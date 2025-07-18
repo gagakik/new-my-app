@@ -1,0 +1,109 @@
+.exhibitions-container {
+  width: 100%; /* გახადეთ რესპონსიული */
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 1.5rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow-x: hidden;
+}
+
+.exhibitions-container h2 {
+  text-align: center;
+  color: #343a40;
+  margin-bottom: 1.5rem;
+}
+
+.exhibitions-container p.no-exhibitions {
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+}
+
+.add-new {
+  display: block;
+  width: fit-content;
+  margin: 0 auto 1.5rem;
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.8s;
+}
+
+.add-new:hover {
+  background-color: #0056b3;
+}
+
+/* Flexbox კონტეინერი ჰორიზონტალური სქროლით */
+.exhibitions-grid {
+  display: inline-flex;
+  flex-wrap: nowrap; /* ხელს უშლის ბარათების ახალ ხაზზე გადასვლას */
+  gap: 20px;
+  overflow-x: auto; /* ააქტიურებს ჰორიზონტალურ სქროლს საჭიროების შემთხვევაში */
+  padding-bottom: 10px; /* სქროლბარისთვის ადგილი */
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: #888 #f1f1f1;
+}
+
+/* თითოეული "ქარდი" */
+.exhibition-card {
+  flex: 0 0 280px; /* ფიქსირებული სიგანე, არ იზრდება და არ მცირდება */
+  height: auto; /* დავაყენოთ ავტომატური სიმაღლე */
+  padding: 1.5rem;
+  background-color: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.exhibition-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.exhibition-card h3 {
+  margin-top: 0;
+  color: #007bff;
+  font-size: 1.2rem;
+}
+
+.exhibition-card p {
+  margin: 0.5rem 0;
+  color: #495057;
+}
+
+.actions {
+  margin-top: 1rem;
+  display: flex;
+  gap: 10px;
+}
+
+.actions button {
+  flex-grow: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s;
+}
+
+.actions .edit {
+  background-color: #28a745;
+  color: #fff;
+}
+
+.actions .delete {
+  background-color: #dc3545;
+  color: #fff;
+}
+
+.actions button:hover {
+  opacity: 0.9;
+}
