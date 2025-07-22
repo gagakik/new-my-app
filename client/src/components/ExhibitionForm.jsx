@@ -30,8 +30,13 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
     
     const method = isEditing ? 'PUT' : 'POST';
     const url = isEditing
+<<<<<<< HEAD
       ? `/api/exhibitions/${exhibitionToEdit.id}` // შედარებითი მისამართი
       : '/api/exhibitions'; // შედარებითი მისამართი
+=======
+      ? `http://localhost:5000/api/exhibitions/${exhibitionToEdit.id}`
+      : 'http://localhost:5000/api/exhibitions';
+>>>>>>> 8cc3b0cf900c6fdde851ceac41da26e92406183f
 
     try {
       const token = localStorage.getItem('token'); // ტოკენის აღება

@@ -8,12 +8,16 @@ const UserManagement = ({ showNotification, userRole }) => {
 
     const fetchUsers = async () => {
         try {
+<<<<<<< HEAD
             const token = localStorage.getItem('token'); // ტოკენის აღება
             const response = await fetch('/api/users', { // შედარებითი მისამართი
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
+=======
+            const response = await fetch('http://localhost:5000/api/users');
+>>>>>>> 8cc3b0cf900c6fdde851ceac41da26e92406183f
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.error || 'მომხმარებლების მიღება ვერ მოხერხდა.');
@@ -33,8 +37,12 @@ const UserManagement = ({ showNotification, userRole }) => {
         if (!isConfirmed) return;
 
         try {
+<<<<<<< HEAD
             const token = localStorage.getItem('token'); // ტოკენის აღება
             const response = await fetch(`/api/users/${userId}/role`, { // შედარებითი მისამართი
+=======
+            const response = await fetch(`http://localhost:5000/api/users/${userId}/role`, {
+>>>>>>> 8cc3b0cf900c6fdde851ceac41da26e92406183f
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

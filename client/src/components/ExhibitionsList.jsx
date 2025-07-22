@@ -16,7 +16,7 @@ const ExhibitionsList = ({ showNotification, userRole }) => { // მივიღ
 
   const fetchExhibitions = async () => {
     try {
-      const response = await fetch('/api/exhibitions');
+      const response = await fetch('http://localhost:5000/api/exhibitions');
       if (!response.ok) {
         throw new Error('მონაცემების მიღება ვერ მოხერხდა.');
       }
@@ -39,8 +39,12 @@ const ExhibitionsList = ({ showNotification, userRole }) => { // მივიღ
     if (!isConfirmed) return;
 
     try {
+<<<<<<< HEAD
       const token = localStorage.getItem('token'); // ტოკენის აღება
       const response = await fetch(`/api/exhibitions/${id}`, {
+=======
+      const response = await fetch(`http://localhost:5000/api/exhibitions/${id}`, {
+>>>>>>> 8cc3b0cf900c6fdde851ceac41da26e92406183f
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}` // ტოკენის გაგზავნა
