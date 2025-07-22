@@ -24,8 +24,8 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
     const newExhibition = { exhibition_name: name, comment, manager };
     const method = isEditing ? 'PUT' : 'POST';
     const url = isEditing
-      ? `/api/exhibitions/${exhibitionToEdit.id}`
-      : '/api/exhibitions';
+      ? `http://localhost:5000/api/exhibitions/${exhibitionToEdit.id}`
+      : 'http://localhost:5000/api/exhibitions';
 
     try {
       const response = await fetch(url, {

@@ -8,7 +8,7 @@ const UserManagement = ({ showNotification }) => {
 
     const fetchUsers = async () => {
         try {
-            const response = await fetch('/api/users');
+            const response = await fetch('http://localhost:5000/api/users');
             if (!response.ok) {
                 throw new Error('მომხმარებლების მიღება ვერ მოხერხდა.');
             }
@@ -27,7 +27,7 @@ const UserManagement = ({ showNotification }) => {
         if (!isConfirmed) return;
 
         try {
-            const response = await fetch(`/api/users/${userId}/role`, {
+            const response = await fetch(`http://localhost:5000/api/users/${userId}/role`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
