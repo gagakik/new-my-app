@@ -1,14 +1,14 @@
 import React from 'react';
 import './Header.css';
 
-const Header = ({ isLoggedIn, userRole, onLogout, onViewChange }) => {
+const Header = ({ isLoggedIn, userRole, userName, onLogout, onViewChange }) => { // დავამატეთ userName
   return (
     <header className="header">
       <div className="logo">გამოფენების პორტალი</div>
       <nav>
         {isLoggedIn ? (
           <>
-            <span className="user-info">შესული ხართ როგორც: {userRole}</span>
+            <span className="user-info">როლი: {userRole} | მომხმარებელი: {userName}</span> {/* დავამატეთ userName */}
             {userRole === 'admin' && (
               <button onClick={() => onViewChange('users')} className="nav-btn">
                 მომხმარებლების მართვა

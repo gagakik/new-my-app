@@ -3,8 +3,8 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const db = require('./db');
 const jwt = require('jsonwebtoken');
-const multer = require('multer'); // დაამატეთ multer
-const path = require('path'); // დაამატეთ path მოდული
+const multer = require('multer');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -13,7 +13,6 @@ app.use(cors());
 app.use(express.json());
 
 // --- multer კონფიგურაცია სურათების ატვირთვისთვის ---
-// სურათების შენახვის ადგილი
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         // დარწმუნდით, რომ 'uploads' საქაღალდე არსებობს თქვენს server დირექტორიაში
@@ -23,10 +22,10 @@ const storage = multer.diskStorage({
         cb(null, Date.now() + path.extname(file.originalname)); // უნიკალური ფაილის სახელი
     }
 });
-
 const upload = multer({ storage: storage });
 
 // სტატიკური საქაღალდე ატვირთული სურათებისთვის
+// ეს ხაზი აუცილებელია!
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
@@ -36,14 +35,14 @@ function authenticateToken(req, res, next) {
     const token = authHeader && authHeader.split(' ')[1];
 
     if (token == null) {
-        return res.sendStatus(401); // თუ ტოკენი არ არსებობს
+        return res.status(401).json({ error: 'ავტორიზაციის ტოკენი არ არის მოწოდებული.' });
     }
 
     jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
         if (err) {
-            return res.sendStatus(403); // თუ ტოკენი არასწორია
+            return res.status(403).json({ error: 'არასწორი ან ვადაგასული ავტორიზაციის ტოკენი.' });
         }
-        req.user = user; // მომხმარებლის მონაცემების დამატება მოთხოვნაში (id, username, role)
+        req.user = user;
         next();
     });
 }
@@ -83,7 +82,7 @@ app.post('/api/login', async (req, res) => {
             process.env.JWT_SECRET,
             { expiresIn: '1h' }
         );
-        res.status(200).json({ message: 'შესვლა წარმატებით დასრულდა.', role: user.role, token: token, userId: user.id });
+        res.status(200).json({ message: 'შესვლა წარმატებით დასრულდა.', role: user.role, token: token, userId: user.id, username: user.username });
       } else {
         res.status(401).json({ message: 'არასწორი პაროლი.' });
       }
@@ -252,7 +251,7 @@ app.post('/api/equipment', authenticateToken, authorizeEquipmentManagement, uplo
         res.status(201).json({ message: 'აღჭურვილობა წარმატებით დაემატა.', equipment: result.rows[0] });
     } catch (error) {
         console.error('შეცდომა აღჭურვილობის დამატებისას:', error);
-        if (error.code === '23505') {
+        if (error.code === '23505') { // UNIQUE CONSTRAINT VIOLATION
             return res.status(409).json({ message: 'აღჭურვილობა ამ კოდური სახელით უკვე არსებობს.' });
         }
         res.status(500).json({ message: 'აღჭურვილობის დამატება ვერ მოხერხდა.', error: error.message });

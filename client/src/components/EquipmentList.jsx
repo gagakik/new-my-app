@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'; // Fixed: '=>' changed to 'from'
 import './EquipmentList.css';
 import EquipmentForm from './EquipmentForm';
 
@@ -103,7 +103,7 @@ const EquipmentList = ({ showNotification, userRole }) => {
               <p><strong>ფასი:</strong> ${item.price}</p>
               <p><strong>აღწერა:</strong> {item.description}</p>
               {item.image_url && (
-                <img src={`http://localhost:5000${item.image_url}`} alt={item.code_name} className="equipment-image" />
+                <img src={item.image_url} alt={item.code_name} className="equipment-image" /> 
               )}
               {item.created_at && (
                 <p className="created-info">დამატებულია: {new Date(item.created_at).toLocaleDateString()}</p>
