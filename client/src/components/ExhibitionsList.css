@@ -6,7 +6,7 @@
   background-color: #f8f9fa;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  overflow-x: hidden;
+  overflow-x: hidden; /* მალავს ჰორიზონტალურ სქროლს მთავარ კონტეინერზე */
 }
 
 .exhibitions-container h2 {
@@ -38,28 +38,26 @@
   background-color: #0056b3;
 }
 
-/* Flexbox კონტეინერი ჰორიზონტალური სქროლით */
+/* Grid კონტეინერი ფიქსირებული ზომის ქარდებისთვის */
 .exhibitions-grid {
-  display: inline-flex;
-  flex-wrap: nowrap; /* ხელს უშლის ბარათების ახალ ხაზზე გადასვლას */
-  gap: 20px;
-  overflow-x: auto; /* ააქტიურებს ჰორიზონტალურ სქროლს საჭიროების შემთხვევაში */
-  padding-bottom: 10px; /* სქროლბარისთვის ადგილი */
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-  scrollbar-color: #888 #f1f1f1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* ფიქსირებული მინიმალური სიგანე, ავტომატური გადანაწილება */
+  gap: 20px; /* ქარდებს შორის დაშორება */
+  justify-content: center; /* ცენტრში განლაგება */
 }
 
 /* თითოეული "ქარდი" */
 .exhibition-card {
-  flex: 0 0 280px; /* ფიქსირებული სიგანე, არ იზრდება და არ მცირდება */
-  height: auto; /* დავაყენოთ ავტომატური სიმაღლე */
   padding: 1.5rem;
   background-color: #fff;
   border: 1px solid #dee2e6;
   border-radius: 8px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: auto; /* ავტომატური სიმაღლე შიგთავსის მიხედვით */
 }
 
 .exhibition-card:hover {

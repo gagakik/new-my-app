@@ -1,20 +1,23 @@
-.equipment-container {
-  width: 100%;
+.equipment-container { /* შეცვლილია exhibitions-container-დან */
+  width: 100%; /* გახადეთ რესპონსიული */
   max-width: 1200px;
   margin: 2rem auto;
-  padding: 1.5rem;
-  background-color: #f8f9fa;
+  padding: 1.2rem;
+  background-color: #2b55a7;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow-x: hidden; /* მალავს ჰორიზონტალურ სქროლს მთავარ კონტეინერზე */
 }
 
-.equipment-container h2 {
+.equipment-container h2 { /* შეცვლილია exhibitions-container-დან */
   text-align: center;
-  color: #343a40;
-  margin-bottom: 1.5rem;
+  color: #000000;
+  font-weight: 500;
+  margin-bottom: 1.2rem;
+  font-size: 1.2rem;
 }
 
-.equipment-container p.no-equipment {
+.equipment-container p.no-equipment { /* შეცვლილია exhibitions-container-დან */
   text-align: center;
   color: #6c757d;
   font-style: italic;
@@ -25,26 +28,30 @@
   width: fit-content;
   margin: 0 auto 1.5rem;
   padding: 10px 20px;
-  background-color: #007bff;
+  background-color: #7f7f80;
   color: #fff;
+  font-size: 1rem;
+  font-weight: 400;
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: background-color 0.8s;
 }
 
 .add-new:hover {
-  background-color: #0056b3;
+  background-color: #0d0d0e;
 }
 
-.equipment-grid {
+/* Grid კონტეინერი ფიქსირებული ზომის ქარდებისთვის */
+.equipment-grid { /* შეცვლილია exhibitions-grid-დან */
   display: grid;
-  /* შევამცირეთ ბარათების ზომა, რათა მეტი ელემენტი ჩანდეს ერთ რიგში */
-  grid-template-columns: repeat(auto-fit, minmax(250px, 300px));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* ფიქსირებული მინიმალური სიგანე, ავტომატური გადანაწილება */
+  gap: 20px; /* ქარდებს შორის დაშორება */
+  justify-content: center; /* ცენტრში განლაგება */
 }
 
-.equipment-card {
+/* თითოეული "ქარდი" */
+.equipment-card { /* შეცვლილია exhibition-card-დან */
   padding: 1.5rem;
   background-color: #fff;
   border: 1px solid #dee2e6;
@@ -54,42 +61,40 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  /* დავრწმუნდეთ, რომ შიგთავსი არ გადმოდის */
-  overflow: hidden; 
+  height: auto; /* ავტომატური სიმაღლე შიგთავსის მიხედვით */
+  overflow: hidden; /* დავრწმუნდეთ, რომ შიგთავსი არ გადმოდის */
+  max-width: 300px; /* ქარდის მაქსიმალური სიგანე */
 }
 
-.equipment-card:hover {
+.equipment-card:hover { /* შეცვლილია exhibition-card-დან */
   transform: translateY(-5px);
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
 }
 
-.equipment-card h3 {
+.equipment-card h3 { /* შეცვლილია exhibition-card-დან */
   margin-top: 0;
   color: #007bff;
-  font-size: 1rem;
-  margin-bottom: 0.5rem;
+  font-size: 1.2rem;
 }
 
-.equipment-card p {
-  margin: 0.25rem 0;
-  font-size: 0.8rem;
+.equipment-card p { /* შეცვლილია exhibition-card-დან */
+  margin: 0.5rem 0;
   color: #495057;
+  font-size: 0.8rem;
 }
 
+/* სურათის სტილები */
 .equipment-image {
-  max-width: 100%;
-  height: 150px; /* ფიქსირებული სიმაღლე სურათებისთვის */
+  width: 100%; /* სურათი ავსებს ქარდის სიგანეს */
+  max-width: 250px; /* მაქსიმალური სიგანე */
+  height: 200px; /* ფიქსირებული სიმაღლე სურათისთვის */
+  object-fit:fill /* სურათის სკეილირება ასპექტის თანაფარდობის შენარჩუნებით, რომ არ დამახინჯდეს */
   border-radius: 4px;
   margin-top: 1rem;
-  display: block;
-  margin: auto;
-  object-fit:scale-down /* სურათის ზომის მორგება და ავტომატური სქეილი */
-}
-
-.created-info {
-  font-size: 0.85rem;
-  color: #6c757d;
-  margin-top: 0.75rem;
+  margin-bottom: 1rem; /* დაშორება ტექსტიდან */
+  display: block; /* ბლოკის ელემენტად ქცევა ცენტრირებისთვის */
+  margin-left: auto; /* ცენტრირება */
+  margin-right: auto; /* ცენტრირება */
 }
 
 .actions {

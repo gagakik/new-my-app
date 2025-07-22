@@ -8,8 +8,12 @@ const UserManagement = ({ showNotification, userRole }) => {
 
     const fetchUsers = async () => {
         try {
-
-            const response = await fetch('http://localhost:5000/api/users');
+            const token = localStorage.getItem('token'); // ტოკენის აღება
+            const response = await fetch('/api/users', {
+                headers: {
+                    'Authorization': `Bearer ${token}` // ტოკენის გაგზავნა
+                }
+            });
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.error || 'მომხმარებლების მიღება ვერ მოხერხდა.');
@@ -29,12 +33,12 @@ const UserManagement = ({ showNotification, userRole }) => {
         if (!isConfirmed) return;
 
         try {
-
-            const response = await fetch(`http://localhost:5000/api/users/${userId}/role`, {
+            const token = localStorage.getItem('token'); // ტოკენის აღება
+            const response = await fetch(`/api/users/${userId}/role`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': `Bearer ${token}` // ტოკენის გაგზავნა
                 },
                 body: JSON.stringify({ role: newRole }),
             });
@@ -58,7 +62,7 @@ const UserManagement = ({ showNotification, userRole }) => {
 
         try {
             const token = localStorage.getItem('token'); // ტოკენის აღება
-            const response = await fetch(`/api/users/${userId}`, { // შედარებითი მისამართი
+            const response = await fetch(`/api/users/${userId}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`
