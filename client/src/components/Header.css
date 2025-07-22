@@ -1,60 +1,57 @@
 .header {
   display: flex;
-  justify-content: space-between;
+  justify-content: space-between; /* ლოგო მარცხნივ, ნავიგაცია მარჯვნივ */
   align-items: center;
   padding: 1rem 2rem;
-  background-color: #fff;
-  color: #343a40;
-  border-bottom: 1px solid #e9ecef;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-  font-size: 1rem;
+  background-color: #2b55a7; /* კომპანიის ძირითადი ფერი */
+  color: #fff; /* ტექსტის ფერი ჰედერში */
+  width: 100%;
+  box-sizing: border-box;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15); /* დავამატოთ ჩრდილი */
 }
 
 .logo {
   font-weight: 700;
-  font-size: 1.25rem;
-  color: #007bff;
+  font-size: 1.2rem; /* ლოგოს ზომა */
+  color: #fff; /* ლოგოს თეთრი ფერი */
+  text-decoration: none; /* ლოგო თუ ლინკია */
 }
 
 .nav {
   display: flex;
   align-items: center;
-  gap: 1.3rem;
+  gap: 1rem; /* ღილაკებს შორის თანაბარი დაშორება */
 }
 
-.nav-btn {
-  background-color: #007bff;
-  color: #fff;
+.nav-btn,
+.logout-btn { /* ღილაკების საერთო სტილები */
+  background-color: #000; /* შავი ფონი ღილაკებისთვის */
+  color: #fff; /* თეთრი ტექსტი ღილაკებზე */
   border: none;
-  width: 150px;
-  height: 40px;
-  padding: 10px 18px;
-  margin-right: 20px;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 400;
+  transition: all 0.3s ease;
+  text-decoration: none; /* თუ ლინკებია */
+  display: inline-block; /* თუ <a> ტეგებია */
+  font-size: 0.8rem;
+  margin-left: 10px;
 }
 
-.nav-btn:hover {
-  background-color: #0056b3;
-}
-
-.logout-btn {
-  background-color: #dc3545;
-  color: #fff;
-  border: none;
-  padding: 10px 18px;
-  width: 100px;
-  height: 40px;
-}
-
+.nav-btn:hover,
 .logout-btn:hover {
-  background-color: #c82333;
+  background-color: #333; /* ოდნავ ღია შავი hover-ზე */
+  transform: translateY(-2px); /* ანიმაცია hover-ზე */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* ჩრდილი hover-ზე */
 }
 
 .user-info {
   font-weight: 500;
-  color: #6c757d;
-  margin-right: 20px;
+  color: #fff; /* თეთრი ფერი მომხმარებლის ინფორმაციისთვის */
+  margin-right: 1.5rem; /* დაშორება ღილაკებიდან */
 }
 
 .guest-info {
-  color: #adb5bd;
+  color: #ccc; /* სტუმრის ინფორმაციის ფერი */
 }

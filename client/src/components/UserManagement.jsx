@@ -1,22 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import './UserManagement.css';
 
-const UserManagement = ({ showNotification }) => {
+const UserManagement = ({ showNotification, userRole }) => {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
     const fetchUsers = async () => {
         try {
-            const response = await fetch('/api/users');
+            const token = localStorage.getItem('token'); // ტოკენის აღება
+            const response = await fetch('/api/users', { // შედარებითი მისამართი
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
             if (!response.ok) {
-                throw new Error('მომხმარებლების მიღება ვერ მოხერხდა.');
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'მომხმარებლების მიღება ვერ მოხერხდა.');
             }
             const data = await response.json();
             setUsers(data);
         } catch (err) {
             setError(err.message);
-            showNotification('შეცდომა მომხმარებლების ჩატვირთვისას!', 'error');
+            showNotification(`შეცდომა მომხმარებლების ჩატვირთვისას: ${err.message}`, 'error');
         } finally {
             setLoading(false);
         }
@@ -27,10 +33,12 @@ const UserManagement = ({ showNotification }) => {
         if (!isConfirmed) return;
 
         try {
-            const response = await fetch(`/api/users/${userId}/role`, {
+            const token = localStorage.getItem('token'); // ტოკენის აღება
+            const response = await fetch(`/api/users/${userId}/role`, { // შედარებითი მისამართი
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({ role: newRole }),
             });
@@ -44,6 +52,32 @@ const UserManagement = ({ showNotification }) => {
             }
         } catch (error) {
             console.error('შეცდომა როლის განახლებისას:', error);
+            showNotification('დაფიქსირდა შეცდომა სერვერთან კავშირისას.', 'error');
+        }
+    };
+
+    const handleDeleteUser = async (userId) => {
+        const isConfirmed = window.confirm('ნამდვილად გსურთ ამ მომხმარებლის წაშლა?');
+        if (!isConfirmed) return;
+
+        try {
+            const token = localStorage.getItem('token'); // ტოკენის აღება
+            const response = await fetch(`/api/users/${userId}`, { // შედარებითი მისამართი
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                showNotification('მომხმარებელი წარმატებით წაიშალა!', 'success');
+                fetchUsers();
+            } else {
+                const errorData = await response.json();
+                showNotification(`წაშლა ვერ მოხერხდა: ${errorData.message}`, 'error');
+            }
+        } catch (error) {
+            console.error('შეცდომა მომხმარებლის წაშლისას:', error);
             showNotification('დაფიქსირდა შეცდომა სერვერთან კავშირისას.', 'error');
         }
     };
@@ -85,12 +119,22 @@ const UserManagement = ({ showNotification }) => {
                                     >
                                         <option value="user">User</option>
                                         <option value="admin">Admin</option>
+                                        <option value="sales">Sales</option>
+                                        <option value="marketing">Marketing</option>
+                                        <option value="operation">Operation</option>
+                                        <option value="guest">Guest</option>
+                                        <option value="finance">Finance</option>
+                                        <option value="manager">Manager</option>
                                     </select>
                                 </td>
                                 <td>
-                                    <button onClick={() => handleRoleChange(user.id, user.role === 'admin' ? 'user' : 'admin')}>
-                                      როლის შეცვლა
-                                    </button>
+                                    {userRole === 'admin' && (
+                                        <button 
+                                            onClick={() => handleDeleteUser(user.id)}
+                                            className="delete-user-btn">
+                                            წაშლა
+                                        </button>
+                                    )}
                                 </td>
                             </tr>
                         ))}

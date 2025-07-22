@@ -2,18 +2,18 @@ import React, { useState, useEffect } from 'react';
 import './ExhibitionForm.css';
 
 const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotification }) => {
-  const [name, setName] = useState('');
+  const [exhibitionName, setExhibitionName] = useState('');
   const [comment, setComment] = useState('');
   const [manager, setManager] = useState('');
   const isEditing = !!exhibitionToEdit;
 
   useEffect(() => {
     if (isEditing) {
-      setName(exhibitionToEdit.exhibition_name);
+      setExhibitionName(exhibitionToEdit.exhibition_name);
       setComment(exhibitionToEdit.comment);
       setManager(exhibitionToEdit.manager);
     } else {
-      setName('');
+      setExhibitionName('');
       setComment('');
       setManager('');
     }
@@ -21,17 +21,27 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const newExhibition = { exhibition_name: name, comment, manager };
+
+    const exhibitionData = {
+      exhibition_name: exhibitionName,
+      comment,
+      manager,
+    };
+    
     const method = isEditing ? 'PUT' : 'POST';
     const url = isEditing
-      ? `/api/exhibitions/${exhibitionToEdit.id}`
-      : '/api/exhibitions';
+      ? `/api/exhibitions/${exhibitionToEdit.id}` // შედარებითი მისამართი
+      : '/api/exhibitions'; // შედარებითი მისამართი
 
     try {
+      const token = localStorage.getItem('token'); // ტოკენის აღება
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newExhibition),
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` // ტოკენის გაგზავნა
+        },
+        body: JSON.stringify(exhibitionData),
       });
 
       if (!response.ok) {
@@ -53,10 +63,10 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label>გამოფენის სახელი</label>
-          <input
+          <input 
             type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            value={exhibitionName}
+            onChange={(e) => setExhibitionName(e.target.value)}
             required
           />
         </div>

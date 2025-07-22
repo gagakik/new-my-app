@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import './AuthPage.css';
+import './AuthForms.css';
 
 const AuthPage = ({ onLoginSuccess, showNotification }) => {
   const [isLoginView, setIsLoginView] = useState(true);
@@ -9,7 +9,7 @@ const AuthPage = ({ onLoginSuccess, showNotification }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const endpoint = isLoginView ? 'login' : 'register';
-    const response = await fetch(`/api/${endpoint}`, {
+    const response = await fetch(`/api/${endpoint}`, { // შედარებითი მისამართი
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -21,7 +21,7 @@ const AuthPage = ({ onLoginSuccess, showNotification }) => {
     if (response.ok) {
       if (isLoginView) {
         showNotification(data.message, 'success');
-        onLoginSuccess(data.role);
+        onLoginSuccess(data.role, data.token); // გადავეცით ტოკენიც
       } else {
         showNotification('რეგისტრაცია წარმატებით დასრულდა. გთხოვთ, შეხვიდეთ სისტემაში.', 'success');
         setIsLoginView(true);

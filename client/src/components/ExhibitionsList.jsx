@@ -1,12 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'; // შეცვლილია '=>' 'from'-ით
 import './ExhibitionsList.css';
-import ExhibitionForm from './ExhibitionForm';
+import ExhibitionForm from './ExhibitionForm'; // გამოფენის ფორმის იმპორტი
 
-const ExhibitionsList = ({ showNotification }) => {
+const ExhibitionsList = ({ showNotification, userRole }) => { // მივიღეთ userRole
   const [exhibitions, setExhibitions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [editingId, setEditingId] = useState(null);
+  const [editingId, setEditingId] = useState(null); // ახალი სტეიტი
+
+  // განსაზღვრეთ, აქვს თუ არა მომხმარებელს მართვის უფლება
+  const isAuthorizedForManagement = 
+    userRole === 'admin' || 
+    userRole === 'sales' || 
+    userRole === 'marketing';
 
   const fetchExhibitions = async () => {
     try {
@@ -18,7 +24,7 @@ const ExhibitionsList = ({ showNotification }) => {
       setExhibitions(data);
     } catch (err) {
       setError(err.message);
-      showNotification('შეცდომა გამოფენების ჩატვირთვისას!', 'error');
+      showNotification(`შეცდომა გამოფენების ჩატვირთვისას: ${err.message}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -33,8 +39,12 @@ const ExhibitionsList = ({ showNotification }) => {
     if (!isConfirmed) return;
 
     try {
+      const token = localStorage.getItem('token'); // ტოკენის აღება
       const response = await fetch(`/api/exhibitions/${id}`, {
         method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}` // ტოკენის გაგზავნა
+        }
       });
 
       if (response.ok) {
@@ -49,14 +59,14 @@ const ExhibitionsList = ({ showNotification }) => {
       showNotification('დაფიქსირდა შეცდომა სერვერთან კავშირისას.', 'error');
     }
   };
-
+  
   const handleEditClick = (exhibition) => {
     setEditingId(exhibition.id);
   };
   
   const handleExhibitionUpdated = () => {
-      setEditingId(null);
-      fetchExhibitions();
+      setEditingId(null); // რედაქტირების რეჟიმიდან გასვლა
+      fetchExhibitions(); // სიის განახლება
   };
   
   if (loading) {
@@ -69,31 +79,41 @@ const ExhibitionsList = ({ showNotification }) => {
 
   return (
     <div className="exhibitions-container">
-      <h2>Exebition List</h2>
-      <button className="add-new" onClick={() => setEditingId(0)}>Add New Exebition</button>
-      {editingId !== null && (
-         <ExhibitionForm exhibitionToEdit={exhibitions.find(e => e.id === editingId)} onExhibitionUpdated={handleExhibitionUpdated} showNotification={showNotification} />
+      <h2>გამოფენების სია</h2>
+      {isAuthorizedForManagement && ( // ღილაკი მხოლოდ უფლებამოსილი როლებისთვის
+        <button className="add-new" onClick={() => setEditingId(0)}>ახალი გამოფენის დამატება</button>
       )}
+      
+      {editingId !== null && isAuthorizedForManagement && ( // ფორმაც მხოლოდ უფლებამოსილი როლებისთვის
+         <ExhibitionForm 
+            exhibitionToEdit={exhibitions.find(e => e.id === editingId)} 
+            onExhibitionUpdated={handleExhibitionUpdated} 
+            showNotification={showNotification} 
+         />
+      )}
+      
       {exhibitions.length === 0 ? (
-        <p>გამოფენები არ მოიძებნა.</p>
+        <p className="no-exhibitions">გამოფენები არ მოიძებნა.</p>
       ) : (
-        <ul>
+        <div className="exhibitions-grid">
           {exhibitions.map((exhibition) => (
-            <li key={exhibition.id}>
+            <div key={exhibition.id} className="exhibition-card">
               <h3>{exhibition.exhibition_name}</h3>
               <p><strong>კომენტარი:</strong> {exhibition.comment}</p>
               <p><strong>მენეჯერი:</strong> {exhibition.manager}</p>
-              <div className="actions">
-                <button className="edit" onClick={() => handleEditClick(exhibition)}>EDIT</button>
-                <button 
-                  className="delete" 
-                  onClick={() => handleDelete(exhibition.id)}>
-                  DEL
-                </button>
-              </div>
-            </li>
+              {isAuthorizedForManagement && ( // ღილაკები მხოლოდ უფლებამოსილი როლებისთვის
+                <div className="actions">
+                  <button className="edit" onClick={() => handleEditClick(exhibition)}>რედაქტირება</button>
+                  <button 
+                    className="delete" 
+                    onClick={() => handleDelete(exhibition.id)}>
+                    წაშლა
+                  </button>
+                </div>
+              )}
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );
