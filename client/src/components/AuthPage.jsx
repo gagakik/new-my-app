@@ -9,11 +9,8 @@ const AuthPage = ({ onLoginSuccess, showNotification }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const endpoint = isLoginView ? 'login' : 'register';
-<<<<<<< HEAD
-    const response = await fetch(`/api/${endpoint}`, { // შედარებითი მისამართი
-=======
+
     const response = await fetch(`http://localhost:5000/api/${endpoint}`, {
->>>>>>> 8cc3b0cf900c6fdde851ceac41da26e92406183f
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
