@@ -5,38 +5,38 @@ import AuthPage from './components/AuthPage';
 import ExhibitionsList from './components/ExhibitionsList';
 import UserManagement from './components/UserManagement';
 import EquipmentList from './components/EquipmentList';
+import CompaniesList from './components/CompaniesList'; // ახალი იმპორტი
 import Notification from './components/Notification';
 import './index.css';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState(null);
-  const [userName, setUserName] = useState(null); // ახალი სტეიტი მომხმარებლის სახელისთვის
+  const [userName, setUserName] = useState(null);
   const [activeView, setActiveView] = useState('auth');
   const [notification, setNotification] = useState({ message: '', type: '' });
 
-  // handleLoginSuccess ფუნქცია განახლებულია userId-ის და userName-ის მისაღებად
   const handleLoginSuccess = (role, token, userId, username) => {
     setIsLoggedIn(true);
     setUserRole(role);
-    setUserName(username); // მომხმარებლის სახელის დაყენება
+    setUserName(username);
     localStorage.setItem('userRole', role);
     localStorage.setItem('token', token);
-    localStorage.setItem('userId', userId); // userId-ის შენახვა
-    localStorage.setItem('userName', username); // მომხმარებლის სახელის შენახვა
-    setActiveView('equipment'); // ნაგულისხმევად ვაჩვენოთ აღჭურვილობის გვერდი
+    localStorage.setItem('userId', userId);
+    localStorage.setItem('userName', username);
+    setActiveView('companies'); // ნაგულისხმევად ვაჩვენოთ კომპანიების გვერდი
     showNotification('შესვლა წარმატებით დასრულდა!', 'success');
   };
   
   const handleLogout = () => {
     setIsLoggedIn(false);
     setUserRole(null);
-    setUserName(null); // მომხმარებლის სახელის გასუფთავება
+    setUserName(null);
     setActiveView('auth');
     localStorage.removeItem('userRole');
     localStorage.removeItem('token');
     localStorage.removeItem('userId');
-    localStorage.removeItem('userName'); // მომხმარებლის სახელის გასუფთავება
+    localStorage.removeItem('userName');
     showNotification('თქვენ წარმატებით გამოხვედით სისტემიდან.', 'info');
   };
   
@@ -55,12 +55,12 @@ function App() {
   useEffect(() => {
     const storedRole = localStorage.getItem('userRole');
     const storedToken = localStorage.getItem('token');
-    const storedUserName = localStorage.getItem('userName'); // მომხმარებლის სახელის აღება
+    const storedUserName = localStorage.getItem('userName');
     if (storedRole && storedToken) {
       setIsLoggedIn(true);
       setUserRole(storedRole);
-      setUserName(storedUserName); // მომხმარებლის სახელის დაყენება
-      setActiveView('equipment'); // გვერდის განახლებისას აღჭურვილობის გვერდი
+      setUserName(storedUserName);
+      setActiveView('companies'); // გვერდის განახლებისას კომპანიების გვერდი
     }
   }, []);
 
@@ -80,6 +80,10 @@ function App() {
     if (activeView === 'equipment') {
         return <EquipmentList showNotification={showNotification} userRole={userRole} />;
     }
+
+    if (activeView === 'companies') { // ახალი view კომპანიებისთვის
+        return <CompaniesList showNotification={showNotification} userRole={userRole} />;
+    }
     
     return null;
   };
@@ -89,7 +93,7 @@ function App() {
       <Header 
         isLoggedIn={isLoggedIn} 
         userRole={userRole} 
-        userName={userName} // userName გადავეცით Header-ს
+        userName={userName}
         onLogout={handleLogout} 
         onViewChange={handleViewChange}
       /> 

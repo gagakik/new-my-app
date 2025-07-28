@@ -15,17 +15,15 @@ app.use(express.json());
 // --- multer კონფიგურაცია სურათების ატვირთვისთვის ---
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        // დარწმუნდით, რომ 'uploads' საქაღალდე არსებობს თქვენს server დირექტორიაში
         cb(null, 'uploads/'); 
     },
     filename: (req, file, cb) => {
-        cb(null, Date.now() + path.extname(file.originalname)); // უნიკალური ფაილის სახელი
+        cb(null, Date.now() + path.extname(file.originalname));
     }
 });
 const upload = multer({ storage: storage });
 
 // სტატიკური საქაღალდე ატვირთული სურათებისთვის
-// ეს ხაზი აუცილებელია!
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
@@ -42,10 +40,22 @@ function authenticateToken(req, res, next) {
         if (err) {
             return res.status(403).json({ error: 'არასწორი ან ვადაგასული ავტორიზაციის ტოკენი.' });
         }
-        req.user = user;
+        req.user = user; // მომხმარებლის მონაცემების დამატება მოთხოვნაში (id, username, role)
         next();
     });
 }
+
+// დამხმარე ფუნქცია როლის შემოწმებისთვის (კომპანიების მართვა)
+const authorizeCompanyManagement = (req, res, next) => {
+    const allowedRoles = ['admin', 'sales']; // მხოლოდ admin და sales
+    if (!req.user || !allowedRoles.includes(req.user.role)) {
+        return res.status(403).json({ error: 'წვდომა აკრძალულია: არ გაქვთ კომპანიების მართვის უფლება.' });
+    }
+    next();
+};
+
+
+
 
 // API ენდპოინტი მომხმარებლის რეგისტრაციისთვის
 app.post('/api/register', async (req, res) => {
@@ -164,7 +174,7 @@ app.get('/api/exhibitions', async (req, res) => {
 });
 
 // POST: ახალი გამოფენის დამატება
-app.post('/api/exhibitions', async (req, res) => {
+app.post('/api/exhibitions', authenticateToken, authorizeCompanyManagement, async (req, res) => { // დავამატეთ ავტორიზაცია
   const { exhibition_name, comment, manager } = req.body;
   try {
     const result = await db.query(
@@ -179,7 +189,7 @@ app.post('/api/exhibitions', async (req, res) => {
 });
 
 // PUT: გამოფენის რედაქტირება ID-ის მიხედვით
-app.put('/api/exhibitions/:id', async (req, res) => {
+app.put('/api/exhibitions/:id', authenticateToken, authorizeCompanyManagement, async (req, res) => { // დავამატეთ ავტორიზაცია
   const { id } = req.params;
   const { exhibition_name, comment, manager } = req.body;
   try {
@@ -199,7 +209,7 @@ app.put('/api/exhibitions/:id', async (req, res) => {
 });
 
 // DELETE: გამოფენის წაშლა ID-ის მიხედვით
-app.delete('/api/exhibitions/:id', async (req, res) => {
+app.delete('/api/exhibitions/:id', authenticateToken, authorizeCompanyManagement, async (req, res) => { // დავამატეთ ავტორიზაცია
   const { id } = req.params;
   try {
     const result = await db.query('DELETE FROM exhibitions WHERE id = $1 RETURNING *', [id]);
@@ -237,10 +247,9 @@ app.get('/api/equipment', async (req, res) => {
 });
 
 // POST: ახალი აღჭურვილობის დამატება (მხოლოდ admin, operation)
-// შეცვლილია: იღებს ფაილს და მონაცემებს
 app.post('/api/equipment', authenticateToken, authorizeEquipmentManagement, upload.single('image'), async (req, res) => {
     const { code_name, quantity, price, description } = req.body;
-    const image_url = req.file ? `/uploads/${req.file.filename}` : null; // სურათის URL
+    const image_url = req.file ? `/uploads/${req.file.filename}` : null;
     const created_by_user_id = req.user.id; 
 
     try {
@@ -251,21 +260,20 @@ app.post('/api/equipment', authenticateToken, authorizeEquipmentManagement, uplo
         res.status(201).json({ message: 'აღჭურვილობა წარმატებით დაემატა.', equipment: result.rows[0] });
     } catch (error) {
         console.error('შეცდომა აღჭურვილობის დამატებისას:', error);
-        if (error.code === '23505') { // UNIQUE CONSTRAINT VIOLATION
-            return res.status(409).json({ message: 'აღჭურვილობა ამ კოდური სახელით უკვე არსებობს.' });
+        if (error.code === '23505') {
+            return res.status(409).json({ message: 'აღჭვილობა ამ კოდური სახელით უკვე არსებობს.' });
         }
         res.status(500).json({ message: 'აღჭურვილობის დამატება ვერ მოხერხდა.', error: error.message });
     }
 });
 
 // PUT: აღჭურვილობის რედაქტირება ID-ის მიხედვით (მხოლოდ admin, operation)
-// შეცვლილია: იღებს ფაილს და მონაცემებს
 app.put('/api/equipment/:id', authenticateToken, authorizeEquipmentManagement, upload.single('image'), async (req, res) => {
     const { id } = req.params;
     const { code_name, quantity, price, description } = req.body;
-    let image_url = req.body.image_url_existing || null; // არსებული URL-ის მიღება
+    let image_url = req.body.image_url_existing || null;
     if (req.file) {
-        image_url = `/uploads/${req.file.filename}`; // ახალი სურათის URL
+        image_url = `/uploads/${req.file.filename}`;
     }
 
     try {
@@ -281,7 +289,7 @@ app.put('/api/equipment/:id', authenticateToken, authorizeEquipmentManagement, u
     } catch (error) {
         console.error('შეცდომა აღჭურვილობის განახლებისას:', error);
         if (error.code === '23505') {
-            return res.status(409).json({ message: 'აღჭურვილობა ამ კოდური სახელით უკვე არსებობს.' });
+            return res.status(409).json({ message: 'აღჭვილობა ამ კოდური სახელით უკვე არსებობს.' });
         }
         res.status(500).json({ message: 'აღჭურვილობის განახლება ვერ მოხერხდა.', error: error.message });
     }
@@ -303,6 +311,136 @@ app.delete('/api/equipment/:id', authenticateToken, authorizeEquipmentManagement
     }
 });
 
+// GET: ყველა კომპანიის მიღება (ფილტრაციით და ძიებით)
+app.get('/api/companies', authenticateToken, async (req, res) => { // დავამატეთ authenticateToken
+    const { searchTerm, country, profile, status } = req.query;
+    let query = 'SELECT * FROM companies WHERE 1=1';
+    const values = [];
+    let paramIndex = 1;
+
+    if (searchTerm) {
+        query += ` AND company_name ILIKE $${paramIndex}`;
+        values.push(`%${searchTerm}%`);
+        paramIndex++;
+    }
+    if (country) {
+        query += ` AND country = $${paramIndex}`;
+        values.push(country);
+        paramIndex++;
+    }
+    if (profile) {
+        query += ` AND company_profile ILIKE $${paramIndex}`;
+        values.push(`%${profile}%`);
+        paramIndex++;
+    }
+    if (status) {
+        query += ` AND status = $${paramIndex}`;
+        values.push(status);
+        paramIndex++;
+    }
+
+    query += ' ORDER BY id ASC';
+
+    try {
+        const result = await db.query(query, values);
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error('შეცდომა კომპანიების მიღებისას:', error);
+        res.status(500).json({ message: 'კომპანიების მიღება ვერ მოხერხდა.', error: error.message });
+    }
+});
+
+// POST: ახალი კომპანიის დამატება (მხოლოდ admin, sales)
+app.post('/api/companies', authenticateToken, authorizeCompanyManagement, async (req, res) => {
+    const { 
+        company_name, country, company_profile, identification_code, legal_address,
+        contact_person1_name, contact_person1_phone, contact_person1_email,
+        contact_person2_name, contact_person2_phone, contact_person2_email,
+        website, comment, status
+    } = req.body;
+    const created_by_user_id = req.user.id; // მომხმარებლის ID ტოკენიდან
+
+    try {
+        const result = await db.query(
+            `INSERT INTO companies (
+                company_name, country, company_profile, identification_code, legal_address,
+                contact_person1_name, contact_person1_phone, contact_person1_email,
+                contact_person2_name, contact_person2_phone, contact_person2_email,
+                website, comment, status, created_by_user_id
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING *`,
+            [
+                company_name, country, company_profile, identification_code, legal_address,
+                contact_person1_name, contact_person1_phone, contact_person1_email,
+                contact_person2_name, contact_person2_phone, contact_person2_email,
+                website, comment, status, created_by_user_id
+            ]
+        );
+        res.status(201).json({ message: 'კომპანია წარმატებით დაემატა.', company: result.rows[0] });
+    } catch (error) {
+        console.error('შეცდომა კომპანიის დამატებისას:', error);
+        if (error.code === '23505') { // UNIQUE CONSTRAINT VIOLATION for identification_code
+            return res.status(409).json({ message: 'კომპანია ამ საიდენტიფიკაციო კოდით უკვე არსებობს.' });
+        }
+        res.status(500).json({ message: 'კომპანიის დამატება ვერ მოხერხდა.', error: error.message });
+    }
+});
+
+// PUT: კომპანიის რედაქტირება ID-ის მიხედვით (მხოლოდ admin, sales)
+app.put('/api/companies/:id', authenticateToken, authorizeCompanyManagement, async (req, res) => {
+    const { id } = req.params;
+    const { 
+        company_name, country, company_profile, identification_code, legal_address,
+        contact_person1_name, contact_person1_phone, contact_person1_email,
+        contact_person2_name, contact_person2_phone, contact_person2_email,
+        website, comment, status
+    } = req.body;
+    const updated_by_user_id = req.user.id; // მომხმარებლის ID ტოკენიდან
+
+    try {
+        const result = await db.query(
+            `UPDATE companies SET 
+                company_name = $1, country = $2, company_profile = $3, identification_code = $4, legal_address = $5,
+                contact_person1_name = $6, contact_person1_phone = $7, contact_person1_email = $8,
+                contact_person2_name = $9, contact_person2_phone = $10, contact_person2_email = $11,
+                website = $12, comment = $13, status = $14, 
+                updated_at = CURRENT_TIMESTAMP, updated_by_user_id = $15
+            WHERE id = $16 RETURNING *`,
+            [
+                company_name, country, company_profile, identification_code, legal_address,
+                contact_person1_name, contact_person1_phone, contact_person1_email,
+                contact_person2_name, contact_person2_phone, contact_person2_email,
+                website, comment, status, updated_by_user_id, id
+            ]
+        );
+        if (result.rows.length > 0) {
+            res.status(200).json({ message: 'კომპანია წარმატებით განახლდა.', company: result.rows[0] });
+        } else {
+            res.status(404).json({ message: 'კომპანია ვერ მოიძებნა.' });
+        }
+    } catch (error) {
+        console.error('შეცდომა კომპანიის განახლებისას:', error);
+        if (error.code === '23505') {
+            return res.status(409).json({ message: 'კომპანია ამ საიდენტიფიკაციო კოდით უკვე არსებობს.' });
+        }
+        res.status(500).json({ message: 'კომპანიის განახლება ვერ მოხერხდა.', error: error.message });
+    }
+});
+
+// DELETE: კომპანიის წაშლა ID-ის მიხედვით (მხოლოდ admin, sales)
+app.delete('/api/companies/:id', authenticateToken, authorizeCompanyManagement, async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await db.query('DELETE FROM companies WHERE id = $1 RETURNING *', [id]);
+        if (result.rows.length > 0) {
+            res.status(200).json({ message: 'კომპანია წარმატებით წაიშალა.' });
+        } else {
+            res.status(404).json({ message: 'კომპანია ვერ მოიძებნა.' });
+        }
+    } catch (error) {
+        console.error('შეცდომა კომპანიის წაშლისას:', error);
+        res.status(500).json({ message: 'კომპანიის წაშლა ვერ მოხერხდა.', error: error.message });
+    }
+});
 
 app.listen(PORT, () => {
   console.log(`სერვერი გაშვებულია http://localhost:${PORT}`);

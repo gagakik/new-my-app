@@ -25,6 +25,53 @@ CREATE TABLE exhibitions (
     manager VARCHAR(255) NOT NULL
 );
 
+psql -d my_app_db -U gaga
+```psql` კონსოლში (`my_app_db=>` ან მსგავსი), გაუშვით ეს ბრძანებები:
+
+```sql
+-- შექმენით ENUM ტიპი კომპანიის სტატუსისთვის
+CREATE TYPE company_status AS ENUM (
+    'აქტიური',
+    'არქივი'
+);
+
+-- შექმენით ENUM ტიპი ქვეყნებისთვის (შეგიძლიათ დაამატოთ მეტი ქვეყანა საჭიროებისამებრ)
+CREATE TYPE company_country AS ENUM (
+    'საქართველო',
+    'აშშ',
+    'გერმანია',
+    'საფრანგეთი',
+    'დიდი ბრიტანეთი',
+    'იაპონია',
+    'ჩინეთი',
+    'ინდოეთი',
+    'ბრაზილია',
+    'კანადა'
+);
+
+-- შექმენით companies ცხრილი
+CREATE TABLE companies (
+    id SERIAL PRIMARY KEY,
+    company_name VARCHAR(255) NOT NULL,
+    country company_country NOT NULL,
+    company_profile TEXT,
+    identification_code VARCHAR(50) UNIQUE NOT NULL,
+    legal_address TEXT,
+    contact_person1_name VARCHAR(255),
+    contact_person1_phone VARCHAR(50),
+    contact_person1_email VARCHAR(100),
+    contact_person2_name VARCHAR(255),
+    contact_person2_phone VARCHAR(50),
+    contact_person2_email VARCHAR(100),
+    website VARCHAR(255),
+    comment TEXT,
+    status company_status DEFAULT 'აქტიური',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL
+);
+
 .env file
 
 DATABASE_URL="postgres://gaga:Sami4xuti@localhost:5432/my_app_db"

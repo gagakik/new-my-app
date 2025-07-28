@@ -1,0 +1,196 @@
+.companies-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 1.5rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.companies-container h2 {
+  text-align: center;
+  color: #343a40;
+  margin-bottom: 1.5rem;
+}
+
+.companies-container p.no-companies {
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+}
+
+.add-new {
+  display: block;
+  width: fit-content;
+  margin: 0 auto 1.5rem;
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.add-new:hover {
+  background-color: #0056b3;
+}
+
+.companies-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  justify-content: center;
+}
+
+.company-card {
+  padding: 1.5rem;
+  background-color: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: auto;
+  overflow: hidden;
+}
+
+.company-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.company-card h3 {
+  margin-top: 0;
+  color: #007bff;
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+}
+
+.company-card p {
+  margin: 0.25rem 0;
+  color: #495057;
+}
+
+.actions {
+  margin-top: 1rem;
+  display: flex;
+  gap: 10px;
+}
+
+.actions button {
+  flex-grow: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s;
+}
+
+.actions .edit {
+  background-color: #28a745;
+  color: #fff;
+}
+
+.actions .delete {
+  background-color: #dc3545;
+  color: #fff;
+}
+
+.actions .view-details {
+  background-color: #6c757d;
+  color: #fff;
+}
+
+.actions button:hover {
+  opacity: 0.9;
+}
+
+/* ფილტრების სტილები */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 1.5rem;
+  justify-content: center;
+  align-items: center;
+}
+
+.filters input,
+.filters select,
+.filters button {
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 5px;
+  font-size: 0.9rem;
+}
+
+.filters button {
+  background-color: #007bff;
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.filters button:hover {
+  background-color: #0056b3;
+}
+
+/* დეტალური ხედვის კონტეინერი */
+.company-details-container {
+  width: 100%;
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  text-align: left;
+}
+
+.company-details-container h2 {
+  text-align: center;
+  color: #343a40;
+  margin-bottom: 1.5rem;
+}
+
+.company-details-container p {
+  margin-bottom: 0.75rem;
+  line-height: 1.6;
+}
+
+.company-details-container p strong {
+  color: #343a40;
+}
+
+.company-details-container a {
+  color: #007bff;
+  text-decoration: none;
+}
+
+.company-details-container a:hover {
+  text-decoration: underline;
+}
+
+.company-details-container .meta-info {
+  font-size: 0.85rem;
+  color: #6c757d;
+  margin-top: 1rem;
+  text-align: right;
+}
+
+.company-details-container .back-btn {
+  display: block;
+  width: fit-content;
+  margin: 2rem auto 0;
+  background-color: #6c757d;
+  color: #fff;
+}
+
+.company-details-container .back-btn:hover {
+  background-color: #5a6268;
+}
