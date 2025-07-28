@@ -72,7 +72,7 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
           />
         </div>
         <div className="form-group">
-          <label>კომენტარი</label>
+          <label>მოკლე განმარტება</label>
           <input
             type="text"
             value={comment}
@@ -81,7 +81,7 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
           />
         </div>
         <div className="form-group">
-          <label>მენეჯერი</label>
+          <label>გამოფენის მენეჯერი</label>
           <input
             type="text"
             value={manager}
