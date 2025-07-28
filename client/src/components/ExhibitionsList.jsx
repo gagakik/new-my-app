@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'; // შეცვლილია '=>' 'from'-ით
+import React, { useState, useEffect, useCallback } from 'react'; // დავამატეთ useCallback
 import './ExhibitionsList.css';
 import ExhibitionForm from './ExhibitionForm'; // გამოფენის ფორმის იმპორტი
 
@@ -14,11 +14,19 @@ const ExhibitionsList = ({ showNotification, userRole }) => { // მივიღ
     userRole === 'sales' || 
     userRole === 'marketing';
 
-  const fetchExhibitions = async () => {
+  // fetchExhibitions ფუნქცია მოთავსებულია useCallback-ში
+  const fetchExhibitions = useCallback(async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/exhibitions');
+      const token = localStorage.getItem('token'); 
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+      const response = await fetch('/api/exhibitions', {
+        headers: headers
+      });
+
       if (!response.ok) {
-        throw new Error('მონაცემების მიღება ვერ მოხერხდა.');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'მონაცემების მიღება ვერ მოხერხდა.');
       }
       const data = await response.json();
       setExhibitions(data);
@@ -28,22 +36,27 @@ const ExhibitionsList = ({ showNotification, userRole }) => { // მივიღ
     } finally {
       setLoading(false);
     }
-  };
+  }, [showNotification]); // showNotification არის დამოკიდებულება
 
   useEffect(() => {
     fetchExhibitions();
-  }, []);
+  }, [fetchExhibitions]); // fetchExhibitions დაემატა დამოკიდებულებებში
 
   const handleDelete = async (id) => {
     const isConfirmed = window.confirm('ნამდვილად გსურთ ამ გამოფენის წაშლა?');
     if (!isConfirmed) return;
 
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        showNotification('ავტორიზაციის ტოკენი არ მოიძებნა. გთხოვთ, შეხვიდეთ სისტემაში.', 'error');
+        return;
+      }
 
-      const response = await fetch(`http://localhost:5000/api/exhibitions/${id}`, {
+      const response = await fetch(`/api/exhibitions/${id}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token}` // ტოკენის გაგზავნა
+          'Authorization': `Bearer ${token}`
         }
       });
 
@@ -65,8 +78,8 @@ const ExhibitionsList = ({ showNotification, userRole }) => { // მივიღ
   };
   
   const handleExhibitionUpdated = () => {
-      setEditingId(null); // რედაქტირების რეჟიმიდან გასვლა
-      fetchExhibitions(); // სიის განახლება
+      setEditingId(null);
+      fetchExhibitions();
   };
   
   if (loading) {
@@ -80,11 +93,11 @@ const ExhibitionsList = ({ showNotification, userRole }) => { // მივიღ
   return (
     <div className="exhibitions-container">
       <h2>გამოფენების სია</h2>
-      {isAuthorizedForManagement && ( // ღილაკი მხოლოდ უფლებამოსილი როლებისთვის
+      {isAuthorizedForManagement && (
         <button className="add-new" onClick={() => setEditingId(0)}>ახალი გამოფენის დამატება</button>
       )}
       
-      {editingId !== null && isAuthorizedForManagement && ( // ფორმაც მხოლოდ უფლებამოსილი როლებისთვის
+      {editingId !== null && isAuthorizedForManagement && (
          <ExhibitionForm 
             exhibitionToEdit={exhibitions.find(e => e.id === editingId)} 
             onExhibitionUpdated={handleExhibitionUpdated} 
@@ -101,7 +114,7 @@ const ExhibitionsList = ({ showNotification, userRole }) => { // მივიღ
               <h3>{exhibition.exhibition_name}</h3>
               <p><strong>კომენტარი:</strong> {exhibition.comment}</p>
               <p><strong>მენეჯერი:</strong> {exhibition.manager}</p>
-              {isAuthorizedForManagement && ( // ღილაკები მხოლოდ უფლებამოსილი როლებისთვის
+              {isAuthorizedForManagement && (
                 <div className="actions">
                   <button className="edit" onClick={() => handleEditClick(exhibition)}>რედაქტირება</button>
                   <button 

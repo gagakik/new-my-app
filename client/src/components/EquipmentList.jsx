@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'; // Fixed: '=>' changed to 'from'
+import React, { useState, useEffect, useCallback } from 'react'; // დავამატეთ useCallback
 import './EquipmentList.css';
 import EquipmentForm from './EquipmentForm';
 
@@ -12,9 +12,16 @@ const EquipmentList = ({ showNotification, userRole }) => {
     userRole === 'admin' || 
     userRole === 'operation';
 
-  const fetchEquipment = async () => {
+  // fetchEquipment ფუნქცია მოთავსებულია useCallback-ში
+  const fetchEquipment = useCallback(async () => {
     try {
-      const response = await fetch('/api/equipment');
+      const token = localStorage.getItem('token'); // ტოკენის აღება
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {}; // ჰედერების შექმნა
+
+      const response = await fetch('/api/equipment', { // შედარებითი მისამართი
+        headers: headers // ჰედერების გაგზავნა
+      });
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'აღჭურვილობის მიღება ვერ მოხერხდა.');
@@ -27,11 +34,11 @@ const EquipmentList = ({ showNotification, userRole }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showNotification]); // showNotification არის დამოკიდებულება
 
   useEffect(() => {
     fetchEquipment();
-  }, []);
+  }, [fetchEquipment]); // fetchEquipment დაემატა დამოკიდებულებებში
 
   const handleDelete = async (id) => {
     const isConfirmed = window.confirm('ნამდვილად გსურთ ამ აღჭურვილობის წაშლა?');
@@ -39,6 +46,10 @@ const EquipmentList = ({ showNotification, userRole }) => {
 
     try {
       const token = localStorage.getItem('token');
+      if (!token) { // შემოწმება, თუ ტოკენი არ არსებობს
+        showNotification('ავტორიზაციის ტოკენი არ მოიძებნა. გთხოვთ, შეხვიდეთ სისტემაში.', 'error');
+        return;
+      }
       const response = await fetch(`/api/equipment/${id}`, {
         method: 'DELETE',
         headers: {

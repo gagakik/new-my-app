@@ -1,0 +1,46 @@
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    role VARCHAR(50) DEFAULT 'user'
+);
+
+CREATE TABLE equipment (
+    id SERIAL PRIMARY KEY,
+    code_name VARCHAR(255) UNIQUE NOT NULL,
+    quantity INTEGER NOT NULL,
+    price DECIMAL(10, 2) NOT NULL,
+    description TEXT,
+    image_url VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL
+);
+
+
+
+CREATE TABLE exhibitions (
+    id SERIAL PRIMARY KEY,
+    exhibition_name VARCHAR(255) NOT NULL,
+    comment TEXT,
+    manager VARCHAR(255) NOT NULL
+);
+
+.env file
+
+DATABASE_URL="postgres://gaga:Sami4xuti@localhost:5432/my_app_db"
+
+
+JWT_SECRET=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.KMUFsIDTnFmyG3nMiGM6H9FNFUROf3wh7SmqJp-QV30
+
+
+db.js file 
+const { Pool } = require('pg');
+require('dotenv').config();
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
+module.exports = {
+  query: (text, params) => pool.query(text, params),
+};
