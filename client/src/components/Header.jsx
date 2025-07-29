@@ -1,4 +1,4 @@
-import React from 'react'; // useState და useEffect ამოღებულია
+import React from 'react';
 import './Header.css';
 
 const Header = ({ isLoggedIn, userRole, userName, onLogout, onViewChange }) => {
@@ -22,6 +22,9 @@ const Header = ({ isLoggedIn, userRole, userName, onLogout, onViewChange }) => {
             </button>
             <button onClick={() => onViewChange('companies')} className="nav-btn">
                 კომპანიები
+            </button>
+            <button onClick={() => onViewChange('spaces')} className="nav-btn"> {/* ახალი ღილაკი */}
+                სივრცეები
             </button>
             <button onClick={onLogout} className="logout-btn">
               გასვლა

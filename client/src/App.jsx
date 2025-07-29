@@ -6,6 +6,7 @@ import ExhibitionsList from './components/ExhibitionsList';
 import UserManagement from './components/UserManagement';
 import EquipmentList from './components/EquipmentList';
 import CompaniesList from './components/CompaniesList';
+import SpacesList from './components/SpacesList'; // ახალი იმპორტი
 import Notification from './components/Notification';
 import './index.css';
 
@@ -15,7 +16,7 @@ function App() {
   const [userName, setUserName] = useState(null);
   const [activeView, setActiveView] = useState('auth');
   const [notification, setNotification] = useState({ message: '', type: '' });
-  const [isAuthReady, setIsAuthReady] = useState(false); // ახალი სტეიტი: ავტორიზაციის სტატუსი დადგენილია თუ არა
+  const [isAuthReady, setIsAuthReady] = useState(false);
 
   const handleLoginSuccess = (role, token, userId, username) => {
     setIsLoggedIn(true);
@@ -70,7 +71,7 @@ function App() {
         setUserName(null);
         setActiveView('auth');
       }
-      setIsAuthReady(true); // ავტორიზაციის სტატუსი დადგენილია
+      setIsAuthReady(true);
     };
 
     checkAuthStatus();
@@ -78,7 +79,7 @@ function App() {
 
   const renderContent = () => {
     if (!isAuthReady) {
-      return <div>იტვირთება აპლიკაცია...</div>; // აჩვენეთ ჩატვირთვის შეტყობინება
+      return <div>იტვირთება აპლიკაცია...</div>;
     }
 
     if (!isLoggedIn) {
@@ -99,6 +100,10 @@ function App() {
 
     if (activeView === 'companies') {
         return <CompaniesList showNotification={showNotification} userRole={userRole} />;
+    }
+
+    if (activeView === 'spaces') { // ახალი view სივრცეებისთვის
+        return <SpacesList showNotification={showNotification} userRole={userRole} />;
     }
     
     return null;

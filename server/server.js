@@ -54,6 +54,16 @@ const authorizeCompanyManagement = (req, res, next) => {
     next();
 };
 
+
+// დამხმარე ფუნქცია როლის შემოწმებისთვის (კომპანიების მართვა)
+const authorizeSpaceManagement = (req, res, next) => {
+    const allowedRoles = ['admin', 'sales']; // მხოლოდ admin და sales
+    if (!req.user || !allowedRoles.includes(req.user.role)) {
+        return res.status(403).json({ error: 'წვდომა აკრძალულია: არ გაქვთ კომპანიების მართვის უფლება.' });
+    }
+    next();
+};
+
 // დამხმარე ფუნქცია როლის შემოწმებისთვის (აღჭურვილობის მართვა)
 const authorizeEquipmentManagement = (req, res, next) => {
     const allowedRoles = ['admin', 'operation'];
@@ -436,6 +446,80 @@ app.delete('/api/companies/:id', authenticateToken, authorizeCompanyManagement, 
     } catch (error) {
         console.error('შეცდომა კომპანიის წაშლისას:', error);
         res.status(500).json({ message: 'კომპანიის წაშლა ვერ მოხერხდა.', error: error.message });
+    }
+});
+
+// --- სივრცეების API ენდპოინტები ---
+
+// GET: ყველა სივრცის მიღება (ყველა ავტორიზებული მომხმარებლისთვის)
+app.get('/api/spaces', async (req, res) => {
+    try {
+        const result = await db.query('SELECT * FROM spaces ORDER BY id ASC');
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error('შეცდომა სივრცეების მიღებისას:', error);
+        res.status(500).json({ message: 'სივრცეების მიღება ვერ მოხერხდა.', error: error.message });
+    }
+});
+
+// POST: ახალი სივრცის დამატება (მხოლოდ admin, manager)
+app.post('/api/spaces', authenticateToken, authorizeSpaceManagement, async (req, res) => {
+    const { category, building_name, description, area_sqm } = req.body;
+    const created_by_user_id = req.user.id; // მომხმარებლის ID ტოკენიდან
+
+    try {
+        const result = await db.query(
+            'INSERT INTO spaces (category, building_name, description, area_sqm, created_by_user_id) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+            [category, building_name, description, area_sqm, created_by_user_id]
+        );
+        res.status(201).json({ message: 'სივრცე წარმატებით დაემატა.', space: result.rows[0] });
+    } catch (error) {
+        console.error('შეცდომა სივრცის დამატებისას:', error);
+        if (error.code === '23505') { // UNIQUE CONSTRAINT VIOLATION (თუ დაემატება)
+            return res.status(409).json({ message: 'სივრცე ამ კოდური სახელით უკვე არსებობს.' });
+        }
+        res.status(500).json({ message: 'სივრცის დამატება ვერ მოხერხდა.', error: error.message });
+    }
+});
+
+// PUT: სივრცის რედაქტირება ID-ის მიხედვით (მხოლოდ admin, manager)
+app.put('/api/spaces/:id', authenticateToken, authorizeSpaceManagement, async (req, res) => {
+    const { id } = req.params;
+    const { category, building_name, description, area_sqm } = req.body;
+    const updated_by_user_id = req.user.id; // მომხმარებლის ID ტოკენიდან
+
+    try {
+        const result = await db.query(
+            'UPDATE spaces SET category = $1, building_name = $2, description = $3, area_sqm = $4, updated_at = CURRENT_TIMESTAMP, updated_by_user_id = $5 WHERE id = $6 RETURNING *',
+            [category, building_name, description, area_sqm, updated_by_user_id, id]
+        );
+        if (result.rows.length > 0) {
+            res.status(200).json({ message: 'სივრცე წარმატებით განახლდა.', space: result.rows[0] });
+        } else {
+            res.status(404).json({ message: 'სივრცე ვერ მოიძებნა.' });
+        }
+    } catch (error) {
+        console.error('შეცდომა სივრცის განახლებისას:', error);
+        if (error.code === '23505') {
+            return res.status(409).json({ message: 'სივრცე ამ კოდური სახელით უკვე არსებობს.' });
+        }
+        res.status(500).json({ message: 'სივრცის განახლება ვერ მოხერხდა.', error: error.message });
+    }
+});
+
+// DELETE: სივრცის წაშლა ID-ის მიხედვით (მხოლოდ admin, manager)
+app.delete('/api/spaces/:id', authenticateToken, authorizeSpaceManagement, async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await db.query('DELETE FROM spaces WHERE id = $1 RETURNING *', [id]);
+        if (result.rows.length > 0) {
+            res.status(200).json({ message: 'სივრცე წარმატებით წაიშალა.' });
+        } else {
+            res.status(404).json({ message: 'სივრცე ვერ მოიძებნა.' });
+        }
+    } catch (error) {
+        console.error('შეცდომა სივრცის წაშლისას:', error);
+        res.status(500).json({ message: 'სივრცის წაშლა ვერ მოხერხდა.', error: error.message });
     }
 });
 

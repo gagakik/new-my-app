@@ -1,4 +1,4 @@
-.exhibitions-container {
+.spaces-container {
   width: 100%;
   max-width: 1200px;
   margin: 2rem auto;
@@ -8,13 +8,13 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.exhibitions-container h2 {
+.spaces-container h2 {
   text-align: center;
   color: #343a40;
   margin-bottom: 1.5rem;
 }
 
-.exhibitions-container p.no-exhibitions {
+.spaces-container p.no-spaces {
   text-align: center;
   color: #6c757d;
   font-style: italic;
@@ -37,25 +37,25 @@
   background-color: #0056b3;
 }
 
-/* გამოფენების ცხრილის სტილები */
-.exhibitions-table { /* შეცვლილია exhibitions-grid-დან */
+/* სივრცეების ცხრილის სტილები */
+.spaces-table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 1rem;
   background-color: #fff;
   border-radius: 8px;
-  overflow: hidden; /* აუცილებელია border-radius-ისთვის */
+  overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.exhibitions-table th,
-.exhibitions-table td {
+.spaces-table th,
+.spaces-table td {
   padding: 12px 15px;
   text-align: left;
   border-bottom: 1px solid #dee2e6;
 }
 
-.exhibitions-table th {
+.spaces-table th {
   background-color: #e9ecef;
   color: #495057;
   font-weight: bold;
@@ -63,37 +63,37 @@
   font-size: 0.85rem;
 }
 
-.exhibitions-table tbody tr:nth-child(even) {
+.spaces-table tbody tr:nth-child(even) {
   background-color: #f2f2f2;
 }
 
-.exhibitions-table tbody tr:hover {
+.spaces-table tbody tr:hover {
   background-color: #e2f0ff;
 }
 
-.exhibitions-table .actions {
+.spaces-table .actions {
   display: flex;
   gap: 8px;
   justify-content: flex-start;
 }
 
-.exhibitions-table .actions button {
+.spaces-table .actions button {
   padding: 6px 10px;
   font-size: 0.8rem;
   border-radius: 4px;
   white-space: nowrap;
 }
 
-.exhibitions-table .edit {
+.spaces-table .edit {
   background-color: #28a745;
   color: #fff;
 }
 
-.exhibitions-table .delete {
+.spaces-table .delete {
   background-color: #dc3545;
   color: #fff;
 }
 
-.exhibitions-table .actions button:hover {
+.spaces-table .actions button:hover {
   opacity: 0.9;
 }

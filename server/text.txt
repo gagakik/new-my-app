@@ -92,3 +92,32 @@ const pool = new Pool({
 module.exports = {
   query: (text, params) => pool.query(text, params),
 };
+
+
+psql -d my_app_db -U gaga
+```psql` კონსოლში (`my_app_db=>` ან მსგავსი), გაუშვით ეს ბრძანებები:
+
+```sql
+-- შექმენით ENUM ტიპი სივრცის კატეგორიებისთვის
+CREATE TYPE space_category AS ENUM (
+    'საოფისე',
+    'საგამოფენო',
+    'საპარკინგე',
+    'სასაწყობე',
+    'საწარმო',
+    'ივენთები',
+    'საკომფერენციო'
+);
+
+-- შექმენით spaces ცხრილი
+CREATE TABLE spaces (
+    id SERIAL PRIMARY KEY,
+    category space_category NOT NULL,
+    building_name VARCHAR(255) NOT NULL,
+    description TEXT,
+    area_sqm DECIMAL(10, 2), -- არ არის სავალდებულო
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL
+);

@@ -11,6 +11,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
   const [filterCountry, setFilterCountry] = useState('');
   const [filterProfile, setFilterProfile] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [filterIdentificationCode, setFilterIdentificationCode] = useState(''); // ახალი სტეიტი საიდენტიფიკაციო კოდისთვის
   const [selectedCompany, setSelectedCompany] = useState(null); // დეტალური ხედვისთვის
 
   // განსაზღვრეთ, აქვს თუ არა მომხმარებელს მართვის უფლება
@@ -28,6 +29,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
       if (filterCountry) url += `country=${filterCountry}&`;
       if (filterProfile) url += `profile=${filterProfile}&`;
       if (filterStatus) url += `status=${filterStatus}&`;
+      if (filterIdentificationCode) url += `identificationCode=${filterIdentificationCode}&`;
 
       const response = await fetch(url, { headers });
       if (!response.ok) {
@@ -42,7 +44,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, filterCountry, filterProfile, filterStatus, showNotification]);
+  }, [searchTerm, filterCountry, filterProfile, filterStatus, filterIdentificationCode, showNotification]);
 
   useEffect(() => {
     fetchCompanies();
@@ -170,6 +172,12 @@ const CompaniesList = ({ showNotification, userRole }) => {
           <option value="აქტიური">აქტიური</option>
           <option value="არქივი">არქივი</option>
         </select>
+        <input 
+          type="text" 
+          placeholder="საიდენტიფიკაციო კოდი..." 
+          value={filterIdentificationCode} 
+          onChange={(e) => setFilterIdentificationCode(e.target.value)} 
+        /> {/* ახალი ველი საიდენტიფიკაციო კოდისთვის */}
         <button onClick={fetchCompanies}>ფილტრი</button> {/* ფილტრის ღილაკი */}
       </div> {/* filters დასასრული */}
 
@@ -189,28 +197,42 @@ const CompaniesList = ({ showNotification, userRole }) => {
       {companies.length === 0 ? (
         <p className="no-companies">კომპანიები არ მოიძებნა.</p>
       ) : (
-        <div className="companies-grid">
-          {companies.map((company) => (
-            <div key={company.id} className="company-card">
-              <h3>{company.company_name}</h3>
-              <p><strong>პროფილი:</strong> {company.company_profile}</p>
-              <p><strong>სტატუსი:</strong> {company.status}</p>
-              <div className="actions">
-                <button className="view-details" onClick={() => handleViewDetails(company)}>დეტალები</button>
-                {isAuthorizedForManagement && (
-                  <>
-                    <button className="edit" onClick={() => handleEditClick(company)}>რედაქტირება</button>
-                    <button 
-                      className="delete" 
-                      onClick={() => handleDelete(company.id)}>
-                      წაშლა
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+        <table className="companies-table"> {/* შეცვლილია div-დან table-ზე */}
+          <thead>
+            <tr>
+              <th>კომპანია</th>
+              <th>ქვეყანა</th>
+              <th>პროფილი</th>
+              <th>სტატუსი</th>
+              <th>მოქმედებები</th>
+            </tr>
+          </thead>
+          <tbody>
+            {companies.map((company) => (
+              <tr key={company.id}>
+                <td>{company.company_name}</td>
+                <td>{company.country}</td>
+                <td>{company.company_profile}</td>
+                <td>{company.status}</td>
+                <td>
+                  <div className="actions">
+                    <button className="view-details" onClick={() => handleViewDetails(company)}>დეტალები</button>
+                    {isAuthorizedForManagement && (
+                      <>
+                        <button className="edit" onClick={() => handleEditClick(company)}>რედაქტირება</button>
+                        <button 
+                          className="delete" 
+                          onClick={() => handleDelete(company.id)}>
+                          წაშლა
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
     </div>
   );

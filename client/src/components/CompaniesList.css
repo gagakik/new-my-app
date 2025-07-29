@@ -108,7 +108,6 @@
 }
 
 .companies-table .actions button {
-  /* შეცვლილია: ამოღებულია flex-grow: 1; */
   padding: 6px 10px;
   font-size: 0.8rem;
   border-radius: 4px;
@@ -149,7 +148,7 @@
 .company-details-container h2 {
   text-align: center;
   color: #343a40;
-  margin-bottom: 1.2rem;
+  margin-bottom: 1.5rem;
 }
 
 .company-details-container p {
