@@ -311,6 +311,8 @@ app.delete('/api/equipment/:id', authenticateToken, authorizeEquipmentManagement
     }
 });
 
+// --- კომპანიების API ენდპოინტები ---
+
 // GET: ყველა კომპანიის მიღება (ფილტრაციით და ძიებით)
 app.get('/api/companies', authenticateToken, async (req, res) => { // დავამატეთ authenticateToken
     const { searchTerm, country, profile, status } = req.query;
@@ -354,8 +356,7 @@ app.get('/api/companies', authenticateToken, async (req, res) => { // დავ�
 app.post('/api/companies', authenticateToken, authorizeCompanyManagement, async (req, res) => {
     const { 
         company_name, country, company_profile, identification_code, legal_address,
-        contact_person1_name, contact_person1_phone, contact_person1_email,
-        contact_person2_name, contact_person2_phone, contact_person2_email,
+        contact_persons, // შეცვლილია: ახალი ველი JSONB-ისთვის
         website, comment, status
     } = req.body;
     const created_by_user_id = req.user.id; // მომხმარებლის ID ტოკენიდან
@@ -364,14 +365,12 @@ app.post('/api/companies', authenticateToken, authorizeCompanyManagement, async 
         const result = await db.query(
             `INSERT INTO companies (
                 company_name, country, company_profile, identification_code, legal_address,
-                contact_person1_name, contact_person1_phone, contact_person1_email,
-                contact_person2_name, contact_person2_phone, contact_person2_email,
+                contact_persons, 
                 website, comment, status, created_by_user_id
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING *`,
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
             [
                 company_name, country, company_profile, identification_code, legal_address,
-                contact_person1_name, contact_person1_phone, contact_person1_email,
-                contact_person2_name, contact_person2_phone, contact_person2_email,
+                JSON.stringify(contact_persons), // JSONB ველისთვის
                 website, comment, status, created_by_user_id
             ]
         );
@@ -390,8 +389,7 @@ app.put('/api/companies/:id', authenticateToken, authorizeCompanyManagement, asy
     const { id } = req.params;
     const { 
         company_name, country, company_profile, identification_code, legal_address,
-        contact_person1_name, contact_person1_phone, contact_person1_email,
-        contact_person2_name, contact_person2_phone, contact_person2_email,
+        contact_persons, // შეცვლილია: ახალი ველი JSONB-ისთვის
         website, comment, status
     } = req.body;
     const updated_by_user_id = req.user.id; // მომხმარებლის ID ტოკენიდან
@@ -400,15 +398,13 @@ app.put('/api/companies/:id', authenticateToken, authorizeCompanyManagement, asy
         const result = await db.query(
             `UPDATE companies SET 
                 company_name = $1, country = $2, company_profile = $3, identification_code = $4, legal_address = $5,
-                contact_person1_name = $6, contact_person1_phone = $7, contact_person1_email = $8,
-                contact_person2_name = $9, contact_person2_phone = $10, contact_person2_email = $11,
-                website = $12, comment = $13, status = $14, 
-                updated_at = CURRENT_TIMESTAMP, updated_by_user_id = $15
-            WHERE id = $16 RETURNING *`,
+                contact_persons = $6, 
+                website = $7, comment = $8, status = $9, 
+                updated_at = CURRENT_TIMESTAMP, updated_by_user_id = $10
+            WHERE id = $11 RETURNING *`,
             [
                 company_name, country, company_profile, identification_code, legal_address,
-                contact_person1_name, contact_person1_phone, contact_person1_email,
-                contact_person2_name, contact_person2_phone, contact_person2_email,
+                JSON.stringify(contact_persons), // JSONB ველისთვის
                 website, comment, status, updated_by_user_id, id
             ]
         );
@@ -441,6 +437,7 @@ app.delete('/api/companies/:id', authenticateToken, authorizeCompanyManagement, 
         res.status(500).json({ message: 'კომპანიის წაშლა ვერ მოხერხდა.', error: error.message });
     }
 });
+
 
 app.listen(PORT, () => {
   console.log(`სერვერი გაშვებულია http://localhost:${PORT}`);

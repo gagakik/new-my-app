@@ -106,10 +106,12 @@ const CompaniesList = ({ showNotification, userRole }) => {
         <p><strong>კომპანიის პროფილი:</strong> {selectedCompany.company_profile}</p>
         <p><strong>საიდენტიფიკაციო კოდი:</strong> {selectedCompany.identification_code}</p>
         <p><strong>იურიდიული მისამართი:</strong> {selectedCompany.legal_address}</p>
-        <p><strong>1. საკონტაქტო პირი:</strong> {selectedCompany.contact_person1_name} ({selectedCompany.contact_person1_phone}, {selectedCompany.contact_person1_email})</p>
-        {selectedCompany.contact_person2_name && (
-          <p><strong>2. საკონტაქტო პირი:</strong> {selectedCompany.contact_person2_name} ({selectedCompany.contact_person2_phone}, {selectedCompany.contact_person2_email})</p>
-        )}
+        {/* საკონტაქტო პირების გამოტანა */}
+        {selectedCompany.contact_persons && selectedCompany.contact_persons.map((person, index) => (
+          <div key={index}>
+            <p><strong>{index + 1}. საკონტაქტო პირი:</strong> {person.position ? `(${person.position}) ` : ''}{person.name} ({person.phone}, {person.email})</p>
+          </div>
+        ))}
         <p><strong>ვებგვერდი:</strong> <a href={`http://${selectedCompany.website}`} target="_blank" rel="noopener noreferrer">{selectedCompany.website}</a></p>
         <p><strong>კომენტარი:</strong> {selectedCompany.comment}</p>
         <p><strong>სტატუსი:</strong> {selectedCompany.status}</p>
@@ -139,7 +141,13 @@ const CompaniesList = ({ showNotification, userRole }) => {
           <option value="საქართველო">საქართველო</option>
           <option value="აშშ">აშშ</option>
           <option value="გერმანია">გერმანია</option>
-          {/* დაამატეთ სხვა ქვეყნები */}
+          <option value="საფრანგეთი">საფრანგეთი</option>
+          <option value="დიდი ბრიტანეთი">დიდი ბრიტანეთი</option>
+          <option value="იაპონია">იაპონია</option>
+          <option value="ჩინეთი">ჩინეთი</option>
+          <option value="ინდოეთი">ინდოეთი</option>
+          <option value="ბრაზილია">ბრაზილია</option>
+          <option value="კანადა">კანადა</option>
         </select>
         <input 
           type="text" 

@@ -62,3 +62,49 @@
 .cancel-btn:hover {
   background-color: #5a6268;
 }
+
+/* საკონტაქტო პირების სტილები */
+.contact-person-group {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  background-color: #f9f9f9;
+}
+
+.contact-person-group h5 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #007bff;
+}
+
+.add-contact-btn, .remove-contact-btn {
+  padding: 8px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s;
+  margin-top: 1rem;
+}
+
+.add-contact-btn {
+  background-color: #17a2b8;
+  color: #fff;
+  display: block; /* ღილაკი ცალკე ხაზზე */
+  margin: 1rem auto 0; /* ცენტრირება */
+}
+
+.add-contact-btn:hover {
+  background-color: #138496;
+}
+
+.remove-contact-btn {
+  background-color: #dc3545;
+  color: #fff;
+  display: block; /* ღილაკი ცალკე ხაზზე */
+  margin: 0.5rem auto 0; /* ცენტრირება */
+}
+
+.remove-contact-btn:hover {
+  background-color: #c82333;
+}

@@ -57,12 +57,10 @@ CREATE TABLE companies (
     company_profile TEXT,
     identification_code VARCHAR(50) UNIQUE NOT NULL,
     legal_address TEXT,
-    contact_person1_name VARCHAR(255),
-    contact_person1_phone VARCHAR(50),
-    contact_person1_email VARCHAR(100),
-    contact_person2_name VARCHAR(255),
-    contact_person2_phone VARCHAR(50),
-    contact_person2_email VARCHAR(100),
+    
+    -- საკონტაქტო პირები (JSONB ტიპი შეუზღუდავი რაოდენობისთვის)
+    contact_persons JSONB DEFAULT '[]'::jsonb, 
+    
     website VARCHAR(255),
     comment TEXT,
     status company_status DEFAULT 'აქტიური',
