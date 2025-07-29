@@ -8,11 +8,12 @@
   width: 100%;
   box-sizing: border-box;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15); /* დავამატოთ ჩრდილი */
+  border-radius: 8px;
 }
 
 .logo {
-  font-weight: 700;
-  font-size: 1.2rem; /* ლოგოს ზომა */
+  font-weight: 500;
+  font-size: 1rem; /* ლოგოს ზომა */
   color: #fff; /* ლოგოს თეთრი ფერი */
   text-decoration: none; /* ლოგო თუ ლინკია */
 }
@@ -37,13 +38,15 @@
   display: inline-block; /* თუ <a> ტეგებია */
   font-size: 0.8rem;
   margin-left: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* ჩრდილი hover-ზე */
+   transition: all 0.5s ease;
 }
 
 .nav-btn:hover,
 .logout-btn:hover {
   background-color: #333; /* ოდნავ ღია შავი hover-ზე */
   transform: translateY(-2px); /* ანიმაცია hover-ზე */
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* ჩრდილი hover-ზე */
+  
 }
 
 .user-info {

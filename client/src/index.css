@@ -48,6 +48,15 @@ button {
   font-family: inherit;
   cursor: pointer;
   transition: all 0.25s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* ჩრდილი hover-ზე */
+}
+
+button:hover {
+  opacity: 0.9;
+  background-color: #2c55a4;
+  transform: translateY(-2px); /* ანიმაცია hover-ზე */
+  transition: all 0.5s ease;
+  
 }
 
 /* დამატებითი სტილები ყველა კონტეინერისთვის */
@@ -90,9 +99,13 @@ button {
   max-width: 120px;
   background-color: rgb(0, 68, 95);
   color: #fff;
+  transition: all 0.5s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* ჩრდილი hover-ზე */
 }
 
 .actions button:hover {
   opacity: 0.9;
-  background-color: #212529;
+  background-color: #2c55a4;
+    transform: translateY(-2px); /* ანიმაცია hover-ზე */
+  
 }
