@@ -60,3 +60,39 @@ button {
   border-radius: 12px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
 }
+
+.actions .edit {
+  background-color: #28a745;
+  color: #fff;
+  font-weight: 400;
+  font-size: 0.8rem;
+  max-width: 120px;
+}
+
+.actions .delete {
+  background-color: #dc3545;
+  color: #fff;
+    font-weight: 400;
+  font-size: 0.8rem;
+  max-width: 120px;
+}
+
+.actions button {
+  flex-grow: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s;
+  font-weight: 400;
+  font-size: 0.8rem;
+  max-width: 120px;
+  background-color: rgb(0, 68, 95);
+  color: #fff;
+}
+
+.actions button:hover {
+  opacity: 0.9;
+  background-color: #212529;
+}
