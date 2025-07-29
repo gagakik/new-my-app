@@ -11,6 +11,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
   const [filterCountry, setFilterCountry] = useState('');
   const [filterProfile, setFilterProfile] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [filterIdentificationCode, setFilterIdentificationCode] = useState(''); // ახალი სტეიტი საიდენტიფიკაციო კოდისთვის
   const [selectedCompany, setSelectedCompany] = useState(null); // დეტალური ხედვისთვის
 
   // განსაზღვრეთ, აქვს თუ არა მომხმარებელს მართვის უფლება
@@ -28,6 +29,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
       if (filterCountry) url += `country=${filterCountry}&`;
       if (filterProfile) url += `profile=${filterProfile}&`;
       if (filterStatus) url += `status=${filterStatus}&`;
+      if (filterIdentificationCode) url += `identificationCode=${filterIdentificationCode}&`; // დავამატეთ საიდენტიფიკაციო კოდის ფილტრი
 
       const response = await fetch(url, { headers });
       if (!response.ok) {
@@ -42,7 +44,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, filterCountry, filterProfile, filterStatus, showNotification]);
+  }, [searchTerm, filterCountry, filterProfile, filterStatus, filterIdentificationCode, showNotification]); // დავამატეთ filterIdentificationCode დამოკიდებულებებში
 
   useEffect(() => {
     fetchCompanies();
@@ -106,12 +108,22 @@ const CompaniesList = ({ showNotification, userRole }) => {
         <p><strong>კომპანიის პროფილი:</strong> {selectedCompany.company_profile}</p>
         <p><strong>საიდენტიფიკაციო კოდი:</strong> {selectedCompany.identification_code}</p>
         <p><strong>იურიდიული მისამართი:</strong> {selectedCompany.legal_address}</p>
+        
         {/* საკონტაქტო პირების გამოტანა */}
-        {selectedCompany.contact_persons && selectedCompany.contact_persons.map((person, index) => (
-          <div key={index}>
-            <p><strong>{index + 1}. საკონტაქტო პირი:</strong> {person.position ? `(${person.position}) ` : ''}{person.name} ({person.phone}, {person.email})</p>
+        {selectedCompany.contact_persons && selectedCompany.contact_persons.length > 0 && (
+          <div>
+            <h4>საკონტაქტო პირები:</h4>
+            {selectedCompany.contact_persons.map((person, index) => (
+              <div key={index} className="contact-person-details-card">
+                <p><strong>პოზიცია:</strong> {person.position || 'არ არის მითითებული'}</p>
+                <p><strong>სახელი გვარი:</strong> {person.name || 'არ არის მითითებული'}</p>
+                <p><strong>ტელეფონი:</strong> {person.phone || 'არ არის მითითებული'}</p>
+                <p><strong>მეილი:</strong> {person.email || 'არ არის მითითებული'}</p>
+              </div>
+            ))}
           </div>
-        ))}
+        )}
+
         <p><strong>ვებგვერდი:</strong> <a href={`http://${selectedCompany.website}`} target="_blank" rel="noopener noreferrer">{selectedCompany.website}</a></p>
         <p><strong>კომენტარი:</strong> {selectedCompany.comment}</p>
         <p><strong>სტატუსი:</strong> {selectedCompany.status}</p>
@@ -160,6 +172,12 @@ const CompaniesList = ({ showNotification, userRole }) => {
           <option value="აქტიური">აქტიური</option>
           <option value="არქივი">არქივი</option>
         </select>
+        <input 
+          type="text" 
+          placeholder="საიდენტიფიკაციო კოდი..." 
+          value={filterIdentificationCode} 
+          onChange={(e) => setFilterIdentificationCode(e.target.value)} 
+        /> {/* ახალი ველი საიდენტიფიკაციო კოდისთვის */}
         <button onClick={fetchCompanies}>ფილტრი</button> {/* ფილტრის ღილაკი */}
       </div> {/* filters დასასრული */}
 
