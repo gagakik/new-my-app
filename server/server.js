@@ -54,7 +54,14 @@ const authorizeCompanyManagement = (req, res, next) => {
     next();
 };
 
-
+// დამხმარე ფუნქცია როლის შემოწმებისთვის (აღჭურვილობის მართვა)
+const authorizeEquipmentManagement = (req, res, next) => {
+    const allowedRoles = ['admin', 'operation'];
+    if (!req.user || !allowedRoles.includes(req.user.role)) {
+        return res.status(403).json({ error: 'წვდომა აკრძალულია: არ გაქვთ აღჭურვილობის მართვის უფლება.' });
+    }
+    next();
+};
 
 
 // API ენდპოინტი მომხმარებლის რეგისტრაციისთვის
@@ -226,14 +233,7 @@ app.delete('/api/exhibitions/:id', authenticateToken, authorizeCompanyManagement
 
 // --- აღჭურვილობის API ენდპოინტები ---
 
-// დამხმარე ფუნქცია როლის შემოწმებისთვის
-const authorizeEquipmentManagement = (req, res, next) => {
-    const allowedRoles = ['admin', 'operation'];
-    if (!req.user || !allowedRoles.includes(req.user.role)) {
-        return res.status(403).json({ error: 'წვდომა აკრძალულია: არ გაქვთ აღჭურვილობის მართვის უფლება.' });
-    }
-    next();
-};
+
 
 // GET: ყველა აღჭურვილობის მიღება (ყველა ავტორიზებული მომხმარებლისთვის)
 app.get('/api/equipment', async (req, res) => {
@@ -310,6 +310,7 @@ app.delete('/api/equipment/:id', authenticateToken, authorizeEquipmentManagement
         res.status(500).json({ message: 'აღჭურვილობის წაშლა ვერ მოხერხდა.', error: error.message });
     }
 });
+
 
 // --- კომპანიების API ენდპოინტები ---
 

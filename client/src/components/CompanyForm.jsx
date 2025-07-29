@@ -114,7 +114,7 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification /* user
           <label>ქვეყანა</label>
           <select value={country} onChange={(e) => setCountry(e.target.value)} required>
             <option value="">აირჩიეთ ქვეყანა</option>
-            <option value="Georgia">Georgia</option>
+            <option value="საქართველო">საქართველო</option> {/* შეცვლილია: "Georgia"-დან "საქართველო"-ზე */}
             <option value="აშშ">აშშ</option>
             <option value="გერმანია">გერმანია</option>
             <option value="საფრანგეთი">საფრანგეთი</option>
@@ -165,7 +165,7 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification /* user
           </div>
         ))}
         <button type="button" className="add-contact-btn" onClick={handleAddContactPerson}>
-          დამატება
+          კონტაქტის დამატება
         </button>
 
         <div className="form-group">
