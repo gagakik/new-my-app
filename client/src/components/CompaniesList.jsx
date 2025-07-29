@@ -11,7 +11,6 @@ const CompaniesList = ({ showNotification, userRole }) => {
   const [filterCountry, setFilterCountry] = useState('');
   const [filterProfile, setFilterProfile] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
-  const [filterIdentificationCode, setFilterIdentificationCode] = useState(''); // ახალი სტეიტი საიდენტიფიკაციო კოდისთვის
   const [selectedCompany, setSelectedCompany] = useState(null); // დეტალური ხედვისთვის
 
   // განსაზღვრეთ, აქვს თუ არა მომხმარებელს მართვის უფლება
@@ -29,7 +28,6 @@ const CompaniesList = ({ showNotification, userRole }) => {
       if (filterCountry) url += `country=${filterCountry}&`;
       if (filterProfile) url += `profile=${filterProfile}&`;
       if (filterStatus) url += `status=${filterStatus}&`;
-      if (filterIdentificationCode) url += `identificationCode=${filterIdentificationCode}&`; // დავამატეთ საიდენტიფიკაციო კოდის ფილტრი
 
       const response = await fetch(url, { headers });
       if (!response.ok) {
@@ -44,7 +42,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, filterCountry, filterProfile, filterStatus, filterIdentificationCode, showNotification]); // დავამატეთ filterIdentificationCode დამოკიდებულებებში
+  }, [searchTerm, filterCountry, filterProfile, filterStatus, showNotification]);
 
   useEffect(() => {
     fetchCompanies();
@@ -172,12 +170,6 @@ const CompaniesList = ({ showNotification, userRole }) => {
           <option value="აქტიური">აქტიური</option>
           <option value="არქივი">არქივი</option>
         </select>
-        <input 
-          type="text" 
-          placeholder="საიდენტიფიკაციო კოდი..." 
-          value={filterIdentificationCode} 
-          onChange={(e) => setFilterIdentificationCode(e.target.value)} 
-        /> {/* ახალი ველი საიდენტიფიკაციო კოდისთვის */}
         <button onClick={fetchCompanies}>ფილტრი</button> {/* ფილტრის ღილაკი */}
       </div> {/* filters დასასრული */}
 
