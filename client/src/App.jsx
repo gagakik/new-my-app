@@ -5,7 +5,7 @@ import AuthPage from './components/AuthPage';
 import ExhibitionsList from './components/ExhibitionsList';
 import UserManagement from './components/UserManagement';
 import EquipmentList from './components/EquipmentList';
-import CompaniesList from './components/CompaniesList'; // ახალი იმპორტი
+import CompaniesList from './components/CompaniesList';
 import Notification from './components/Notification';
 import './index.css';
 
@@ -15,6 +15,7 @@ function App() {
   const [userName, setUserName] = useState(null);
   const [activeView, setActiveView] = useState('auth');
   const [notification, setNotification] = useState({ message: '', type: '' });
+  const [isAuthReady, setIsAuthReady] = useState(false); // ახალი სტეიტი: ავტორიზაციის სტატუსი დადგენილია თუ არა
 
   const handleLoginSuccess = (role, token, userId, username) => {
     setIsLoggedIn(true);
@@ -24,7 +25,7 @@ function App() {
     localStorage.setItem('token', token);
     localStorage.setItem('userId', userId);
     localStorage.setItem('userName', username);
-    setActiveView('companies'); // ნაგულისხმევად ვაჩვენოთ კომპანიების გვერდი
+    setActiveView('companies'); 
     showNotification('შესვლა წარმატებით დასრულდა!', 'success');
   };
   
@@ -53,18 +54,33 @@ function App() {
   };
 
   useEffect(() => {
-    const storedRole = localStorage.getItem('userRole');
-    const storedToken = localStorage.getItem('token');
-    const storedUserName = localStorage.getItem('userName');
-    if (storedRole && storedToken) {
-      setIsLoggedIn(true);
-      setUserRole(storedRole);
-      setUserName(storedUserName);
-      setActiveView('companies'); // გვერდის განახლებისას კომპანიების გვერდი
-    }
+    const checkAuthStatus = () => {
+      const storedRole = localStorage.getItem('userRole');
+      const storedToken = localStorage.getItem('token');
+      const storedUserName = localStorage.getItem('userName');
+      
+      if (storedRole && storedToken) {
+        setIsLoggedIn(true);
+        setUserRole(storedRole);
+        setUserName(storedUserName);
+        setActiveView('companies'); 
+      } else {
+        setIsLoggedIn(false);
+        setUserRole(null);
+        setUserName(null);
+        setActiveView('auth');
+      }
+      setIsAuthReady(true); // ავტორიზაციის სტატუსი დადგენილია
+    };
+
+    checkAuthStatus();
   }, []);
 
   const renderContent = () => {
+    if (!isAuthReady) {
+      return <div>იტვირთება აპლიკაცია...</div>; // აჩვენეთ ჩატვირთვის შეტყობინება
+    }
+
     if (!isLoggedIn) {
       return <AuthPage onLoginSuccess={handleLoginSuccess} showNotification={showNotification} />;
     }
@@ -81,7 +97,7 @@ function App() {
         return <EquipmentList showNotification={showNotification} userRole={userRole} />;
     }
 
-    if (activeView === 'companies') { // ახალი view კომპანიებისთვის
+    if (activeView === 'companies') {
         return <CompaniesList showNotification={showNotification} userRole={userRole} />;
     }
     
