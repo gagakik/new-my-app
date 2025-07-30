@@ -81,6 +81,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-left: 10px;
 }
 
 .dropdown-btn:hover {
