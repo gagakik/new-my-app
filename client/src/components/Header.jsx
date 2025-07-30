@@ -44,15 +44,7 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
           <>
             <span className="user-info">როლი: {userRole} | მომხმარებელი: {userName}</span>
             
-            {/* Admin only user management button */}
-            {userRole === 'admin' && (
-              <button 
-                onClick={() => handleViewChange('users')} 
-                className={`nav-btn ${activeView === 'users' ? 'active' : ''}`}
-              >
-                მომხმარებლების მართვა
-              </button>
-            )}
+           
             
             {/* Dropdown Menu */}
             <div className={`dropdown ${dropdownOpen ? 'open' : ''}`} ref={dropdownRef}>
@@ -91,6 +83,15 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
             >
               სტატისტიკა
             </button>
+             {/* Admin only user management button */}
+            {userRole === 'admin' && (
+              <button 
+                onClick={() => handleViewChange('users')} 
+                className={`nav-btn ${activeView === 'users' ? 'active' : ''}`}
+              >
+                მომხმარებლების მართვა
+              </button>
+            )}
             <button onClick={onLogout} className="logout-btn">
               გასვლა
             </button>
