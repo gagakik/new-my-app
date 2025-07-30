@@ -4,5 +4,5 @@
   padding: 1rem;
   background-color: #333;
   color: #fff;
-  margin-top: auto; /* აიძულებს footer-ს იყოს ბოლოში */
+  margin-bottom:auto; /* აიძულებს footer-ს იყოს ბოლოში */
 }

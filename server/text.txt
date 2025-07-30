@@ -92,3 +92,153 @@ const pool = new Pool({
 module.exports = {
   query: (text, params) => pool.query(text, params),
 };
+
+
+psql -d my_app_db -U gaga
+```psql` კონსოლში (`my_app_db=>` ან მსგავსი), გაუშვით ეს ბრძანებები:
+
+```sql
+-- შექმენით ENUM ტიპი სივრცის კატეგორიებისთვის
+CREATE TYPE space_category AS ENUM (
+    'საოფისე',
+    'საგამოფენო',
+    'საპარკინგე',
+    'სასაწყობე',
+    'საწარმო',
+    'ივენთები',
+    'საკომფერენციო'
+);
+
+-- შექმენით spaces ცხრილი
+CREATE TABLE spaces (
+    id SERIAL PRIMARY KEY,
+    category space_category NOT NULL,
+    building_name VARCHAR(255) NOT NULL,
+    description TEXT,
+    area_sqm DECIMAL(10, 2), -- არ არის სავალდებულო
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL
+);
+
+
+const createTables = async () => {
+  try {
+    // Annual Services table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS annual_services (
+        id SERIAL PRIMARY KEY,
+        service_name VARCHAR(255) NOT NULL,
+        description TEXT,
+        price DECIMAL(10,2),
+        duration_hours INTEGER,
+        available_from DATE,
+        available_to DATE,
+        max_capacity INTEGER,
+        service_type VARCHAR(100) DEFAULT 'საფუძვლო',
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_by_user_id INTEGER REFERENCES users(id)
+      )
+    `);
+
+    // Bookings table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS bookings (
+        id SERIAL PRIMARY KEY,
+        service_id INTEGER REFERENCES annual_services(id),
+        exhibition_id INTEGER REFERENCES exhibitions(id),
+        company_id INTEGER REFERENCES companies(id),
+        booking_date DATE NOT NULL,
+        start_time TIME,
+        end_time TIME,
+        status VARCHAR(50) DEFAULT 'pending',
+        total_amount DECIMAL(10,2),
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_by_user_id INTEGER REFERENCES users(id)
+      )
+    `);
+
+    await pool.query(`
+    CREATE TABLE spaces (
+    id SERIAL PRIMARY KEY,
+    category space_category NOT NULL,
+    building_name VARCHAR(255) NOT NULL,
+    description TEXT,
+    area_sqm DECIMAL(10, 2), -- არ არის სავალდებულო
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL
+);
+`);
+    await pool.query(`
+CREATE TYPE space_category AS ENUM (
+    'საოფისე',
+    'საგამოფენო',
+    'საპარკინგე',
+    'სასაწყობე',
+    'საწარმო',
+    'ივენთები',
+    'საკომფერენციო'
+);
+`);
+
+    // Statistics table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS statistics (
+        id SERIAL PRIMARY KEY,
+        exhibition_id INTEGER REFERENCES exhibitions(id),
+        metric_name VARCHAR(255) NOT NULL,
+        metric_value DECIMAL(15,2),
+        metric_date DATE DEFAULT CURRENT_DATE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Company-Exhibition junction table (კომპანია-გამოფენის კავშირი)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS company_exhibitions (
+        id SERIAL PRIMARY KEY,
+        company_id INTEGER REFERENCES companies(id) ON DELETE CASCADE,
+        exhibition_id INTEGER REFERENCES exhibitions(id) ON DELETE CASCADE,
+        participation_status VARCHAR(50) DEFAULT 'მონაწილე',
+        booth_number VARCHAR(50),
+        booth_size DECIMAL(10,2),
+        registration_date DATE DEFAULT CURRENT_DATE,
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(company_id, exhibition_id)
+      )
+    `);
+
+    console.log('Database tables created successfully');
+  } catch (error) {
+    console.error('Error creating tables:', error);
+  }
+};
+
+// Initialize tables
+createTables();
+
+
+
+ჩავასწოროთ ბაზა და კოდიც - ახალი სერვისის დამატება
+
+ველების ჩამონათვალი:
+
+1. სერვისის სახელი
+2. აღწერა
+3. წელის არჩევა (არქივის ფუნქციას რომ დავამატებთ მერე დაგვჭირდება ფილტრისთვის)
+4. სერვისების სიიდან არჩევის უფლება (უნდა შემეძლოს სივცეების მონიშვნა რამდენიც დამჭირდება)
+5. თარიღის მითითება : დაწყების და დასრულების
+6. სერვისის სტატუსის მინიჭება: გამოფენა, კომფერენცია, გაქირავება, ივენთი.
+
+მუშაობის ლოგიკა: როდესაც დასრულების თარიღის მეორე დღეს უნდა შემეძლოს არქივში შენახვის უფლება თავის მონაწილეებით და მონაცემებით, 
+როდესაც ბუკინგში შეყვანილი მონაცემებში მიუთითებ კონკრეტულ სერვის შემდეგ ამსერვიში რო შევალ იქ უნდა მიჩანდეს ბუკინგით დამატებული მონაწილეები, ასევე უნდა შემეძლოს მანდვე კომპანისს დეტალების ნახვა რედაქტირება,
+
+ჯერ ეს გავიაროთ და მერე კიდე დავხვეწოთ დეტალები.

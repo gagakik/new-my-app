@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'; // დავამატეთ useCallback
+import React, { useState, useEffect, useCallback } from 'react';
 import './ExhibitionsList.css';
 import ExhibitionForm from './ExhibitionForm'; // გამოფენის ფორმის იმპორტი
 
@@ -36,11 +36,11 @@ const ExhibitionsList = ({ showNotification, userRole }) => { // მივიღ
     } finally {
       setLoading(false);
     }
-  }, [showNotification]); // showNotification არის დამოკიდებულება
+  }, [showNotification]);
 
   useEffect(() => {
     fetchExhibitions();
-  }, [fetchExhibitions]); // fetchExhibitions დაემატა დამოკიდებულებებში
+  }, [fetchExhibitions]);
 
   const handleDelete = async (id) => {
     const isConfirmed = window.confirm('ნამდვილად გსურთ ამ გამოფენის წაშლა?');
@@ -78,8 +78,8 @@ const ExhibitionsList = ({ showNotification, userRole }) => { // მივიღ
   };
   
   const handleExhibitionUpdated = () => {
-      setEditingId(null);
-      fetchExhibitions();
+      setEditingId(null); // რედაქტირების რეჟიმიდან გასვლა
+      fetchExhibitions(); // სიის განახლება
   };
   
   if (loading) {
@@ -93,11 +93,11 @@ const ExhibitionsList = ({ showNotification, userRole }) => { // მივიღ
   return (
     <div className="exhibitions-container">
       <h2>გამოფენების სია</h2>
-      {isAuthorizedForManagement && (
+      {isAuthorizedForManagement && ( // ღილაკი მხოლოდ უფლებამოსილი როლებისთვის
         <button className="add-new" onClick={() => setEditingId(0)}>ახალი გამოფენის დამატება</button>
       )}
       
-      {editingId !== null && isAuthorizedForManagement && (
+      {editingId !== null && isAuthorizedForManagement && ( // ფორმაც მხოლოდ უფლებამოსილი როლებისთვის
          <ExhibitionForm 
             exhibitionToEdit={exhibitions.find(e => e.id === editingId)} 
             onExhibitionUpdated={handleExhibitionUpdated} 
@@ -108,25 +108,37 @@ const ExhibitionsList = ({ showNotification, userRole }) => { // მივიღ
       {exhibitions.length === 0 ? (
         <p className="no-exhibitions">გამოფენები არ მოიძებნა.</p>
       ) : (
-        <div className="exhibitions-grid">
-          {exhibitions.map((exhibition) => (
-            <div key={exhibition.id} className="exhibition-card">
-              <h3>{exhibition.exhibition_name}</h3>
-              <p><strong>კომენტარი:</strong> {exhibition.comment}</p>
-              <p><strong>მენეჯერი:</strong> {exhibition.manager}</p>
-              {isAuthorizedForManagement && (
-                <div className="actions">
-                  <button className="edit" onClick={() => handleEditClick(exhibition)}>რედაქტირება</button>
-                  <button 
-                    className="delete" 
-                    onClick={() => handleDelete(exhibition.id)}>
-                    წაშლა
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+        <table className="exhibitions-table"> {/* შეცვლილია ul-დან table-ზე */}
+          <thead>
+            <tr>
+              <th>გამოფენის სახელი</th>
+              <th>კომენტარი</th>
+              <th>მენეჯერი</th>
+              {isAuthorizedForManagement && <th>მოქმედებები</th>} {/* მოქმედებები მხოლოდ უფლებამოსილი როლებისთვის */}
+            </tr>
+          </thead>
+          <tbody>
+            {exhibitions.map((exhibition) => (
+              <tr key={exhibition.id}>
+                <td>{exhibition.exhibition_name}</td>
+                <td>{exhibition.comment}</td>
+                <td>{exhibition.manager}</td>
+                {isAuthorizedForManagement && (
+                  <td>
+                    <div className="actions">
+                      <button className="edit" onClick={() => handleEditClick(exhibition)}>რედაქტირება</button>
+                      <button 
+                        className="delete" 
+                        onClick={() => handleDelete(exhibition.id)}>
+                        წაშლა
+                      </button>
+                    </div>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
     </div>
   );

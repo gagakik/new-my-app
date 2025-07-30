@@ -11,7 +11,29 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification /* user
   const [website, setWebsite] = useState('');
   const [comment, setComment] = useState('');
   const [status, setStatus] = useState('აქტიური'); // დეფაულტად აქტიური
+  const [selectedExhibitions, setSelectedExhibitions] = useState([]); // ახალი სტეიტი გამოფენებისთვის
+  const [exhibitions, setExhibitions] = useState([]); // ყველა გამოფენის სია
   const isEditing = !!companyToEdit;
+
+  // გამოფენების ჩატვირთვა
+  useEffect(() => {
+    const fetchExhibitions = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/exhibitions', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setExhibitions(data);
+        }
+      } catch (error) {
+        console.error('გამოფენების ჩატვირთვის შეცდომა:', error);
+      }
+    };
+
+    fetchExhibitions();
+  }, []);
 
   useEffect(() => {
     if (isEditing && companyToEdit) {
@@ -24,6 +46,7 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification /* user
       setWebsite(companyToEdit.website || '');
       setComment(companyToEdit.comment || '');
       setStatus(companyToEdit.status || 'აქტიური');
+      setSelectedExhibitions(companyToEdit.exhibitions || []); // არსებული გამოფენები
     } else {
       setCompanyName('');
       setCountry('');
@@ -34,6 +57,7 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification /* user
       setWebsite('');
       setComment('');
       setStatus('აქტიური');
+      setSelectedExhibitions([]);
     }
   }, [companyToEdit, isEditing]);
 
@@ -53,6 +77,16 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification /* user
     setContactPersons(updatedPersons);
   };
 
+  const handleExhibitionToggle = (exhibitionId) => {
+    setSelectedExhibitions(prev => {
+      if (prev.includes(exhibitionId)) {
+        return prev.filter(id => id !== exhibitionId);
+      } else {
+        return [...prev, exhibitionId];
+      }
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -66,6 +100,7 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification /* user
       website,
       comment,
       status,
+      selected_exhibitions: selectedExhibitions, // გამოფენების IDs
     };
     
     const method = isEditing ? 'PUT' : 'POST';
@@ -114,7 +149,26 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification /* user
           <label>ქვეყანა</label>
           <select value={country} onChange={(e) => setCountry(e.target.value)} required>
             <option value="">აირჩიეთ ქვეყანა</option>
-            <option value="Georgia">Georgia</option>
+            <option value="საქართველო">საქართველო</option>
+            <option value="აშშ">აშშ</option>
+            <option value="გერმანია">გერმანია</option>
+            <option value="საფრანგეთი">საფრანგეთი</option>
+            <option value="დიდი ბრიტანეთი">დიდი ბრიტანეთი</option>
+            <option value="იტალია">იტალია</option>
+            <option value="ესპანეთი">ესპანეთი</option>
+            <option value="კანადა">კანადა</option>
+            <option value="ავსტრალია">ავსტრალია</option>
+            <option value="იაპონია">იაპონია</option>
+            <option value="ჩინეთი">ჩინეთი</option>
+            <option value="ბრაზილია">ბრაზილია</option>
+            <option value="მექსიკო">მექსიკო</option>
+            <option value="არგენტინა">არგენტინა</option>
+            <option value="ჩილე">ჩილე</option>
+            <option value="ინდოეთი">ინდოეთი</option>
+            <option value="თურქეთი">თურქეთი</option>
+            <option value="რუსეთი">რუსეთი</option>
+            <option value="უკრაინა">უკრაინა</option>
+            <option value="პოლონეთი">პოლონეთი</option>
             <option value="აშშ">აშშ</option>
             <option value="გერმანია">გერმანია</option>
             <option value="საფრანგეთი">საფრანგეთი</option>
@@ -165,7 +219,7 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification /* user
           </div>
         ))}
         <button type="button" className="add-contact-btn" onClick={handleAddContactPerson}>
-          დამატება
+          კონტაქტის დამატება
         </button>
 
         <div className="form-group">
@@ -182,6 +236,22 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification /* user
             <option value="აქტიური">აქტიური</option>
             <option value="არქივი">არქივი</option>
           </select>
+        </div>
+
+        <div className="form-group">
+          <label>მონაწილეობა გამოფენებში</label>
+          <div className="exhibitions-selection">
+            {exhibitions.map(exhibition => (
+              <label key={exhibition.id} className="exhibition-checkbox">
+                <input
+                  type="checkbox"
+                  checked={selectedExhibitions.includes(exhibition.id)}
+                  onChange={() => handleExhibitionToggle(exhibition.id)}
+                />
+                {exhibition.exhibition_name}
+              </label>
+            ))}
+          </div>
         </div>
         
         <button type="submit" className="submit-btn">

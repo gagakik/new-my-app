@@ -17,8 +17,12 @@ const Notification = ({ message, type, onClose }) => {
 
   return (
     <div className={`notification ${type}`}>
-      {message}
-      <button className="close-btn" onClick={onClose}>&times;</button>
+      <div className="notification-content">
+        {message}
+      </div>
+      <button className="close-btn" onClick={onClose} aria-label="დახურვა">
+        &times;
+      </button>
     </div>
   );
 };

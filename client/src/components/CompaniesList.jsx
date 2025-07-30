@@ -11,6 +11,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
   const [filterCountry, setFilterCountry] = useState('');
   const [filterProfile, setFilterProfile] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [filterIdentificationCode, setFilterIdentificationCode] = useState(''); // ახალი სტეიტი საიდენტიფიკაციო კოდისთვის
   const [selectedCompany, setSelectedCompany] = useState(null); // დეტალური ხედვისთვის
 
   // განსაზღვრეთ, აქვს თუ არა მომხმარებელს მართვის უფლება
@@ -28,6 +29,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
       if (filterCountry) url += `country=${filterCountry}&`;
       if (filterProfile) url += `profile=${filterProfile}&`;
       if (filterStatus) url += `status=${filterStatus}&`;
+      if (filterIdentificationCode) url += `identificationCode=${filterIdentificationCode}&`;
 
       const response = await fetch(url, { headers });
       if (!response.ok) {
@@ -42,7 +44,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, filterCountry, filterProfile, filterStatus, showNotification]);
+  }, [searchTerm, filterCountry, filterProfile, filterStatus, filterIdentificationCode, showNotification]);
 
   useEffect(() => {
     fetchCompanies();
@@ -106,12 +108,22 @@ const CompaniesList = ({ showNotification, userRole }) => {
         <p><strong>კომპანიის პროფილი:</strong> {selectedCompany.company_profile}</p>
         <p><strong>საიდენტიფიკაციო კოდი:</strong> {selectedCompany.identification_code}</p>
         <p><strong>იურიდიული მისამართი:</strong> {selectedCompany.legal_address}</p>
+
         {/* საკონტაქტო პირების გამოტანა */}
-        {selectedCompany.contact_persons && selectedCompany.contact_persons.map((person, index) => (
-          <div key={index}>
-            <p><strong>{index + 1}. საკონტაქტო პირი:</strong> {person.position ? `(${person.position}) ` : ''}{person.name} ({person.phone}, {person.email})</p>
+        {selectedCompany.contact_persons && selectedCompany.contact_persons.length > 0 && (
+          <div>
+            <h4>საკონტაქტო პირები:</h4>
+            {selectedCompany.contact_persons.map((person, index) => (
+              <div key={index} className="contact-person-details-card">
+                <p><strong>პოზიცია:</strong> {person.position || 'არ არის მითითებული'}</p>
+                <p><strong>სახელი გვარი:</strong> {person.name || 'არ არის მითითებული'}</p>
+                <p><strong>ტელეფონი:</strong> {person.phone || 'არ არის მითითებული'}</p>
+                <p><strong>მეილი:</strong> {person.email || 'არ არის მითითებული'}</p>
+              </div>
+            ))}
           </div>
-        ))}
+        )}
+
         <p><strong>ვებგვერდი:</strong> <a href={`http://${selectedCompany.website}`} target="_blank" rel="noopener noreferrer">{selectedCompany.website}</a></p>
         <p><strong>კომენტარი:</strong> {selectedCompany.comment}</p>
         <p><strong>სტატუსი:</strong> {selectedCompany.status}</p>
@@ -127,7 +139,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
   return (
     <div className="companies-container">
       <h2>კომპანიების სია</h2>
-      
+
       {/* ფილტრები და ძებნა */}
       <div className="filters">
         <input 
@@ -143,11 +155,21 @@ const CompaniesList = ({ showNotification, userRole }) => {
           <option value="გერმანია">გერმანია</option>
           <option value="საფრანგეთი">საფრანგეთი</option>
           <option value="დიდი ბრიტანეთი">დიდი ბრიტანეთი</option>
+          <option value="იტალია">იტალია</option>
+          <option value="ესპანეთი">ესპანეთი</option>
+          <option value="კანადა">კანადა</option>
+          <option value="ავსტრალია">ავსტრალია</option>
           <option value="იაპონია">იაპონია</option>
           <option value="ჩინეთი">ჩინეთი</option>
-          <option value="ინდოეთი">ინდოეთი</option>
           <option value="ბრაზილია">ბრაზილია</option>
-          <option value="კანადა">კანადა</option>
+          <option value="მექსიკო">მექსიკო</option>
+          <option value="არგენტინა">არგენტინა</option>
+          <option value="ჩილე">ჩილე</option>
+          <option value="ინდოეთი">ინდოეთი</option>
+          <option value="თურქეთი">თურქეთი</option>
+          <option value="რუსეთი">რუსეთი</option>
+          <option value="უკრაინა">უკრაინა</option>
+          <option value="პოლონეთი">პოლონეთი</option>
         </select>
         <input 
           type="text" 
@@ -160,6 +182,12 @@ const CompaniesList = ({ showNotification, userRole }) => {
           <option value="აქტიური">აქტიური</option>
           <option value="არქივი">არქივი</option>
         </select>
+        <input 
+          type="text" 
+          placeholder="საიდენტიფიკაციო კოდი..." 
+          value={filterIdentificationCode} 
+          onChange={(e) => setFilterIdentificationCode(e.target.value)} 
+        /> {/* ახალი ველი საიდენტიფიკაციო კოდისთვის */}
         <button onClick={fetchCompanies}>ფილტრი</button> {/* ფილტრის ღილაკი */}
       </div> {/* filters დასასრული */}
 
@@ -179,28 +207,42 @@ const CompaniesList = ({ showNotification, userRole }) => {
       {companies.length === 0 ? (
         <p className="no-companies">კომპანიები არ მოიძებნა.</p>
       ) : (
-        <div className="companies-grid">
-          {companies.map((company) => (
-            <div key={company.id} className="company-card">
-              <h3>{company.company_name}</h3>
-              <p><strong>პროფილი:</strong> {company.company_profile}</p>
-              <p><strong>სტატუსი:</strong> {company.status}</p>
-              <div className="actions">
-                <button className="view-details" onClick={() => handleViewDetails(company)}>დეტალები</button>
-                {isAuthorizedForManagement && (
-                  <>
-                    <button className="edit" onClick={() => handleEditClick(company)}>რედაქტირება</button>
-                    <button 
-                      className="delete" 
-                      onClick={() => handleDelete(company.id)}>
-                      წაშლა
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+        <table className="companies-table"> {/* შეცვლილია div-დან table-ზე */}
+          <thead>
+            <tr>
+              <th>კომპანია</th>
+              <th>ქვეყანა</th>
+              <th>პროფილი</th>
+              <th>სტატუსი</th>
+              <th>მოქმედებები</th>
+            </tr>
+          </thead>
+          <tbody>
+            {companies.map((company) => (
+              <tr key={company.id}>
+                <td>{company.company_name}</td>
+                <td>{company.country}</td>
+                <td>{company.company_profile}</td>
+                <td>{company.status}</td>
+                <td>
+                  <div className="actions">
+                    <button className="view-details" onClick={() => handleViewDetails(company)}>დეტალები</button>
+                    {isAuthorizedForManagement && (
+                      <>
+                        <button className="edit" onClick={() => handleEditClick(company)}>რედაქტირება</button>
+                        <button 
+                          className="delete" 
+                          onClick={() => handleDelete(company.id)}>
+                          წაშლა
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
     </div>
   );
