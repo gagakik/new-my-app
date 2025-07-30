@@ -108,11 +108,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
         <p><strong>კომპანიის პროფილი:</strong> {selectedCompany.company_profile}</p>
         <p><strong>საიდენტიფიკაციო კოდი:</strong> {selectedCompany.identification_code}</p>
         <p><strong>იურიდიული მისამართი:</strong> {selectedCompany.legal_address}</p>
-<<<<<<< HEAD
 
-=======
-        
->>>>>>> e8881a64810b628cdde938a6aa8d6d64c1684dd8
         {/* საკონტაქტო პირების გამოტანა */}
         {selectedCompany.contact_persons && selectedCompany.contact_persons.length > 0 && (
           <div>

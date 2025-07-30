@@ -149,7 +149,6 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification /* user
           <label>ქვეყანა</label>
           <select value={country} onChange={(e) => setCountry(e.target.value)} required>
             <option value="">აირჩიეთ ქვეყანა</option>
-<<<<<<< HEAD
             <option value="საქართველო">საქართველო</option>
             <option value="აშშ">აშშ</option>
             <option value="გერმანია">გერმანია</option>
@@ -170,9 +169,6 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification /* user
             <option value="რუსეთი">რუსეთი</option>
             <option value="უკრაინა">უკრაინა</option>
             <option value="პოლონეთი">პოლონეთი</option>
-=======
-            <option value="საქართველო">საქართველო</option> {/* შეცვლილია: "Georgia"-დან "საქართველო"-ზე */}
->>>>>>> e8881a64810b628cdde938a6aa8d6d64c1684dd8
             <option value="აშშ">აშშ</option>
             <option value="გერმანია">გერმანია</option>
             <option value="საფრანგეთი">საფრანგეთი</option>

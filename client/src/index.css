@@ -57,7 +57,6 @@ p {
 }
 
 button {
-<<<<<<< HEAD
   border-radius: 12px;
   border: none;
   padding: 0.8em 1.8em;
@@ -71,25 +70,6 @@ button {
   box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
   position: relative;
   overflow: hidden;
-=======
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.7em 1.5em;
-  font-size: 1em;
-  font-weight: 400;
-  font-family: inherit;
-  cursor: pointer;
-  transition: all 0.25s ease;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* ჩრდილი hover-ზე */
-}
-
-button:hover {
-  opacity: 0.9;
-  background-color: #2c55a4;
-  transform: translateY(-2px); /* ანიმაცია hover-ზე */
-  transition: all 0.5s ease;
-  
->>>>>>> e8881a64810b628cdde938a6aa8d6d64c1684dd8
 }
 
 button::before {
@@ -173,7 +153,6 @@ table {
   border-spacing: 0;
   background: white;
   border-radius: 12px;
-<<<<<<< HEAD
   overflow: hidden;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
@@ -309,47 +288,3 @@ input:focus, textarea:focus, select:focus {
     padding: 0.75rem;
   }
 }
-=======
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-}
-
-.actions .edit {
-  background-color: #28a745;
-  color: #fff;
-  font-weight: 400;
-  font-size: 0.8rem;
-  max-width: 120px;
-}
-
-.actions .delete {
-  background-color: #dc3545;
-  color: #fff;
-    font-weight: 400;
-  font-size: 0.8rem;
-  max-width: 120px;
-}
-
-.actions button {
-  flex-grow: 1;
-  padding: 10px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: background-color 0.3s;
-  font-weight: 400;
-  font-size: 0.8rem;
-  max-width: 120px;
-  background-color: rgb(0, 68, 95);
-  color: #fff;
-  transition: all 0.5s ease;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* ჩრდილი hover-ზე */
-}
-
-.actions button:hover {
-  opacity: 0.9;
-  background-color: #2c55a4;
-    transform: translateY(-2px); /* ანიმაცია hover-ზე */
-  
-}
->>>>>>> e8881a64810b628cdde938a6aa8d6d64c1684dd8

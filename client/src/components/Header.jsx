@@ -1,9 +1,5 @@
-<<<<<<< HEAD
 
 import React, { useState, useRef, useEffect } from 'react';
-=======
-import React from 'react';
->>>>>>> e8881a64810b628cdde938a6aa8d6d64c1684dd8
 import './Header.css';
 
 const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewChange }) => {
@@ -94,9 +90,6 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
               className={`nav-btn ${activeView === 'statistics' ? 'active' : ''}`}
             >
               სტატისტიკა
-            </button>
-            <button onClick={() => onViewChange('spaces')} className="nav-btn"> {/* ახალი ღილაკი */}
-                სივრცეები
             </button>
             <button onClick={onLogout} className="logout-btn">
               გასვლა

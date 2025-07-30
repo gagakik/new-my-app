@@ -46,11 +46,7 @@
 .logout-btn:hover {
   background-color: #333; /* ოდნავ ღია შავი hover-ზე */
   transform: translateY(-2px); /* ანიმაცია hover-ზე */
-<<<<<<< HEAD
 
-=======
-  
->>>>>>> e8881a64810b628cdde938a6aa8d6d64c1684dd8
 }
 
 .user-info {
