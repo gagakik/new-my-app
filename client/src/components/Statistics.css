@@ -173,8 +173,8 @@
   color: #2d3748;
   margin-bottom: 2rem;
   padding-bottom: 1rem;
-  font-size: 1.75rem;
-  font-weight: 700;
+  font-size: 1.5rem;
+  font-weight: 500;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -235,6 +235,23 @@
   height: 2px;
   background: linear-gradient(90deg, #667eea, #764ba2);
 }
+
+.service-rank-item {
+  display: flex;
+  flex-direction: row;
+  max-width: 200px;
+  margin-top: 10px;
+  align-items: center;
+  gap: 1rem;
+  border-color: #2d3748;
+  border: 1px solid #4facfe;
+  padding: 1rem;
+  border-radius: 10px;
+  background: rgba(248, 250, 252, 0.8);
+  transition: all 0.3s ease;
+}
+
+.rank-number 
 
 .chart-table tbody tr {
   transition: all 0.3s ease;

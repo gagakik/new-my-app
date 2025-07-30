@@ -106,7 +106,7 @@ const Statistics = ({ showNotification, userRole }) => {
               <div className="service-info">
                 <div className="service-name">{service.service_name}</div>
                 <div className="service-stats">
-                  {service.booking_count} ჯავშანი • {formatCurrency(service.total_revenue)}
+                  {service.booking_count} ჯავშანი 
                 </div>
               </div>
             </div>
