@@ -35,8 +35,8 @@ const ServiceForm = ({ serviceToEdit, onServiceUpdated, showNotification }) => {
       setServiceName(serviceToEdit.service_name || '');
       setDescription(serviceToEdit.description || '');
       setYearSelection(serviceToEdit.year_selection || new Date().getFullYear());
-      setStartDate(serviceToEdit.start_date || '');
-      setEndDate(serviceToEdit.end_date || '');
+      setStartDate(serviceToEdit.start_date ? serviceToEdit.start_date.slice(0, 10) : '');
+      setEndDate(serviceToEdit.end_date ? serviceToEdit.end_date.slice(0, 10) : '');
       setServiceType(serviceToEdit.service_type || 'გამოფენა');
       setIsActive(serviceToEdit.is_active !== undefined ? serviceToEdit.is_active : true);
       setSelectedSpaces(serviceToEdit.selected_spaces || []);
