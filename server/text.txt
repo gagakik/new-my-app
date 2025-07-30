@@ -120,6 +120,7 @@ CREATE TABLE spaces (
     created_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL
+<<<<<<< HEAD
 );
 
 
@@ -242,3 +243,6 @@ createTables();
 როდესაც ბუკინგში შეყვანილი მონაცემებში მიუთითებ კონკრეტულ სერვის შემდეგ ამსერვიში რო შევალ იქ უნდა მიჩანდეს ბუკინგით დამატებული მონაწილეები, ასევე უნდა შემეძლოს მანდვე კომპანისს დეტალების ნახვა რედაქტირება,
 
 ჯერ ეს გავიაროთ და მერე კიდე დავხვეწოთ დეტალები.
+=======
+);
+>>>>>>> e8881a64810b628cdde938a6aa8d6d64c1684dd8

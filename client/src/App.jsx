@@ -6,10 +6,14 @@ import ExhibitionsList from './components/ExhibitionsList';
 import UserManagement from './components/UserManagement';
 import EquipmentList from './components/EquipmentList';
 import CompaniesList from './components/CompaniesList';
+<<<<<<< HEAD
 import SpacesList from './components/SpacesList';
 import ServicesList from './components/ServicesList';
 import BookingsList from './components/BookingsList';
 import Statistics from './components/Statistics';
+=======
+import SpacesList from './components/SpacesList'; // ახალი იმპორტი
+>>>>>>> e8881a64810b628cdde938a6aa8d6d64c1684dd8
 import Notification from './components/Notification';
 import './index.css';
 
@@ -105,6 +109,7 @@ function App() {
         return <CompaniesList showNotification={showNotification} userRole={userRole} />;
     }
 
+<<<<<<< HEAD
     if (activeView === 'spaces') {
         return <SpacesList showNotification={showNotification} userRole={userRole} />;
     }
@@ -120,6 +125,11 @@ function App() {
     if (activeView === 'statistics') {
         return <Statistics showNotification={showNotification} userRole={userRole} />;
     }
+=======
+    if (activeView === 'spaces') { // ახალი view სივრცეებისთვის
+        return <SpacesList showNotification={showNotification} userRole={userRole} />;
+    }
+>>>>>>> e8881a64810b628cdde938a6aa8d6d64c1684dd8
     
     return null;
   };

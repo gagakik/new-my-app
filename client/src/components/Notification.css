@@ -1,8 +1,11 @@
 
 .notification {
   position: fixed;
+  display: flex;
+  flex-direction: row;
   top: 20px;
   right: 20px;
+<<<<<<< HEAD
   padding: 16px 20px;
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
@@ -34,6 +37,15 @@
   filter: blur(20px);
   opacity: 0.3;
   z-index: -1;
+=======
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  color: #fff;
+  z-index: 1000;
+  animation: fadeIn 0.5s, fadeOut 0.5s 2.5s;
+  font-size: 0.8rem;
+>>>>>>> e8881a64810b628cdde938a6aa8d6d64c1684dd8
 }
 
 .notification.success {
@@ -82,6 +94,7 @@
 }
 
 .close-btn {
+<<<<<<< HEAD
   background: rgba(255, 255, 255, 0.2);
   border: none;
   color: #fff;
@@ -98,6 +111,19 @@
   backdrop-filter: blur(10px);
   min-width: 24px;
   min-height: 24px;
+=======
+  background-color: #dc3545;
+  border: none;
+  color: #fff;
+  font-size: 1.3rem;
+  cursor: pointer;
+  margin-left: 10px;
+  padding: 15px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items:center
+>>>>>>> e8881a64810b628cdde938a6aa8d6d64c1684dd8
 }
 
 .close-btn:hover {
