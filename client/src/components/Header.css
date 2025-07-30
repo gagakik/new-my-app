@@ -65,6 +65,7 @@
 
 /* Dropdown Menu Styles */
 .dropdown {
+  margin-left: 10px;
   position: relative;
   display: inline-block;
 }
