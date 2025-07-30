@@ -119,7 +119,7 @@ const BookingForm = ({ bookingToEdit, onBookingUpdated, showNotification }) => {
             <option value="">აირჩიეთ სერვისი</option>
             {services.map(service => (
               <option key={service.id} value={service.id}>
-                {service.service_name} - {parseFloat(service.price).toFixed(2)} ₾
+                {service.service_name}
               </option>
             ))}
           </select>

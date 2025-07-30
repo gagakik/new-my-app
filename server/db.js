@@ -1,13 +1,11 @@
 const { Pool } = require('pg');
-require('dotenv').config(); // .env ფაილის ჩასატვირთად
+require('dotenv').config();
 
 const pool = new Pool({
-  user: process.env.DB_USER,        // მომხმარებლის სახელი .env-დან
-  host: process.env.DB_HOST,        // ჰოსტი .env-დან (localhost)
-  database: process.env.DB_DATABASE, // ბაზის სახელი .env-დან
-  password: process.env.DB_PASSWORD, // პაროლი .env-დან
-  port: process.env.DB_PORT,        // პორტი .env-დან
+  connectionString: process.env.DATABASE_URL,
+  ssl: false, // ლოკალური PostgreSQL-ისთვის SSL გამორთული
 });
+
 
 // Create tables if they don't exist
 const createTables = async () => {
@@ -128,6 +126,19 @@ const createTables = async () => {
       )
     `);
 
+    // Remove price column if it exists
+    await pool.query(`
+      DO $$ 
+      BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'annual_services' AND column_name = 'price'
+        ) THEN
+          ALTER TABLE annual_services DROP COLUMN price;
+        END IF;
+      END $$;
+    `);
+
     // Add missing columns if they don't exist (for existing databases)
     await pool.query(`
       DO $$ 
@@ -183,12 +194,24 @@ const createTables = async () => {
         start_time TIME,
         end_time TIME,
         status VARCHAR(50) DEFAULT 'pending',
-        total_amount DECIMAL(10,2),
         notes TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         created_by_user_id INTEGER REFERENCES users(id)
       )
+    `);
+
+    // Remove total_amount column if it exists
+    await pool.query(`
+      DO $$ 
+      BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'bookings' AND column_name = 'total_amount'
+        ) THEN
+          ALTER TABLE bookings DROP COLUMN total_amount;
+        END IF;
+      END $$;
     `);
 
     // Statistics table
@@ -227,6 +250,7 @@ const createTables = async () => {
 
 // Initialize tables
 createTables();
+
 module.exports = {
   query: (text, params) => pool.query(text, params),
 };

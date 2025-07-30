@@ -275,7 +275,6 @@ const ServicesList = ({ showNotification, userRole }) => {
                     {selectedService.bookings.map(booking => (
                       <li key={booking.id}>
                         {booking.company_name} - {booking.status}
-                        {booking.total_amount && ` (${parseFloat(booking.total_amount).toFixed(2)} ₾)`}
                       </li>
                     ))}
                   </ul>

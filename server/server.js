@@ -589,8 +589,7 @@ app.get('/api/statistics', authenticateToken, async (req, res) => {
             SELECT 
                 (SELECT COUNT(*) FROM exhibitions) as total_exhibitions,
                 (SELECT COUNT(*) FROM companies) as total_companies,
-                (SELECT COUNT(*) FROM bookings) as total_bookings,
-                (SELECT COALESCE(SUM(total_amount), 0) FROM bookings WHERE status = 'confirmed') as total_revenue
+                (SELECT COUNT(*) FROM bookings) as total_bookings
         `;
         const overviewResult = await db.query(overviewQuery);
         
@@ -598,8 +597,7 @@ app.get('/api/statistics', authenticateToken, async (req, res) => {
         const monthlyQuery = `
             SELECT 
                 DATE_TRUNC('month', booking_date) as month,
-                COUNT(*) as booking_count,
-                COALESCE(SUM(total_amount), 0) as revenue
+                COUNT(*) as booking_count
             FROM bookings 
             WHERE booking_date >= CURRENT_DATE - INTERVAL '12 months'
             GROUP BY DATE_TRUNC('month', booking_date)
@@ -611,8 +609,7 @@ app.get('/api/statistics', authenticateToken, async (req, res) => {
         const topServicesQuery = `
             SELECT 
                 s.service_name,
-                COUNT(b.id) as booking_count,
-                COALESCE(SUM(b.total_amount), 0) as total_revenue
+                COUNT(b.id) as booking_count
             FROM annual_services s
             LEFT JOIN bookings b ON s.id = b.service_id
             GROUP BY s.id, s.service_name
@@ -674,7 +671,8 @@ app.get('/api/annual-services/:id/details', authenticateToken, async (req, res) 
 
         // სერვისის ჯავშნები
         const bookingsResult = await db.query(`
-            SELECT b.*, c.company_name, e.exhibition_name 
+            SELECT b.id, b.booking_date, b.start_time, b.end_time, b.status, b.notes,
+                   c.company_name, e.exhibition_name 
             FROM bookings b
             LEFT JOIN companies c ON b.company_id = c.id
             LEFT JOIN exhibitions e ON b.exhibition_id = e.id
@@ -858,13 +856,9 @@ app.post('/api/bookings', authenticateToken, async (req, res) => {
     const created_by_user_id = req.user.id;
 
     try {
-        // Calculate total amount based on service price
-        const serviceResult = await db.query('SELECT price FROM annual_services WHERE id = $1', [service_id]);
-        const total_amount = serviceResult.rows[0]?.price || 0;
-
         const result = await db.query(
-            'INSERT INTO bookings (service_id, exhibition_id, company_id, booking_date, start_time, end_time, total_amount, notes, created_by_user_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
-            [service_id, exhibition_id, company_id, booking_date, start_time, end_time, total_amount, notes, created_by_user_id]
+            'INSERT INTO bookings (service_id, exhibition_id, company_id, booking_date, start_time, end_time, notes, created_by_user_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+            [service_id, exhibition_id, company_id, booking_date, start_time, end_time, notes, created_by_user_id]
         );
         res.status(201).json({ message: 'ჯავშანი წარმატებით დაემატა.', booking: result.rows[0] });
     } catch (error) {
@@ -924,14 +918,12 @@ app.get('/api/statistics', authenticateToken, async (req, res) => {
         const totalExhibitions = await db.query('SELECT COUNT(*) FROM exhibitions');
         const totalCompanies = await db.query('SELECT COUNT(*) FROM companies');
         const totalBookings = await db.query('SELECT COUNT(*) FROM bookings');
-        const totalRevenue = await db.query('SELECT SUM(total_amount) FROM bookings WHERE status = $1', ['confirmed']);
 
         // Monthly bookings
         const monthlyBookings = await db.query(`
             SELECT 
                 DATE_TRUNC('month', booking_date) as month,
-                COUNT(*) as booking_count,
-                SUM(total_amount) as revenue
+                COUNT(*) as booking_count
             FROM bookings 
             WHERE booking_date >= CURRENT_DATE - INTERVAL '12 months'
             GROUP BY DATE_TRUNC('month', booking_date)
@@ -942,8 +934,7 @@ app.get('/api/statistics', authenticateToken, async (req, res) => {
         const topServices = await db.query(`
             SELECT 
                 s.service_name,
-                COUNT(b.id) as booking_count,
-                SUM(b.total_amount) as total_revenue
+                COUNT(b.id) as booking_count
             FROM annual_services s
             LEFT JOIN bookings b ON s.id = b.service_id
             GROUP BY s.id, s.service_name
@@ -955,8 +946,7 @@ app.get('/api/statistics', authenticateToken, async (req, res) => {
             overview: {
                 total_exhibitions: parseInt(totalExhibitions.rows[0].count),
                 total_companies: parseInt(totalCompanies.rows[0].count),
-                total_bookings: parseInt(totalBookings.rows[0].count),
-                total_revenue: parseFloat(totalRevenue.rows[0].sum || 0)
+                total_bookings: parseInt(totalBookings.rows[0].count)
             },
             monthly_bookings: monthlyBookings.rows,
             top_services: topServices.rows

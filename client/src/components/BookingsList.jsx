@@ -152,7 +152,6 @@ const BookingsList = ({ showNotification, userRole }) => {
               <th>კომპანია</th>
               <th>ჯავშნის თარიღი</th>
               <th>დრო</th>
-              <th>ღირებულება</th>
               <th>სტატუსი</th>
               {isAuthorizedForManagement && <th>მოქმედებები</th>}
             </tr>
@@ -165,7 +164,6 @@ const BookingsList = ({ showNotification, userRole }) => {
                 <td>{booking.company_name}</td>
                 <td>{formatDate(booking.booking_date)}</td>
                 <td>{formatTime(booking.start_time)} - {formatTime(booking.end_time)}</td>
-                <td>{parseFloat(booking.total_amount || 0).toFixed(2)} ₾</td>
                 <td>{getStatusBadge(booking.status)}</td>
                 {isAuthorizedForManagement && (
                   <td>

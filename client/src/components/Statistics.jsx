@@ -71,11 +71,7 @@ const Statistics = ({ showNotification, userRole }) => {
           <div className="stat-number">{statistics.overview.total_bookings}</div>
           <div className="stat-label">სულ ჯავშნები</div>
         </div>
-        <div className="stat-card revenue">
-          <div className="stat-number">{formatCurrency(statistics.overview.total_revenue)}</div>
-          <div className="stat-label">სულ შემოსავალი</div>
         </div>
-      </div>
 
       {/* Monthly Bookings Chart */}
       <div className="chart-section">
@@ -86,7 +82,6 @@ const Statistics = ({ showNotification, userRole }) => {
               <tr>
                 <th>თვე</th>
                 <th>ჯავშნების რაოდენობა</th>
-                <th>შემოსავალი</th>
               </tr>
             </thead>
             <tbody>
@@ -94,7 +89,6 @@ const Statistics = ({ showNotification, userRole }) => {
                 <tr key={index}>
                   <td>{formatDate(month.month)}</td>
                   <td>{month.booking_count}</td>
-                  <td>{formatCurrency(month.revenue)}</td>
                 </tr>
               ))}
             </tbody>
