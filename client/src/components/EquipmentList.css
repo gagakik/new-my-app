@@ -71,6 +71,16 @@
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
 }
 
+.equipment-image {
+  width: 100%;
+  max-width: 200px;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 4px;
+  margin: 10px 0;
+  border: 1px solid #ddd;
+}
+
 .equipment-card h3 { /* შეცვლილია exhibition-card-დან */
   margin-top: 0;
   color: #007bff;

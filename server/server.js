@@ -272,7 +272,7 @@ app.get('/api/equipment', async (req, res) => {
 // POST: ახალი აღჭურვილობის დამატება (მხოლოდ admin, operation)
 app.post('/api/equipment', authenticateToken, authorizeEquipmentManagement, upload.single('image'), async (req, res) => {
     const { code_name, quantity, price, description } = req.body;
-    const image_url = req.file ? `/uploads/${req.file.filename}` : null;
+    const image_url = req.file ? `http://0.0.0.0:${PORT}/uploads/${req.file.filename}` : null;
     const created_by_user_id = req.user.id; 
 
     try {
@@ -296,7 +296,7 @@ app.put('/api/equipment/:id', authenticateToken, authorizeEquipmentManagement, u
     const { code_name, quantity, price, description } = req.body;
     let image_url = req.body.image_url_existing || null;
     if (req.file) {
-        image_url = `/uploads/${req.file.filename}`;
+        image_url = `http://0.0.0.0:${PORT}/uploads/${req.file.filename}`;
     }
 
     try {

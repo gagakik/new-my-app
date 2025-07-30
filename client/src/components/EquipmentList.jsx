@@ -114,7 +114,15 @@ const EquipmentList = ({ showNotification, userRole }) => {
               <p><strong>ფასი:</strong> ${item.price}</p>
               <p><strong>აღწერა:</strong> {item.description}</p>
               {item.image_url && (
-                <img src={item.image_url} alt={item.code_name} className="equipment-image" /> 
+                <img 
+                  src={item.image_url} 
+                  alt={item.code_name} 
+                  className="equipment-image"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    console.log('სურათის ჩატვირთვის შეცდომა:', item.image_url);
+                  }}
+                /> 
               )}
               {item.created_at && (
                 <p className="created-info">დამატებულია: {new Date(item.created_at).toLocaleDateString()}</p>
