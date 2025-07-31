@@ -6,11 +6,13 @@ import SpacesList from './SpacesList';
 import UserManagement from './UserManagement';
 import ServicesList from './ServicesList';
 import BookingsList from './BookingsList';
+import EventsList from './EventsList'; // Added EventsList import
 
 import './MainContent.css';
 
 const MainContent = ({ showNotification, userRole }) => {
   const [activeSection, setActiveSection] = useState('dashboard');
+  const [activeComponent, setActiveComponent] = useState(null); // Initialize activeComponent state
 
   return (
     <div className="main-content">
@@ -81,7 +83,7 @@ const MainContent = ({ showNotification, userRole }) => {
             </button>
           )}
         </nav>
-        
+
         <div className="content-area">
           {activeSection === 'dashboard' && (
             <div className="dashboard">
@@ -115,6 +117,56 @@ const MainContent = ({ showNotification, userRole }) => {
           )}
           {activeSection === 'users' && userRole === 'admin' && (
             <UserManagement showNotification={showNotification} />
+          )}
+          {(userRole === 'admin' || userRole === 'sales' || userRole === 'marketing') && (
+            <div className="section">
+              <h3>Sales და Marketing</h3>
+              <button
+                onClick={() => setActiveComponent('exhibitions')}
+                className={activeComponent === 'exhibitions' ? 'active' : ''}
+              >
+                გამოფენები
+              </button>
+              <button
+                onClick={() => setActiveComponent('companies')}
+                className={activeComponent === 'companies' ? 'active' : ''}
+              >
+                კომპანიები
+              </button>
+              <button
+                onClick={() => setActiveComponent('services')}
+                className={activeComponent === 'services' ? 'active' : ''}
+              >
+                ყოველწლური სერვისები
+              </button>
+              <button
+                onClick={() => setActiveComponent('events')}
+                className={activeComponent === 'events' ? 'active' : ''}
+              >
+                ივენთები
+              </button>
+              <button
+                onClick={() => setActiveComponent('bookings')}
+                className={activeComponent === 'bookings' ? 'active' : ''}
+              >
+                ჯავშნები
+              </button>
+            </div>
+          )}
+          {activeComponent === 'exhibitions' && (
+            <ExhibitionsList showNotification={showNotification} userRole={userRole} />
+          )}
+          {activeComponent === 'companies' && (
+            <CompaniesList showNotification={showNotification} userRole={userRole} />
+          )}
+          {activeComponent === 'services' && (
+            <ServicesList showNotification={showNotification} userRole={userRole} />
+          )}
+          {activeComponent === 'events' && (
+            <EventsList showNotification={showNotification} userRole={userRole} />
+          )}
+          {activeComponent === 'bookings' && (
+            <BookingsList showNotification={showNotification} userRole={userRole} />
           )}
         </div>
     </div>
