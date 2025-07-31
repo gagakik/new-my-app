@@ -808,19 +808,23 @@ app.delete('/api/annual-services/:id', authenticateToken, async (req, res) => {
             });
         }
 
-        // თუ ჯავშნები არ არსებობს, მაშინ შეგვიძლია სერვისის წაშლა
+        // პირველ რიგში, წავშალოთ დაკავშირებული ჩანაწერები
+        await db.query('DELETE FROM service_spaces WHERE service_id = $1', [id]);
+        await db.query('DELETE FROM service_exhibitions WHERE service_id = $1', [id]);
+
+        // შემდეგ წავშალოთ თავად სერვისი
         const result = await db.query('DELETE FROM annual_services WHERE id = $1 RETURNING *', [id]);
         if (result.rows.length > 0) {
-            res.status(200).json({ message: 'სერვისი წარმატებით წაიშალა.' });
+            res.status(200).json({ message: 'ივენთი წარმატებით წაიშალა.' });
         } else {
-            res.status(404).json({ message: 'სერვისი ვერ მოიძებნა.' });
+            res.status(404).json({ message: 'ივენთი ვერ მოიძებნა.' });
         }
     } catch (error) {
-        console.error('შეცდომა სერვისის წაშლისას:', error);
+        console.error('შეცდომა ივენთის წაშლისას:', error);
         if (error.code === '23503') {
-            res.status(400).json({ message: 'სერვისის წაშლა შეუძლებელია. მასზე არსებობს დაკავშირებული ჯავშნები.' });
+            res.status(400).json({ message: 'ივენთის წაშლა შეუძლებელია. მასზე არსებობს დაკავშირებული ჯავშნები.' });
         } else {
-            res.status(500).json({ message: 'სერვისის წაშლა ვერ მოხერხდა.', error: error.message });
+            res.status(500).json({ message: 'ივენთის წაშლა ვერ მოხერხდა.', error: error.message });
         }
     }
 });
