@@ -54,26 +54,37 @@ const EventsList = ({ showNotification, userRole }) => {
         
         const data = await fallbackResponse.json();
         console.log('All services data:', data);
+        console.log('Available service types:', [...new Set(data.map(s => s.service_type))]);
         
-        // ფილტრაცია მხოლოდ ივენთ ტიპის სერვისებისთვის
-        console.log('Available services:', data.map(s => ({ id: s.id, name: s.service_name, type: s.service_type })));
+        // უფრო ფართო ფილტრაცია - ყველა სერვისი რომელიც შეიძლება ივენთი იყოს
+        const eventKeywords = [
+          'ივენთ', 'event', 
+          'ფესტივალ', 'festival', 
+          'კონფერენც', 'conference', 
+          'შოუ', 'show',
+          'გამოფენ', 'exhibition',
+          'ღონისძიებ', 'სემინარ', 'seminar',
+          'პრეზენტაც', 'presentation',
+          'ფორუმ', 'forum'
+        ];
         
-        const eventTypes = ['ივენთი', 'ფესტივალი', 'event', 'festival', 'კონფერენცია', 'conference', 'შოუ', 'show'];
         const filteredEvents = data.filter(service => {
           if (!service.service_type) return false;
           
           const serviceType = service.service_type.toLowerCase().trim();
-          return eventTypes.some(type => 
-            serviceType.includes(type.toLowerCase()) || 
-            serviceType === type.toLowerCase()
+          const serviceName = (service.service_name || '').toLowerCase().trim();
+          
+          return eventKeywords.some(keyword => 
+            serviceType.includes(keyword.toLowerCase()) || 
+            serviceName.includes(keyword.toLowerCase())
           );
         });
         
         console.log('Filtered events:', filteredEvents);
         
-        // თუ ფილტრაციის შემდეგ ცარიელია, ყველა სერვისი გამოვაჩინოთ 
+        // თუ ფილტრაციის შემდეგ ცარიელია, ყველა სერვისი გამოვაჩინოთ
         if (filteredEvents.length === 0) {
-          console.log('No events found after filtering, showing all services');
+          console.log('No events found after filtering, showing all services as potential events');
           setEvents(data);
         } else {
           setEvents(filteredEvents);
