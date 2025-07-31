@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import Header from './components/Header';
 import Footer from './components/Footer';
 import AuthPage from './components/AuthPage';
 import MainContent from './components/MainContent';
@@ -82,19 +81,16 @@ function App() {
       return <AuthPage onLoginSuccess={handleLoginSuccess} showNotification={showNotification} />;
     }
 
-    return <MainContent showNotification={showNotification} userRole={userRole} />;
+    return <MainContent 
+      showNotification={showNotification} 
+      userRole={userRole} 
+      userName={userName}
+      onLogout={handleLogout}
+    />;
   };
 
   return (
     <div className="App">
-      <Header 
-        isLoggedIn={isLoggedIn} 
-        userRole={userRole} 
-        userName={userName}
-        activeView={activeView}
-        onLogout={handleLogout} 
-        onViewChange={handleViewChange}
-      /> 
       <main>
         {renderContent()}
       </main>

@@ -11,13 +11,23 @@ import Statistics from './Statistics';
 
 import './MainContent.css';
 
-const MainContent = ({ showNotification, userRole }) => {
+const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [activeComponent, setActiveComponent] = useState(null); // Initialize activeComponent state
 
   return (
     <div className="main-content">
-      <nav className="main-nav">
+      <div className="user-header">
+        <div className="user-info">
+          <span>მომხმარებელი: {userName}</span>
+          <span className="user-role">({userRole})</span>
+        </div>
+        <button className="logout-btn" onClick={onLogout}>
+          გამოსვლა
+        </button>
+      </div>
+      <div className="main-layout">
+        <nav className="main-nav">
           <button 
             className={activeSection === 'dashboard' ? 'active' : ''} 
             onClick={() => setActiveSection('dashboard')}
@@ -130,6 +140,7 @@ const MainContent = ({ showNotification, userRole }) => {
             <UserManagement showNotification={showNotification} />
           )}
         </div>
+      </div>
     </div>
   );
 };

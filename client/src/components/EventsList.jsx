@@ -30,9 +30,12 @@ const EventsList = ({ showNotification, userRole }) => {
         throw new Error(errorData.message || 'მონაცემების მიღება ვერ მოხერხდა.');
       }
       const data = await response.json();
+      console.log('All services data:', data); // დამატებული console.log სატესტოდ
+      
       // ფილტრაცია მხოლოდ ივენთ ტიპის სერვისებისთვის
       const eventTypes = ['ივენთი', 'ფესტივალი'];
       const filteredEvents = data.filter(service => eventTypes.includes(service.service_type));
+      console.log('Filtered events:', filteredEvents); // დამატებული console.log სატესტოდ
       setEvents(filteredEvents);
     } catch (err) {
       setError(err.message);
