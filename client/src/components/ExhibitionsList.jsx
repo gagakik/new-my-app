@@ -18,13 +18,24 @@ const ExhibitionsList = ({ showNotification, userRole }) => { // მივიღ
   const fetchExhibitions = useCallback(async () => {
     try {
       const token = localStorage.getItem('token'); 
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+      if (!token) {
+        throw new Error('ავტორიზაცია საჭიროა გამოფენების ნახვისთვის');
+      }
+
+      const headers = { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
 
       const response = await fetch('/api/exhibitions', {
         headers: headers
       });
 
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error('არ გაქვთ ივენთების ნახვის უფლება');
+        }
         const errorData = await response.json();
         throw new Error(errorData.message || 'მონაცემების მიღება ვერ მოხერხდა.');
       }

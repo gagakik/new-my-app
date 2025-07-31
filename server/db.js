@@ -183,6 +183,17 @@ const createTables = async () => {
       )
     `);
 
+    // Service-Exhibition junction table (სერვისი-გამოფენის კავშირი)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS service_exhibitions (
+        id SERIAL PRIMARY KEY,
+        service_id INTEGER REFERENCES annual_services(id) ON DELETE CASCADE,
+        exhibition_id INTEGER REFERENCES exhibitions(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(service_id, exhibition_id)
+      )
+    `);
+
     // Bookings table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS bookings (
@@ -239,6 +250,28 @@ const createTables = async () => {
         notes TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(company_id, exhibition_id)
+      )
+    `);
+
+    // Event Participants table (ივენთის მონაწილეები)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS event_participants (
+        id SERIAL PRIMARY KEY,
+        event_id INTEGER REFERENCES annual_services(id) ON DELETE CASCADE,
+        company_id INTEGER REFERENCES companies(id) ON DELETE CASCADE,
+        registration_status VARCHAR(50) DEFAULT 'რეგისტრირებული',
+        registration_date DATE DEFAULT CURRENT_DATE,
+        booth_number VARCHAR(50),
+        booth_size DECIMAL(10,2),
+        notes TEXT,
+        payment_status VARCHAR(50) DEFAULT 'მომლოდინე',
+        contact_person VARCHAR(255),
+        contact_email VARCHAR(255),
+        contact_phone VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_by_user_id INTEGER REFERENCES users(id),
+        UNIQUE(event_id, company_id)
       )
     `);
 

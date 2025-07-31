@@ -15,8 +15,22 @@ const SpacesList = ({ showNotification, userRole }) => {
 
   const fetchSpaces = useCallback(async () => {
     try {
-      const response = await fetch('/api/spaces'); // API მოთხოვნა სივრცეებისთვის
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        throw new Error('ავტორიზაცია საჭიროა სივრცეების ნახვისთვის');
+      }
+
+      const headers = { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
+      const response = await fetch('/api/spaces', { headers }); // API მოთხოვნა სივრცეებისთვის
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error('არ გაქვთ სივრცეების ნახვის უფლება');
+        }
         const errorData = await response.json();
         throw new Error(errorData.message || 'სივრცეების მიღება ვერ მოხერხდა.');
       }

@@ -5,16 +5,28 @@ import EquipmentList from './EquipmentList';
 import SpacesList from './SpacesList';
 import UserManagement from './UserManagement';
 import ServicesList from './ServicesList';
-import BookingsList from './BookingsList';
+import EventsList from './EventsList';
 import Statistics from './Statistics';
+
 import './MainContent.css';
 
-const MainContent = ({ showNotification, userRole }) => {
+const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
   const [activeSection, setActiveSection] = useState('dashboard');
+  const [activeComponent, setActiveComponent] = useState(null); // Initialize activeComponent state
 
   return (
     <div className="main-content">
-      <nav className="main-nav">
+      <div className="user-header">
+        <div className="user-info">
+          <span>მომხმარებელი: {userName}</span>
+          <span className="user-role">({userRole})</span>
+        </div>
+        <button className="logout-btn" onClick={onLogout}>
+          გამოსვლა
+        </button>
+      </div>
+      <div className="main-layout">
+        <nav className="main-nav">
           <button 
             className={activeSection === 'dashboard' ? 'active' : ''} 
             onClick={() => setActiveSection('dashboard')}
@@ -58,11 +70,11 @@ const MainContent = ({ showNotification, userRole }) => {
             სერვისები
           </button>
           <button 
-            className={activeSection === 'bookings' ? 'active' : ''} 
-            onClick={() => setActiveSection('bookings')}
+            className={activeSection === 'events' ? 'active' : ''} 
+            onClick={() => setActiveSection('events')}
           >
-            <i className="icon-bookings"></i>
-            ჯავშნები
+            <i className="icon-events"></i>
+            ივენთები
           </button>
           <button 
             className={activeSection === 'statistics' ? 'active' : ''} 
@@ -81,7 +93,7 @@ const MainContent = ({ showNotification, userRole }) => {
             </button>
           )}
         </nav>
-        
+
         <div className="content-area">
           {activeSection === 'dashboard' && (
             <div className="dashboard">
@@ -107,8 +119,8 @@ const MainContent = ({ showNotification, userRole }) => {
           {activeSection === 'services' && (
             <ServicesList showNotification={showNotification} userRole={userRole} />
           )}
-          {activeSection === 'bookings' && (
-            <BookingsList showNotification={showNotification} userRole={userRole} />
+          {activeSection === 'events' && (
+            <EventsList showNotification={showNotification} userRole={userRole} />
           )}
           {activeSection === 'statistics' && (
             <Statistics showNotification={showNotification} userRole={userRole} />
@@ -117,6 +129,7 @@ const MainContent = ({ showNotification, userRole }) => {
             <UserManagement showNotification={showNotification} />
           )}
         </div>
+      </div>
     </div>
   );
 };

@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import './SpaceForm.css';
 
-const SpaceForm = ({ spaceToEdit, onSpaceUpdated, showNotification }) => {
+const SpaceForm = ({ spaceToEdit, onFormClose, onSpaceUpdated, showNotification }) => {
   const [category, setCategory] = useState('');
   const [buildingName, setBuildingName] = useState('');
   const [description, setDescription] = useState('');
   const [areaSqm, setAreaSqm] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const isEditing = !!spaceToEdit;
 
   useEffect(() => {
-    if (isEditing && spaceToEdit) {
+    if (spaceToEdit) {
       setCategory(spaceToEdit.category || '');
       setBuildingName(spaceToEdit.building_name || '');
       setDescription(spaceToEdit.description || '');
@@ -20,22 +22,18 @@ const SpaceForm = ({ spaceToEdit, onSpaceUpdated, showNotification }) => {
       setDescription('');
       setAreaSqm('');
     }
-  }, [spaceToEdit, isEditing]);
+  }, [spaceToEdit]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
     const spaceData = {
       category,
       building_name: buildingName,
       description,
-      area_sqm: areaSqm ? parseFloat(areaSqm) : null, // არასავალდებულო ველი
+      area_sqm: parseFloat(areaSqm) || 0
     };
-    
-    const method = isEditing ? 'PUT' : 'POST';
-    const url = isEditing
-      ? `/api/spaces/${spaceToEdit.id}`
-      : '/api/spaces';
 
     try {
       const token = localStorage.getItem('token');
@@ -44,25 +42,31 @@ const SpaceForm = ({ spaceToEdit, onSpaceUpdated, showNotification }) => {
         return;
       }
 
+      const url = isEditing ? `/api/spaces/${spaceToEdit.id}` : '/api/spaces';
+      const method = isEditing ? 'PUT' : 'POST';
+
       const response = await fetch(url, {
         method,
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(spaceData),
+        body: JSON.stringify(spaceData)
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'ოპერაცია ვერ შესრულდა');
-      }
-
       const data = await response.json();
-      showNotification(data.message, 'success');
-      onSpaceUpdated();
+
+      if (response.ok) {
+        showNotification(data.message, 'success');
+        onSpaceUpdated();
+        if (onFormClose) onFormClose();
+      } else {
+        throw new Error(data.message || 'შეცდომა მოხდა');
+      }
     } catch (error) {
       showNotification(`შეცდომა: ${error.message}`, 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -85,23 +89,38 @@ const SpaceForm = ({ spaceToEdit, onSpaceUpdated, showNotification }) => {
         </div>
         <div className="form-group">
           <label>შენობის დასახელება</label>
-          <input type="text" value={buildingName} onChange={(e) => setBuildingName(e.target.value)} required />
+          <input 
+            type="text" 
+            value={buildingName} 
+            onChange={(e) => setBuildingName(e.target.value)} 
+            required 
+          />
         </div>
         <div className="form-group">
-          <label>აღწერილობა</label>
-          <textarea value={description} onChange={(e) => setDescription(e.target.value)}></textarea>
+          <label>აღწერა</label>
+          <textarea 
+            value={description} 
+            onChange={(e) => setDescription(e.target.value)}
+            rows="3"
+          />
         </div>
         <div className="form-group">
-          <label>ფართობი (კვ.მ)</label>
-          <input type="number" step="0.01" value={areaSqm} onChange={(e) => setAreaSqm(e.target.value)} />
+          <label>ფართობი (კვ.მ.)</label>
+          <input 
+            type="number" 
+            step="0.01"
+            value={areaSqm} 
+            onChange={(e) => setAreaSqm(e.target.value)}
+          />
         </div>
-        
-        <button type="submit" className="submit-btn">
-          {isEditing ? 'განახლება' : 'დამატება'}
-        </button>
-        <button type="button" className="cancel-btn" onClick={onSpaceUpdated}>
-          გაუქმება
-        </button>
+        <div className="form-buttons">
+          <button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'მუშავდება...' : (isEditing ? 'განახლება' : 'დამატება')}
+          </button>
+          <button type="button" onClick={onFormClose}>
+            გაუქმება
+          </button>
+        </div>
       </form>
     </div>
   );

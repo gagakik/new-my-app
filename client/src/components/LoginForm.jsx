@@ -9,7 +9,7 @@ const LoginForm = ({ onLoginSuccess }) => {
     e.preventDefault();
 
     try {
-      const response = await fetch('http://localhost:5000/api/login', {
+      const response = await fetch('/api/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -20,13 +20,18 @@ const LoginForm = ({ onLoginSuccess }) => {
       const data = await response.json();
       
       if (response.ok) {
-        alert(data.message);
-        // აქ ვამოწმებთ, არსებობს თუ არა role.
-        // თუ არსებობს, გადავცემთ App.jsx-ს.
-        if (data.role) {
-            onLoginSuccess(data.role); 
+        // ტოკენისა და მომხმარებლის მონაცემების შენახვა
+        if (data.token && data.role && data.userId && data.username) {
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('userRole', data.role);
+            localStorage.setItem('userId', data.userId);
+            localStorage.setItem('userName', data.username);
+            
+            // გადავცემთ ყველა საჭირო პარამეტრი App.jsx-ს
+            onLoginSuccess(data.role, data.token, data.userId, data.username);
+            alert(data.message);
         } else {
-            alert('ავტორიზაცია ვერ მოხერხდა: როლი არ მოიძებნა.');
+            alert('ავტორიზაცია ვერ მოხერხდა: მონაცემები არასრულია.');
         }
       } else {
         alert(data.message);

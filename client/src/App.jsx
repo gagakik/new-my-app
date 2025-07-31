@@ -1,15 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import Header from './components/Header';
 import Footer from './components/Footer';
 import AuthPage from './components/AuthPage';
-import ExhibitionsList from './components/ExhibitionsList';
-import UserManagement from './components/UserManagement';
-import EquipmentList from './components/EquipmentList';
-import CompaniesList from './components/CompaniesList';
-import SpacesList from './components/SpacesList';
-import ServicesList from './components/ServicesList';
-import BookingsList from './components/BookingsList';
-import Statistics from './components/Statistics';
+import MainContent from './components/MainContent';
 import Notification from './components/Notification';
 import './index.css';
 
@@ -29,7 +21,7 @@ function App() {
     localStorage.setItem('token', token);
     localStorage.setItem('userId', userId);
     localStorage.setItem('userName', username);
-    setActiveView('companies'); 
+    setActiveView('main'); 
     showNotification('შესვლა წარმატებით დასრულდა!', 'success');
   };
   
@@ -67,7 +59,7 @@ function App() {
         setIsLoggedIn(true);
         setUserRole(storedRole);
         setUserName(storedUserName);
-        setActiveView('companies'); 
+        setActiveView('main'); 
       } else {
         setIsLoggedIn(false);
         setUserRole(null);
@@ -89,51 +81,16 @@ function App() {
       return <AuthPage onLoginSuccess={handleLoginSuccess} showNotification={showNotification} />;
     }
 
-    if (activeView === 'exhibitions') {
-      return <ExhibitionsList showNotification={showNotification} userRole={userRole} />;
-    }
-
-    if (activeView === 'users') {
-        return <UserManagement showNotification={showNotification} userRole={userRole} />;
-    }
-
-    if (activeView === 'equipment') {
-        return <EquipmentList showNotification={showNotification} userRole={userRole} />;
-    }
-
-    if (activeView === 'companies') {
-        return <CompaniesList showNotification={showNotification} userRole={userRole} />;
-    }
-
-    if (activeView === 'spaces') {
-        return <SpacesList showNotification={showNotification} userRole={userRole} />;
-    }
-
-    if (activeView === 'services') {
-        return <ServicesList showNotification={showNotification} userRole={userRole} />;
-    }
-
-    if (activeView === 'bookings') {
-        return <BookingsList showNotification={showNotification} userRole={userRole} />;
-    }
-
-    if (activeView === 'statistics') {
-        return <Statistics showNotification={showNotification} userRole={userRole} />;
-    }
-    
-    return null;
+    return <MainContent 
+      showNotification={showNotification} 
+      userRole={userRole} 
+      userName={userName}
+      onLogout={handleLogout}
+    />;
   };
 
   return (
     <div className="App">
-      <Header 
-        isLoggedIn={isLoggedIn} 
-        userRole={userRole} 
-        userName={userName}
-        activeView={activeView}
-        onLogout={handleLogout} 
-        onViewChange={handleViewChange}
-      /> 
       <main>
         {renderContent()}
       </main>

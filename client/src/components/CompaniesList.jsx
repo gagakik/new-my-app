@@ -22,19 +22,30 @@ const CompaniesList = ({ showNotification, userRole }) => {
   const fetchCompanies = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+      if (!token) {
+        throw new Error('ავტორიზაცია საჭიროა კომპანიების ნახვისთვის');
+      }
+
+      const headers = { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
 
       let url = '/api/companies?';
       if (searchTerm) url += `searchTerm=${searchTerm}&`;
       if (filterCountry) url += `country=${filterCountry}&`;
       if (filterProfile) url += `profile=${filterProfile}&`;
       if (filterStatus) url += `status=${filterStatus}&`;
-      if (filterIdentificationCode) url += `identificationCode=${filterIdentificationCode}&`;
+      if (filterIdentificationCode) url += `identification_code=${filterIdentificationCode}&`;
 
       const response = await fetch(url, { headers });
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error('არ გაქვთ კომპანიების ნახვის უფლება');
+        }
         const errorData = await response.json();
-        throw new Error(errorData.message || 'კომპანიების მიღება ვერ მოხერხდა.');
+        throw new Error(errorData.message || 'მონაცემების მიღება ვერ მოხერხდა.');
       }
       const data = await response.json();
       setCompanies(data);
@@ -207,42 +218,42 @@ const CompaniesList = ({ showNotification, userRole }) => {
       {companies.length === 0 ? (
         <p className="no-companies">კომპანიები არ მოიძებნა.</p>
       ) : (
-        <table className="companies-table"> {/* შეცვლილია div-დან table-ზე */}
-          <thead>
-            <tr>
-              <th>კომპანია</th>
-              <th>ქვეყანა</th>
-              <th>პროფილი</th>
-              <th>სტატუსი</th>
-              <th>მოქმედებები</th>
-            </tr>
-          </thead>
-          <tbody>
-            {companies.map((company) => (
-              <tr key={company.id}>
-                <td>{company.company_name}</td>
-                <td>{company.country}</td>
-                <td>{company.company_profile}</td>
-                <td>{company.status}</td>
-                <td>
-                  <div className="actions">
-                    <button className="view-details" onClick={() => handleViewDetails(company)}>დეტალები</button>
-                    {isAuthorizedForManagement && (
-                      <>
-                        <button className="edit" onClick={() => handleEditClick(company)}>რედაქტირება</button>
-                        <button 
-                          className="delete" 
-                          onClick={() => handleDelete(company.id)}>
-                          წაშლა
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <table className="companies-table">
+<thead>
+<tr>
+<th>კომპანია</th>
+<th>ქვეყანა</th>
+<th>პროფილი</th>
+<th>სტატუსი</th>
+<th>მოქმედებები</th>
+</tr>
+</thead>
+<tbody>
+{companies.map((company) => (
+<tr key={company.id}>
+<td>{company.company_name}</td>
+<td>{company.country}</td>
+<td>{company.company_profile}</td>
+<td>{company.status}</td>
+<td>
+<div className="actions">
+<button className="view-details" onClick={() => handleViewDetails(company)}>დეტალები</button>
+{isAuthorizedForManagement && (
+<>
+<button className="edit" onClick={() => handleEditClick(company)}>რედაქტირება</button>
+<button 
+className="delete" 
+onClick={() => handleDelete(company.id)}>
+წაშლა
+</button>
+</>
+)}
+</div>
+</td>
+</tr>
+))}
+</tbody>
+</table>
       )}
     </div>
   );

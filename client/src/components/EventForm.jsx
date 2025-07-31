@@ -1,55 +1,65 @@
-import React, { useState, useEffect } from 'react';
-import './ServiceForm.css';
 
-const ServiceForm = ({ serviceToEdit, onServiceUpdated, showNotification }) => {
+import React, { useState, useEffect } from 'react';
+import './EventForm.css';
+
+const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
   const [serviceName, setServiceName] = useState('');
   const [description, setDescription] = useState('');
   const [yearSelection, setYearSelection] = useState(new Date().getFullYear());
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [serviceType, setServiceType] = useState('გამოფენა');
-  const [isActive, setIsActive] = useState(true);
+  const [serviceType, setServiceType] = useState('ივენთი');
   const [selectedSpaces, setSelectedSpaces] = useState([]);
   const [availableSpaces, setAvailableSpaces] = useState([]);
-  const isEditing = !!serviceToEdit;
+  const [selectedExhibitions, setSelectedExhibitions] = useState([]);
+  const [availableExhibitions, setAvailableExhibitions] = useState([]);
+  const isEditing = !!eventToEdit;
 
-  // Fetch available spaces
+  // Fetch available spaces and exhibitions
   useEffect(() => {
-    const fetchSpaces = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch('/api/spaces');
-        if (response.ok) {
-          const spaces = await response.json();
+        // Fetch spaces
+        const spacesResponse = await fetch('/api/spaces');
+        if (spacesResponse.ok) {
+          const spaces = await spacesResponse.json();
           setAvailableSpaces(spaces);
         }
+
+        // Fetch exhibitions
+        const exhibitionsResponse = await fetch('/api/exhibitions');
+        if (exhibitionsResponse.ok) {
+          const exhibitions = await exhibitionsResponse.json();
+          setAvailableExhibitions(exhibitions);
+        }
       } catch (error) {
-        console.error('შეცდომა სივრცეების მიღებისას:', error);
+        console.error('შეცდომა მონაცემების მიღებისას:', error);
       }
     };
-    fetchSpaces();
+    fetchData();
   }, []);
 
   useEffect(() => {
-    if (isEditing && serviceToEdit) {
-      setServiceName(serviceToEdit.service_name || '');
-      setDescription(serviceToEdit.description || '');
-      setYearSelection(serviceToEdit.year_selection || new Date().getFullYear());
-      setStartDate(serviceToEdit.start_date ? serviceToEdit.start_date.slice(0, 10) : '');
-      setEndDate(serviceToEdit.end_date ? serviceToEdit.end_date.slice(0, 10) : '');
-      setServiceType(serviceToEdit.service_type || 'გამოფენა');
-      setIsActive(serviceToEdit.is_active !== undefined ? serviceToEdit.is_active : true);
-      setSelectedSpaces(serviceToEdit.selected_spaces || []);
+    if (isEditing && eventToEdit) {
+      setServiceName(eventToEdit.service_name || '');
+      setDescription(eventToEdit.description || '');
+      setYearSelection(eventToEdit.year_selection || new Date().getFullYear());
+      setStartDate(eventToEdit.start_date ? eventToEdit.start_date.slice(0, 10) : '');
+      setEndDate(eventToEdit.end_date ? eventToEdit.end_date.slice(0, 10) : '');
+      setServiceType(eventToEdit.service_type || 'ივენთი');
+      setSelectedSpaces(eventToEdit.selected_spaces || []);
+      setSelectedExhibitions(eventToEdit.selected_exhibitions || []);
     } else {
       setServiceName('');
       setDescription('');
       setYearSelection(new Date().getFullYear());
       setStartDate('');
       setEndDate('');
-      setServiceType('გამოფენა');
-      setIsActive(true);
+      setServiceType('ივენთი');
       setSelectedSpaces([]);
+      setSelectedExhibitions([]);
     }
-  }, [serviceToEdit, isEditing]);
+  }, [eventToEdit, isEditing]);
 
   const handleSpaceToggle = (spaceId) => {
     setSelectedSpaces(prev => 
@@ -59,6 +69,8 @@ const ServiceForm = ({ serviceToEdit, onServiceUpdated, showNotification }) => {
     );
   };
 
+  
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -67,20 +79,21 @@ const ServiceForm = ({ serviceToEdit, onServiceUpdated, showNotification }) => {
       return;
     }
 
-    const serviceData = {
+    const eventData = {
       service_name: serviceName,
       description,
       year_selection: parseInt(yearSelection),
       start_date: startDate,
       end_date: endDate,
       service_type: serviceType,
-      is_active: isActive,
+      is_active: true,
       selected_spaces: selectedSpaces,
+      selected_exhibitions: selectedExhibitions,
     };
 
     const method = isEditing ? 'PUT' : 'POST';
     const url = isEditing
-      ? `/api/annual-services/${serviceToEdit.id}`
+      ? `/api/annual-services/${eventToEdit.id}`
       : '/api/annual-services';
 
     try {
@@ -91,7 +104,7 @@ const ServiceForm = ({ serviceToEdit, onServiceUpdated, showNotification }) => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(serviceData),
+        body: JSON.stringify(eventData),
       });
 
       if (!response.ok) {
@@ -101,7 +114,7 @@ const ServiceForm = ({ serviceToEdit, onServiceUpdated, showNotification }) => {
 
       const data = await response.json();
       showNotification(data.message, 'success');
-      onServiceUpdated();
+      onEventUpdated();
     } catch (error) {
       showNotification(`შეცდომა: ${error.message}`, 'error');
     }
@@ -118,10 +131,10 @@ const ServiceForm = ({ serviceToEdit, onServiceUpdated, showNotification }) => {
 
   return (
     <div className="form-container">
-      <h3>{isEditing ? 'სერვისის რედაქტირება' : 'ახალი სერვისის დამატება'}</h3>
+      <h3>{isEditing ? 'ივენთის რედაქტირება' : 'ახალი ივენთის დამატება'}</h3>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label>სერვისის სახელი</label>
+          <label>ივენთის სახელი</label>
           <input 
             type="text"
             value={serviceName}
@@ -174,16 +187,32 @@ const ServiceForm = ({ serviceToEdit, onServiceUpdated, showNotification }) => {
         </div>
 
         <div className="form-group">
-          <label>სერვისის ტიპი</label>
+          <label>ივენთის ტიპი</label>
           <select 
             value={serviceType} 
             onChange={(e) => setServiceType(e.target.value)}
             required
           >
+            <option value="ივენთი">ივენთი</option>
             <option value="გამოფენა">გამოფენა</option>
             <option value="კონფერენცია">კონფერენცია</option>
             <option value="გაქირავება">გაქირავება</option>
-            <option value="ივენთი">ივენთი</option>
+            <option value="ფესტივალი">ფესტივალი</option>
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label>გამოფენის არჩევა</label>
+          <select 
+            value={selectedExhibitions.length > 0 ? selectedExhibitions[0] : ''}
+            onChange={(e) => setSelectedExhibitions(e.target.value ? [parseInt(e.target.value)] : [])}
+          >
+            <option value="">აირჩიეთ გამოფენა</option>
+            {availableExhibitions.map(exhibition => (
+              <option key={exhibition.id} value={exhibition.id}>
+                {exhibition.exhibition_name}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -203,22 +232,11 @@ const ServiceForm = ({ serviceToEdit, onServiceUpdated, showNotification }) => {
           </div>
         </div>
 
-        <div className="form-group">
-          <label>
-            <input
-              type="checkbox"
-              checked={isActive}
-              onChange={(e) => setIsActive(e.target.checked)}
-            />
-            აქტიური სერვისი
-          </label>
-        </div>
-
         <div className="form-actions">
           <button type="submit" className="submit-btn">
             {isEditing ? 'განახლება' : 'დამატება'}
           </button>
-          <button type="button" className="cancel-btn" onClick={onServiceUpdated}>
+          <button type="button" className="cancel-btn" onClick={onEventUpdated}>
             გაუქმება
           </button>
         </div>
@@ -227,4 +245,4 @@ const ServiceForm = ({ serviceToEdit, onServiceUpdated, showNotification }) => {
   );
 };
 
-export default ServiceForm;
+export default EventForm;
