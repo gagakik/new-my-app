@@ -5,8 +5,8 @@ import EquipmentList from './EquipmentList';
 import SpacesList from './SpacesList';
 import UserManagement from './UserManagement';
 import ServicesList from './ServicesList';
+import EventsList from './EventsList';
 import BookingsList from './BookingsList';
-import EventsList from './EventsList'; // Added EventsList import
 
 import './MainContent.css';
 
@@ -108,6 +108,9 @@ const MainContent = ({ showNotification, userRole }) => {
           )}
           {activeSection === 'services' && (
             <ServicesList showNotification={showNotification} userRole={userRole} />
+          )}
+          {activeSection === 'events' && (
+            <EventsList showNotification={showNotification} userRole={userRole} />
           )}
           {activeSection === 'bookings' && (
             <BookingsList showNotification={showNotification} userRole={userRole} />

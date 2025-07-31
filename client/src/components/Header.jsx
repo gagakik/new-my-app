@@ -45,7 +45,8 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
         icon: '💼',
         items: [
           { key: 'companies', label: 'კომპანიები', icon: '🏬' },
-          { key: 'spaces', label: 'სივრცეები', icon: '🏠' }
+          { key: 'spaces', label: 'სივრცეები', icon: '🏠' },
+          { key: 'events', label: 'ივენთები', icon: '🎪' }
         ]
       });
     }
