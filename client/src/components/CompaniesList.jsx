@@ -207,42 +207,42 @@ const CompaniesList = ({ showNotification, userRole }) => {
       {companies.length === 0 ? (
         <p className="no-companies">კომპანიები არ მოიძებნა.</p>
       ) : (
-        <table className="companies-table"> {/* შეცვლილია div-დან table-ზე */}
-          <thead>
-            <tr>
-              <th>კომპანია</th>
-              <th>ქვეყანა</th>
-              <th>პროფილი</th>
-              <th>სტატუსი</th>
-              <th>მოქმედებები</th>
-            </tr>
-          </thead>
-          <tbody>
-            {companies.map((company) => (
-              <tr key={company.id}>
-                <td>{company.company_name}</td>
-                <td>{company.country}</td>
-                <td>{company.company_profile}</td>
-                <td>{company.status}</td>
-                <td>
-                  <div className="actions">
-                    <button className="view-details" onClick={() => handleViewDetails(company)}>დეტალები</button>
-                    {isAuthorizedForManagement && (
-                      <>
-                        <button className="edit" onClick={() => handleEditClick(company)}>რედაქტირება</button>
-                        <button 
-                          className="delete" 
-                          onClick={() => handleDelete(company.id)}>
-                          წაშლა
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <table className="companies-table">
+<thead>
+<tr>
+<th>კომპანია</th>
+<th>ქვეყანა</th>
+<th>პროფილი</th>
+<th>სტატუსი</th>
+<th>მოქმედებები</th>
+</tr>
+</thead>
+<tbody>
+{companies.map((company) => (
+<tr key={company.id}>
+<td>{company.company_name}</td>
+<td>{company.country}</td>
+<td>{company.company_profile}</td>
+<td>{company.status}</td>
+<td>
+<div className="actions">
+<button className="view-details" onClick={() => handleViewDetails(company)}>დეტალები</button>
+{isAuthorizedForManagement && (
+<>
+<button className="edit" onClick={() => handleEditClick(company)}>რედაქტირება</button>
+<button 
+className="delete" 
+onClick={() => handleDelete(company.id)}>
+წაშლა
+</button>
+</>
+)}
+</div>
+</td>
+</tr>
+))}
+</tbody>
+</table>
       )}
     </div>
   );
