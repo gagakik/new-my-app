@@ -3,12 +3,14 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import AuthPage from './components/AuthPage';
 import ExhibitionsList from './components/ExhibitionsList';
+import EventsList from './components/EventsList';
 import UserManagement from './components/UserManagement';
 import EquipmentList from './components/EquipmentList';
 import CompaniesList from './components/CompaniesList';
 import SpacesList from './components/SpacesList';
 import ServicesList from './components/ServicesList';
 import BookingsList from './components/BookingsList';
+import Statistics from './components/Statistics';
 
 import Notification from './components/Notification';
 import './index.css';
@@ -91,6 +93,10 @@ function App() {
 
     if (activeView === 'exhibitions') {
       return <ExhibitionsList showNotification={showNotification} userRole={userRole} />;
+    }
+
+    if (activeView === 'events') {
+      return <EventsList showNotification={showNotification} userRole={userRole} />;
     }
 
     if (activeView === 'users') {
