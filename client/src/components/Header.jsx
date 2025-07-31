@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import './Header.css';
 
@@ -128,7 +127,7 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
         <span className="logo-icon">🏢</span>
         <span className="logo-text">გამოფენების პორტალი</span>
       </div>
-      
+
       <nav className="nav">
         {isLoggedIn ? (
           <>
@@ -136,7 +135,7 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
               <span className="user-role">{userRole}</span>
               <span className="user-name">{userName}</span>
             </div>
-            
+
             <div className="nav-menu">
               {getRoleBasedMenus().map((menu) => (
                 <div key={menu.key} className="nav-item">

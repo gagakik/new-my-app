@@ -61,6 +61,13 @@ const MainContent = ({ showNotification, userRole }) => {
             სერვისები
           </button>
           <button 
+            className={activeSection === 'events' ? 'active' : ''} 
+            onClick={() => setActiveSection('events')}
+          >
+            <i className="icon-events"></i>
+            ივენთები
+          </button>
+          <button 
             className={activeSection === 'bookings' ? 'active' : ''} 
             onClick={() => setActiveSection('bookings')}
           >
