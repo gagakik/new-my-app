@@ -1064,6 +1064,7 @@ app.delete('/api/bookings/:id', authenticateToken, async (req, res) => {
 });
 
 
+<<<<<<< HEAD
 
 
 // Error handling middleware for multer errors
@@ -1081,6 +1082,8 @@ app.use((error, req, res, next) => {
     console.error('სერვერის შეცდომა:', error);
     res.status(500).json({ message: 'სერვერის შიდა შეცდომა' });
 });
+=======
+>>>>>>> 943e8c497f5414c18ba3e38e01b5e552fe83f025
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`სერვერი გაშვებულია http://0.0.0.0:${PORT}`);
