@@ -580,7 +580,7 @@ app.delete('/api/spaces/:id', authenticateToken, authorizeSpaceManagement, async
 });
 
 // ივენთების ცალკე API endpoint
-app.get('/api/events', authenticateToken, async (req, res) => {
+app.get('/api/events', async (req, res) => {
   try {
     const query = `
       SELECT * FROM annual_services 

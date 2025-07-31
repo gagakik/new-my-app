@@ -19,7 +19,15 @@ const EventsList = ({ showNotification, userRole }) => {
   const fetchEvents = useCallback(async () => {
     try {
       const token = localStorage.getItem('token'); 
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      
+      if (!token) {
+        throw new Error('ავტორიზაცია საჭიროა ივენთების ნახვისთვის');
+      }
+
+      const headers = { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
 
       // ცალკე API call ივენთებისთვის
       const response = await fetch('/api/events', {
@@ -27,12 +35,19 @@ const EventsList = ({ showNotification, userRole }) => {
       });
 
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error('არ გაქვთ ივენთების ნახვის უფლება');
+        }
+        
         // თუ events endpoint არ არსებობს, შევცადოთ annual-services-ით
         const fallbackResponse = await fetch('/api/annual-services', {
           headers: headers
         });
         
         if (!fallbackResponse.ok) {
+          if (fallbackResponse.status === 401 || fallbackResponse.status === 403) {
+            throw new Error('არ გაქვთ სერვისების ნახვის უფლება');
+          }
           const errorData = await fallbackResponse.json();
           throw new Error(errorData.message || 'მონაცემების მიღება ვერ მოხერხდა.');
         }
