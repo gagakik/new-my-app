@@ -131,7 +131,6 @@ const BookingsList = ({ showNotification, userRole }) => {
   return (
     <div className="bookings-container">
       <h2>ჯავშნები</h2>
-      <button className="add-new" onClick={() => setEditingId(0)}>ახალი ჯავშნის დამატება</button>
       
       {editingId !== null && (
          <BookingForm 
