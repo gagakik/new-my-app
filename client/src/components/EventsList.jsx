@@ -21,23 +21,42 @@ const EventsList = ({ showNotification, userRole }) => {
       const token = localStorage.getItem('token'); 
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
 
-      const response = await fetch('/api/annual-services', {
+      // ცალკე API call ივენთებისთვის
+      const response = await fetch('/api/events', {
         headers: headers
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'მონაცემების მიღება ვერ მოხერხდა.');
+        // თუ events endpoint არ არსებობს, შევცადოთ annual-services-ით
+        const fallbackResponse = await fetch('/api/annual-services', {
+          headers: headers
+        });
+        
+        if (!fallbackResponse.ok) {
+          const errorData = await fallbackResponse.json();
+          throw new Error(errorData.message || 'მონაცემების მიღება ვერ მოხერხდა.');
+        }
+        
+        const data = await fallbackResponse.json();
+        console.log('All services data:', data);
+        
+        // ფილტრაცია მხოლოდ ივენთ ტიპის სერვისებისთვის
+        const eventTypes = ['ივენთი', 'ფესტივალი', 'event', 'festival'];
+        const filteredEvents = data.filter(service => 
+          eventTypes.some(type => 
+            service.service_type && service.service_type.toLowerCase().includes(type.toLowerCase())
+          )
+        );
+        console.log('Filtered events:', filteredEvents);
+        setEvents(filteredEvents);
+        return;
       }
-      const data = await response.json();
-      console.log('All services data:', data); // დამატებული console.log სატესტოდ
       
-      // ფილტრაცია მხოლოდ ივენთ ტიპის სერვისებისთვის
-      const eventTypes = ['ივენთი', 'ფესტივალი'];
-      const filteredEvents = data.filter(service => eventTypes.includes(service.service_type));
-      console.log('Filtered events:', filteredEvents); // დამატებული console.log სატესტოდ
-      setEvents(filteredEvents);
+      const data = await response.json();
+      console.log('Events data:', data);
+      setEvents(data);
     } catch (err) {
+      console.error('Error fetching events:', err);
       setError(err.message);
       showNotification(`შეცდომა ივენთების ჩატვირთვისას: ${err.message}`, 'error');
     } finally {

@@ -579,12 +579,25 @@ app.delete('/api/spaces/:id', authenticateToken, authorizeSpaceManagement, async
     }
 });
 
+// ივენთების ცალკე API endpoint
+app.get('/api/events', authenticateToken, async (req, res) => {
+  try {
+    const query = `
+      SELECT * FROM annual_services 
+      WHERE service_type IN ('ივენთი', 'ფესტივალი', 'event', 'festival')
+      AND is_archived = FALSE
+      ORDER BY created_at DESC
+    `;
+    const result = await db.query(query);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching events:', error);
+    res.status(500).json({ message: 'ივენთების მიღება ვერ მოხერხდა' });
+  }
+});
 
-
-// --- ყოველწლური სერვისების API ენდპოინტები ---
-
-// GET: ყველა ყოველწლური სერვისის მიღება
-app.get('/api/annual-services', async (req, res) => {
+// წლიწადმეორე სერვისების API როუტები
+app.get('/api/annual-services', authenticateToken, async (req, res) => {
     try {
         const result = await db.query(`
             SELECT s.*, 
@@ -597,6 +610,7 @@ app.get('/api/annual-services', async (req, res) => {
             ORDER BY s.created_at DESC
         `);
         res.status(200).json(result.rows);
+            
     } catch (error) {
         console.error('შეცდომა სერვისების მიღებისას:', error);
         res.status(500).json({ message: 'სერვისების მიღება ვერ მოხერხდა.', error: error.message });
