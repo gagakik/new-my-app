@@ -1,160 +1,246 @@
+
 .header {
   display: flex;
-  justify-content: space-between; /* ლოგო მარცხნივ, ნავიგაცია მარჯვნივ */
+  justify-content: space-between;
   align-items: center;
-  padding: 1rem 2rem;
-  background-color: #2b55a7; /* კომპანიის ძირითადი ფერი */
-  color: #fff; /* ტექსტის ფერი ჰედერში */
-  width: 100%;
-  box-sizing: border-box;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15); /* დავამატოთ ჩრდილი */
-  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-bottom: 1px solid #dee2e6;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
 }
 
 .logo {
-  font-weight: 500;
-  font-size: 1rem; /* ლოგოს ზომა */
-  color: #fff; /* ლოგოს თეთრი ფერი */
-  text-decoration: none; /* ლოგო თუ ლინკია */
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: #495057;
+}
+
+.logo-icon {
+  font-size: 1.5rem;
+}
+
+.logo-text {
+  font-size: 1.1rem;
+  letter-spacing: -0.02em;
 }
 
 .nav {
   display: flex;
   align-items: center;
-  gap: 1rem; /* ღილაკებს შორის თანაბარი დაშორება */
-}
-
-.nav-btn,
-.logout-btn { /* ღილაკების საერთო სტილები */
-  background-color: #7f7f7f; /* შავი ფონი ღილაკებისთვის */
-  color: #fff; /* თეთრი ტექსტი ღილაკებზე */
-  border: none;
-  padding: 10px 20px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-weight: 400;
-  transition: all 0.3s ease;
-  text-decoration: none; /* თუ ლინკებია */
-  display: inline-block; /* თუ <a> ტეგებია */
-  font-size: 0.8rem;
-  margin-left: 10px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* ჩრდილი hover-ზე */
-   transition: all 0.5s ease;
-}
-
-.nav-btn:hover,
-.logout-btn:hover {
-  background-color: #333; /* ოდნავ ღია შავი hover-ზე */
-  transform: translateY(-2px); /* ანიმაცია hover-ზე */
-
+  gap: 1rem;
 }
 
 .user-info {
-  font-weight: 500;
-  color: #fff; /* თეთრი ფერი მომხმარებლის ინფორმაციისთვის */
-  margin-right: 1.5rem; /* დაშორება ღილაკებიდან */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin-right: 1rem;
+  font-size: 0.85rem;
 }
 
-.guest-info {
-  color: #ccc; /* სტუმრის ინფორმაციის ფერი */
+.user-role {
+  font-weight: 600;
+  color: #007bff;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
 }
 
-.logout-btn:hover {
-  background-color: #c82333;
+.user-name {
+  color: #6c757d;
+  margin-top: 0.1rem;
 }
 
-/* Dropdown Menu Styles */
-.dropdown {
-  margin-left: 10px;
-  position: relative;
-  display: inline-block;
-}
-
-.dropdown-btn {
-  background-color: #6c757d;
-  color: white;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: background-color 0.3s;
+.nav-menu {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.5rem;
 }
 
+.nav-item {
+  position: relative;
+}
+
+.nav-btn,
+.dropdown-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #495057;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.nav-btn:hover,
 .dropdown-btn:hover {
-  background-color: #5a6268;
+  background: #f8f9fa;
+  border-color: #007bff;
+  color: #007bff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.15);
 }
 
-.dropdown-btn::after {
-  content: '▼';
-  font-size: 0.8rem;
-  transition: transform 0.3s;
+.nav-btn.active {
+  background: #007bff;
+  border-color: #007bff;
+  color: white;
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
 }
 
-.dropdown.open .dropdown-btn::after {
+.nav-btn.single {
+  min-width: auto;
+}
+
+.nav-icon,
+.item-icon {
+  font-size: 1rem;
+}
+
+.nav-label,
+.item-label {
+  font-size: 0.85rem;
+}
+
+.dropdown-arrow {
+  font-size: 0.7rem;
+  transition: transform 0.2s ease;
+  margin-left: 0.25rem;
+}
+
+.dropdown.open .dropdown-arrow {
   transform: rotate(180deg);
 }
 
 .dropdown-content {
-  display: none;
   position: absolute;
-  background-color: white;
-  min-width: 200px;
-  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-  z-index: 1000;
-  border-radius: 8px;
-  border: 1px solid #e1e5e9;
-  top: 100%;
+  top: calc(100% + 0.5rem);
   left: 0;
-  margin-top: 5px;
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all 0.2s ease;
+  min-width: 200px;
+  z-index: 1000;
 }
 
 .dropdown.open .dropdown-content {
-  display: block;
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
 }
 
 .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   width: 100%;
-  color: #495057;
-  padding: 12px 16px;
-  text-decoration: none;
-  display: block;
-  border: none;
+  padding: 0.75rem 1rem;
   background: none;
+  border: none;
   text-align: left;
   cursor: pointer;
-  transition: background-color 0.3s;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
+  color: #495057;
+  transition: background-color 0.15s ease;
 }
 
 .dropdown-item:hover {
-  background-color: #f8f9fa;
+  background: #f8f9fa;
 }
 
 .dropdown-item.active {
-  background-color: #007bff;
-  color: white;
+  background: #e3f2fd;
+  color: #007bff;
 }
 
 .dropdown-item:first-child {
-  border-radius: 8px 8px 0 0;
+  border-radius: 7px 7px 0 0;
 }
 
 .dropdown-item:last-child {
-  border-radius: 0 0 8px 8px;
-}
-.nav-btn:hover {
-  background-color: #0056b3;
+  border-radius: 0 0 7px 7px;
 }
 
-.nav-btn.active {
-  background-color: #28a745;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+.logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  background: #dc3545;
+  border: 1px solid #dc3545;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: white;
+  transition: all 0.2s ease;
+  margin-left: 0.5rem;
 }
 
-.nav-btn.active:hover {
-  background-color: #218838;
+.logout-btn:hover {
+  background: #c82333;
+  border-color: #c82333;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+}
+
+.logout-icon {
+  font-size: 1rem;
+}
+
+.logout-text {
+  font-size: 0.85rem;
+}
+
+.guest-info {
+  color: #6c757d;
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .header {
+    padding: 0.5rem 1rem;
+  }
+  
+  .logo-text {
+    display: none;
+  }
+  
+  .nav-menu {
+    gap: 0.25rem;
+  }
+  
+  .nav-btn,
+  .dropdown-btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+  }
+  
+  .nav-label,
+  .item-label {
+    display: none;
+  }
+  
+  .user-info {
+    display: none;
+  }
 }
