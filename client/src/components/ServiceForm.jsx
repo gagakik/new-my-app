@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import './ServiceForm.css';
 
@@ -130,7 +129,7 @@ const ServiceForm = ({ serviceToEdit, onServiceUpdated, showNotification }) => {
             required
           />
         </div>
-        
+
         <div className="form-group">
           <label>აღწერა</label>
           <textarea
@@ -140,7 +139,7 @@ const ServiceForm = ({ serviceToEdit, onServiceUpdated, showNotification }) => {
             rows="3"
           />
         </div>
-        
+
         <div className="form-group">
           <label>წელი</label>
           <select 
@@ -153,7 +152,7 @@ const ServiceForm = ({ serviceToEdit, onServiceUpdated, showNotification }) => {
             ))}
           </select>
         </div>
-        
+
         <div className="form-group">
           <label>დაწყების თარიღი</label>
           <input
@@ -163,7 +162,7 @@ const ServiceForm = ({ serviceToEdit, onServiceUpdated, showNotification }) => {
             required
           />
         </div>
-        
+
         <div className="form-group">
           <label>დასრულების თარიღი</label>
           <input
@@ -173,7 +172,7 @@ const ServiceForm = ({ serviceToEdit, onServiceUpdated, showNotification }) => {
             required
           />
         </div>
-        
+
         <div className="form-group">
           <label>სერვისის ტიპი</label>
           <select 
@@ -187,7 +186,7 @@ const ServiceForm = ({ serviceToEdit, onServiceUpdated, showNotification }) => {
             <option value="ივენთი">ივენთი</option>
           </select>
         </div>
-        
+
         <div className="form-group">
           <label>სივრცეების არჩევა</label>
           <div className="spaces-selection">
@@ -203,7 +202,7 @@ const ServiceForm = ({ serviceToEdit, onServiceUpdated, showNotification }) => {
             ))}
           </div>
         </div>
-        
+
         <div className="form-group">
           <label>
             <input
@@ -214,7 +213,7 @@ const ServiceForm = ({ serviceToEdit, onServiceUpdated, showNotification }) => {
             აქტიური სერვისი
           </label>
         </div>
-        
+
         <div className="form-actions">
           <button type="submit" className="submit-btn">
             {isEditing ? 'განახლება' : 'დამატება'}

@@ -62,7 +62,7 @@ const EquipmentList = ({ showNotification, userRole }) => {
         setEquipment(equipment.filter((item) => item.id !== id));
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'წაშლა ვერ მოხერხდა.');
+        throw new Error(errorData.message || 'წაშლა ვერ მოხერხდა');და.');
       }
     } catch (error) {
       console.error('შეცდომა წაშლისას:', error);

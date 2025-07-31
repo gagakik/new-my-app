@@ -579,55 +579,7 @@ app.delete('/api/spaces/:id', authenticateToken, authorizeSpaceManagement, async
     }
 });
 
-// --- სტატისტიკის API ენდპოინტები ---
 
-// GET: სტატისტიკის მიღება
-app.get('/api/statistics', authenticateToken, async (req, res) => {
-    try {
-        // ძირითადი მონაცემები
-        const overviewQuery = `
-            SELECT 
-                (SELECT COUNT(*) FROM exhibitions) as total_exhibitions,
-                (SELECT COUNT(*) FROM companies) as total_companies,
-                (SELECT COUNT(*) FROM bookings) as total_bookings
-        `;
-        const overviewResult = await db.query(overviewQuery);
-        
-        // ყოველთვიური ჯავშნები
-        const monthlyQuery = `
-            SELECT 
-                DATE_TRUNC('month', booking_date) as month,
-                COUNT(*) as booking_count
-            FROM bookings 
-            WHERE booking_date >= CURRENT_DATE - INTERVAL '12 months'
-            GROUP BY DATE_TRUNC('month', booking_date)
-            ORDER BY month DESC
-        `;
-        const monthlyResult = await db.query(monthlyQuery);
-        
-        // ტოპ სერვისები
-        const topServicesQuery = `
-            SELECT 
-                s.service_name,
-                COUNT(b.id) as booking_count
-            FROM annual_services s
-            LEFT JOIN bookings b ON s.id = b.service_id
-            GROUP BY s.id, s.service_name
-            ORDER BY booking_count DESC
-            LIMIT 5
-        `;
-        const topServicesResult = await db.query(topServicesQuery);
-        
-        res.status(200).json({
-            overview: overviewResult.rows[0],
-            monthly_bookings: monthlyResult.rows,
-            top_services: topServicesResult.rows
-        });
-    } catch (error) {
-        console.error('შეცდომა სტატისტიკის მიღებისას:', error);
-        res.status(500).json({ message: 'სტატისტიკის მიღება ვერ მოხერხდა.', error: error.message });
-    }
-});
 
 // --- ყოველწლური სერვისების API ენდპოინტები ---
 
