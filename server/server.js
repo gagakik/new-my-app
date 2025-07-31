@@ -82,7 +82,7 @@ app.post('/api/register', async (req, res) => {
   try {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
-    
+
     const result = await db.query(
       'INSERT INTO users (username, password, role) VALUES ($1, $2, $3) RETURNING id, username, role',
       [username, hashedPassword, defaultRole]
@@ -369,7 +369,7 @@ app.get('/api/companies', authenticateToken, async (req, res) => { // დავ�
 
     try {
         const result = await db.query(query, values);
-        
+
         // თითოეული კომპანიისთვის გამოფენების მიღება
         for (let company of result.rows) {
             const exhibitionsResult = await db.query(`
@@ -378,11 +378,11 @@ app.get('/api/companies', authenticateToken, async (req, res) => { // დავ�
                 JOIN company_exhibitions ce ON e.id = ce.exhibition_id
                 WHERE ce.company_id = $1
             `, [company.id]);
-            
+
             company.exhibitions = exhibitionsResult.rows.map(e => e.id);
             company.exhibition_names = exhibitionsResult.rows.map(e => e.exhibition_name);
         }
-        
+
         res.status(200).json(result.rows);
     } catch (error) {
         console.error('შეცდომა კომპანიების მიღებისას:', error);
@@ -650,7 +650,7 @@ app.post('/api/annual-services', authenticateToken, async (req, res) => {
         return res.status(403).json({ error: 'წვდომა აკრძალულია: არ გაქვთ სერვისების მართვის უფლება.' });
     }
 
-    const { service_name, description, year_selection, start_date, end_date, service_type, is_active, selected_spaces } = req.body;
+    const { service_name, description, year_selection, start_date, end_date, service_type, is_active, selected_spaces, selected_exhibitions } = req.body;
     const created_by_user_id = req.user.id;
 
     try {
@@ -671,6 +671,15 @@ app.post('/api/annual-services', authenticateToken, async (req, res) => {
                 );
             }
         }
+         // გამოფენების კავშირების დამატება
+         if (selected_exhibitions && selected_exhibitions.length > 0) {
+            for (const exhibitionId of selected_exhibitions) {
+                await db.query(
+                    'INSERT INTO service_exhibitions (service_id, exhibition_id) VALUES ($1, $2)',
+                    [service.id, exhibitionId]
+                );
+            }
+        }
 
         res.status(201).json({ message: 'სერვისი წარმატებით დაემატა.', service });
     } catch (error) {
@@ -687,7 +696,7 @@ app.put('/api/annual-services/:id', authenticateToken, async (req, res) => {
     }
 
     const { id } = req.params;
-    const { service_name, description, year_selection, start_date, end_date, service_type, is_active, selected_spaces } = req.body;
+    const { service_name, description, year_selection, start_date, end_date, service_type, is_active, selected_spaces, selected_exhibitions } = req.body;
 
     try {
         // სერვისის განახლება
@@ -709,6 +718,19 @@ app.put('/api/annual-services/:id', authenticateToken, async (req, res) => {
                     );
                 }
             }
+
+             // არსებული გამოფენების კავშირების წაშლა
+             await db.query('DELETE FROM service_exhibitions WHERE service_id = $1', [id]);
+
+             // ახალი გამოფენების კავშირების დამატება
+             if (selected_exhibitions && selected_exhibitions.length > 0) {
+                 for (const exhibitionId of selected_exhibitions) {
+                     await db.query(
+                         'INSERT INTO service_exhibitions (service_id, exhibition_id) VALUES ($1, $2)',
+                         [id, exhibitionId]
+                     );
+                 }
+             }
 
             res.status(200).json({ message: 'სერვისი წარმატებით განახლდა.', service: result.rows[0] });
         } else {

@@ -183,6 +183,17 @@ const createTables = async () => {
       )
     `);
 
+    // Service-Exhibition junction table (სერვისი-გამოფენის კავშირი)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS service_exhibitions (
+        id SERIAL PRIMARY KEY,
+        service_id INTEGER REFERENCES annual_services(id) ON DELETE CASCADE,
+        exhibition_id INTEGER REFERENCES exhibitions(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(service_id, exhibition_id)
+      )
+    `);
+
     // Bookings table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS bookings (

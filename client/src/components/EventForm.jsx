@@ -11,22 +11,32 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
   const [serviceType, setServiceType] = useState('ივენთი');
   const [selectedSpaces, setSelectedSpaces] = useState([]);
   const [availableSpaces, setAvailableSpaces] = useState([]);
+  const [selectedExhibitions, setSelectedExhibitions] = useState([]);
+  const [availableExhibitions, setAvailableExhibitions] = useState([]);
   const isEditing = !!eventToEdit;
 
-  // Fetch available spaces
+  // Fetch available spaces and exhibitions
   useEffect(() => {
-    const fetchSpaces = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch('/api/spaces');
-        if (response.ok) {
-          const spaces = await response.json();
+        // Fetch spaces
+        const spacesResponse = await fetch('/api/spaces');
+        if (spacesResponse.ok) {
+          const spaces = await spacesResponse.json();
           setAvailableSpaces(spaces);
         }
+
+        // Fetch exhibitions
+        const exhibitionsResponse = await fetch('/api/exhibitions');
+        if (exhibitionsResponse.ok) {
+          const exhibitions = await exhibitionsResponse.json();
+          setAvailableExhibitions(exhibitions);
+        }
       } catch (error) {
-        console.error('შეცდომა სივრცეების მიღებისას:', error);
+        console.error('შეცდომა მონაცემების მიღებისას:', error);
       }
     };
-    fetchSpaces();
+    fetchData();
   }, []);
 
   useEffect(() => {
@@ -38,6 +48,7 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
       setEndDate(eventToEdit.end_date ? eventToEdit.end_date.slice(0, 10) : '');
       setServiceType(eventToEdit.service_type || 'ივენთი');
       setSelectedSpaces(eventToEdit.selected_spaces || []);
+      setSelectedExhibitions(eventToEdit.selected_exhibitions || []);
     } else {
       setServiceName('');
       setDescription('');
@@ -46,6 +57,7 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
       setEndDate('');
       setServiceType('ივენთი');
       setSelectedSpaces([]);
+      setSelectedExhibitions([]);
     }
   }, [eventToEdit, isEditing]);
 
@@ -54,6 +66,14 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
       prev.includes(spaceId) 
         ? prev.filter(id => id !== spaceId)
         : [...prev, spaceId]
+    );
+  };
+
+  const handleExhibitionToggle = (exhibitionId) => {
+    setSelectedExhibitions(prev => 
+      prev.includes(exhibitionId) 
+        ? prev.filter(id => id !== exhibitionId)
+        : [...prev, exhibitionId]
     );
   };
 
@@ -74,6 +94,7 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
       service_type: serviceType,
       is_active: true,
       selected_spaces: selectedSpaces,
+      selected_exhibitions: selectedExhibitions,
     };
 
     const method = isEditing ? 'PUT' : 'POST';
@@ -184,6 +205,22 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
             <option value="გაქირავება">გაქირავება</option>
             <option value="ფესტივალი">ფესტივალი</option>
           </select>
+        </div>
+
+        <div className="form-group">
+          <label>გამოფენების არჩევა</label>
+          <div className="exhibitions-selection">
+            {availableExhibitions.map(exhibition => (
+              <label key={exhibition.id} className="exhibition-checkbox">
+                <input
+                  type="checkbox"
+                  checked={selectedExhibitions.includes(exhibition.id)}
+                  onChange={() => handleExhibitionToggle(exhibition.id)}
+                />
+                <span>{exhibition.exhibition_name}</span>
+              </label>
+            ))}
+          </div>
         </div>
 
         <div className="form-group">
