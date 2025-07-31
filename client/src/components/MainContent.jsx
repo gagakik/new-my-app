@@ -6,7 +6,6 @@ import SpacesList from './SpacesList';
 import UserManagement from './UserManagement';
 import ServicesList from './ServicesList';
 import EventsList from './EventsList';
-import BookingsList from './BookingsList';
 import Statistics from './Statistics';
 
 import './MainContent.css';
@@ -78,13 +77,6 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
             ივენთები
           </button>
           <button 
-            className={activeSection === 'bookings' ? 'active' : ''} 
-            onClick={() => setActiveSection('bookings')}
-          >
-            <i className="icon-bookings"></i>
-            ჯავშნები
-          </button>
-          <button 
             className={activeSection === 'statistics' ? 'active' : ''} 
             onClick={() => setActiveSection('statistics')}
           >
@@ -129,9 +121,6 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
           )}
           {activeSection === 'events' && (
             <EventsList showNotification={showNotification} userRole={userRole} />
-          )}
-          {activeSection === 'bookings' && (
-            <BookingsList showNotification={showNotification} userRole={userRole} />
           )}
           {activeSection === 'statistics' && (
             <Statistics showNotification={showNotification} userRole={userRole} />
