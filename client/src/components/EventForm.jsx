@@ -69,13 +69,7 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
     );
   };
 
-  const handleExhibitionToggle = (exhibitionId) => {
-    setSelectedExhibitions(prev => 
-      prev.includes(exhibitionId) 
-        ? prev.filter(id => id !== exhibitionId)
-        : [...prev, exhibitionId]
-    );
-  };
+  
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -208,19 +202,18 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
         </div>
 
         <div className="form-group">
-          <label>გამოფენების არჩევა</label>
-          <div className="exhibitions-selection">
+          <label>გამოფენის არჩევა</label>
+          <select 
+            value={selectedExhibitions.length > 0 ? selectedExhibitions[0] : ''}
+            onChange={(e) => setSelectedExhibitions(e.target.value ? [parseInt(e.target.value)] : [])}
+          >
+            <option value="">აირჩიეთ გამოფენა</option>
             {availableExhibitions.map(exhibition => (
-              <label key={exhibition.id} className="exhibition-checkbox">
-                <input
-                  type="checkbox"
-                  checked={selectedExhibitions.includes(exhibition.id)}
-                  onChange={() => handleExhibitionToggle(exhibition.id)}
-                />
-                <span>{exhibition.exhibition_name}</span>
-              </label>
+              <option key={exhibition.id} value={exhibition.id}>
+                {exhibition.exhibition_name}
+              </option>
             ))}
-          </div>
+          </select>
         </div>
 
         <div className="form-group">

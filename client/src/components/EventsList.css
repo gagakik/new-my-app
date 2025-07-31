@@ -258,3 +258,138 @@
 .modal-body li {
   margin: 5px 0;
 }
+.events-container {
+  width: 100%;
+  max-width: 1400px;
+  margin: 2rem auto;
+  padding: 1.5rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.events-container h2 {
+  text-align: center;
+  color: #343a40;
+  margin-bottom: 1.5rem;
+}
+
+.events-container p.no-events {
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+}
+
+.add-new {
+  display: block;
+  width: fit-content;
+  margin: 0 auto 1.5rem;
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.add-new:hover {
+  background-color: #0056b3;
+}
+
+.events-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  background-color: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.events-table th,
+.events-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.events-table th {
+  background-color: #e9ecef;
+  color: #495057;
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+}
+
+.events-table tbody tr:nth-child(even) {
+  background-color: #f2f2f2;
+}
+
+.events-table tbody tr:hover {
+  background-color: #e2f0ff;
+}
+
+.events-table .actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-start;
+}
+
+.events-table .actions button {
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  border-radius: 4px;
+  white-space: nowrap;
+  border: none;
+  cursor: pointer;
+}
+
+.events-table .edit {
+  background-color: #28a745;
+  color: #fff;
+}
+
+.events-table .edit:hover {
+  background-color: #218838;
+}
+
+.events-table .archive {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.events-table .archive:hover {
+  background-color: #e0a800;
+}
+
+.events-table .delete {
+  background-color: #dc3545;
+  color: #fff;
+}
+
+.events-table .delete:hover {
+  background-color: #c82333;
+}
+
+.status {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.status.active {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status.inactive {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.status.archived {
+  background-color: #e2e3e5;
+  color: #383d41;
+}
