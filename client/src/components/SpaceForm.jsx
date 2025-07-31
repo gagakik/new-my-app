@@ -1,66 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './SpaceForm.css';
 
-const SpaceForm = ({ spaceToEdit, onSpaceUpdated, showNotification }) => {
-  const [category, setCategory] = useState('');
-  const [buildingName, setBuildingName] = useState('');
-  const [description, setDescription] = useState('');
-  const [areaSqm, setAreaSqm] = useState('');
-  const isEditing = !!spaceToEdit;
-
-  useEffect(() => {
-    if (isEditing && spaceToEdit) {
-      setCategory(spaceToEdit.category || '');
-      setBuildingName(spaceToEdit.building_name || '');
-      setDescription(spaceToEdit.description || '');
-      setAreaSqm(spaceToEdit.area_sqm || '');
-    } else {
-      setCategory('');
-      setBuildingName('');
-      setDescription('');
-      setAreaSqm('');
-    }
-  }, [spaceToEdit, isEditing]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    const spaceData = {
-      category,
-      building_name: buildingName,
-      description,
-      area_sqm: areaSqm ? parseFloat(areaSqm) : null, // არასავალდებულო ველი
-    };
-    
-    const method = isEditing ? 'PUT' : 'POST';
-    const url = isEditing
-      ? `/api/spaces/${spaceToEdit.id}`
-      : '/api/spaces';
-
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        showNotification('ავტორიზაციის ტოკენი არ მოიძებნა. გთხოვთ, შეხვიდეთ სისტემაში.', 'error');
-        return;
-      }
-
-      const response = await fetch(url, {
-        method,
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(spaceData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'ოპერაცია ვერ შესრულდა');
-      }
-
-      const data = await response.jsoimport React, { useState, useEffect } from 'react';
-import './SpaceForm.css';
-
 const SpaceForm = ({ spaceToEdit, onFormClose, onSpaceUpdated, showNotification }) => {
   const [category, setCategory] = useState('');
   const [buildingName, setBuildingName] = useState('');
@@ -76,6 +16,11 @@ const SpaceForm = ({ spaceToEdit, onFormClose, onSpaceUpdated, showNotification 
       setBuildingName(spaceToEdit.building_name || '');
       setDescription(spaceToEdit.description || '');
       setAreaSqm(spaceToEdit.area_sqm || '');
+    } else {
+      setCategory('');
+      setBuildingName('');
+      setDescription('');
+      setAreaSqm('');
     }
   }, [spaceToEdit]);
 
@@ -114,7 +59,7 @@ const SpaceForm = ({ spaceToEdit, onFormClose, onSpaceUpdated, showNotification 
       if (response.ok) {
         showNotification(data.message, 'success');
         onSpaceUpdated();
-        onFormClose();
+        if (onFormClose) onFormClose();
       } else {
         throw new Error(data.message || 'შეცდომა მოხდა');
       }
@@ -176,28 +121,6 @@ const SpaceForm = ({ spaceToEdit, onFormClose, onSpaceUpdated, showNotification 
             გაუქმება
           </button>
         </div>
-      </form>
-    </div>
-  );
-};
-
-export default SpaceForm;e="text" value={buildingName} onChange={(e) => setBuildingName(e.target.value)} required />
-        </div>
-        <div className="form-group">
-          <label>აღწერილობა</label>
-          <textarea value={description} onChange={(e) => setDescription(e.target.value)}></textarea>
-        </div>
-        <div className="form-group">
-          <label>ფართობი (კვ.მ)</label>
-          <input type="number" step="0.01" value={areaSqm} onChange={(e) => setAreaSqm(e.target.value)} />
-        </div>
-        
-        <button type="submit" className="submit-btn">
-          {isEditing ? 'განახლება' : 'დამატება'}
-        </button>
-        <button type="button" className="cancel-btn" onClick={onSpaceUpdated}>
-          გაუქმება
-        </button>
       </form>
     </div>
   );
