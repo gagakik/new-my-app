@@ -56,14 +56,28 @@ const EventsList = ({ showNotification, userRole }) => {
         console.log('All services data:', data);
         
         // ფილტრაცია მხოლოდ ივენთ ტიპის სერვისებისთვის
-        const eventTypes = ['ივენთი', 'ფესტივალი', 'event', 'festival'];
-        const filteredEvents = data.filter(service => 
-          eventTypes.some(type => 
-            service.service_type && service.service_type.toLowerCase().includes(type.toLowerCase())
-          )
-        );
+        console.log('Available services:', data.map(s => ({ id: s.id, name: s.service_name, type: s.service_type })));
+        
+        const eventTypes = ['ივენთი', 'ფესტივალი', 'event', 'festival', 'კონფერენცია', 'conference', 'შოუ', 'show'];
+        const filteredEvents = data.filter(service => {
+          if (!service.service_type) return false;
+          
+          const serviceType = service.service_type.toLowerCase().trim();
+          return eventTypes.some(type => 
+            serviceType.includes(type.toLowerCase()) || 
+            serviceType === type.toLowerCase()
+          );
+        });
+        
         console.log('Filtered events:', filteredEvents);
-        setEvents(filteredEvents);
+        
+        // თუ ფილტრაციის შემდეგ ცარიელია, ყველა სერვისი გამოვაჩინოთ 
+        if (filteredEvents.length === 0) {
+          console.log('No events found after filtering, showing all services');
+          setEvents(data);
+        } else {
+          setEvents(filteredEvents);
+        }
         return;
       }
       

@@ -583,16 +583,23 @@ app.delete('/api/spaces/:id', authenticateToken, authorizeSpaceManagement, async
 app.get('/api/events', async (req, res) => {
   try {
     const query = `
-      SELECT * FROM annual_services 
-      WHERE service_type IN ('ივენთი', 'ფესტივალი', 'event', 'festival')
-      AND is_archived = FALSE
-      ORDER BY created_at DESC
+      SELECT s.*, 
+             COUNT(DISTINCT ss.space_id) as spaces_count,
+             COUNT(DISTINCT b.id) as bookings_count
+      FROM annual_services s
+      LEFT JOIN service_spaces ss ON s.id = ss.service_id
+      LEFT JOIN bookings b ON s.id = b.service_id
+      WHERE s.service_type ILIKE ANY(ARRAY['%ივენთი%', '%ფესტივალი%', '%event%', '%festival%', '%კონფერენცია%', '%conference%', '%შოუ%', '%show%'])
+      AND s.is_archived = FALSE
+      GROUP BY s.id
+      ORDER BY s.created_at DESC
     `;
     const result = await db.query(query);
+    console.log('Events endpoint called, returning:', result.rows.length, 'events');
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching events:', error);
-    res.status(500).json({ message: 'ივენთების მიღება ვერ მოხერხდა' });
+    res.status(500).json({ message: 'ივენთების მიღება ვერ მოხერხდა', error: error.message });
   }
 });
 
