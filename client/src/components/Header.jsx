@@ -77,12 +77,7 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
             >
               ჯავშნები
             </button>
-            <button 
-              onClick={() => handleViewChange('statistics')} 
-              className={`nav-btn ${activeView === 'statistics' ? 'active' : ''}`}
-            >
-              სტატისტიკა
-            </button>
+            
              {/* Admin only user management button */}
             {userRole === 'admin' && (
               <button 

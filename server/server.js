@@ -861,53 +861,7 @@ app.delete('/api/bookings/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// --- სტატისტიკის API ენდპოინტები ---
 
-// GET: სტატისტიკის მიღება
-app.get('/api/statistics', authenticateToken, async (req, res) => {
-    try {
-        // General statistics
-        const totalExhibitions = await db.query('SELECT COUNT(*) FROM exhibitions');
-        const totalCompanies = await db.query('SELECT COUNT(*) FROM companies');
-        const totalBookings = await db.query('SELECT COUNT(*) FROM bookings');
-
-        // Monthly bookings
-        const monthlyBookings = await db.query(`
-            SELECT 
-                DATE_TRUNC('month', booking_date) as month,
-                COUNT(*) as booking_count
-            FROM bookings 
-            WHERE booking_date >= CURRENT_DATE - INTERVAL '12 months'
-            GROUP BY DATE_TRUNC('month', booking_date)
-            ORDER BY month
-        `);
-
-        // Top services
-        const topServices = await db.query(`
-            SELECT 
-                s.service_name,
-                COUNT(b.id) as booking_count
-            FROM annual_services s
-            LEFT JOIN bookings b ON s.id = b.service_id
-            GROUP BY s.id, s.service_name
-            ORDER BY booking_count DESC
-            LIMIT 5
-        `);
-
-        res.status(200).json({
-            overview: {
-                total_exhibitions: parseInt(totalExhibitions.rows[0].count),
-                total_companies: parseInt(totalCompanies.rows[0].count),
-                total_bookings: parseInt(totalBookings.rows[0].count)
-            },
-            monthly_bookings: monthlyBookings.rows,
-            top_services: topServices.rows
-        });
-    } catch (error) {
-        console.error('შეცდომა სტატისტიკის მიღებისას:', error);
-        res.status(500).json({ message: 'სტატისტიკის მიღება ვერ მოხერხდა.', error: error.message });
-    }
-});
 
 
 app.listen(PORT, '0.0.0.0', () => {

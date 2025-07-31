@@ -6,7 +6,7 @@ import SpacesList from './SpacesList';
 import UserManagement from './UserManagement';
 import ServicesList from './ServicesList';
 import BookingsList from './BookingsList';
-import Statistics from './Statistics';
+
 import './MainContent.css';
 
 const MainContent = ({ showNotification, userRole }) => {

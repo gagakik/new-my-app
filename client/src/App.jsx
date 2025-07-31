@@ -9,7 +9,7 @@ import CompaniesList from './components/CompaniesList';
 import SpacesList from './components/SpacesList';
 import ServicesList from './components/ServicesList';
 import BookingsList from './components/BookingsList';
-import Statistics from './components/Statistics';
+
 import Notification from './components/Notification';
 import './index.css';
 
