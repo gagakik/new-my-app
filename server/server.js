@@ -10,14 +10,30 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || (process.env.NODE_ENV === 'production' ? 80 : 5000);
 
-// uploads ფოლდერის შექმნა development-ისთვის
+// uploads ფოლდერის შექმნა
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-    console.log('uploads ფოლდერი შეიქმნა');
+    try {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+        console.log('uploads ფოლდერი შეიქმნა:', uploadsDir);
+    } catch (error) {
+        console.error('uploads ფოლდერის შექმნის შეცდომა:', error);
+    }
 }
 
-app.use(cors());
+// ფოლდერის უფლებების დაყენება
+try {
+    fs.chmodSync(uploadsDir, 0o755);
+    console.log('uploads ფოლდერს მიენიჭა სწორი უფლებები');
+} catch (error) {
+    console.error('uploads ფოლდერის უფლებების დაყენების შეცდომა:', error);
+}
+
+// CORS configuration for Replit environment
+app.use(cors({
+    origin: ['http://localhost:5173', 'https://*.replit.dev', 'https://*.replit.app'],
+    credentials: true
+}));
 app.use(express.json());
 
 // Production-ში static files-ების სერვირება
@@ -66,14 +82,10 @@ const upload = multer({
     }
 });
 
-// სურათის ატვირთვის ფუნქცია ლოკალურად
+// სურათის ატვირთვის ფუნქცია
 function uploadImage(file) {
-    // Development-ში localhost:5000, Production-ში შედარებითი მისამართი
-    if (process.env.NODE_ENV === 'production') {
-        return `/uploads/${file.filename}`;
-    } else {
-        return `http://localhost:${PORT}/uploads/${file.filename}`;
-    }
+    // ყოველთვის შედარებითი მისამართის გამოყენება
+    return `/uploads/${file.filename}`;
 }
 
 // სტატიკური საქაღალდე ატვირთული სურათებისთვის

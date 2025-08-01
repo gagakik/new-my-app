@@ -79,20 +79,16 @@ const EquipmentList = ({ showNotification, userRole }) => {
     fetchEquipment();
   };
 
-  // სურათის URL-ის ფიქსირება
+  // სურათის URL-ის ფიქსირება Replit გარემოსთვის
   const getImageUrl = (imageUrl) => {
     if (!imageUrl) return null;
 
-    // თუ URL იწყება http://-ით, ჩავანაცვლოთ 0.0.0.0 localhost-ით
-    if (imageUrl.startsWith('http://0.0.0.0:')) {
-      return imageUrl.replace('http://0.0.0.0:', 'http://localhost:');
-    }
-
-    // თუ შედარებითი მისამართია, დავამატოთ localhost:5000
+    // თუ შედარებითი მისამართია, უბრალოდ ვაბრუნებთ
     if (imageUrl.startsWith('/uploads/')) {
-      return `http://localhost:5000${imageUrl}`;
+      return imageUrl;
     }
 
+    // თუ იწყება http://-ით, ვტოვებთ როგორც არის
     return imageUrl;
   };
 

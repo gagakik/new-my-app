@@ -119,13 +119,13 @@ const ExhibitionsList = ({ showNotification, userRole }) => { // მივიღ
       {exhibitions.length === 0 ? (
         <p className="no-exhibitions">გამოფენები არ მოიძებნა.</p>
       ) : (
-        <table className="exhibitions-table"> {/* შეცვლილია ul-დან table-ზე */}
+        <table className="exhibitions-table">
           <thead>
             <tr>
               <th>გამოფენის სახელი</th>
               <th>კომენტარი</th>
               <th>მენეჯერი</th>
-              {isAuthorizedForManagement && <th>მოქმედებები</th>} {/* მოქმედებები მხოლოდ უფლებამოსილი როლებისთვის */}
+              {isAuthorizedForManagement && <th>მოქმედებები</th>}
             </tr>
           </thead>
           <tbody>

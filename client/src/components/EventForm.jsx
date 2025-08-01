@@ -19,18 +19,28 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const token = localStorage.getItem('token');
+        const headers = token ? { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        } : {};
+
         // Fetch spaces
-        const spacesResponse = await fetch('/api/spaces');
+        const spacesResponse = await fetch('/api/spaces', { headers });
         if (spacesResponse.ok) {
           const spaces = await spacesResponse.json();
           setAvailableSpaces(spaces);
+        } else {
+          console.error('სივრცეების მიღება ვერ მოხერხდა:', spacesResponse.status);
         }
 
         // Fetch exhibitions
-        const exhibitionsResponse = await fetch('/api/exhibitions');
+        const exhibitionsResponse = await fetch('/api/exhibitions', { headers });
         if (exhibitionsResponse.ok) {
           const exhibitions = await exhibitionsResponse.json();
           setAvailableExhibitions(exhibitions);
+        } else {
+          console.error('გამოფენების მიღება ვერ მოხერხდა:', exhibitionsResponse.status);
         }
       } catch (error) {
         console.error('შეცდომა მონაცემების მიღებისას:', error);
@@ -68,6 +78,8 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
         : [...prev, spaceId]
     );
   };
+
+  
 
   
 
