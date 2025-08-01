@@ -16,7 +16,7 @@ const SpacesList = ({ showNotification, userRole }) => {
   const fetchSpaces = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      
+
       if (!token) {
         throw new Error('ავტორიზაცია საჭიროა სივრცეების ნახვისთვის');
       }
@@ -114,39 +114,66 @@ const SpacesList = ({ showNotification, userRole }) => {
       {spaces.length === 0 ? (
         <p className="no-spaces">სივრცეები არ მოიძებნა.</p>
       ) : (
-        <table className="spaces-table">
-          <thead>
-            <tr>
-              <th>კატეგორია</th>
-              <th>შენობის დასახელება</th>
-              <th>აღწერილობა</th>
-              <th>ფართობი (კვ.მ)</th>
-              <th>მოქმედებები</th>
-            </tr>
-          </thead>
-          <tbody>
-            {spaces.map((space) => (
-              <tr key={space.id}>
-                <td>{space.category}</td>
-                <td>{space.building_name}</td>
-                <td>{space.description}</td>
-                <td>{space.area_sqm || 'არ არის მითითებული'}</td>
-                <td>
-                  {isAuthorizedForManagement && (
-                    <div className="actions">
-                      <button className="edit" onClick={() => handleEditClick(space)}>რედაქტირება</button>
-                      <button 
-                        className="delete" 
-                        onClick={() => handleDelete(space.id)}>
-                        წაშლა
-                      </button>
-                    </div>
-                  )}
-                </td>
+        <>
+          {/* Desktop Table */}
+          <table className="spaces-table">
+            <thead>
+              <tr>
+                <th>კატეგორია</th>
+                <th>შენობის დასახელება</th>
+                <th>აღწერილობა</th>
+                <th>ფართობი (კვ.მ)</th>
+                <th>მოქმედებები</th>
               </tr>
+            </thead>
+            <tbody>
+              {spaces.map((space) => (
+                <tr key={space.id}>
+                  <td>{space.category}</td>
+                  <td>{space.building_name}</td>
+                  <td>{space.description}</td>
+                  <td>{space.area_sqm || 'არ არის მითითებული'}</td>
+                  <td>
+                    {isAuthorizedForManagement && (
+                      <div className="actions">
+                        <button className="edit" onClick={() => handleEditClick(space)}>რედაქტირება</button>
+                        <button 
+                          className="delete" 
+                          onClick={() => handleDelete(space.id)}>
+                          წაშლა
+                        </button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Mobile Cards */}
+          <div className="mobile-cards">
+            {spaces.map(space => (
+              <div key={space.id} className="space-card">
+                <h3>{space.building_name}</h3>
+                <div className="space-info">
+                  <span><strong>კატეგორია:</strong> {space.category}</span>
+                  <span><strong>ფართობი:</strong> {space.area_sqm || 'არ არის მითითებული'} კვ.მ</span>
+                  <span><strong>აღწერილობა:</strong> {space.description}</span>
+                </div>
+                {isAuthorizedForManagement && (
+                  <div className="space-actions">
+                    <button className="edit" onClick={() => handleEditClick(space)}>
+                      რედაქტირება
+                    </button>
+                    <button className="delete" onClick={() => handleDelete(space.id)}>
+                      წაშლა
+                    </button>
+                  </div>
+                )}
+              </div>
             ))}
-          </tbody>
-        </table>
+          </div>
+        </>
       )}
     </div>
   );

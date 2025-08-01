@@ -158,16 +158,16 @@
 }
 
 .event-actions .edit:hover {
-  background-color: #e0a800;
+  background-color: #218838;
 }
 
 .event-actions .archive {
-  background-color: #6f42c1;
-  color: white;
+  background-color: #ffc107;
+  color: #212529;
 }
 
 .event-actions .archive:hover {
-  background-color: #5a32a3;
+  background-color: #e0a800;
 }
 
 .event-actions .delete {
@@ -179,26 +179,26 @@
   background-color: #c82333;
 }
 
-/* Modal Styles */
+/* Modal styles */
 .event-details-modal {
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
+  width: 100%;
+  height: 100%;
   background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  padding: 20px;
 }
 
 .modal-content {
   background: white;
   border-radius: 8px;
-  padding: 0;
-  max-width: 600px;
   width: 90%;
+  max-width: 600px;
   max-height: 80vh;
   overflow-y: auto;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
@@ -210,12 +210,11 @@
   align-items: center;
   padding: 20px;
   border-bottom: 1px solid #e9ecef;
-  background-color: #f8f9fa;
 }
 
 .modal-header h3 {
   margin: 0;
-  color: #343a40;
+  color: #333;
 }
 
 .close-modal {
@@ -223,17 +222,18 @@
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
-  color: #6c757d;
   padding: 0;
   width: 30px;
   height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
 }
 
 .close-modal:hover {
-  color: #343a40;
+  background-color: #f8f9fa;
 }
 
 .modal-body {
@@ -247,11 +247,10 @@
 .modal-body h4 {
   margin-top: 20px;
   margin-bottom: 10px;
-  color: #343a40;
+  color: #333;
 }
 
 .modal-body ul {
-  margin: 10px 0;
   padding-left: 20px;
 }
 
@@ -265,25 +264,25 @@
     margin: 1rem;
     padding: 1rem;
   }
-  
+
   .events-grid {
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 15px;
   }
-  
+
   .event-card {
     padding: 15px;
   }
-  
+
   .event-actions {
     gap: 6px;
   }
-  
+
   .event-actions button {
     padding: 8px 12px;
     font-size: 0.75rem;
   }
-  
+
   .modal-content {
     width: 95%;
     max-height: 85vh;
@@ -296,109 +295,100 @@
     margin: 0.5rem;
     padding: 0.8rem;
   }
-  
+
   .events-container h2 {
     font-size: 1.5rem;
     margin-bottom: 1rem;
   }
-  
+
   .add-new {
     width: 100%;
     padding: 12px 20px;
     font-size: 1rem;
     margin-bottom: 1rem;
   }
-  
+
   /* Switch to single column layout on mobile */
   .events-grid {
     grid-template-columns: 1fr;
     gap: 12px;
   }
-  
+
   .event-card {
     padding: 12px;
   }
-  
+
   .event-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.5rem;
   }
-  
+
   .event-name {
     font-size: 1.1rem;
     margin-right: 0;
     margin-bottom: 0.5rem;
   }
-  
+
   .status-badge {
     align-self: flex-start;
   }
-  
+
   .event-details {
     margin: 10px 0;
   }
-  
+
   .event-details p {
     margin: 6px 0;
     font-size: 0.9rem;
   }
-  
+
   .event-actions {
     gap: 6px;
     justify-content: center;
   }
-  
+
   .event-actions button {
     padding: 8px 10px;
     font-size: 0.75rem;
     flex: 1;
     min-width: 70px;
   }
-  
+
   /* Modal responsive design */
   .event-details-modal {
     padding: 0.5rem;
   }
-  
+
   .modal-content {
     width: 100%;
     max-height: 95vh;
     border-radius: 8px 8px 0 0;
   }
-  
+
   .modal-header {
     padding: 15px;
     flex-wrap: wrap;
   }
-  
+
   .modal-header h3 {
     font-size: 1.2rem;
     margin-bottom: 0.5rem;
     width: 100%;
   }
-  
+
   .modal-body {
     padding: 15px;
   }
-  
+
   .modal-body p {
     margin: 8px 0;
     font-size: 0.9rem;
   }
-  
+
   .modal-body h4 {
     font-size: 1.1rem;
     margin-top: 15px;
-  }
-  
-  .modal-body ul {
-    padding-left: 15px;
-  }
-  
-  .modal-body li {
-    margin: 4px 0;
-    font-size: 0.85rem;
   }
 }
 
@@ -408,53 +398,53 @@
     margin: 0.25rem;
     padding: 0.6rem;
   }
-  
+
   .events-container h2 {
     font-size: 1.3rem;
   }
-  
+
   .event-card {
     padding: 10px;
   }
-  
+
   .event-name {
     font-size: 1rem;
   }
-  
+
   .event-details p {
     font-size: 0.85rem;
     margin: 4px 0;
   }
-  
+
   .event-actions {
     flex-wrap: wrap;
     gap: 4px;
   }
-  
+
   .event-actions button {
     padding: 6px 8px;
     font-size: 0.7rem;
     min-width: 65px;
   }
-  
+
   .status-badge {
     font-size: 0.65rem;
     padding: 3px 6px;
   }
-  
+
   .modal-header h3 {
     font-size: 1.1rem;
   }
-  
+
   .modal-body {
     padding: 12px;
   }
-  
+
   .modal-body p,
   .modal-body li {
     font-size: 0.8rem;
   }
-  
+
   .close-modal {
     font-size: 1.3rem;
     width: 25px;
@@ -467,143 +457,8 @@
   .events-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .modal-content {
     max-height: 98vh;
   }
-}
-.events-container {
-  width: 100%;
-  max-width: 1400px;
-  margin: 2rem auto;
-  padding: 1.5rem;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.events-container h2 {
-  text-align: center;
-  color: #343a40;
-  margin-bottom: 1.5rem;
-}
-
-.events-container p.no-events {
-  text-align: center;
-  color: #6c757d;
-  font-style: italic;
-}
-
-.add-new {
-  display: block;
-  width: fit-content;
-  margin: 0 auto 1.5rem;
-  padding: 10px 20px;
-  background-color: #007bff;
-  color: #fff;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.add-new:hover {
-  background-color: #0056b3;
-}
-
-.events-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 1rem;
-  background-color: #fff;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.events-table th,
-.events-table td {
-  padding: 12px 15px;
-  text-align: left;
-  border-bottom: 1px solid #dee2e6;
-}
-
-.events-table th {
-  background-color: #e9ecef;
-  color: #495057;
-  font-weight: bold;
-  text-transform: uppercase;
-  font-size: 0.85rem;
-}
-
-.events-table tbody tr:nth-child(even) {
-  background-color: #f2f2f2;
-}
-
-.events-table tbody tr:hover {
-  background-color: #e2f0ff;
-}
-
-.events-table .actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-start;
-}
-
-.events-table .actions button {
-  padding: 6px 10px;
-  font-size: 0.8rem;
-  border-radius: 4px;
-  white-space: nowrap;
-  border: none;
-  cursor: pointer;
-}
-
-.events-table .edit {
-  background-color: #28a745;
-  color: #fff;
-}
-
-.events-table .edit:hover {
-  background-color: #218838;
-}
-
-.events-table .archive {
-  background-color: #ffc107;
-  color: #212529;
-}
-
-.events-table .archive:hover {
-  background-color: #e0a800;
-}
-
-.events-table .delete {
-  background-color: #dc3545;
-  color: #fff;
-}
-
-.events-table .delete:hover {
-  background-color: #c82333;
-}
-
-.status {
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: bold;
-}
-
-.status.active {
-  background-color: #d4edda;
-  color: #155724;
-}
-
-.status.inactive {
-  background-color: #f8d7da;
-  color: #721c24;
-}
-
-.status.archived {
-  background-color: #e2e3e5;
-  color: #383d41;
 }

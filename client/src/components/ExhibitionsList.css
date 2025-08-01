@@ -1,11 +1,157 @@
 .exhibitions-container {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 2rem auto;
   padding: 1.5rem;
   background-color: #f8f9fa;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Tablet responsive design */
+@media (max-width: 1024px) {
+  .exhibitions-container {
+    margin: 1rem;
+    padding: 1.2rem;
+  }
+
+  .exhibitions-container h2 {
+    font-size: 1.8rem;
+  }
+
+  .add-new {
+    padding: 12px 20px;
+    font-size: 0.9rem;
+  }
+
+  table {
+    font-size: 0.9rem;
+  }
+
+  table th, table td {
+    padding: 10px 12px;
+  }
+
+  .actions button {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+}
+
+/* Mobile responsive design */
+@media (max-width: 768px) {
+  .exhibitions-container {
+    margin: 0.5rem;
+    padding: 1rem;
+  }
+
+  .exhibitions-container h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .add-new {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  /* Convert table to card layout on mobile */
+  table {
+    display: none;
+  }
+
+  .mobile-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .exhibition-card {
+    background: white;
+    border-radius: 10px;
+    padding: 1rem;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+    border: 1px solid #dee2e6;
+  }
+
+  .exhibition-card h3 {
+    margin: 0 0 0.8rem 0;
+    color: #343a40;
+    font-size: 1.1rem;
+  }
+
+  .exhibition-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .exhibition-info span {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.3rem 0;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 0.9rem;
+  }
+
+  .exhibition-info span:last-child {
+    border-bottom: none;
+  }
+
+  .exhibition-info span strong {
+    color: #495057;
+    min-width: 100px;
+  }
+
+  .exhibition-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .exhibition-actions button {
+    flex: 1;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+  }
+}
+
+/* Small mobile devices */
+@media (max-width: 480px) {
+  .exhibitions-container {
+    margin: 0.25rem;
+    padding: 0.8rem;
+  }
+
+  .exhibitions-container h2 {
+    font-size: 1.3rem;
+  }
+
+  .exhibition-card {
+    padding: 0.8rem;
+  }
+
+  .exhibition-card h3 {
+    font-size: 1rem;
+  }
+
+  .exhibition-info span {
+    font-size: 0.85rem;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .exhibition-actions {
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .exhibition-actions button {
+    padding: 10px;
+    font-size: 0.8rem;
+  }
 }
 
 .exhibitions-container h2 {

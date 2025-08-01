@@ -79,19 +79,47 @@ const EquipmentList = ({ showNotification, userRole }) => {
     fetchEquipment();
   };
 
+  // სურათის URL-ის ფიქსირება
+  const getImageUrl = (imageUrl) => {
+    if (!imageUrl) return null;
+
+    // თუ URL იწყება http://-ით, ჩავანაცვლოთ 0.0.0.0 localhost-ით
+    if (imageUrl.startsWith('http://0.0.0.0:')) {
+      return imageUrl.replace('http://0.0.0.0:', 'http://localhost:');
+    }
+
+    // თუ შედარებითი მისამართია, დავამატოთ localhost:5000
+    if (imageUrl.startsWith('/uploads/')) {
+      return `http://localhost:5000${imageUrl}`;
+    }
+
+    return imageUrl;
+  };
+
+
   if (loading) {
-    return <div>იტვირთება...</div>;
+    return (
+      <div className="equipment-container">
+        <div className="loading">იტვირთება...</div>
+      </div>
+    );
   }
 
   if (error) {
-    return <div>შეცდომა: {error}</div>;
+    return (
+      <div className="equipment-container">
+        <div className="error">შეცდომა: {error}</div>
+      </div>
+    );
   }
 
   return (
     <div className="equipment-container">
       <h2>აღჭურვილობის სია</h2>
       {isAuthorizedForManagement && (
-        <button className="add-new" onClick={() => setEditingId(0)}>ახალი აღჭურვილობის დამატება</button>
+        <button className="add-new" onClick={() => setEditingId(0)}>
+          ახალი აღჭურვილობის დამატება
+        </button>
       )}
 
       {editingId !== null && isAuthorizedForManagement && (
@@ -109,37 +137,41 @@ const EquipmentList = ({ showNotification, userRole }) => {
         <div className="equipment-grid">
           {equipment.map((item) => (
             <div key={item.id} className="equipment-card">
-              <h3>{item.code_name}</h3>
-              <p><strong>რაოდენობა:</strong> {item.quantity}</p>
-              <p><strong>ფასი:</strong> ${item.price}</p>
-              <p><strong>აღწერა:</strong> {item.description}</p>
-              {item.image_url && (
-                <img 
-                  src={item.image_url} 
-                  alt={item.code_name} 
-                  className="equipment-image"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    console.log('სურათის ჩატვირთვის შეცდომა:', item.image_url);
-                  }}
-                /> 
-              )}
-              {item.created_at && (
-                <p className="created-info">დამატებულია: {new Date(item.created_at).toLocaleDateString()}</p>
-              )}
-              {item.created_by_user_id && (
-                <p className="created-info">დაამატა მომხმარებელმა ID: {item.created_by_user_id}</p>
-              )}
-              {isAuthorizedForManagement && (
-                <div className="actions">
-                  <button className="edit" onClick={() => handleEditClick(item)}>რედაქტირება</button>
-                  <button 
-                    className="delete" 
-                    onClick={() => handleDelete(item.id)}>
-                    წაშლა
-                  </button>
-                </div>
-              )}
+              <div className="equipment-details">
+                <h3>{item.code_name}</h3>
+                <p><strong>რაოდენობა:</strong> {item.quantity}</p>
+                <p><strong>ფასი:</strong> ${item.price}</p>
+                <p><strong>აღწერა:</strong> {item.description}</p>
+                {item.image_url && (
+                  <img 
+                    src={getImageUrl(item.image_url)} 
+                    alt={item.code_name} 
+                    className="equipment-image"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      console.log('სურათის ჩატვირთვის შეცდომა:', item.image_url);
+                    }}
+                    loading="lazy"
+                  /> 
+                )}
+                {item.created_at && (
+                  <p className="created-info">
+                    დამატებულია: {new Date(item.created_at).toLocaleDateString('ka-GE')}
+                  </p>
+                )}
+                {isAuthorizedForManagement && (
+                  <div className="equipment-actions">
+                    <button className="edit" onClick={() => handleEditClick(item)}>
+                      რედაქტირება
+                    </button>
+                    <button 
+                      className="delete" 
+                      onClick={() => handleDelete(item.id)}>
+                      წაშლა
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           ))}
         </div>

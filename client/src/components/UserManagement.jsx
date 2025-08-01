@@ -42,7 +42,7 @@ const UserManagement = ({ showNotification, userRole }) => {
                 },
                 body: JSON.stringify({ role: newRole }),
             });
-            
+
             if (response.ok) {
                 showNotification('როლი წარმატებით განახლდა!', 'success');
                 fetchUsers();
@@ -97,49 +97,85 @@ const UserManagement = ({ showNotification, userRole }) => {
     return (
         <div className="user-management-container">
             <h2>მომხმარებლების მართვა</h2>
-            {users.length === 0 ? (
-                <p>მომხმარებლები არ მოიძებნა.</p>
+            {error && <p className="error">{error}</p>}
+            {loading ? (
+                <p>ჩატვირთვა...</p>
             ) : (
-                <table>
-                    <thead>
-                        <tr>
-                            <th>სახელი</th>
-                            <th>როლი</th>
-                            <th>მოქმედებები</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {users.map(user => (
-                            <tr key={user.id}>
-                                <td>{user.username}</td>
-                                <td>
-                                    <select
-                                        value={user.role}
-                                        onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                                    >
-                                        <option value="user">User</option>
-                                        <option value="admin">Admin</option>
-                                        <option value="sales">Sales</option>
-                                        <option value="marketing">Marketing</option>
-                                        <option value="operation">Operation</option>
-                                        <option value="guest">Guest</option>
-                                        <option value="finance">Finance</option>
-                                        <option value="manager">Manager</option>
-                                    </select>
-                                </td>
-                                <td>
-                                    {userRole === 'admin' && (
-                                        <button 
-                                            onClick={() => handleDeleteUser(user.id)}
-                                            className="delete-user-btn">
-                                            წაშლა
-                                        </button>
-                                    )}
-                                </td>
+                <>
+                    {/* Desktop table */}
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>სახელი</th>
+                                <th>ეიმეილი</th>
+                                <th>როლი</th>
+                                <th>მოქმედება</th>
                             </tr>
+                        </thead>
+                        <tbody>
+                            {users.map(user => (
+                                <tr key={user.id}>
+                                    <td>{user.id}</td>
+                                    <td>{user.username}</td>
+                                    <td>{user.email}</td>
+                                    <td>
+                                        <select
+                                            value={user.role}
+                                            onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                                        >
+                                            <option value="user">user</option>
+                                            <option value="admin">admin</option>
+                                            <option value="sales">sales</option>
+                                            <option value="marketing">marketing</option>
+                                            <option value="operation">operation</option>
+                                            <option value="finance">finance</option>
+                                            <option value="manager">manager</option>
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <button onClick={() => handleRoleChange(user.id, user.role)}>
+                                            განახლება
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+
+                    {/* Mobile cards */}
+                    <div className="mobile-cards">
+                        {users.map(user => (
+                            <div key={user.id} className="user-card">
+                                <h3>{user.username}</h3>
+                                <div className="user-info">
+                                    <span><strong>ID:</strong> {user.id}</span>
+                                    <span><strong>ეიმეილი:</strong> {user.email}</span>
+                                    <span><strong>შექმნის თარიღი:</strong> {new Date(user.created_at).toLocaleDateString('ka-GE')}</span>
+                                </div>
+                                <select 
+                                    className="user-role-select"
+                                    value={user.role}
+                                    onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                                >
+                                    <option value="user">user</option>
+                                    <option value="admin">admin</option>
+                                    <option value="sales">sales</option>
+                                    <option value="marketing">marketing</option>
+                                    <option value="operation">operation</option>
+                                    <option value="finance">finance</option>
+                                    <option value="manager">manager</option>
+                                </select>
+                                <button 
+                                    className="update-role-btn"
+                                    onClick={() => handleRoleChange(user.id, user.role)}
+                                >
+                                    განახლება
+                                </button>
+                            </div>
                         ))}
-                    </tbody>
-                </table>
+                    </div>
+                </>
             )}
         </div>
     );

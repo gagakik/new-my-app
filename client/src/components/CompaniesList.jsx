@@ -218,42 +218,64 @@ const CompaniesList = ({ showNotification, userRole }) => {
       {companies.length === 0 ? (
         <p className="no-companies">კომპანიები არ მოიძებნა.</p>
       ) : (
-        <table className="companies-table">
-<thead>
-<tr>
-<th>კომპანია</th>
-<th>ქვეყანა</th>
-<th>პროფილი</th>
-<th>სტატუსი</th>
-<th>მოქმედებები</th>
-</tr>
-</thead>
-<tbody>
-{companies.map((company) => (
-<tr key={company.id}>
-<td>{company.company_name}</td>
-<td>{company.country}</td>
-<td>{company.company_profile}</td>
-<td>{company.status}</td>
-<td>
-<div className="actions">
-<button className="view-details" onClick={() => handleViewDetails(company)}>დეტალები</button>
-{isAuthorizedForManagement && (
-<>
-<button className="edit" onClick={() => handleEditClick(company)}>რედაქტირება</button>
-<button 
-className="delete" 
-onClick={() => handleDelete(company.id)}>
-წაშლა
-</button>
-</>
-)}
-</div>
-</td>
-</tr>
-))}
-</tbody>
-</table>
+        <>
+          {/* Desktop Table View */}
+          <table className="companies-table desktop-only">
+            <thead>
+              <tr>
+                <th>კომპანიის სახელი</th>
+                <th>ქვეყანა</th>
+                <th>პროფილი</th>
+                <th>სტატუსი</th>
+                <th>მოქმედებები</th>
+              </tr>
+            </thead>
+            <tbody>
+              {companies.map(company => (
+                <tr key={company.id}>
+                  <td>{company.company_name}</td>
+                  <td>{company.country}</td>
+                  <td>{company.company_profile}</td>
+                  <td>{company.status}</td>
+                  <td>
+                    <div className="actions">
+                      <button className="view-details" onClick={() => handleViewDetails(company)}>დეტალები</button>
+                      {isAuthorizedForManagement && (
+                        <>
+                          <button className="edit" onClick={() => handleEditClick(company)}>რედაქტირება</button>
+                          <button className="delete" onClick={() => handleDelete(company.id)}>წაშლა</button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Mobile Card View */}
+          <div className="mobile-cards mobile-only">
+            {companies.map(company => (
+              <div key={company.id} className="company-card">
+                <h3>{company.company_name}</h3>
+                <div className="company-info">
+                  <span><strong>ქვეყანა:</strong> {company.country}</span>
+                  <span><strong>პროფილი:</strong> {company.company_profile}</span>
+                  <span><strong>სტატუსი:</strong> {company.status}</span>
+                </div>
+                <div className="company-actions">
+                  <button className="view-details" onClick={() => handleViewDetails(company)}>დეტალები</button>
+                  {isAuthorizedForManagement && (
+                    <>
+                      <button className="edit" onClick={() => handleEditClick(company)}>რედაქტირება</button>
+                      <button className="delete" onClick={() => handleDelete(company.id)}>წაშლა</button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

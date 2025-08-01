@@ -265,9 +265,31 @@ input:focus, textarea:focus, select:focus {
 }
 
 /* Responsive improvements */
-@media (max-width: 768px) {
+@media (max-width: 820px) and (min-width: 391px) {
+  button {
+    padding: 0.7em 1.5em;
+    font-size: 0.9em;
+  }
+  
+  .card {
+    padding: 1.2rem;
+  }
+  
+  input, textarea, select {
+    padding: 0.7rem 0.9rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 390px) {
   body {
     padding: 0;
+  }
+  
+  button {
+    padding: 0.6em 1.2em;
+    font-size: 0.85em;
+    border-radius: 10px;
   }
   
   .actions {
@@ -278,6 +300,7 @@ input:focus, textarea:focus, select:focus {
   .actions button {
     width: 100%;
     min-width: auto;
+    padding: 0.7rem 1rem;
   }
   
   table {
@@ -285,6 +308,57 @@ input:focus, textarea:focus, select:focus {
   }
   
   table th, table td {
-    padding: 0.75rem;
+    padding: 0.6rem 0.8rem;
+  }
+  
+  .card {
+    padding: 1rem;
+    border-radius: 12px;
+  }
+  
+  input, textarea, select {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.85rem;
+    border-radius: 6px;
+  }
+  
+  .form-container {
+    padding: 1rem;
+    border-radius: 12px;
+  }
+}
+
+@media (max-width: 320px) {
+  button {
+    padding: 0.5em 1em;
+    font-size: 0.8em;
+    border-radius: 8px;
+  }
+  
+  .actions button {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.8rem;
+  }
+  
+  table {
+    font-size: 0.8rem;
+  }
+  
+  table th, table td {
+    padding: 0.5rem 0.6rem;
+  }
+  
+  .card {
+    padding: 0.8rem;
+    border-radius: 10px;
+  }
+  
+  input, textarea, select {
+    padding: 0.5rem 0.7rem;
+    font-size: 0.8rem;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-size: 0.9em;
   }
 }

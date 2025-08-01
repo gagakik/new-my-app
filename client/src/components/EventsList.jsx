@@ -31,72 +31,52 @@ const EventsList = ({ showNotification, userRole }) => {
         'Content-Type': 'application/json'
       };
 
+      console.log('Fetching events from /api/events');
       const response = await fetch('/api/events', { headers });
+      
       if (!response.ok) {
+        console.error('Events API failed with status:', response.status);
+        
         if (response.status === 401 || response.status === 403) {
           throw new Error('არ გაქვთ ივენთების ნახვის უფლება');
         }
-
-        // თუ events endpoint არ არსებობს, შევცადოთ annual-services-ით
-        const fallbackResponse = await fetch('/api/annual-services', {
-          headers: headers
-        });
-
-        if (!fallbackResponse.ok) {
-          if (fallbackResponse.status === 401 || fallbackResponse.status === 403) {
-            throw new Error('არ გაქვთ სერვისების ნახვის უფლება');
+        
+        if (response.status === 500) {
+          console.log('Server error, trying fallback to annual-services');
+          // სერვერის შეცდომის შემთხვევაში შევცადოთ annual-services-ით
+          try {
+            const fallbackResponse = await fetch('/api/annual-services', { headers });
+            
+            if (!fallbackResponse.ok) {
+              throw new Error('ბექენდ სერვისები მიუწვდომელია');
+            }
+            
+            const data = await fallbackResponse.json();
+            console.log('Fallback data received:', data.length, 'services');
+            setEvents(data || []);
+            return;
+          } catch (fallbackError) {
+            console.error('Fallback also failed:', fallbackError);
+            throw new Error('სერვისი დროებით მიუწვდომელია');
           }
-          const errorData = await fallbackResponse.json();
-          throw new Error(errorData.message || 'მონაცემების მიღება ვერ მოხერხდა.');
         }
+        
+        throw new Error(`სერვერის შეცდომა: ${response.status}`);
+      }
 
-        const data = await fallbackResponse.json();
-        console.log('All services data:', data);
-        console.log('Available service types:', [...new Set(data.map(s => s.service_type))]);
-
-        // უფრო ფართო ფილტრაცია - ყველა სერვისი რომელიც შეიძლება ივენთი იყოს
-        const eventKeywords = [
-          'ივენთ', 'event', 
-          'ფესტივალ', 'festival', 
-          'კონფერენც', 'conference', 
-          'შოუ', 'show',
-          'გამოფენ', 'exhibition',
-          'ღონისძიებ', 'სემინარ', 'seminar',
-          'პრეზენტაც', 'presentation',
-          'ფორუმ', 'forum'
-        ];
-
-        const filteredEvents = data.filter(service => {
-          if (!service.service_type) return false;
-
-          const serviceType = service.service_type.toLowerCase().trim();
-          const serviceName = (service.service_name || '').toLowerCase().trim();
-
-          return eventKeywords.some(keyword => 
-            serviceType.includes(keyword.toLowerCase()) || 
-            serviceName.includes(keyword.toLowerCase())
-          );
-        });
-
-        console.log('Filtered events:', filteredEvents);
-
-        // თუ ფილტრაციის შემდეგ ცარიელია, ყველა სერვისი გამოვაჩინოთ
-        if (filteredEvents.length === 0) {
-          console.log('No events found after filtering, showing all services as potential events');
-          setEvents(data);
-        } else {
-          setEvents(filteredEvents);
-        }
-        return;
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("სერვერმა არასწორი ფორმატი დააბრუნა");
       }
 
       const data = await response.json();
-      console.log('Events data:', data);
-      setEvents(data);
+      console.log('Events data received:', data.length, 'events');
+      setEvents(data || []);
     } catch (err) {
       console.error('Error fetching events:', err);
       setError(err.message);
       showNotification(`შეცდომა ივენთების ჩატვირთვისას: ${err.message}`, 'error');
+      setEvents([]); // ცარიელი მასივი დავაყენოთ შეცდომის შემთხვევაში
     } finally {
       setLoading(false);
     }

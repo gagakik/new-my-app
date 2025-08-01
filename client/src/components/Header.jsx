@@ -3,6 +3,7 @@ import './Header.css';
 
 const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewChange }) => {
   const [dropdownOpen, setDropdownOpen] = useState({});
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const dropdownRefs = useRef({});
 
   // Close dropdown when clicking outside
@@ -22,10 +23,20 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
   }, []);
 
   const toggleDropdown = (key) => {
-    setDropdownOpen(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
+    setDropdownOpen(prev => {
+      const newState = { ...prev };
+      // Close all other dropdowns
+      Object.keys(newState).forEach(k => {
+        if (k !== key) newState[k] = false;
+      });
+      // Toggle the clicked dropdown
+      newState[key] = !prev[key];
+      return newState;
+    });
+  };
+
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
   const handleViewChange = (view) => {
@@ -131,17 +142,31 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
       <nav className="nav">
         {isLoggedIn ? (
           <>
-            <div className="user-info">
+            <div className="user-info desktop-only">
               <span className="user-role">{userRole}</span>
               <span className="user-name">{userName}</span>
             </div>
 
-            <div className="nav-menu">
+            <button className="mobile-menu-toggle" onClick={toggleMobileMenu}>
+              <span className={`hamburger ${isMobileMenuOpen ? 'open' : ''}`}></span>
+              <span className={`hamburger ${isMobileMenuOpen ? 'open' : ''}`}></span>
+              <span className={`hamburger ${isMobileMenuOpen ? 'open' : ''}`}></span>
+            </button>
+
+            <div className={`nav-menu ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
+              <div className="mobile-user-info">
+                <span className="user-role">{userRole}</span>
+                <span className="user-name">{userName}</span>
+              </div>
+
               {getRoleBasedMenus().map((menu) => (
                 <div key={menu.key} className="nav-item">
                   {menu.single ? (
                     <button 
-                      onClick={menu.action}
+                      onClick={() => {
+                        menu.action();
+                        setIsMobileMenuOpen(false);
+                      }}
                       className={`nav-btn single ${activeView === menu.key ? 'active' : ''}`}
                     >
                       <span className="nav-icon">{menu.icon}</span>
@@ -164,7 +189,11 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
                         {menu.items.map((item) => (
                           <button
                             key={item.key}
-                            onClick={() => handleViewChange(item.key)}
+                            onClick={() => {
+                              handleViewChange(item.key);
+                              setDropdownOpen({});
+                              setIsMobileMenuOpen(false);
+                            }}
                             className={`dropdown-item ${activeView === item.key ? 'active' : ''}`}
                           >
                             <span className="item-icon">{item.icon}</span>
@@ -176,9 +205,14 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
                   )}
                 </div>
               ))}
+
+              <button onClick={onLogout} className="logout-btn mobile-logout">
+                <span className="logout-icon">🚪</span>
+                <span className="logout-text">გასვლა</span>
+              </button>
             </div>
 
-            <button onClick={onLogout} className="logout-btn">
+            <button onClick={onLogout} className="logout-btn desktop-only">
               <span className="logout-icon">🚪</span>
               <span className="logout-text">გასვლა</span>
             </button>

@@ -83,16 +83,16 @@ const ExhibitionsList = ({ showNotification, userRole }) => { // მივიღ
       showNotification('დაფიქსირდა შეცდომა სერვერთან კავშირისას.', 'error');
     }
   };
-  
+
   const handleEditClick = (exhibition) => {
     setEditingId(exhibition.id);
   };
-  
+
   const handleExhibitionUpdated = () => {
       setEditingId(null); // რედაქტირების რეჟიმიდან გასვლა
       fetchExhibitions(); // სიის განახლება
   };
-  
+
   if (loading) {
     return <div>იტვირთება...</div>;
   }
@@ -107,7 +107,7 @@ const ExhibitionsList = ({ showNotification, userRole }) => { // მივიღ
       {isAuthorizedForManagement && ( // ღილაკი მხოლოდ უფლებამოსილი როლებისთვის
         <button className="add-new" onClick={() => setEditingId(0)}>ახალი გამოფენის დამატება</button>
       )}
-      
+
       {editingId !== null && isAuthorizedForManagement && ( // ფორმაც მხოლოდ უფლებამოსილი როლებისთვის
          <ExhibitionForm 
             exhibitionToEdit={exhibitions.find(e => e.id === editingId)} 
@@ -115,7 +115,7 @@ const ExhibitionsList = ({ showNotification, userRole }) => { // მივიღ
             showNotification={showNotification} 
          />
       )}
-      
+
       {exhibitions.length === 0 ? (
         <p className="no-exhibitions">გამოფენები არ მოიძებნა.</p>
       ) : (
