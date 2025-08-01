@@ -1,3 +1,7 @@
+Adding date-info styles to the exhibitions-table CSS class.
+```
+
+```replit_final_file
 .exhibitions-container {
   width: 100%;
   max-width: 1400px;
@@ -194,6 +198,23 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+.date-info {
+  padding: 8px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+}
+
+.date-info .user {
+  font-weight: bold;
+  color: #2d3748;
+  margin-bottom: 4px;
+}
+
+.date-info .date {
+  font-size: 0.85rem;
+  color: #6c757d;
+}
+
 .exhibitions-table th,
 .exhibitions-table td {
   padding: 12px 15px;
@@ -238,6 +259,21 @@
 .exhibitions-table .delete {
   background-color: #dc3545;
   color: #fff;
+}
+
+.creation-info, .update-info {
+  font-size: 0.85rem;
+}
+
+.creation-info strong, .update-info strong {
+  color: #495057;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.creation-info .date, .update-info .date {
+  color: #6c757d;
+  font-size: 0.75rem;
 }
 
 .exhibitions-table .actions button:hover {

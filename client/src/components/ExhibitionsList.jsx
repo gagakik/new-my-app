@@ -125,6 +125,8 @@ const ExhibitionsList = ({ showNotification, userRole }) => { // მივიღ
               <th>გამოფენის სახელი</th>
               <th>კომენტარი</th>
               <th>მენეჯერი</th>
+              <th>შექმნილია</th>
+              <th>განახლებულია</th>
               {isAuthorizedForManagement && <th>მოქმედებები</th>}
             </tr>
           </thead>
@@ -134,6 +136,40 @@ const ExhibitionsList = ({ showNotification, userRole }) => { // მივიღ
                 <td>{exhibition.exhibition_name}</td>
                 <td>{exhibition.comment}</td>
                 <td>{exhibition.manager}</td>
+                <td className="date-info">
+                  {exhibition.created_by && (
+                    <div>
+                      <div className="user">{exhibition.created_by}</div>
+                      {exhibition.created_at && (
+                        <div className="date">
+                          {new Date(exhibition.created_at).toLocaleDateString('ka-GE', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </td>
+                <td className="date-info">
+                  {exhibition.updated_by && exhibition.updated_at && (
+                    <div>
+                      <div className="user">{exhibition.updated_by}</div>
+                      <div className="date">
+                        {new Date(exhibition.updated_at).toLocaleDateString('ka-GE', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </td>
                 {isAuthorizedForManagement && (
                   <td>
                     <div className="actions">

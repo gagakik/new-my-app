@@ -123,6 +123,8 @@ const SpacesList = ({ showNotification, userRole }) => {
                 <th>შენობის დასახელება</th>
                 <th>აღწერილობა</th>
                 <th>ფართობი (კვ.მ)</th>
+                <th>შექმნილია</th>
+                <th>განახლებულია</th>
                 <th>მოქმედებები</th>
               </tr>
             </thead>
@@ -133,6 +135,40 @@ const SpacesList = ({ showNotification, userRole }) => {
                   <td>{space.building_name}</td>
                   <td>{space.description}</td>
                   <td>{space.area_sqm || 'არ არის მითითებული'}</td>
+                  <td className="date-info">
+                    {space.created_by && (
+                      <div className="date-info">
+                        <div className="user">{space.created_by}</div>
+                        {space.created_at && (
+                          <div className="date">
+                            {new Date(space.created_at).toLocaleDateString('ka-GE', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </td>
+                  <td className="date-info">
+                    {space.updated_by && space.updated_at && (
+                      <div className="date-info">
+                        <div className="user">{space.updated_by}</div>
+                        <div className="date">
+                          {new Date(space.updated_at).toLocaleDateString('ka-GE', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </td>
                   <td>
                     {isAuthorizedForManagement && (
                       <div className="actions">

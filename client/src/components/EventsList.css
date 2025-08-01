@@ -179,6 +179,25 @@
   background-color: #c82333;
 }
 
+.event-details .date-info {
+  margin-top: 10px;
+  padding: 8px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border-left: 3px solid #007bff;
+}
+
+.event-details .date-info .user {
+  font-weight: bold;
+  color: #2d3748;
+  margin-bottom: 4px;
+}
+
+.event-details .date-info .date {
+  font-size: 0.85rem;
+  color: #6c757d;
+}
+
 /* Modal styles */
 .event-details-modal {
   position: fixed;

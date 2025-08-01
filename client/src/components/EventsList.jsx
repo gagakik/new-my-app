@@ -247,6 +247,38 @@ const EventsList = ({ showNotification, userRole }) => {
                   <p><strong>თარიღები:</strong> {formatDate(event.start_date)} - {formatDate(event.end_date)}</p>
                   <p><strong>სივრცეები:</strong> {event.spaces_count || 0}</p>
                   <p><strong>აღწერა:</strong> {event.description}</p>
+                  
+                  {event.created_by && (
+                    <div className="date-info">
+                      <div className="user">{event.created_by}</div>
+                      {event.created_at && (
+                        <div className="date">
+                          {new Date(event.created_at).toLocaleDateString('ka-GE', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {event.updated_by && event.updated_at && (
+                    <div className="date-info">
+                      <div className="user">{event.updated_by}</div>
+                      <div className="date">
+                        {new Date(event.updated_at).toLocaleDateString('ka-GE', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="event-actions">

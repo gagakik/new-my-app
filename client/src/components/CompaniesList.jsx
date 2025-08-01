@@ -138,9 +138,17 @@ const CompaniesList = ({ showNotification, userRole }) => {
         <p><strong>ვებგვერდი:</strong> <a href={`http://${selectedCompany.website}`} target="_blank" rel="noopener noreferrer">{selectedCompany.website}</a></p>
         <p><strong>კომენტარი:</strong> {selectedCompany.comment}</p>
         <p><strong>სტატუსი:</strong> {selectedCompany.status}</p>
-        <p className="meta-info">დამატებულია: {new Date(selectedCompany.created_at).toLocaleDateString()} (ID: {selectedCompany.created_by_user_id})</p>
+        <p className="meta-info">
+          <strong>შექმნის ინფორმაცია:</strong> 
+          {new Date(selectedCompany.created_at).toLocaleDateString()} 
+          {selectedCompany.created_by_username && ` - ${selectedCompany.created_by_username}`}
+        </p>
         {selectedCompany.updated_at && (
-          <p className="meta-info">განახლებულია: {new Date(selectedCompany.updated_at).toLocaleDateString()} (ID: {selectedCompany.updated_by_user_id})</p>
+          <p className="meta-info">
+            <strong>განახლების ინფორმაცია:</strong> 
+            {new Date(selectedCompany.updated_at).toLocaleDateString()} 
+            {selectedCompany.updated_by_username && ` - ${selectedCompany.updated_by_username}`}
+          </p>
         )}
         <button className="back-btn" onClick={() => setSelectedCompany(null)}>უკან დაბრუნება</button>
       </div>
@@ -226,17 +234,43 @@ const CompaniesList = ({ showNotification, userRole }) => {
                 <th>კომპანიის სახელი</th>
                 <th>ქვეყანა</th>
                 <th>პროფილი</th>
+                <th>საიდ. კოდი</th>
                 <th>სტატუსი</th>
+                <th>შექმნა</th>
+                <th>განახლება</th>
                 <th>მოქმედებები</th>
               </tr>
             </thead>
             <tbody>
               {companies.map(company => (
                 <tr key={company.id}>
-                  <td>{company.company_name}</td>
+                  <td className="company-name">{company.company_name}</td>
                   <td>{company.country}</td>
-                  <td>{company.company_profile}</td>
-                  <td>{company.status}</td>
+                  <td className="company-profile">{company.company_profile}</td>
+                  <td>{company.identification_code}</td>
+                  <td>
+                    <span className={`status-badge ${company.status?.toLowerCase()}`}>
+                      {company.status}
+                    </span>
+                  </td>
+                  <td className="date-info">
+                    <div className="date">{new Date(company.created_at).toLocaleDateString()}</div>
+                    {company.created_by_username && (
+                      <div className="user">{company.created_by_username}</div>
+                    )}
+                  </td>
+                  <td className="date-info">
+                    {company.updated_at ? (
+                      <>
+                        <div className="date">{new Date(company.updated_at).toLocaleDateString()}</div>
+                        {company.updated_by_username && (
+                          <div className="user">{company.updated_by_username}</div>
+                        )}
+                      </>
+                    ) : (
+                      <span className="no-update">-</span>
+                    )}
+                  </td>
                   <td>
                     <div className="actions">
                       <button className="view-details" onClick={() => handleViewDetails(company)}>დეტალები</button>

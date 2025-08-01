@@ -9,9 +9,24 @@
 }
 
 .spaces-container h2 {
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.date-info {
   text-align: center;
-  color: #343a40;
-  margin-bottom: 1.5rem;
+}
+
+.date-info .date {
+  font-weight: bold;
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.date-info .user {
+  color: #666;
+  font-size: 0.8rem;
+  margin-top: 2px;
 }
 
 .add-new {
@@ -313,4 +328,22 @@
 
 .spaces-table .actions button:hover {
   opacity: 0.9;
+}
+.space-details .date-info {
+  margin-top: 10px;
+  padding: 8px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border-left: 3px solid #007bff;
+}
+
+.space-details .date-info .user {
+  font-weight: bold;
+  color: #2d3748;
+  margin-bottom: 4px;
+}
+
+.space-details .date-info .date {
+  font-size: 0.85rem;
+  color: #6c757d;
 }

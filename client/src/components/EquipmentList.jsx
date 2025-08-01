@@ -150,10 +150,36 @@ const EquipmentList = ({ showNotification, userRole }) => {
                     loading="lazy"
                   /> 
                 )}
-                {item.created_at && (
-                  <p className="created-info">
-                    დამატებულია: {new Date(item.created_at).toLocaleDateString('ka-GE')}
-                  </p>
+                {item.created_by && (
+                  <div className="date-info">
+                    <div className="user">{item.created_by}</div>
+                    {item.created_at && (
+                      <div className="date">
+                        {new Date(item.created_at).toLocaleDateString('ka-GE', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {item.updated_by && item.updated_at && (
+                  <div className="date-info">
+                    <div className="user">{item.updated_by}</div>
+                    <div className="date">
+                      {new Date(item.updated_at).toLocaleDateString('ka-GE', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </div>
+                  </div>
                 )}
                 {isAuthorizedForManagement && (
                   <div className="equipment-actions">

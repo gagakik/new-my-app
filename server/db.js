@@ -54,7 +54,7 @@ const createTables = async () => {
         CREATE TYPE company_country AS ENUM (
           'საქართველო', 'აშშ', 'გერმანია', 'საფრანგეთი', 'დიდი ბრიტანეთი',
           'იტალია', 'ესპანეთი', 'კანადა', 'ავსტრალია', 'იაპონია',
-          'ჩინეთი', 'ბრაზილია', 'მექსიკო', 'არგენტინა', 'ჩილე',
+          'ჩინეთი', 'ბრაზილია', 'მექსიკა', 'არგენტინა', 'ჩილე',
           'ინდოეთი', 'თურქეთი', 'რუსეთი', 'უკრაინა', 'პოლონეთი'
         );
       EXCEPTION
@@ -151,7 +151,7 @@ const createTables = async () => {
           ALTER TABLE annual_services 
           ADD COLUMN year_selection INTEGER NOT NULL DEFAULT EXTRACT(YEAR FROM CURRENT_DATE);
         END IF;
-        
+
         -- Add start_date column if it doesn't exist
         IF NOT EXISTS (
           SELECT 1 FROM information_schema.columns 
@@ -160,7 +160,7 @@ const createTables = async () => {
           ALTER TABLE annual_services 
           ADD COLUMN start_date DATE NOT NULL DEFAULT CURRENT_DATE;
         END IF;
-        
+
         -- Add end_date column if it doesn't exist
         IF NOT EXISTS (
           SELECT 1 FROM information_schema.columns 
@@ -235,6 +235,74 @@ const createTables = async () => {
         metric_date DATE DEFAULT CURRENT_DATE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
+    `);
+
+    // Add tracking columns to exhibitions table
+    await pool.query(`
+      DO $$ 
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'exhibitions' AND column_name = 'created_by_user_id'
+        ) THEN
+          ALTER TABLE exhibitions ADD COLUMN created_by_user_id INTEGER REFERENCES users(id);
+        END IF;
+        
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'exhibitions' AND column_name = 'updated_by_user_id'
+        ) THEN
+          ALTER TABLE exhibitions ADD COLUMN updated_by_user_id INTEGER REFERENCES users(id);
+        END IF;
+        
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'exhibitions' AND column_name = 'created_at'
+        ) THEN
+          ALTER TABLE exhibitions ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+        END IF;
+        
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'exhibitions' AND column_name = 'updated_at'
+        ) THEN
+          ALTER TABLE exhibitions ADD COLUMN updated_at TIMESTAMP;
+        END IF;
+      END $$;
+    `);
+
+    // Add tracking columns to annual_services table
+    await pool.query(`
+      DO $$ 
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'annual_services' AND column_name = 'created_by_user_id'
+        ) THEN
+          ALTER TABLE annual_services ADD COLUMN created_by_user_id INTEGER REFERENCES users(id);
+        END IF;
+        
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'annual_services' AND column_name = 'updated_by_user_id'
+        ) THEN
+          ALTER TABLE annual_services ADD COLUMN updated_by_user_id INTEGER REFERENCES users(id);
+        END IF;
+        
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'annual_services' AND column_name = 'created_at'
+        ) THEN
+          ALTER TABLE annual_services ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+        END IF;
+        
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'annual_services' AND column_name = 'updated_at'
+        ) THEN
+          ALTER TABLE annual_services ADD COLUMN updated_at TIMESTAMP;
+        END IF;
+      END $$;
     `);
 
     // Company-Exhibition junction table (კომპანია-გამოფენის კავშირი)
