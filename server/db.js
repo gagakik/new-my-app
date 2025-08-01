@@ -247,21 +247,21 @@ const createTables = async () => {
         ) THEN
           ALTER TABLE exhibitions ADD COLUMN created_by_user_id INTEGER REFERENCES users(id);
         END IF;
-        
+
         IF NOT EXISTS (
           SELECT 1 FROM information_schema.columns 
           WHERE table_name = 'exhibitions' AND column_name = 'updated_by_user_id'
         ) THEN
           ALTER TABLE exhibitions ADD COLUMN updated_by_user_id INTEGER REFERENCES users(id);
         END IF;
-        
+
         IF NOT EXISTS (
           SELECT 1 FROM information_schema.columns 
           WHERE table_name = 'exhibitions' AND column_name = 'created_at'
         ) THEN
           ALTER TABLE exhibitions ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
         END IF;
-        
+
         IF NOT EXISTS (
           SELECT 1 FROM information_schema.columns 
           WHERE table_name = 'exhibitions' AND column_name = 'updated_at'
@@ -281,21 +281,21 @@ const createTables = async () => {
         ) THEN
           ALTER TABLE annual_services ADD COLUMN created_by_user_id INTEGER REFERENCES users(id);
         END IF;
-        
+
         IF NOT EXISTS (
           SELECT 1 FROM information_schema.columns 
           WHERE table_name = 'annual_services' AND column_name = 'updated_by_user_id'
         ) THEN
           ALTER TABLE annual_services ADD COLUMN updated_by_user_id INTEGER REFERENCES users(id);
         END IF;
-        
+
         IF NOT EXISTS (
           SELECT 1 FROM information_schema.columns 
           WHERE table_name = 'annual_services' AND column_name = 'created_at'
         ) THEN
           ALTER TABLE annual_services ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
         END IF;
-        
+
         IF NOT EXISTS (
           SELECT 1 FROM information_schema.columns 
           WHERE table_name = 'annual_services' AND column_name = 'updated_at'
@@ -341,6 +341,47 @@ const createTables = async () => {
         created_by_user_id INTEGER REFERENCES users(id),
         UNIQUE(event_id, company_id)
       )
+    `);
+
+    // აღჭურვილობის ცხრილი
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS equipment (
+        id SERIAL PRIMARY KEY,
+        code_name VARCHAR(255) NOT NULL,
+        quantity INTEGER DEFAULT 1,
+        price DECIMAL(10,2),
+        description TEXT,
+        image_url VARCHAR(500),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_by_id INTEGER REFERENCES users(id),
+        updated_by_id INTEGER REFERENCES users(id)
+      )
+    `);
+
+    // დავამატოთ ველები თუ არ არსებობს
+    await pool.query(`
+      ALTER TABLE equipment 
+      ADD COLUMN IF NOT EXISTS created_by_id INTEGER REFERENCES users(id),
+      ADD COLUMN IF NOT EXISTS updated_by_id INTEGER REFERENCES users(id)
+    `);
+
+    await pool.query(`
+      ALTER TABLE annual_services 
+      ADD COLUMN IF NOT EXISTS created_by_id INTEGER REFERENCES users(id),
+      ADD COLUMN IF NOT EXISTS updated_by_id INTEGER REFERENCES users(id)
+    `);
+
+    await pool.query(`
+      ALTER TABLE exhibitions 
+      ADD COLUMN IF NOT EXISTS created_by_id INTEGER REFERENCES users(id),
+      ADD COLUMN IF NOT EXISTS updated_by_id INTEGER REFERENCES users(id)
+    `);
+
+    await pool.query(`
+      ALTER TABLE spaces 
+      ADD COLUMN IF NOT EXISTS created_by_id INTEGER REFERENCES users(id),
+      ADD COLUMN IF NOT EXISTS updated_by_id INTEGER REFERENCES users(id)
     `);
 
     console.log('Database tables created successfully');
