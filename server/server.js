@@ -742,14 +742,56 @@ app.get('/api/events', authenticateToken, async (req, res) => {
 app.get('/api/events/:eventId/participants', authenticateToken, async (req, res) => {
     const { eventId } = req.params;
     try {
-        const result = await db.query(`
-            SELECT ep.*, c.company_name, c.country, c.identification_code
-            FROM event_participants ep
-            JOIN companies c ON ep.company_id = c.id
-            WHERE ep.event_id = $1
-            ORDER BY ep.registration_date DESC
-        `, [eventId]);
-        res.status(200).json(result.rows);
+        // შევამოწმოთ თუ event_participants ცხრილი არსებობს
+        const tableCheckResult = await db.query(`
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'event_participants'
+            );
+        `);
+
+        if (tableCheckResult.rows[0].exists) {
+            // თუ event_participants ცხრილი არსებობს
+            const result = await db.query(`
+                SELECT ep.*, c.company_name, c.country, c.identification_code
+                FROM event_participants ep
+                JOIN companies c ON ep.company_id = c.id
+                WHERE ep.event_id = $1
+                ORDER BY ep.registration_date DESC
+            `, [eventId]);
+
+            console.log(`Found ${result.rows.length} participants for event ${eventId}`);
+            res.status(200).json(result.rows);
+        } else {
+            // თუ ცხრილი არ არსებობს, შევქმნათ იგი
+            console.log('event_participants table does not exist, creating it...');
+            await db.query(`
+                CREATE TABLE IF NOT EXISTS event_participants (
+                    id SERIAL PRIMARY KEY,
+                    event_id INTEGER NOT NULL,
+                    company_id INTEGER NOT NULL,
+                    registration_status VARCHAR(50) DEFAULT 'მონაწილეობის მოთხოვნა',
+                    payment_status VARCHAR(50) DEFAULT 'მომლოდინე',
+                    booth_number VARCHAR(20),
+                    booth_size DECIMAL(10,2),
+                    notes TEXT,
+                    contact_person VARCHAR(255),
+                    contact_email VARCHAR(255),
+                    contact_phone VARCHAR(50),
+                    registration_date DATE DEFAULT CURRENT_DATE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    created_by_user_id INTEGER,
+                    UNIQUE(event_id, company_id),
+                    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
+                    FOREIGN KEY (created_by_user_id) REFERENCES users(id)
+                );
+            `);
+
+            console.log('event_participants table created, returning empty array');
+            res.status(200).json([]);
+        }
     } catch (error) {
         console.error('შეცდომა მონაწილეების მიღებისას:', error);
         res.status(500).json({ message: 'მონაწილეების მიღება ვერ მოხერხდა.', error: error.message });
@@ -771,13 +813,26 @@ app.post('/api/events/:eventId/participants', authenticateToken, async (req, res
     const created_by_user_id = req.user.id;
 
     try {
-        const result = await db.query(
-            `INSERT INTO event_participants 
-            (event_id, company_id, booth_number, booth_size, notes, contact_person, contact_email, contact_phone, created_by_user_id) 
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-            [eventId, company_id, booth_number, booth_size, notes, contact_person, contact_email, contact_phone, created_by_user_id]
-        );
-        res.status(201).json({ message: 'მონაწილე წარმატებით დარეგისტრირდა.', participant: result.rows[0] });
+        // შევამოწმოთ თუ event_participants ცხრილი არსებობს
+        const tableCheckResult = await db.query(`
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'event_participants'
+            );
+        `);
+
+        if (tableCheckResult.rows[0].exists) {
+            const result = await db.query(
+                `INSERT INTO event_participants 
+                (event_id, company_id, booth_number, booth_size, notes, contact_person, contact_email, contact_phone, created_by_user_id) 
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+                [eventId, company_id, booth_number, booth_size, notes, contact_person, contact_email, contact_phone, created_by_user_id]
+            );
+            res.status(201).json({ message: 'მონაწილე წარმატებით დარეგისტრირდა.', participant: result.rows[0] });
+        } else {
+            res.status(404).json({ message: 'მონაწილეების რეგისტრაციის ფუნქცია ამ ივენთისთვის ხელმისაწვდომი არ არის.' });
+        }
     } catch (error) {
         console.error('შეცდომა მონაწილის რეგისტრაციისას:', error);
         if (error.code === '23505') {
@@ -876,16 +931,17 @@ app.post('/api/annual-services', authenticateToken, async (req, res) => {
 
   const { 
     service_name, description, year_selection, start_date, end_date, 
-    service_type, is_active, selected_spaces, selected_exhibitions 
+    service_type, is_active, selected_spaces, selected_exhibitions,
+    exhibition_id, selected_companies
   } = req.body;
   const created_by_user_id = req.user.id;
 
   try {
     const result = await db.query(
       `INSERT INTO annual_services 
-      (service_name, description, year_selection, start_date, end_date, service_type, is_active, created_by_user_id) 
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-      [service_name, description, year_selection, start_date, end_date, service_type, is_active, created_by_user_id]
+      (service_name, description, year_selection, start_date, end_date, service_type, is_active, created_by_user_id, exhibition_id) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [service_name, description, year_selection, start_date, end_date, service_type, is_active, created_by_user_id, exhibition_id]
     );
 
     const service = result.rows[0];
@@ -900,7 +956,92 @@ app.post('/api/annual-services', authenticateToken, async (req, res) => {
       }
     }
 
-    res.status(201).json({ message: 'სერვისი წარმატებით დაემატა.', service });
+    // კომპანიების ავტომატური რეგისტრაცია event participants-ში
+    // თუ exhibition_id მითითებულია, მოვძებნოთ ყველა კომპანია რომელიც ამ გამოფენას მონაწილეობს
+    if (exhibition_id) {
+      console.log(`ივენთისთვის ${service.id} ვეძებთ კომპანიებს გამოფენისთვის ${exhibition_id}`);
+      
+      // ჯერ შევამოწმოთ event_participants ცხრილი არსებობს თუ არა
+      const tableExists = await db.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'event_participants'
+        );
+      `);
+
+      if (!tableExists.rows[0].exists) {
+        // თუ ცხრილი არ არსებობს, შევქმნათ
+        await db.query(`
+          CREATE TABLE IF NOT EXISTS event_participants (
+            id SERIAL PRIMARY KEY,
+            event_id INTEGER NOT NULL,
+            company_id INTEGER NOT NULL,
+            registration_status VARCHAR(50) DEFAULT 'მონაწილეობის მოთხოვნა',
+            payment_status VARCHAR(50) DEFAULT 'მომლოდინე',
+            booth_number VARCHAR(20),
+            booth_size DECIMAL(10,2),
+            notes TEXT,
+            contact_person VARCHAR(255),
+            contact_email VARCHAR(255),
+            contact_phone VARCHAR(50),
+            registration_date DATE DEFAULT CURRENT_DATE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            created_by_user_id INTEGER,
+            UNIQUE(event_id, company_id),
+            FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
+            FOREIGN KEY (created_by_user_id) REFERENCES users(id)
+          );
+        `);
+        console.log('event_participants ცხრილი შეიქმნა');
+      }
+
+      const companiesForExhibition = await db.query(`
+        SELECT company_id FROM company_exhibitions WHERE exhibition_id = $1
+      `, [exhibition_id]);
+
+      console.log(`მოიძებნა ${companiesForExhibition.rows.length} კომპანია გამოფენისთვის ${exhibition_id}`);
+
+      // ყველა კომპანიის ავტომატური რეგისტრაცია "მონაწილეობის მოთხოვნა" სტატუსით
+      for (const companyRecord of companiesForExhibition.rows) {
+        try {
+          await db.query(`
+            INSERT INTO event_participants (event_id, company_id, registration_status, registration_date, created_by_user_id)
+            VALUES ($1, $2, 'მონაწილეობის მოთხოვნა', CURRENT_DATE, $3)
+            ON CONFLICT (event_id, company_id) DO NOTHING
+          `, [service.id, companyRecord.company_id, created_by_user_id]);
+          console.log(`კომპანია ${companyRecord.company_id} დარეგისტრირდა ივენთზე ${service.id}`);
+        } catch (regError) {
+          console.error(`შეცდომა კომპანიის ${companyRecord.company_id} რეგისტრაციისას:`, regError);
+        }
+      }
+    }
+
+    // დამატებით არჩეული კომპანიების რეგისტრაცია (თუ არის)
+    if (selected_companies && selected_companies.length > 0) {
+      for (const companyId of selected_companies) {
+        await db.query(`
+          INSERT INTO event_participants (event_id, company_id, registration_status, registration_date, created_by_user_id)
+          VALUES ($1, $2, 'მონაწილეობის მოთხოვნა', CURRENT_DATE, $3)
+          ON CONFLICT (event_id, company_id) DO NOTHING
+        `, [service.id, companyId, created_by_user_id]);
+      }
+    }
+
+    // პასუხის ჩამოყალიბება
+    let registeredCompaniesCount = 0;
+    if (exhibition_id) {
+      const companiesCountResult = await db.query(`
+        SELECT COUNT(*) as count FROM company_exhibitions WHERE exhibition_id = $1
+      `, [exhibition_id]);
+      registeredCompaniesCount = companiesCountResult.rows[0].count;
+    }
+
+    res.status(201).json({ 
+      message: `ივენთი წარმატებით შეიქმნა. ${registeredCompaniesCount} კომპანია ავტომატურად დარეგისტრირდა მონაწილეობის მოთხოვნის სტატუსით.`, 
+      event: service 
+    });
   } catch (error) {
     console.error('შეცდომა სერვისის დამატებისას:', error);
     res.status(500).json({ message: 'სერვისის დამატება ვერ მოხერხდა.', error: error.message });
@@ -1251,7 +1392,7 @@ app.post('/api/annual-services', authenticateToken, async (req, res) => {
       `INSERT INTO annual_services
        (service_name, description, year_selection, service_type, start_date, end_date, is_active, created_by_user_id, created_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING *`,
-      [service_name, description, yearselection, service_type, start_date, end_date, is_active, created_by_user_id]
+      [service_name, description, year_selection, service_type, start_date, end_date, is_active, created_by_user_id]
     );
 
     res.status(201).json({

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import './EventForm.css';
 
@@ -13,6 +12,9 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
   const [availableSpaces, setAvailableSpaces] = useState([]);
   const [selectedExhibitions, setSelectedExhibitions] = useState([]);
   const [availableExhibitions, setAvailableExhibitions] = useState([]);
+  const [selectedExhibitionId, setSelectedExhibitionId] = useState('');
+  const [availableCompanies, setAvailableCompanies] = useState([]);
+  const [selectedCompanies, setSelectedCompanies] = useState([]);
   const isEditing = !!eventToEdit;
 
   // Fetch available spaces and exhibitions
@@ -49,17 +51,78 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
     fetchData();
   }, []);
 
+  // Fetch companies when exhibition is selected
+  const fetchCompaniesByExhibition = async (exhibitionId, preserveSelection = false, isEditMode = false) => {
+    if (!exhibitionId) {
+      setAvailableCompanies([]);
+      if (!preserveSelection) {
+        setSelectedCompanies([]);
+      }
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
+      const response = await fetch(`/api/companies?exhibition_id=${exhibitionId}`, { headers });
+      if (response.ok) {
+        const companies = await response.json();
+        const filteredCompanies = companies.filter(company => 
+          company.exhibitions && company.exhibitions.includes(parseInt(exhibitionId))
+        );
+        setAvailableCompanies(filteredCompanies);
+
+        // ავტო-არჩევა მხოლოდ ახალი ივენთისთვის
+        if (!preserveSelection && !isEditMode) {
+          const autoSelectedCompanies = filteredCompanies.map(company => company.id);
+          setSelectedCompanies(autoSelectedCompanies);
+        }
+      }
+    } catch (error) {
+      console.error('შეცდომა კომპანიების მიღებისას:', error);
+    }
+  };
+
   useEffect(() => {
     if (isEditing && eventToEdit) {
+      console.log('რედაქტირების მონაცემები:', eventToEdit);
+      
       setServiceName(eventToEdit.service_name || '');
       setDescription(eventToEdit.description || '');
       setYearSelection(eventToEdit.year_selection || new Date().getFullYear());
       setStartDate(eventToEdit.start_date ? eventToEdit.start_date.slice(0, 10) : '');
       setEndDate(eventToEdit.end_date ? eventToEdit.end_date.slice(0, 10) : '');
       setServiceType(eventToEdit.service_type || 'ივენთი');
-      setSelectedSpaces(eventToEdit.selected_spaces || []);
-      setSelectedExhibitions(eventToEdit.selected_exhibitions || []);
+      
+      // სივრცეების სწორი დაყენება
+      const spacesArray = Array.isArray(eventToEdit.selected_spaces) 
+        ? eventToEdit.selected_spaces 
+        : eventToEdit.selected_spaces ? JSON.parse(eventToEdit.selected_spaces) : [];
+      setSelectedSpaces(spacesArray);
+      
+      // გამოფენების სწორი დაყენება
+      const exhibitionsArray = Array.isArray(eventToEdit.selected_exhibitions) 
+        ? eventToEdit.selected_exhibitions 
+        : eventToEdit.selected_exhibitions ? JSON.parse(eventToEdit.selected_exhibitions) : [];
+      setSelectedExhibitions(exhibitionsArray);
+      
+      // გამოფენის ID-ის სწორად დაყენება
+      const exhibitionId = eventToEdit.exhibition_id ? eventToEdit.exhibition_id.toString() : '';
+      setSelectedExhibitionId(exhibitionId);
+      console.log('დაყენებული გამოფენის ID:', exhibitionId);
+      
+      setSelectedCompanies(eventToEdit.selected_companies || []);
+      
+      // რედაქტირების დროს გამოფენისთვის კომპანიების ჩატვირთვა
+      if (exhibitionId && availableExhibitions.length > 0) {
+        fetchCompaniesByExhibition(exhibitionId, true, true);
+      }
     } else {
+      // ცარიელი ფორმისთვის
       setServiceName('');
       setDescription('');
       setYearSelection(new Date().getFullYear());
@@ -68,8 +131,11 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
       setServiceType('ივენთი');
       setSelectedSpaces([]);
       setSelectedExhibitions([]);
+      setSelectedExhibitionId('');
+      setSelectedCompanies([]);
+      setAvailableCompanies([]);
     }
-  }, [eventToEdit, isEditing]);
+  }, [eventToEdit, isEditing, availableExhibitions]);
 
   const handleSpaceToggle = (spaceId) => {
     setSelectedSpaces(prev => 
@@ -79,9 +145,23 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
     );
   };
 
-  
+  const handleExhibitionSelect = (exhibitionId) => {
+    setSelectedExhibitionId(exhibitionId);
+    setSelectedExhibitions(exhibitionId ? [parseInt(exhibitionId)] : []);
+    fetchCompaniesByExhibition(exhibitionId, false, isEditing); // რედაქტირების დროს ავტო-სელექცია გათიშული
+  };
 
-  
+  const handleCompanyToggle = (companyId) => {
+    setSelectedCompanies(prev => 
+      prev.includes(companyId) 
+        ? prev.filter(id => id !== companyId)
+        : [...prev, companyId]
+    );
+  };
+
+
+
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -101,6 +181,8 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
       is_active: true,
       selected_spaces: selectedSpaces,
       selected_exhibitions: selectedExhibitions,
+      exhibition_id: selectedExhibitionId,
+      selected_companies: selectedCompanies,
     };
 
     const method = isEditing ? 'PUT' : 'POST';
@@ -126,7 +208,13 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
 
       const data = await response.json();
       showNotification(data.message, 'success');
-      onEventUpdated();
+
+      // თუ ახალი ივენთი შეიქმნა და გამოფენა არჩეული იყო, კომპანიები ავტომატურად უნდა დარეგისტრირდეს
+      if (!isEditing && data.event && selectedExhibitionId) {
+        showNotification(`ივენთი შეიქმნა. ავტომატურად რეგისტრირდება ${availableCompanies.length} კომპანია.`, 'info');
+      }
+
+      onEventUpdated(); // ფორმის გასუფთავება და სიის განახლება
     } catch (error) {
       showNotification(`შეცდომა: ${error.message}`, 'error');
     }
@@ -216,8 +304,8 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
         <div className="form-group">
           <label>გამოფენის არჩევა</label>
           <select 
-            value={selectedExhibitions.length > 0 ? selectedExhibitions[0] : ''}
-            onChange={(e) => setSelectedExhibitions(e.target.value ? [parseInt(e.target.value)] : [])}
+            value={selectedExhibitionId}
+            onChange={(e) => handleExhibitionSelect(e.target.value)}
           >
             <option value="">აირჩიეთ გამოფენა</option>
             {availableExhibitions.map(exhibition => (
@@ -227,6 +315,16 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
             ))}
           </select>
         </div>
+
+        {selectedExhibitionId && (
+          <div className="form-group">
+            <label>მონაწილე კომპანიები</label>
+            <div className="companies-info">
+              <p>ამ გამოფენას რეგისტრირებული აქვს <strong>{availableCompanies.length} კომპანია</strong>, რომლებიც ავტომატურად დაემატება მონაწილეობის მოთხოვნის სტატუსით.</p>
+              <small>მონაწილეების სია და სტატუსების მართვა შესაძლებელია ივენთის შექმნის შემდეგ.</small>
+            </div>
+          </div>
+        )}
 
         <div className="form-group">
           <label>სივრცეების არჩევა</label>

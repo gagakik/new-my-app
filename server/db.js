@@ -302,6 +302,13 @@ const createTables = async () => {
         ) THEN
           ALTER TABLE annual_services ADD COLUMN updated_at TIMESTAMP;
         END IF;
+
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'annual_services' AND column_name = 'exhibition_id'
+        ) THEN
+          ALTER TABLE annual_services ADD COLUMN exhibition_id INTEGER REFERENCES exhibitions(id);
+        END IF;
       END $$;
     `);
 

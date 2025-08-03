@@ -156,11 +156,12 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
 
   const getStatusBadge = (status) => {
     const statusMap = {
+      'მონაწილეობის მოთხოვნა': 'requested',
       'რეგისტრირებული': 'registered',
       'დადასტურებული': 'confirmed',
       'გაუქმებული': 'cancelled'
     };
-    return statusMap[status] || 'registered';
+    return statusMap[status] || 'requested';
   };
 
   const getPaymentBadge = (status) => {
@@ -268,6 +269,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                         value={formData.registration_status}
                         onChange={(e) => setFormData({...formData, registration_status: e.target.value})}
                       >
+                        <option value="მონაწილეობის მოთხოვნა">მონაწილეობის მოთხოვნა</option>
                         <option value="რეგისტრირებული">რეგისტრირებული</option>
                         <option value="დადასტურებული">დადასტურებული</option>
                         <option value="გაუქმებული">გაუქმებული</option>
@@ -310,7 +312,12 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
 
           <div className="participants-list">
             {participants.length === 0 ? (
-              <p className="no-participants">მონაწილეები არ არის რეგისტრირებული</p>
+              <div className="no-participants">
+                <p>ამ ივენთზე მონაწილეები ჯერ არ არის რეგისტრირებული.</p>
+                {isAuthorizedForManagement && (
+                  <p className="hint">მონაწილის დამატებისთვის გამოიყენეთ ზემოთ მოცემული ღილაკი.</p>
+                )}
+              </div>
             ) : (
               <div className="participants-table">
                 <div className="table-header">

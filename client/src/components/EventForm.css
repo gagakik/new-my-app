@@ -8,7 +8,47 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.spaces-selection,
+.spaces-selection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  padding: 1rem;
+  border-radius: 4px;
+}
+
+.companies-info {
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1rem;
+  background-color: #f8f9fa;
+}
+
+.companies-info p {
+  margin: 0 0 1rem 0;
+  color: #495057;
+  font-weight: 500;
+}
+
+.companies-info {
+  background-color: #f8f9fa;
+  padding: 15px;
+  border-radius: 6px;
+  border-left: 4px solid #007bff;
+}
+
+.companies-info p {
+  margin: 0 0 8px 0;
+  color: #495057;
+}
+
+.companies-info small {
+  color: #6c757d;
+  font-style: italic;
+}
+
 .exhibitions-selection {
   display: flex;
   flex-direction: column;
