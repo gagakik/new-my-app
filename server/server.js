@@ -45,14 +45,25 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Request logging middleware for debugging
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    if (req.method === 'POST' || req.method === 'PUT') {
+        console.log('Request body:', req.body);
+    }
+    next();
+});
+
 // Production-ში static files-ების სერვირება
 if (process.env.NODE_ENV === 'production') {
     app.use(express.static(path.join(__dirname, '../client/dist')));
 
     // React router-ისთვის catch-all handler
-    app.get('*', (req, res) => {
+    app.get('*', (req, res, next) => {
         if (!req.path.startsWith('/api') && !req.path.startsWith('/uploads')) {
             res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
+        } else {
+            next();
         }
     });
 }
@@ -123,11 +134,7 @@ const upload = multer({
 
 // სურათის ატვირთვის ფუნქცია
 function uploadImage(file) {
-    // პროდუქშენში სრული URL-ის გამოყენება
-    if (process.env.NODE_ENV === 'production') {
-        return `http://209.38.237.197/uploads/${file.filename}`;
-    }
-    // development-ში შედარებითი მისამართის გამოყენება
+    // შედარებითი მისამართის გამოყენება ყველა გარემოში
     return `/uploads/${file.filename}`;
 }
 
@@ -653,7 +660,7 @@ app.put('/api/companies/:id', authenticateToken, async (req, res) => {
             return res.status(404).json({ message: 'კომპანია ვერ მოიძებნა.' });
         }
 
-        console.log(`კომპანია ${company_name} წარმატებით განახლდა`);
+        console.log(`კომპანია ID ${id} წარმატებით განახლდა`);
 
         // გამოფენების კავშირების განახლება
         if (selected_exhibitions !== undefined) {
@@ -685,31 +692,25 @@ app.put('/api/companies/:id', authenticateToken, async (req, res) => {
         console.error('Error details:', {
             message: error.message,
             code: error.code,
-            detail: error.detail,
-            stack: error.stack,
-            constraint: error.constraint
+            detail: error.detail
         });
         
         // Check for specific error types
         if (error.code === '23505') {
             return res.status(409).json({ 
-                message: 'კომპანია ამ საიდენტიფიკაციო კოდით უკვე არსებობს.',
-                error: 'duplicate_key'
+                message: 'კომპანია ამ საიდენტიფიკაციო კოდით უკვე არსებობს.'
             });
         }
         
         if (error.code === '23503') {
             return res.status(400).json({ 
-                message: 'მონაცემთა ბაზის თავსებადობის შეცდომა.',
-                error: 'foreign_key_violation'
+                message: 'მონაცემთა ბაზის თავსებადობის შეცდომა.'
             });
         }
         
         res.status(500).json({ 
             message: 'კომპანიის განახლება ვერ მოხერხდა.', 
-            error: error.message,
-            details: error.detail || 'დეტალები არ მოიძებნა',
-            code: error.code || 'unknown_error'
+            error: error.message
         });
     }
 });
@@ -2171,6 +2172,15 @@ app.put('/api/annual-services/:id', authenticateToken, async (req, res) => {
 
 // Error handling middleware for multer errors
 app.use((error, req, res, next) => {
+    console.error('Error occurred:', {
+        message: error.message,
+        stack: error.stack,
+        url: req.url,
+        method: req.method,
+        body: req.body,
+        headers: req.headers
+    });
+
     if (error instanceof multer.MulterError) {
         if (error.code === 'LIMIT_FILE_SIZE') {
             return res.status(400).json({ message: 'ფაილი ძალიან დიდია. მაქსიმუმ 5MB.' });
@@ -2181,8 +2191,7 @@ app.use((error, req, res, next) => {
         return res.status(400).json({ message: error.message });
     }
 
-    console.error('სერვერის შეცდომა:', error);
-    res.status(500).json({ message: 'სერვერის შიდა შეცდომა' });
+    res.status(500).json({ message: 'სერვერის შიდა შეცდომა', error: error.message });
 });
 
 // --- რეპორტების API ენდპოინტები ---
