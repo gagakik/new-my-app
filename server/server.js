@@ -59,7 +59,13 @@ const multerStorage = multer.diskStorage({
         }
 
         if (!fs.existsSync(uploadPath)) {
-            fs.mkdirSync(uploadPath, { recursive: true });
+            try {
+                fs.mkdirSync(uploadPath, { recursive: true });
+                fs.chmodSync(uploadPath, 0o755);
+                console.log('Upload directory created:', uploadPath);
+            } catch (error) {
+                console.error('Error creating upload directory:', error);
+            }
         }
         cb(null, uploadPath); 
     },
@@ -74,7 +80,9 @@ const multerStorage = multer.diskStorage({
         else if (file.fieldname === 'handover_file') prefix = 'handover';
         else if (file.mimetype.startsWith('image/')) prefix = 'img';
 
-        cb(null, prefix + '-' + uniqueSuffix + fileExtension);
+        const filename = prefix + '-' + uniqueSuffix + fileExtension;
+        console.log('Generated filename:', filename);
+        cb(null, filename);
     }
 });
 
@@ -106,7 +114,11 @@ const upload = multer({
 
 // სურათის ატვირთვის ფუნქცია
 function uploadImage(file) {
-    // ყოველთვის შედარებითი მისამართის გამოყენება
+    // პროდუქშენში სრული URL-ის გამოყენება
+    if (process.env.NODE_ENV === 'production') {
+        return `http://209.38.237.197/uploads/${file.filename}`;
+    }
+    // development-ში შედარებითი მისამართის გამოყენება
     return `/uploads/${file.filename}`;
 }
 
@@ -442,66 +454,62 @@ app.delete('/api/equipment/:id', authenticateToken, authorizeEquipmentManagement
 
 // GET: ყველა კომპანიის მიღება (ფილტრაციით და ძიებით)
 app.get('/api/companies', authenticateToken, async (req, res) => {
-    const { searchTerm, country, profile, status, identification_code } = req.query;
+    const { searchTerm, country, profile, status, identification_code, exhibition_id } = req.query;
     let query = `SELECT 
         c.*,
         creator.username as created_by_username,
-        updater.username as updated_by_username
+        updater.username as updated_by_username,
+        ARRAY_AGG(DISTINCT ce.exhibition_id) FILTER (WHERE ce.exhibition_id IS NOT NULL) as exhibitions
         FROM companies c
         LEFT JOIN users creator ON c.created_by_user_id = creator.id
         LEFT JOIN users updater ON c.updated_by_user_id = updater.id
-        WHERE 1=1`;
-    const values = [];
-    let paramIndex = 1;
+        LEFT JOIN company_exhibitions ce ON c.id = ce.company_id`;
+
+    let params = [];
+    let conditions = [];
 
     if (searchTerm) {
-        query += ` AND c.company_name ILIKE $${paramIndex}`;
-        values.push(`%${searchTerm}%`);
-        paramIndex++;
-    }
-    if (country) {
-        query += ` AND c.country = $${paramIndex}`;
-        values.push(country);
-        paramIndex++;
-    }
-    if (profile) {
-        query += ` AND c.company_profile ILIKE $${paramIndex}`;
-        values.push(`%${profile}%`);
-        paramIndex++;
-    }
-    if (status) {
-        query += ` AND c.status = $${paramIndex}`;
-        values.push(status);
-        paramIndex++;
-    }
-    if (identification_code) {
-        query += ` AND c.identification_code ILIKE $${paramIndex}`;
-        values.push(`%${identification_code}%`);
-        paramIndex++;
+        conditions.push(`(c.company_name ILIKE $${params.length + 1} OR c.identification_code ILIKE $${params.length + 1})`);
+        params.push(`%${searchTerm}%`);
     }
 
-    query += ' ORDER BY c.id ASC';
+    if (country) {
+        conditions.push(`c.country = $${params.length + 1}`);
+        params.push(country);
+    }
+
+    if (profile) {
+        conditions.push(`c.company_profile ILIKE $${params.length + 1}`);
+        params.push(`%${profile}%`);
+    }
+
+    if (status) {
+        conditions.push(`c.status = $${params.length + 1}`);
+        params.push(status);
+    }
+
+    if (identification_code) {
+        conditions.push(`c.identification_code = $${params.length + 1}`);
+        params.push(identification_code);
+    }
+
+    if (exhibition_id) {
+        conditions.push(`ce.exhibition_id = $${params.length + 1}`);
+        params.push(exhibition_id);
+    }
+
+    if (conditions.length > 0) {
+        query += ' WHERE ' + conditions.join(' AND ');
+    }
+
+    query += ' GROUP BY c.id, creator.username, updater.username ORDER BY c.created_at DESC';
 
     try {
-        const result = await db.query(query, values);
-
-        // თითოეული კომპანიისთვის გამოფენების მიღება
-        for (let company of result.rows) {
-            const exhibitionsResult = await db.query(`
-                SELECT e.id, e.exhibition_name 
-                FROM exhibitions e
-                JOIN company_exhibitions ce ON e.id = ce.exhibition_id
-                WHERE ce.company_id = $1
-            `, [company.id]);
-
-            company.exhibitions = exhibitionsResult.rows.map(e => e.id);
-            company.exhibition_names = exhibitionsResult.rows.map(e => e.exhibition_name);
-        }
-
+        const result = await db.query(query, params);
         res.status(200).json(result.rows);
     } catch (error) {
         console.error('შეცდომა კომპანიების მიღებისას:', error);
-        res.status(500).json({ message: 'კომპანიების მიღება ვერ მოხერხდა.', error: error.message });
+        res.status(500).json({ message: 'კომპანიების სიის მიღება ვერ მოხერხდა.', error: error.message });
     }
 });
 
@@ -551,55 +559,56 @@ app.post('/api/companies', authenticateToken, authorizeCompanyManagement, async 
     }
 });
 
-// PUT: კომპანიის რედაქტირება ID-ის მიხედვით (მხოლოდ admin, sales)
-app.put('/api/companies/:id', authenticateToken, authorizeCompanyManagement, async (req, res) => {
+// PUT: კომპანიის განახლება
+app.put('/api/companies/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { 
-        company_name, country, company_profile, identification_code, legal_address,
-        contact_persons, // შეცვლილია: ახალი ველი JSONB-ისთვის
-        website, comment, status, selected_exhibitions
+        company_name, 
+        country, 
+        company_profile, 
+        identification_code, 
+        legal_address, 
+        contact_persons, 
+        website, 
+        comment, 
+        status,
+        selected_exhibitions
     } = req.body;
-    const updated_by_user_id = req.user.id; // მომხმარებლის ID ტოკენიდან
 
     try {
-        // კომპანიის განახლება
+        // ჯერ კომპანიას ვანახლებთ
         const result = await db.query(
-            `UPDATE companies SET 
-                company_name = $1, country = $2, company_profile = $3, identification_code = $4, legal_address = $5,
-                contact_persons = $6, 
-                website = $7, comment = $8, status = $9, 
-                updated_at = CURRENT_TIMESTAMP, updated_by_user_id = $10
-            WHERE id = $11 RETURNING *`,
-            [
-                company_name, country, company_profile, identification_code, legal_address,
-                JSON.stringify(contact_persons), // JSONB ველისთვის
-                website, comment, status, updated_by_user_id, id
-            ]
+            `UPDATE companies 
+             SET company_name = $1, country = $2, company_profile = $3, 
+                 identification_code = $4, legal_address = $5, contact_persons = $6,
+                 website = $7, comment = $8, status = $9, updated_at = CURRENT_TIMESTAMP,
+                 updated_by_user_id = $11
+             WHERE id = $10 RETURNING *`,
+            [company_name, country, company_profile, identification_code, legal_address, 
+             JSON.stringify(contact_persons), website, comment, status, id, req.user.id]
         );
 
-        if (result.rows.length > 0) {
-            // არსებული გამოფენების კავშირების წაშლა
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'კომპანია ვერ მოიძებნა.' });
+        }
+
+        // თუ გამოფენების არჩევანი მოვიდა, ვანახლებთ კავშირებს
+        if (selected_exhibitions && Array.isArray(selected_exhibitions)) {
+            // ჯერ ყველა არსებული კავშირი ვშლით ამ კომპანიისთვის
             await db.query('DELETE FROM company_exhibitions WHERE company_id = $1', [id]);
 
-            // ახალი გამოფენების კავშირების დამატება
-            if (selected_exhibitions && selected_exhibitions.length > 0) {
-                for (const exhibitionId of selected_exhibitions) {
-                    await db.query(
-                        'INSERT INTO company_exhibitions (company_id, exhibition_id) VALUES ($1, $2)',
-                        [id, exhibitionId]
-                    );
-                }
+            // შემდეგ ახალ კავშირებს ვამატებთ
+            for (const exhibitionId of selected_exhibitions) {
+                await db.query(
+                    'INSERT INTO company_exhibitions (company_id, exhibition_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                    [id, exhibitionId]
+                );
             }
-
-            res.status(200).json({ message: 'კომპანია წარმატებით განახლდა.', company: result.rows[0] });
-        } else {
-            res.status(404).json({ message: 'კომპანია ვერ მოიძებნა.' });
         }
+
+        res.status(200).json({ message: 'კომპანია წარმატებით განახლდა.', company: result.rows[0] });
     } catch (error) {
         console.error('შეცდომა კომპანიის განახლებისას:', error);
-        if (error.code === '23505') {
-            return res.status(409).json({ message: 'კომპანია ამ საიდენტიფიკაციო კოდით უკვე არსებობს.' });
-        }
         res.status(500).json({ message: 'კომპანიის განახლება ვერ მოხერხდა.', error: error.message });
     }
 });
@@ -1653,7 +1662,7 @@ app.get('/api/equipment/availability/:eventId', authenticateToken, async (req, r
 
     // ივენთის მიღება და თარიღების შემოწმება
     const eventResult = await db.query('SELECT start_date, end_date FROM annual_services WHERE id = $1', [eventId]);
-    
+
     if (eventResult.rows.length === 0) {
       return res.status(404).json({ message: 'ივენთი ვერ მოიძებნა' });
     }
@@ -1814,7 +1823,7 @@ app.post('/api/participants/:participantId/equipment-bookings', authenticateToke
           COALESCE(SUM(eb.quantity), 0) as booked_quantity
         FROM equipment e
         LEFT JOIN equipment_bookings eb ON e.id = eb.equipment_id
-        LEFT JOIN event_participants ep ON eb.participant_id = eb.id
+        LEFT JOIN event_participants ep ON eb.participant_id = ep.id
         LEFT JOIN events ev ON ep.event_id = ev.id
         WHERE e.id = $1 
         AND (ev.start_date IS NULL OR (ev.start_date <= $3 AND ev.end_date >= $2))

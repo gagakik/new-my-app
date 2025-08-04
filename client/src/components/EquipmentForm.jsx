@@ -36,9 +36,12 @@ const EquipmentForm = ({ equipmentToEdit, onEquipmentUpdated, showNotification }
     formData.append('quantity', quantity);
     formData.append('price', price);
     formData.append('description', description);
+    
     if (imageFile) {
+      console.log('Uploading new image file:', imageFile.name, imageFile.size);
       formData.append('image', imageFile); // დაამატეთ ფაილი
     } else if (isEditing && existingImageUrl) {
+      console.log('Keeping existing image:', existingImageUrl);
       formData.append('image_url_existing', existingImageUrl); // თუ სურათი არ იცვლება
     }
     
@@ -46,6 +49,8 @@ const EquipmentForm = ({ equipmentToEdit, onEquipmentUpdated, showNotification }
     const url = isEditing
       ? `/api/equipment/${equipmentToEdit.id}`
       : '/api/equipment';
+
+    console.log('Submitting equipment form:', method, url);
 
     try {
       const token = localStorage.getItem('token');
@@ -60,13 +65,16 @@ const EquipmentForm = ({ equipmentToEdit, onEquipmentUpdated, showNotification }
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('Upload error:', errorData);
         throw new Error(errorData.message || 'ოპერაცია ვერ შესრულდა');
       }
 
       const data = await response.json();
+      console.log('Upload success:', data);
       showNotification(data.message, 'success');
       onEquipmentUpdated();
     } catch (error) {
+      console.error('Submit error:', error);
       showNotification(`შეცდომა: ${error.message}`, 'error');
     }
   };

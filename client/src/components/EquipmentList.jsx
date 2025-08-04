@@ -79,16 +79,28 @@ const EquipmentList = ({ showNotification, userRole }) => {
     fetchEquipment();
   };
 
-  // სურათის URL-ის ფიქსირება Replit გარემოსთვის
   const getImageUrl = (imageUrl) => {
     if (!imageUrl) return null;
 
-    // თუ შედარებითი მისამართია, უბრალოდ ვაბრუნებთ
-    if (imageUrl.startsWith('/uploads/')) {
+    console.log('Processing image URL:', imageUrl);
+
+    // თუ URL უკვე სრული მისამართია (http-ით იწყება), ისე დავტოვოთ
+    if (imageUrl.startsWith('http')) {
       return imageUrl;
     }
 
-    // თუ იწყება http://-ით, ვტოვებთ როგორც არის
+    // თუ URL არ იწყება /-ით, დავუმატოთ
+    if (!imageUrl.startsWith('/')) {
+      imageUrl = '/' + imageUrl;
+    }
+
+    // პროდუქშენ გარემოში სრული URL-ის ფორმირება
+    const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('replit');
+    if (isProduction) {
+      return `http://209.38.237.197${imageUrl}`;
+    }
+
+    console.log('Final image URL:', imageUrl);
     return imageUrl;
   };
 
@@ -166,7 +178,7 @@ const EquipmentList = ({ showNotification, userRole }) => {
                     )}
                   </div>
                 )}
-                
+
                 {item.updated_by && item.updated_at && (
                   <div className="date-info">
                     <div className="user">{item.updated_by}</div>

@@ -352,11 +352,6 @@ const createTables = async () => {
         id SERIAL PRIMARY KEY,
         company_id INTEGER REFERENCES companies(id) ON DELETE CASCADE,
         exhibition_id INTEGER REFERENCES exhibitions(id) ON DELETE CASCADE,
-        participation_status VARCHAR(50) DEFAULT 'მონაწილე',
-        booth_number VARCHAR(50),
-        booth_size DECIMAL(10,2),
-        registration_date DATE DEFAULT CURRENT_DATE,
-        notes TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(company_id, exhibition_id)
       )
