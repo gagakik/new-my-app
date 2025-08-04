@@ -105,6 +105,20 @@ const multerStorage = multer.diskStorage({
 
             const filename = prefix + '-' + uniqueSuffix + fileExtension;
             console.log('Generated filename:', filename, 'for field:', file.fieldname);
+            console.log('File will be saved to:', req.uploadPath || path.join(__dirname, 'uploads'), filename);
+            
+            // შევამოწმოთ ფაილი ნამდვილად შეიქმნა თუ არა
+            setTimeout(() => {
+                const fullPath = path.join(req.uploadPath || path.join(__dirname, 'uploads'), filename);
+                fs.access(fullPath, fs.constants.F_OK, (err) => {
+                    if (err) {
+                        console.error('File was not created successfully:', fullPath);
+                    } else {
+                        console.log('File created successfully:', fullPath);
+                    }
+                });
+            }, 100);
+            
             cb(null, filename);
         } catch (error) {
             console.error('Error generating filename:', error);
@@ -141,12 +155,39 @@ const upload = multer({
 
 // სურათის ატვირთვის ფუნქცია
 function uploadImage(file) {
+    const filePath = `/uploads/${file.filename}`;
+    const fullPath = path.join(__dirname, 'uploads', file.filename);
+    
+    // შევამოწმოთ ფაილი არსებობს თუ არა
+    try {
+        if (fs.existsSync(fullPath)) {
+            console.log('File exists and accessible:', fullPath);
+        } else {
+            console.error('File does not exist after upload:', fullPath);
+        }
+    } catch (error) {
+        console.error('Error checking file existence:', error);
+    }
+    
     // შედარებითი მისამართის გამოყენება ყველა გარემოში
-    return `/uploads/${file.filename}`;
+    return filePath;
 }
 
 // სტატიკური საქაღალდე ატვირთული სურათებისთვის
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+    setHeaders: (res, filePath) => {
+        console.log('Static file requested:', filePath);
+        // Cache control headers
+        res.setHeader('Cache-Control', 'public, max-age=31536000');
+    }
+}));
+
+// 404 error handling for missing uploads
+app.use('/uploads', (req, res, next) => {
+    console.log('File not found:', req.path);
+    console.log('Full path attempted:', path.join(__dirname, 'uploads', req.path));
+    res.status(404).json({ error: 'ფაილი ვერ მოიძებნა' });
+});
 
 
 // --- middleware-ის შექმნა ტოკენის შესამოწმებლად ---
