@@ -330,6 +330,22 @@ const createTables = async () => {
       END $$;
     `);
 
+    // Notifications table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        type VARCHAR(50) NOT NULL DEFAULT 'info',
+        title VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        is_read BOOLEAN DEFAULT FALSE,
+        related_entity_type VARCHAR(50),
+        related_entity_id INTEGER,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     // Company-Exhibition junction table (კომპანია-გამოფენის კავშირი)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS company_exhibitions (
@@ -350,22 +366,70 @@ const createTables = async () => {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS event_participants (
         id SERIAL PRIMARY KEY,
-        event_id INTEGER REFERENCES annual_services(id) ON DELETE CASCADE,
-        company_id INTEGER REFERENCES companies(id) ON DELETE CASCADE,
-        registration_status VARCHAR(50) DEFAULT 'რეგისტრირებული',
-        registration_date DATE DEFAULT CURRENT_DATE,
-        booth_number VARCHAR(50),
+        event_id INTEGER NOT NULL,
+        company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+        registration_status VARCHAR(50) DEFAULT 'მონაწილეობის მოთხოვნა',
+        payment_status VARCHAR(50) DEFAULT 'მომლოდინე',
+        booth_number VARCHAR(20),
         booth_size DECIMAL(10,2),
         notes TEXT,
-        payment_status VARCHAR(50) DEFAULT 'მომლოდინე',
         contact_person VARCHAR(255),
+        contact_position VARCHAR(255),
         contact_email VARCHAR(255),
-        contact_phone VARCHAR(255),
+        contact_phone VARCHAR(50),
+        payment_amount DECIMAL(10,2),
+        payment_due_date DATE,
+        payment_method VARCHAR(50),
+        invoice_number VARCHAR(100),
+        invoice_file VARCHAR(500),
+        contract_file VARCHAR(500),
+        handover_file VARCHAR(500),
+        registration_date DATE DEFAULT CURRENT_DATE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         created_by_user_id INTEGER REFERENCES users(id),
         UNIQUE(event_id, company_id)
-      )
+      );
+    `);
+
+    // Add contact_position column if it doesn't exist
+    await pool.query(`
+      DO $$ 
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'event_participants' AND column_name = 'contact_position'
+        ) THEN
+          ALTER TABLE event_participants ADD COLUMN contact_position VARCHAR(255);
+        END IF;
+      END $$;
+    `);
+
+    // Add file attachment columns if they don't exist
+    await pool.query(`
+      DO $$ 
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'event_participants' AND column_name = 'invoice_file'
+        ) THEN
+          ALTER TABLE event_participants ADD COLUMN invoice_file VARCHAR(500);
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'event_participants' AND column_name = 'contract_file'
+        ) THEN
+          ALTER TABLE event_participants ADD COLUMN contract_file VARCHAR(500);
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'event_participants' AND column_name = 'handover_file'
+        ) THEN
+          ALTER TABLE event_participants ADD COLUMN handover_file VARCHAR(500);
+        END IF;
+      END $$;
     `);
 
     // აღჭურვილობის ცხრილი
@@ -407,6 +471,20 @@ const createTables = async () => {
       ALTER TABLE spaces 
       ADD COLUMN IF NOT EXISTS created_by_id INTEGER REFERENCES users(id),
       ADD COLUMN IF NOT EXISTS updated_by_id INTEGER REFERENCES users(id)
+    `);
+
+    // Equipment bookings table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS equipment_bookings (
+        id SERIAL PRIMARY KEY,
+        participant_id INTEGER REFERENCES event_participants(id) ON DELETE CASCADE,
+        equipment_id INTEGER REFERENCES equipment(id) ON DELETE CASCADE,
+        quantity INTEGER NOT NULL CHECK (quantity > 0),
+        unit_price DECIMAL(10,2) NOT NULL,
+        total_price DECIMAL(10,2) NOT NULL,
+        booking_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_by INTEGER REFERENCES users(id)
+      );
     `);
 
     console.log('Database tables created successfully');

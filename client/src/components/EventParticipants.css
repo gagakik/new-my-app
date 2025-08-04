@@ -1,4 +1,3 @@
-
 .event-participants-modal {
   position: fixed;
   top: 0;
@@ -76,6 +75,80 @@
 
 .add-participant-btn:hover {
   background-color: #0056b3;
+}
+
+/* ძიება და ფილტრები */
+.participants-filters {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+.search-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.search-group {
+  flex: 1;
+}
+
+.search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.reset-filters-btn {
+  padding: 8px 12px;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  min-width: 40px;
+}
+
+.reset-filters-btn:hover {
+  background-color: #5a6268;
+}
+
+.filters-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.filter-select {
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background-color: white;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.no-participants .hint {
+  color: #6c757d;
+  font-style: italic;
+  margin-top: 0.5rem;
 }
 
 .no-participants {
@@ -384,28 +457,85 @@
   background-color: #c82333;
 }
 
+/* File upload styles */
+.file-uploads-section {
+  margin: 1rem 0;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 5px;
+  border: 1px solid #dee2e6;
+}
+
+.file-uploads-section h5 {
+  margin: 0 0 1rem 0;
+  color: #495057;
+  font-size: 1rem;
+}
+
+.file-uploads-section input[type="file"] {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background-color: white;
+}
+
+.file-name {
+  display: block;
+  margin-top: 0.25rem;
+  color: #28a745;
+  font-style: italic;
+}
+
+/* File links in table */
+.participant-files {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.file-link {
+  color: #007bff;
+  text-decoration: none;
+  font-size: 0.8rem;
+  padding: 2px 4px;
+  border-radius: 3px;
+  transition: background-color 0.2s;
+}
+
+.file-link:hover {
+  background-color: #e3f2fd;
+  text-decoration: underline;
+}ointer;
+  font-size: 0.8rem;
+}
+
+.delete-btn:hover {
+  background-color: #c82333;
+}
+
 /* Tablet responsive design */
 @media (max-width: 1024px) {
   .event-participants-modal .modal-content {
     width: 98%;
     max-height: 95vh;
   }
-  
+
   .table-header,
   .table-row {
     grid-template-columns: 2fr 1fr 1.2fr 1fr 1fr 0.8fr 0.8fr 1fr 1.5fr;
     font-size: 0.9rem;
   }
-  
+
   .form-row {
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   }
-  
+
   .participant-actions {
     flex-direction: column;
     gap: 0.3rem;
   }
-  
+
   .edit-btn, .delete-btn {
     width: 100%;
     padding: 6px 12px;
@@ -417,66 +547,91 @@
   .event-participants-modal {
     padding: 0.5rem;
   }
-  
+
   .event-participants-modal .modal-content {
     width: 100%;
     max-height: 98vh;
     border-radius: 8px 8px 0 0;
   }
-  
+
   .event-participants-modal .modal-header {
     padding: 1rem;
     flex-wrap: wrap;
   }
-  
+
   .event-participants-modal .modal-header h3 {
     font-size: 1.1rem;
     margin-bottom: 0.5rem;
     width: 100%;
   }
-  
+
   .event-participants-modal .modal-body {
     padding: 1rem;
   }
-  
+
   .participant-form {
     padding: 1rem;
     margin-bottom: 1rem;
   }
-  
+
   .form-row {
     grid-template-columns: 1fr;
     gap: 0.8rem;
   }
-  
+
   .form-actions {
     flex-direction: column;
     gap: 0.8rem;
   }
-  
+
   .submit-btn, .cancel-btn {
     width: 100%;
     padding: 12px;
     font-size: 1rem;
   }
-  
+
   .add-participant-btn {
     width: 100%;
     padding: 12px 20px;
     font-size: 1rem;
   }
-  
+
+  .participants-filters {
+    margin-bottom: 1rem;
+    padding: 0.8rem;
+  }
+
+  .search-row {
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+
+  .reset-filters-btn {
+    width: 100%;
+    padding: 10px;
+  }
+
+  .filters-row {
+    grid-template-columns: 1fr;
+    gap: 0.8rem;
+  }
+
+  .filter-select {
+    width: 100%;
+    padding: 10px 12px;
+  }
+
   /* Mobile table design - switch to card layout */
   .participants-table {
     display: flex;
     flex-direction: column;
     gap: 1rem;
   }
-  
+
   .table-header {
     display: none;
   }
-  
+
   .table-row {
     display: block;
     background-color: white;
@@ -485,7 +640,7 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     border: 1px solid #dee2e6;
   }
-  
+
   .table-row > div {
     display: flex;
     justify-content: space-between;
@@ -493,31 +648,31 @@
     padding: 0.5rem 0;
     border-bottom: 1px solid #f0f0f0;
   }
-  
+
   .table-row > div:last-child {
     border-bottom: none;
     justify-content: center;
   }
-  
+
   .table-row > div::before {
     content: attr(data-label);
     font-weight: bold;
     color: #666;
     font-size: 0.85rem;
   }
-  
+
   .company-info {
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .participant-actions {
     flex-direction: row;
     gap: 0.5rem;
     justify-content: center;
     width: 100%;
   }
-  
+
   .edit-btn, .delete-btn {
     flex: 1;
     min-width: 80px;
@@ -529,43 +684,186 @@
   .event-participants-modal .modal-header h3 {
     font-size: 1rem;
   }
-  
+
   .participant-form h4 {
     font-size: 1.1rem;
   }
-  
+
   .form-group label {
     font-size: 0.9rem;
   }
-  
+
   .form-group input,
   .form-group select,
   .form-group textarea {
     font-size: 0.9rem;
     padding: 10px;
   }
-  
+
   .table-row {
     padding: 0.8rem;
   }
-  
+
   .table-row > div {
     font-size: 0.85rem;
     padding: 0.4rem 0;
   }
-  
+
   .status-badge,
   .payment-badge {
     padding: 3px 6px;
     font-size: 0.7rem;
   }
-  
+
   .participant-actions {
     margin-top: 0.5rem;
   }
-  
+
   .edit-btn, .delete-btn {
     font-size: 0.75rem;
     padding: 6px 10px;
+  }
+}
+
+.participants-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.files-section {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border: 1px solid #dee2e6;
+  border-radius: 5px;
+  background-color: #f8f9fa;
+}
+
+.files-section h4 {
+  margin-bottom: 1rem;
+  color: #495057;
+}
+
+.file-input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.file-info {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: #6c757d;
+  padding: 4px 8px;
+  background-color: #e9ecef;
+  border-radius: 3px;
+}
+
+/* აღჭურვილობის სექცია */
+.equipment-section {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border: 1px solid #dee2e6;
+  border-radius: 5px;
+  background-color: #f8f9fa;
+}
+
+.equipment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.equipment-header h4 {
+  margin: 0;
+  color: #495057;
+}
+
+.add-equipment-btn {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.add-equipment-btn:hover {
+  background-color: #218838;
+}
+
+.equipment-item {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background-color: white;
+  position: relative;
+}
+
+.equipment-item .form-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr auto;
+  gap: 1rem;
+  align-items: end;
+}
+
+.remove-equipment-btn {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  height: 38px;
+  margin-top: 25px;
+}
+
+.remove-equipment-btn:hover {
+  background-color: #c82333;
+}
+
+.equipment-total {
+  margin-top: 1rem;
+  padding: 1rem;
+  background-color: #e9ecef;
+  border-radius: 4px;
+  text-align: right;
+  font-size: 1.1rem;
+}
+
+.equipment-item small {
+  display: block;
+  color: #6c757d;
+  font-size: 0.75rem;
+  margin-top: 2px;
+}
+
+/* მობილური რესპონსივი აღჭურვილობისთვის */
+@media (max-width: 768px) {
+  .equipment-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+
+  .equipment-item .form-row {
+    grid-template-columns: 1fr;
+    gap: 0.8rem;
+  }
+
+  .remove-equipment-btn {
+    margin-top: 0;
+    align-self: center;
+  }
+
+  .equipment-total {
+    text-align: center;
+    font-size: 1rem;
   }
 }

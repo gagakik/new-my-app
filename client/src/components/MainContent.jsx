@@ -102,6 +102,15 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
                 მომხმარებლები
               </button>
             )}
+             {(userRole === 'admin' || userRole === 'sales' || userRole === 'marketing') && (
+              <button
+                className={activeSection === 'eventReports' ? 'active' : ''}
+                onClick={() => handleSectionChange('eventReports')}
+              >
+                <i className="icon-reports"></i>
+                Event Reports
+              </button>
+            )}
           </div>
         </nav>
 
@@ -135,6 +144,11 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
           )}
           {activeSection === 'users' && userRole === 'admin' && (
             <UserManagement showNotification={showNotification} />
+          )}
+           {activeSection === 'eventReports' && (
+            <div>
+              <p>Event Reports Content</p>
+            </div>
           )}
         </div>
       </div>
