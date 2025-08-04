@@ -87,41 +87,70 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
     }
   };
 
+  // რედაქტირების მონაცემების დაყენება
   useEffect(() => {
-    if (isEditing && eventToEdit) {
-      console.log('რედაქტირების მონაცემები:', eventToEdit);
-      
-      setServiceName(eventToEdit.service_name || '');
-      setDescription(eventToEdit.description || '');
-      setYearSelection(eventToEdit.year_selection || new Date().getFullYear());
-      setStartDate(eventToEdit.start_date ? eventToEdit.start_date.slice(0, 10) : '');
-      setEndDate(eventToEdit.end_date ? eventToEdit.end_date.slice(0, 10) : '');
-      setServiceType(eventToEdit.service_type || 'ივენთი');
-      
-      // სივრცეების სწორი დაყენება
-      const spacesArray = Array.isArray(eventToEdit.selected_spaces) 
-        ? eventToEdit.selected_spaces 
-        : eventToEdit.selected_spaces ? JSON.parse(eventToEdit.selected_spaces) : [];
-      setSelectedSpaces(spacesArray);
-      
-      // გამოფენების სწორი დაყენება
-      const exhibitionsArray = Array.isArray(eventToEdit.selected_exhibitions) 
-        ? eventToEdit.selected_exhibitions 
-        : eventToEdit.selected_exhibitions ? JSON.parse(eventToEdit.selected_exhibitions) : [];
-      setSelectedExhibitions(exhibitionsArray);
-      
-      // გამოფენის ID-ის სწორად დაყენება
-      const exhibitionId = eventToEdit.exhibition_id ? eventToEdit.exhibition_id.toString() : '';
-      setSelectedExhibitionId(exhibitionId);
-      console.log('დაყენებული გამოფენის ID:', exhibitionId);
-      
-      setSelectedCompanies(eventToEdit.selected_companies || []);
-      
-      // რედაქტირების დროს გამოფენისთვის კომპანიების ჩატვირთვა
-      if (exhibitionId && availableExhibitions.length > 0) {
-        fetchCompaniesByExhibition(exhibitionId, true, true);
+    const loadEditingData = async () => {
+      if (isEditing && eventToEdit) {
+        console.log('რედაქტირების მონაცემები:', eventToEdit);
+
+        setServiceName(eventToEdit.service_name || '');
+        setDescription(eventToEdit.description || '');
+        setYearSelection(eventToEdit.year_selection || new Date().getFullYear());
+        setStartDate(eventToEdit.start_date ? eventToEdit.start_date.slice(0, 10) : '');
+        setEndDate(eventToEdit.end_date ? eventToEdit.end_date.slice(0, 10) : '');
+        setServiceType(eventToEdit.service_type || 'ივენთი');
+
+        // გამოფენის ID-ის სწორად დაყენება
+        const exhibitionId = eventToEdit.exhibition_id ? eventToEdit.exhibition_id.toString() : '';
+        setSelectedExhibitionId(exhibitionId);
+        console.log('დაყენებული გამოფენის ID:', exhibitionId);
+
+        // სივრცეების მოძებნა და დაყენება
+        try {
+          const token = localStorage.getItem('token');
+          const spacesResponse = await fetch(`/api/annual-services/${eventToEdit.id}/details`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          
+          if (spacesResponse.ok) {
+            const serviceDetails = await spacesResponse.json();
+            const spaceIds = serviceDetails.spaces ? serviceDetails.spaces.map(s => s.id) : [];
+            setSelectedSpaces(spaceIds);
+            console.log('ჩატვირთული სივრცეები:', spaceIds);
+          } else {
+            // თუ დეტალები ვერ მოვიღეთ, ცდილობა მარტივი მეთოდით
+            const spacesArray = Array.isArray(eventToEdit.selected_spaces) 
+              ? eventToEdit.selected_spaces 
+              : eventToEdit.selected_spaces ? JSON.parse(eventToEdit.selected_spaces) : [];
+            setSelectedSpaces(spacesArray);
+          }
+        } catch (error) {
+          console.error('სივრცეების ჩატვირთვის შეცდომა:', error);
+          setSelectedSpaces([]);
+        }
+
+        // გამოფენების დაყენება
+        const exhibitionsArray = exhibitionId ? [parseInt(exhibitionId)] : [];
+        setSelectedExhibitions(exhibitionsArray);
+
+        // კომპანიების ჩატვირთვა თუ გამოფენა არჩეულია
+        if (exhibitionId && availableExhibitions.length > 0) {
+          console.log('კომპანიების ჩატვირთვა რედაქტირებისას, გამოფენის ID:', exhibitionId);
+          await fetchCompaniesByExhibition(exhibitionId, true, true);
+        }
+        
+        setSelectedCompanies(eventToEdit.selected_companies || []);
       }
-    } else {
+    };
+
+    if (availableExhibitions.length > 0) {
+      loadEditingData();
+    }
+  }, [eventToEdit, isEditing, availableExhibitions]);
+
+  // ცალკე useEffect-ი ცარიელი ფორმისთვის
+  useEffect(() => {
+    if (!isEditing) {
       // ცარიელი ფორმისთვის
       setServiceName('');
       setDescription('');
@@ -135,7 +164,7 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
       setSelectedCompanies([]);
       setAvailableCompanies([]);
     }
-  }, [eventToEdit, isEditing, availableExhibitions]);
+  }, [isEditing]);
 
   const handleSpaceToggle = (spaceId) => {
     setSelectedSpaces(prev => 
@@ -146,9 +175,20 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
   };
 
   const handleExhibitionSelect = (exhibitionId) => {
+    console.log('გამოფენის არჩევა:', exhibitionId, 'რედაქტირების რეჟიმი:', isEditing);
     setSelectedExhibitionId(exhibitionId);
     setSelectedExhibitions(exhibitionId ? [parseInt(exhibitionId)] : []);
-    fetchCompaniesByExhibition(exhibitionId, false, isEditing); // რედაქტირების დროს ავტო-სელექცია გათიშული
+    
+    // კომპანიების ჩატვირთვა
+    if (exhibitionId) {
+      // რედაქტირების დროს არ ვაფსებთ არჩეულ კომპანიებს
+      fetchCompaniesByExhibition(exhibitionId, isEditing, isEditing);
+    } else {
+      setAvailableCompanies([]);
+      if (!isEditing) {
+        setSelectedCompanies([]);
+      }
+    }
   };
 
   const handleCompanyToggle = (companyId) => {
@@ -198,7 +238,19 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(eventData),
+        body: JSON.stringify({
+          service_name: serviceName,
+          description,
+          year_selection: yearSelection,
+          start_date: startDate,
+          end_date: endDate,
+          service_type: serviceType,
+          is_active: true,
+          selected_spaces: selectedSpaces,
+          selected_exhibitions: selectedExhibitions,
+          exhibition_id: selectedExhibitionId ? parseInt(selectedExhibitionId) : null,
+          selected_companies: selectedCompanies
+        }),
       });
 
       if (!response.ok) {

@@ -277,6 +277,32 @@
   margin: 5px 0;
 }
 
+.event-stats {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.stat-item {
+  font-size: 0.9rem;
+  color: #495057;
+}
+
+.stat-item strong {
+  color: #007bff;
+  margin-right: 4px;
+}
+
+.event-type .type-badge {
+  background-color: #007bff;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
 /* Tablet responsive design */
 @media (max-width: 1024px) {
   .events-container {

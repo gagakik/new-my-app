@@ -285,6 +285,72 @@
   color: #383d41;
 }
 
+.payment-badge.partial {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.payment-badge.overdue {
+  background-color: #f8d7da;
+  color: #721c24;
+  animation: pulse 2s infinite;
+}
+
+.payment-badge.refunded {
+  background-color: #d1ecf1;
+  color: #0c5460;
+}
+
+.status-badge.under-review {
+  background-color: #e2e3e5;
+  color: #383d41;
+}
+
+.status-badge.suspended {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.status-badge.completed {
+  background-color: #d4edda;
+  color: #155724;
+  border: 2px solid #28a745;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+.invoice-number {
+  display: block;
+  font-size: 0.7rem;
+  color: #666;
+  margin-top: 2px;
+}
+
+.overdue {
+  color: #dc3545;
+  font-weight: bold;
+}
+
+.invoice-btn {
+  background-color: #17a2b8;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  margin-left: 4px;
+}
+
+.invoice-btn:hover {
+  background-color: #138496;
+}
+
 .participant-actions {
   display: flex;
   gap: 0.5rem;
@@ -327,7 +393,7 @@
   
   .table-header,
   .table-row {
-    grid-template-columns: 2fr 1fr 1.2fr 1fr 1fr 1fr 1.2fr;
+    grid-template-columns: 2fr 1fr 1.2fr 1fr 1fr 0.8fr 0.8fr 1fr 1.5fr;
     font-size: 0.9rem;
   }
   

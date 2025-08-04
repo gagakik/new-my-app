@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import './EventParticipants.css';
 
@@ -15,7 +14,11 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
     notes: '',
     contact_person: '',
     contact_email: '',
-    contact_phone: ''
+    contact_phone: '',
+    payment_amount: '',
+    payment_due_date: '',
+    payment_method: '',
+    invoice_number: ''
   });
 
   const isAuthorizedForManagement = 
@@ -37,11 +40,15 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
 
       if (response.ok) {
         const data = await response.json();
+        console.log(`ფეტჩი: მოვიღე ${data.length} მონაწილე ივენთისთვის ${eventId}`, data);
         setParticipants(data);
       } else {
+        const errorText = await response.text();
+        console.error('Response error:', errorText);
         showNotification('მონაწილეების მიღება ვერ მოხერხდა', 'error');
       }
     } catch (error) {
+      console.error('Fetch error:', error);
       showNotification('შეცდომა მონაცემების ჩატვირთვისას', 'error');
     } finally {
       setLoading(false);
@@ -66,7 +73,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!formData.company_id) {
       showNotification('გთხოვთ აირჩიოთ კომპანია', 'error');
       return;
@@ -113,7 +120,11 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
       contact_email: participant.contact_email || '',
       contact_phone: participant.contact_phone || '',
       registration_status: participant.registration_status,
-      payment_status: participant.payment_status
+      payment_status: participant.payment_status,
+      payment_amount: participant.payment_amount || '',
+      payment_due_date: participant.payment_due_date || '',
+      payment_method: participant.payment_method || '',
+      invoice_number: participant.invoice_number || ''
     });
     setShowAddForm(true);
   };
@@ -148,7 +159,11 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
       notes: '',
       contact_person: '',
       contact_email: '',
-      contact_phone: ''
+      contact_phone: '',
+      payment_amount: '',
+      payment_due_date: '',
+      payment_method: '',
+      invoice_number: ''
     });
     setEditingParticipant(null);
     setShowAddForm(false);
@@ -288,6 +303,50 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                     </div>
                   </div>
                 )}
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>გადასახდელი თანხა (₾)</label>
+                    <input 
+                      type="number"
+                      step="0.01"
+                      value={formData.payment_amount}
+                      onChange={(e) => setFormData({...formData, payment_amount: e.target.value})}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>გადახდის ვადა</label>
+                    <input 
+                      type="date"
+                      value={formData.payment_due_date}
+                      onChange={(e) => setFormData({...formData, payment_due_date: e.target.value})}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>გადახდის მეთოდი</label>
+                    <select 
+                      value={formData.payment_method}
+                      onChange={(e) => setFormData({...formData, payment_method: e.target.value})}
+                    >
+                      <option value="">აირჩიეთ მეთოდი</option>
+                      <option value="ბანკის გადარიცხვა">ბანკის გადარიცხვა</option>
+                      <option value="ნაღდი">ნაღდი</option>
+                      <option value="საბანკო ბარათი">საბანკო ბარათი</option>
+                      <option value="ონლაინ გადახდა">ონლაინ გადახდა</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>ინვოისის ნომერი</label>
+                    <input 
+                      type="text"
+                      value={formData.invoice_number}
+                      onChange={(e) => setFormData({...formData, invoice_number: e.target.value})}
+                    />
+                  </div>
+                </div>
 
                 <div className="form-group">
                   <label>შენიშვნები</label>

@@ -33,24 +33,24 @@ const EventsList = ({ showNotification, userRole }) => {
 
       console.log('Fetching events from /api/events');
       const response = await fetch('/api/events', { headers });
-      
+
       if (!response.ok) {
         console.error('Events API failed with status:', response.status);
-        
+
         if (response.status === 401 || response.status === 403) {
           throw new Error('არ გაქვთ ივენთების ნახვის უფლება');
         }
-        
+
         if (response.status === 500) {
           console.log('Server error, trying fallback to annual-services');
           // სერვერის შეცდომის შემთხვევაში შევცადოთ annual-services-ით
           try {
             const fallbackResponse = await fetch('/api/annual-services', { headers });
-            
+
             if (!fallbackResponse.ok) {
               throw new Error('ბექენდ სერვისები მიუწვდომელია');
             }
-            
+
             const data = await fallbackResponse.json();
             console.log('Fallback data received:', data.length, 'services');
             setEvents(data || []);
@@ -60,7 +60,7 @@ const EventsList = ({ showNotification, userRole }) => {
             throw new Error('სერვისი დროებით მიუწვდომელია');
           }
         }
-        
+
         throw new Error(`სერვერის შეცდომა: ${response.status}`);
       }
 
@@ -241,44 +241,23 @@ const EventsList = ({ showNotification, userRole }) => {
                   </span>
                 </div>
 
+                
+
                 <div className="event-details">
-                  <p><strong>ტიპი:</strong> {event.service_type}</p>
-                  <p><strong>წელი:</strong> {event.year_selection}</p>
-                  <p><strong>თარიღები:</strong> {formatDate(event.start_date)} - {formatDate(event.end_date)}</p>
-                  <p><strong>სივრცეები:</strong> {event.spaces_count || 0}</p>
-                  <p><strong>აღწერა:</strong> {event.description}</p>
-                  
-                  {event.created_by && (
-                    <div className="date-info">
-                      <div className="user">{event.created_by}</div>
-                      {event.created_at && (
-                        <div className="date">
-                          {new Date(event.created_at).toLocaleDateString('ka-GE', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  
-                  {event.updated_by && event.updated_at && (
-                    <div className="date-info">
-                      <div className="user">{event.updated_by}</div>
-                      <div className="date">
-                        {new Date(event.updated_at).toLocaleDateString('ka-GE', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </div>
-                    </div>
-                  )}
+                  <div className="event-dates">
+                    <span className="date-label">დაწყება:</span>
+                    <span className="date-value">{formatDate(event.start_date)}</span>
+                    <span className="date-label">დასრულება:</span>
+                    <span className="date-value">{formatDate(event.end_date)}</span>
+                  </div>
+                  <div className="event-stats">
+                    <span className="stat-item">
+                      <strong>სივრცეები:</strong> {event.spaces_count || 0}
+                    </span>
+                    <span className="stat-item">
+                      <strong>ტიპი:</strong> {event.service_type}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="event-actions">
