@@ -29,10 +29,19 @@ try {
     console.error('uploads ფოლდერის უფლებების დაყენების შეცდომა:', error);
 }
 
-// CORS configuration for Replit environment
+// CORS configuration for all environments
 app.use(cors({
-    origin: ['http://localhost:5173', 'https://*.replit.dev', 'https://*.replit.app'],
-    credentials: true
+    origin: [
+        'http://localhost:5173', 
+        'http://localhost:5174',
+        'https://*.replit.dev', 
+        'https://*.replit.app',
+        'http://209.38.237.197',
+        'https://209.38.237.197'
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 
@@ -575,8 +584,48 @@ app.put('/api/companies/:id', authenticateToken, async (req, res) => {
         selected_exhibitions
     } = req.body;
 
+    console.log('კომპანიის განახლების მოთხოვნა:', { 
+        id, 
+        company_name, 
+        selected_exhibitions,
+        userRole: req.user.role,
+        userId: req.user.id,
+        requestBody: req.body
+    });
+
+    // Check authorization
+    const allowedRoles = ['admin', 'sales'];
+    if (!req.user || !allowedRoles.includes(req.user.role)) {
+        console.log('უფლება არ არის:', req.user);
+        return res.status(403).json({ error: 'წვდომა აკრძალულია: არ გაქვთ კომპანიების მართვის უფლება.' });
+    }
+
     try {
-        // ჯერ კომპანიას ვანახლებთ
+        // პირველად შევამოწმოთ კომპანია არსებობს თუ არა
+        const checkCompany = await db.query('SELECT id FROM companies WHERE id = $1', [id]);
+        if (checkCompany.rows.length === 0) {
+            console.log(`კომპანია ID ${id} ვერ მოიძებნა`);
+            return res.status(404).json({ message: 'კომპანია ვერ მოიძებნა.' });
+        }
+
+        // company_exhibitions ცხრილის შექმნა თუ არ არსებობს
+        try {
+            await db.query(`
+                CREATE TABLE IF NOT EXISTS company_exhibitions (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+                    exhibition_id INTEGER NOT NULL REFERENCES exhibitions(id) ON DELETE CASCADE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(company_id, exhibition_id)
+                );
+            `);
+            console.log('company_exhibitions ცხრილი შეიქმნა/შემოწმდა');
+        } catch (tableError) {
+            console.error('ცხრილის შექმნის შეცდომა:', tableError);
+            // Continue execution even if table creation fails
+        }
+
+        // კომპანიის მონაცემების განახლება
         const result = await db.query(
             `UPDATE companies 
              SET company_name = $1, country = $2, company_profile = $3, 
@@ -584,32 +633,84 @@ app.put('/api/companies/:id', authenticateToken, async (req, res) => {
                  website = $7, comment = $8, status = $9, updated_at = CURRENT_TIMESTAMP,
                  updated_by_user_id = $11
              WHERE id = $10 RETURNING *`,
-            [company_name, country, company_profile, identification_code, legal_address, 
-             JSON.stringify(contact_persons), website, comment, status, id, req.user.id]
+            [
+                company_name, 
+                country, 
+                company_profile, 
+                identification_code, 
+                legal_address, 
+                contact_persons ? JSON.stringify(contact_persons) : null,
+                website, 
+                comment, 
+                status, 
+                id, 
+                req.user.id
+            ]
         );
 
         if (result.rows.length === 0) {
+            console.log(`კომპანია ID ${id} განახლება ვერ მოხერხდა`);
             return res.status(404).json({ message: 'კომპანია ვერ მოიძებნა.' });
         }
 
-        // თუ გამოფენების არჩევანი მოვიდა, ვანახლებთ კავშირებს
-        if (selected_exhibitions && Array.isArray(selected_exhibitions)) {
+        console.log(`კომპანია ${company_name} წარმატებით განახლდა`);
+
+        // გამოფენების კავშირების განახლება
+        if (selected_exhibitions !== undefined) {
+            console.log(`ვანახლებ გამოფენების კავშირებს: ${selected_exhibitions}`);
+            
             // ჯერ ყველა არსებული კავშირი ვშლით ამ კომპანიისთვის
             await db.query('DELETE FROM company_exhibitions WHERE company_id = $1', [id]);
+            console.log(`წაშლილია ძველი კავშირები კომპანიისთვის ${id}`);
 
-            // შემდეგ ახალ კავშირებს ვამატებთ
-            for (const exhibitionId of selected_exhibitions) {
-                await db.query(
-                    'INSERT INTO company_exhibitions (company_id, exhibition_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-                    [id, exhibitionId]
-                );
+            // ახალი კავშირების დამატება
+            if (Array.isArray(selected_exhibitions) && selected_exhibitions.length > 0) {
+                for (const exhibitionId of selected_exhibitions) {
+                    try {
+                        await db.query(
+                            'INSERT INTO company_exhibitions (company_id, exhibition_id) VALUES ($1, $2) ON CONFLICT (company_id, exhibition_id) DO NOTHING',
+                            [id, exhibitionId]
+                        );
+                        console.log(`დამატებული კავშირი: კომპანია ${id} - გამოფენა ${exhibitionId}`);
+                    } catch (linkError) {
+                        console.error(`შეცდომა კავშირის დამატებისას: კომპანია ${id} - გამოფენა ${exhibitionId}:`, linkError);
+                    }
+                }
             }
         }
 
         res.status(200).json({ message: 'კომპანია წარმატებით განახლდა.', company: result.rows[0] });
     } catch (error) {
         console.error('შეცდომა კომპანიის განახლებისას:', error);
-        res.status(500).json({ message: 'კომპანიის განახლება ვერ მოხერხდა.', error: error.message });
+        console.error('Error details:', {
+            message: error.message,
+            code: error.code,
+            detail: error.detail,
+            stack: error.stack,
+            constraint: error.constraint
+        });
+        
+        // Check for specific error types
+        if (error.code === '23505') {
+            return res.status(409).json({ 
+                message: 'კომპანია ამ საიდენტიფიკაციო კოდით უკვე არსებობს.',
+                error: 'duplicate_key'
+            });
+        }
+        
+        if (error.code === '23503') {
+            return res.status(400).json({ 
+                message: 'მონაცემთა ბაზის თავსებადობის შეცდომა.',
+                error: 'foreign_key_violation'
+            });
+        }
+        
+        res.status(500).json({ 
+            message: 'კომპანიის განახლება ვერ მოხერხდა.', 
+            error: error.message,
+            details: error.detail || 'დეტალები არ მოიძებნა',
+            code: error.code || 'unknown_error'
+        });
     }
 });
 
@@ -2531,4 +2632,6 @@ app.get('/api/documents/contract/:participantId', authenticateToken, async (req,
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`სერვერი გაშვებულია http://0.0.0.0:${PORT}`);
+  console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
+  console.log(`მონაცემთა ბაზის კავშირი: ${process.env.DATABASE_URL ? 'კონფიგურირებული' : 'არ არის'}`);
 });
