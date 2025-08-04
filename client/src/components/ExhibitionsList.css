@@ -1,7 +1,4 @@
-Adding date-info styles to the exhibitions-table CSS class.
-```
-
-```replit_final_file
+/* Date info styles for exhibitions table */
 .exhibitions-container {
   width: 100%;
   max-width: 1400px;
