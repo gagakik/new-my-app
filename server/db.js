@@ -169,6 +169,24 @@ const createTables = async () => {
           ALTER TABLE annual_services 
           ADD COLUMN end_date DATE NOT NULL DEFAULT CURRENT_DATE + INTERVAL '1 day';
         END IF;
+
+        -- Add is_archived column if it doesn't exist
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'annual_services' AND column_name = 'is_archived'
+        ) THEN
+          ALTER TABLE annual_services 
+          ADD COLUMN is_archived BOOLEAN DEFAULT false;
+        END IF;
+
+        -- Add archived_at column if it doesn't exist
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'annual_services' AND column_name = 'archived_at'
+        ) THEN
+          ALTER TABLE annual_services 
+          ADD COLUMN archived_at TIMESTAMP;
+        END IF;
       END $$;
     `);
 
