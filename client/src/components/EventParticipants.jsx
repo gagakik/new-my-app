@@ -671,7 +671,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
 
                 <div className="form-row">
                   <div className="form-group">
-                    <label>გადასახდელი თანხა (₾)</label>
+                    <label>გადასახდელი თანხა (€)</label>
                     <input 
                       type="number"
                       step="0.01"
@@ -761,7 +761,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                           )}
                         </div>
                         <div className="form-group">
-                          <label>ერთეულის ფასი (₾)</label>
+                          <label>ერთეულის ფასი (€)</label>
                           <input 
                             type="number"
                             step="0.01"
@@ -771,7 +771,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                           />
                         </div>
                         <div className="form-group">
-                          <label>ჯამი (₾)</label>
+                          <label>ჯამი (€)</label>
                           <input 
                             type="number"
                             step="0.01"
@@ -794,7 +794,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
 
                   {selectedEquipment.length > 0 && (
                     <div className="equipment-total">
-                      <strong>აღჭურვილობის ჯამური ღირებულება: ₾{equipmentTotal.toFixed(2)}</strong>
+                      <strong>აღჭურვილობის ჯამური ღირებულება: €{equipmentTotal.toFixed(2)}</strong>
                     </div>
                   )}
                 </div>
