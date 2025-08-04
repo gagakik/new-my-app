@@ -78,6 +78,7 @@ const multerStorage = multer.diskStorage({
             uploadPath = path.join(__dirname, 'uploads', 'participants');
         }
 
+        // საქაღალდის შექმნა თუ არ არსებობს
         if (!fs.existsSync(uploadPath)) {
             try {
                 fs.mkdirSync(uploadPath, { recursive: true });
@@ -85,24 +86,30 @@ const multerStorage = multer.diskStorage({
                 console.log('Upload directory created:', uploadPath);
             } catch (error) {
                 console.error('Error creating upload directory:', error);
+                return cb(error);
             }
         }
         cb(null, uploadPath); 
     },
     filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const fileExtension = path.extname(file.originalname).toLowerCase();
+        try {
+            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+            const fileExtension = path.extname(file.originalname).toLowerCase();
 
-        // ფაილის ტიპის მიხედვით პრეფიქსის დაყენება
-        let prefix = 'file';
-        if (file.fieldname === 'invoice_file') prefix = 'invoice';
-        else if (file.fieldname === 'contract_file') prefix = 'contract';
-        else if (file.fieldname === 'handover_file') prefix = 'handover';
-        else if (file.mimetype.startsWith('image/')) prefix = 'img';
+            // ფაილის ტიპის მიხედვით პრეფიქსის დაყენება
+            let prefix = 'file';
+            if (file.fieldname === 'invoice_file') prefix = 'invoice';
+            else if (file.fieldname === 'contract_file') prefix = 'contract';
+            else if (file.fieldname === 'handover_file') prefix = 'handover';
+            else if (file.mimetype && file.mimetype.startsWith('image/')) prefix = 'img';
 
-        const filename = prefix + '-' + uniqueSuffix + fileExtension;
-        console.log('Generated filename:', filename);
-        cb(null, filename);
+            const filename = prefix + '-' + uniqueSuffix + fileExtension;
+            console.log('Generated filename:', filename, 'for field:', file.fieldname);
+            cb(null, filename);
+        } catch (error) {
+            console.error('Error generating filename:', error);
+            cb(error);
+        }
     }
 });
 
@@ -386,10 +393,17 @@ app.delete('/api/exhibitions/:id', authenticateToken, async (req, res) => {
 // GET: ყველა აღჭურვილობის მიღება (ყველა ავტორიზებული მომხმარებლისთვის)
 app.get('/api/equipment', authenticateToken, async (req, res) => {
     try {
+        console.log('აღჭურვილობის მოთხოვნა მიღებულია');
         const result = await db.query('SELECT * FROM equipment ORDER BY id ASC');
+        console.log(`მოიძებნა ${result.rows.length} აღჭურვილობა`);
         res.status(200).json(result.rows);
     } catch (error) {
         console.error('შეცდომა აღჭურვილობის მიღებისას:', error);
+        console.error('Error details:', {
+            message: error.message,
+            code: error.code,
+            detail: error.detail
+        });
         res.status(500).json({ message: 'აღჭურვილობის მიღება ვერ მოხერხდა.', error: error.message });
     }
 });
@@ -470,61 +484,89 @@ app.delete('/api/equipment/:id', authenticateToken, authorizeEquipmentManagement
 
 // GET: ყველა კომპანიის მიღება (ფილტრაციით და ძიებით)
 app.get('/api/companies', authenticateToken, async (req, res) => {
-    const { searchTerm, country, profile, status, identification_code, exhibition_id } = req.query;
-    let query = `SELECT 
-        c.*,
-        creator.username as created_by_username,
-        updater.username as updated_by_username,
-        ARRAY_AGG(DISTINCT ce.exhibition_id) FILTER (WHERE ce.exhibition_id IS NOT NULL) as exhibitions
-        FROM companies c
-        LEFT JOIN users creator ON c.created_by_user_id = creator.id
-        LEFT JOIN users updater ON c.updated_by_user_id = updater.id
-        LEFT JOIN company_exhibitions ce ON c.id = ce.company_id`;
-
-    let params = [];
-    let conditions = [];
-
-    if (searchTerm) {
-        conditions.push(`(c.company_name ILIKE $${params.length + 1} OR c.identification_code ILIKE $${params.length + 1})`);
-        params.push(`%${searchTerm}%`);
-    }
-
-    if (country) {
-        conditions.push(`c.country = $${params.length + 1}`);
-        params.push(country);
-    }
-
-    if (profile) {
-        conditions.push(`c.company_profile ILIKE $${params.length + 1}`);
-        params.push(`%${profile}%`);
-    }
-
-    if (status) {
-        conditions.push(`c.status = $${params.length + 1}`);
-        params.push(status);
-    }
-
-    if (identification_code) {
-        conditions.push(`c.identification_code = $${params.length + 1}`);
-        params.push(identification_code);
-    }
-
-    if (exhibition_id) {
-        conditions.push(`ce.exhibition_id = $${params.length + 1}`);
-        params.push(exhibition_id);
-    }
-
-    if (conditions.length > 0) {
-        query += ' WHERE ' + conditions.join(' AND ');
-    }
-
-    query += ' GROUP BY c.id, creator.username, updater.username ORDER BY c.created_at DESC';
-
     try {
+        console.log('კომპანიების მიღების მოთხოვნა:', req.query);
+
+        const { searchTerm, country, profile, status, identification_code, exhibition_id } = req.query;
+        
+        // company_exhibitions ცხრილის შექმნა თუ არ არსებობს
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS company_exhibitions (
+                id SERIAL PRIMARY KEY,
+                company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+                exhibition_id INTEGER NOT NULL REFERENCES exhibitions(id) ON DELETE CASCADE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(company_id, exhibition_id)
+            );
+        `);
+
+        let query = `SELECT 
+            c.*,
+            creator.username as created_by_username,
+            updater.username as updated_by_username,
+            COALESCE(
+                ARRAY_AGG(DISTINCT ce.exhibition_id) FILTER (WHERE ce.exhibition_id IS NOT NULL), 
+                ARRAY[]::INTEGER[]
+            ) as exhibitions
+            FROM companies c
+            LEFT JOIN users creator ON c.created_by_user_id = creator.id
+            LEFT JOIN users updater ON c.updated_by_user_id = updater.id
+            LEFT JOIN company_exhibitions ce ON c.id = ce.company_id`;
+
+        let params = [];
+        let conditions = [];
+
+        if (searchTerm) {
+            conditions.push(`(c.company_name ILIKE $${params.length + 1} OR c.identification_code ILIKE $${params.length + 1})`);
+            params.push(`%${searchTerm}%`);
+        }
+
+        if (country) {
+            conditions.push(`c.country = $${params.length + 1}`);
+            params.push(country);
+        }
+
+        if (profile) {
+            conditions.push(`c.company_profile ILIKE $${params.length + 1}`);
+            params.push(`%${profile}%`);
+        }
+
+        if (status) {
+            conditions.push(`c.status = $${params.length + 1}`);
+            params.push(status);
+        }
+
+        if (identification_code) {
+            conditions.push(`c.identification_code = $${params.length + 1}`);
+            params.push(identification_code);
+        }
+
+        if (exhibition_id) {
+            conditions.push(`ce.exhibition_id = $${params.length + 1}`);
+            params.push(exhibition_id);
+        }
+
+        if (conditions.length > 0) {
+            query += ' WHERE ' + conditions.join(' AND ');
+        }
+
+        query += ' GROUP BY c.id, creator.username, updater.username ORDER BY c.created_at DESC';
+
+        console.log('SQL Query:', query);
+        console.log('Parameters:', params);
+
         const result = await db.query(query, params);
+        console.log(`მოიძებნა ${result.rows.length} კომპანია`);
+        
         res.status(200).json(result.rows);
     } catch (error) {
         console.error('შეცდომა კომპანიების მიღებისას:', error);
+        console.error('Error details:', {
+            message: error.message,
+            code: error.code,
+            detail: error.detail,
+            stack: error.stack
+        });
         res.status(500).json({ message: 'კომპანიების სიის მიღება ვერ მოხერხდა.', error: error.message });
     }
 });
@@ -539,6 +581,19 @@ app.post('/api/companies', authenticateToken, authorizeCompanyManagement, async 
     const created_by_user_id = req.user.id; // მომხმარებლის ID ტოკენიდან
 
     try {
+        // contact_persons სვეტის დამატება თუ არ არსებობს
+        await db.query(`
+            DO $$ 
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'companies' AND column_name = 'contact_persons'
+                ) THEN
+                    ALTER TABLE companies ADD COLUMN contact_persons JSONB;
+                END IF;
+            END $$;
+        `);
+
         // კომპანიის დამატება
         const result = await db.query(
             `INSERT INTO companies (
@@ -595,9 +650,8 @@ app.put('/api/companies/:id', authenticateToken, async (req, res) => {
         id, 
         company_name, 
         selected_exhibitions,
-        userRole: req.user.role,
-        userId: req.user.id,
-        requestBody: req.body
+        userRole: req.user?.role,
+        userId: req.user?.id
     });
 
     // Check authorization
@@ -608,28 +662,24 @@ app.put('/api/companies/:id', authenticateToken, async (req, res) => {
     }
 
     try {
+        // contact_persons სვეტის დამატება თუ არ არსებობს
+        await db.query(`
+            DO $$ 
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'companies' AND column_name = 'contact_persons'
+                ) THEN
+                    ALTER TABLE companies ADD COLUMN contact_persons JSONB;
+                END IF;
+            END $$;
+        `);
+
         // პირველად შევამოწმოთ კომპანია არსებობს თუ არა
         const checkCompany = await db.query('SELECT id FROM companies WHERE id = $1', [id]);
         if (checkCompany.rows.length === 0) {
             console.log(`კომპანია ID ${id} ვერ მოიძებნა`);
             return res.status(404).json({ message: 'კომპანია ვერ მოიძებნა.' });
-        }
-
-        // company_exhibitions ცხრილის შექმნა თუ არ არსებობს
-        try {
-            await db.query(`
-                CREATE TABLE IF NOT EXISTS company_exhibitions (
-                    id SERIAL PRIMARY KEY,
-                    company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
-                    exhibition_id INTEGER NOT NULL REFERENCES exhibitions(id) ON DELETE CASCADE,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE(company_id, exhibition_id)
-                );
-            `);
-            console.log('company_exhibitions ცხრილი შეიქმნა/შემოწმდა');
-        } catch (tableError) {
-            console.error('ცხრილის შექმნის შეცდომა:', tableError);
-            // Continue execution even if table creation fails
         }
 
         // კომპანიის მონაცემების განახლება
@@ -638,8 +688,8 @@ app.put('/api/companies/:id', authenticateToken, async (req, res) => {
              SET company_name = $1, country = $2, company_profile = $3, 
                  identification_code = $4, legal_address = $5, contact_persons = $6,
                  website = $7, comment = $8, status = $9, updated_at = CURRENT_TIMESTAMP,
-                 updated_by_user_id = $11
-             WHERE id = $10 RETURNING *`,
+                 updated_by_user_id = $10
+             WHERE id = $11 RETURNING *`,
             [
                 company_name, 
                 country, 
@@ -650,8 +700,8 @@ app.put('/api/companies/:id', authenticateToken, async (req, res) => {
                 website, 
                 comment, 
                 status, 
-                id, 
-                req.user.id
+                req.user.id,
+                id
             ]
         );
 
@@ -663,26 +713,31 @@ app.put('/api/companies/:id', authenticateToken, async (req, res) => {
         console.log(`კომპანია ID ${id} წარმატებით განახლდა`);
 
         // გამოფენების კავშირების განახლება
-        if (selected_exhibitions !== undefined) {
-            console.log(`ვანახლებ გამოფენების კავშირებს: ${selected_exhibitions}`);
+        if (selected_exhibitions !== undefined && Array.isArray(selected_exhibitions)) {
+            console.log(`ვანახლებ გამოფენების კავშირებს: ${selected_exhibitions.length} კავშირი`);
             
-            // ჯერ ყველა არსებული კავშირი ვშლით ამ კომპანიისთვის
-            await db.query('DELETE FROM company_exhibitions WHERE company_id = $1', [id]);
-            console.log(`წაშლილია ძველი კავშირები კომპანიისთვის ${id}`);
+            try {
+                // ჯერ ყველა არსებული კავშირი ვშლით ამ კომპანიისთვის
+                await db.query('DELETE FROM company_exhibitions WHERE company_id = $1', [id]);
+                console.log(`წაშლილია ძველი კავშირები კომპანიისთვის ${id}`);
 
-            // ახალი კავშირების დამატება
-            if (Array.isArray(selected_exhibitions) && selected_exhibitions.length > 0) {
+                // ახალი კავშირების დამატება
                 for (const exhibitionId of selected_exhibitions) {
-                    try {
-                        await db.query(
-                            'INSERT INTO company_exhibitions (company_id, exhibition_id) VALUES ($1, $2) ON CONFLICT (company_id, exhibition_id) DO NOTHING',
-                            [id, exhibitionId]
-                        );
-                        console.log(`დამატებული კავშირი: კომპანია ${id} - გამოფენა ${exhibitionId}`);
-                    } catch (linkError) {
-                        console.error(`შეცდომა კავშირის დამატებისას: კომპანია ${id} - გამოფენა ${exhibitionId}:`, linkError);
+                    if (exhibitionId && !isNaN(exhibitionId)) {
+                        try {
+                            await db.query(
+                                'INSERT INTO company_exhibitions (company_id, exhibition_id) VALUES ($1, $2) ON CONFLICT (company_id, exhibition_id) DO NOTHING',
+                                [id, exhibitionId]
+                            );
+                            console.log(`დამატებული კავშირი: კომპანია ${id} - გამოფენა ${exhibitionId}`);
+                        } catch (linkError) {
+                            console.error(`შეცდომა კავშირის დამატებისას: კომპანია ${id} - გამოფენა ${exhibitionId}:`, linkError);
+                        }
                     }
                 }
+            } catch (exhibitionsError) {
+                console.error('გამოფენების კავშირების განახლების შეცდომა:', exhibitionsError);
+                // არ ვაჩერებთ მთავარ ოპერაციას
             }
         }
 
@@ -692,7 +747,8 @@ app.put('/api/companies/:id', authenticateToken, async (req, res) => {
         console.error('Error details:', {
             message: error.message,
             code: error.code,
-            detail: error.detail
+            detail: error.detail,
+            stack: error.stack
         });
         
         // Check for specific error types
