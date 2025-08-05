@@ -119,10 +119,15 @@
   background-color: #138496;
 }
 
+.remove-contact-btn:hover {
+  background-color: #c82333;
+}
+
 .remove-contact-btn {
   background-color: #dc3545;
   color: #fff;
-  display: block; /* ღილაკი ცალკე ხაზზე */
+  display: block;
+  margin: 0.5rem auto 0;ლაკი ცალკე ხაზზე */
   margin: 0.5rem auto 0; /* ცენტრირება */
 }
 

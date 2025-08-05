@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import './ExhibitionForm.css';
 
@@ -5,17 +6,24 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
   const [exhibitionName, setExhibitionName] = useState('');
   const [comment, setComment] = useState('');
   const [manager, setManager] = useState('');
-  const isEditing = !!exhibitionToEdit;
+  const [pricePerSqm, setPricePerSqm] = useState('');
+
+  const isEditing = exhibitionToEdit && exhibitionToEdit.id;
 
   useEffect(() => {
     if (isEditing) {
-      setExhibitionName(exhibitionToEdit.exhibition_name);
-      setComment(exhibitionToEdit.comment);
-      setManager(exhibitionToEdit.manager);
+      console.log('რედაქტირების მონაცემები:', exhibitionToEdit);
+      console.log('price_per_sqm ღირებულება:', exhibitionToEdit.price_per_sqm, 'ტიპი:', typeof exhibitionToEdit.price_per_sqm);
+      
+      setExhibitionName(exhibitionToEdit.exhibition_name || '');
+      setComment(exhibitionToEdit.comment || '');
+      setManager(exhibitionToEdit.manager || '');
+      setPricePerSqm(exhibitionToEdit.price_per_sqm ? exhibitionToEdit.price_per_sqm.toString() : '');
     } else {
       setExhibitionName('');
       setComment('');
       setManager('');
+      setPricePerSqm('');
     }
   }, [exhibitionToEdit, isEditing]);
 
@@ -26,21 +34,23 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
       exhibition_name: exhibitionName,
       comment,
       manager,
+      price_per_sqm: pricePerSqm ? parseFloat(pricePerSqm) : null
     };
-    
-    const method = isEditing ? 'PUT' : 'POST';
-    const url = isEditing
 
+    console.log('გაგზავნილი მონაცემები:', exhibitionData);
+
+    const method = isEditing ? 'PUT' : 'POST';
+    const url = isEditing 
       ? `/api/exhibitions/${exhibitionToEdit.id}`
       : '/api/exhibitions';
 
     try {
-      const token = localStorage.getItem('token'); // ტოკენის აღება
+      const token = localStorage.getItem('token');
       const response = await fetch(url, {
         method,
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` // ტოკენის გაგზავნა
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(exhibitionData),
       });
@@ -89,12 +99,25 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
             required
           />
         </div>
-        <button type="submit" className="submit-btn">
-          {isEditing ? 'განახლება' : 'დამატება'}
-        </button>
-        <button type="button" className="cancel-btn" onClick={onExhibitionUpdated}>
-          გაუქმება
-        </button>
+        <div className="form-group">
+          <label>1 კვმ ღირებულება (ევროში)</label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            value={pricePerSqm}
+            onChange={(e) => setPricePerSqm(e.target.value)}
+            placeholder="მაგ: 150.00"
+          />
+        </div>
+        <div className="form-actions">
+          <button type="submit">
+            {isEditing ? 'განახლება' : 'დამატება'}
+          </button>
+          <button type="button" onClick={onExhibitionUpdated}>
+            გაუქმება
+          </button>
+        </div>
       </form>
     </div>
   );

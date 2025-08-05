@@ -15,22 +15,39 @@ const EquipmentList = ({ showNotification, userRole }) => {
   // fetchEquipment ფუნქცია მოთავსებულია useCallback-ში
   const fetchEquipment = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token'); // ტოკენის აღება
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {}; // ჰედერების შექმნა
+      const token = localStorage.getItem('token');
+      console.log('ტოკენი:', token ? 'არსებობს' : 'არ არსებობს');
 
-      const response = await fetch('/api/equipment', { // შედარებითი მისამართი
-        headers: headers // ჰედერების გაგზავნა
+      if (!token) {
+        showNotification('ავტორიზაცია საჭიროა', 'error');
+        return;
+      }
+
+      const response = await fetch('/api/equipment', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'აღჭურვილობის მიღება ვერ მოხერხდა.');
+      console.log('Response status:', response.status);
+
+      if (response.ok) {
+        const data = await response.json();
+        setEquipment(data);
+      } else if (response.status === 403) {
+        showNotification('წვდომა აკრძალულია. გთხოვთ, ხელახლა შეხვიდეთ სისტემაში.', 'error');
+        // გაასუფთავეთ ტოკენი და გადამისამართეთ login-ზე
+        localStorage.removeItem('token');
+        window.location.reload();
+      } else {
+        const errorText = await response.text();
+        console.error('აღჭურვილობის ჩატვირთვის შეცდომა:', response.status, errorText);
+        showNotification('აღჭურვილობის ჩატვირთვა ვერ მოხერხდა.', 'error');
       }
-      const data = await response.json();
-      setEquipment(data);
-    } catch (err) {
-      setError(err.message);
-      showNotification(`შეცდომა აღჭურვილობის ჩატვირთვისას: ${err.message}`, 'error');
+    } catch (error) {
+      console.error('შეცდომა აღჭურვილობის მიღებისას:', error);
+      showNotification('სერვისი დროებით მიუწვდომელია', 'error');
     } finally {
       setLoading(false);
     }
@@ -145,12 +162,8 @@ const EquipmentList = ({ showNotification, userRole }) => {
         <div className="equipment-grid">
           {equipment.map((item) => (
             <div key={item.id} className="equipment-card">
-              <div className="equipment-details">
-                <h3>{item.code_name}</h3>
-                <p><strong>რაოდენობა:</strong> {item.quantity}</p>
-                <p><strong>ფასი:</strong> ${item.price}</p>
-                <p><strong>აღწერა:</strong> {item.description}</p>
-                {item.image_url && (
+              {item.image_url && (
+                <div className="equipment-image-container">
                   <img 
                     src={getImageUrl(item.image_url)} 
                     alt={item.code_name} 
@@ -161,13 +174,45 @@ const EquipmentList = ({ showNotification, userRole }) => {
                     }}
                     loading="lazy"
                   /> 
-                )}
-                {item.created_by && (
-                  <div className="date-info">
-                    <div className="user">{item.created_by}</div>
-                    {item.created_at && (
+                </div>
+              )}
+
+              <div className="equipment-details">
+                <h3>{item.code_name}</h3>
+
+                <div className="equipment-info">
+                  <p><strong>რაოდენობა:</strong> {item.quantity}</p>
+                  <p><strong>ფასი:</strong> ${item.price}</p>
+                  {item.description && (
+                    <div className="equipment-description">
+                      <strong>აღწერა:</strong> {item.description}
+                    </div>
+                  )}
+                </div>
+
+                <div className="equipment-meta">
+                  {item.created_by && (
+                    <div className="date-info">
+                      <div className="user">{item.created_by}</div>
+                      {item.created_at && (
+                        <div className="date">
+                          {new Date(item.created_at).toLocaleDateString('ka-GE', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {item.updated_by && item.updated_at && (
+                    <div className="date-info update-info">
+                      <div className="user">{item.updated_by}</div>
                       <div className="date">
-                        {new Date(item.created_at).toLocaleDateString('ka-GE', {
+                        {new Date(item.updated_at).toLocaleDateString('ka-GE', {
                           year: 'numeric',
                           month: 'short',
                           day: 'numeric',
@@ -175,37 +220,23 @@ const EquipmentList = ({ showNotification, userRole }) => {
                           minute: '2-digit'
                         })}
                       </div>
-                    )}
-                  </div>
-                )}
-
-                {item.updated_by && item.updated_at && (
-                  <div className="date-info">
-                    <div className="user">{item.updated_by}</div>
-                    <div className="date">
-                      {new Date(item.updated_at).toLocaleDateString('ka-GE', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
                     </div>
-                  </div>
-                )}
-                {isAuthorizedForManagement && (
-                  <div className="equipment-actions">
-                    <button className="edit" onClick={() => handleEditClick(item)}>
-                      რედაქტირება
-                    </button>
-                    <button 
-                      className="delete" 
-                      onClick={() => handleDelete(item.id)}>
-                      წაშლა
-                    </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
+
+              {isAuthorizedForManagement && (
+                <div className="equipment-actions">
+                  <button className="edit" onClick={() => handleEditClick(item)}>
+                    რედაქტირება
+                  </button>
+                  <button 
+                    className="delete" 
+                    onClick={() => handleDelete(item.id)}>
+                    წაშლა
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>

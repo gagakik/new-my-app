@@ -18,6 +18,14 @@ const Statistics = ({ showNotification, userRole }) => {
   const fetchGeneralStatistics = async () => {
     try {
       const token = localStorage.getItem('token');
+      console.log('Token exists:', !!token);
+      
+      if (!token) {
+        showNotification('ავტორიზაციის ტოკენი არ არის', 'error');
+        setLoading(false);
+        return;
+      }
+
       const response = await fetch('/api/statistics/general', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -25,11 +33,21 @@ const Statistics = ({ showNotification, userRole }) => {
         }
       });
 
+      console.log('Response status:', response.status);
+
       if (response.ok) {
         const data = await response.json();
+        console.log('Statistics data:', data);
         setStats(data);
       } else {
-        showNotification('სტატისტიკის ჩატვირთვა ვერ მოხერხდა', 'error');
+        const errorText = await response.text();
+        console.error('Statistics error response:', errorText);
+        
+        if (response.status === 403) {
+          showNotification('წვდომა აკრძალულია. შესაძლოა ტოკენი ვადაგასული იყოს.', 'error');
+        } else {
+          showNotification(`სტატისტიკის ჩატვირთვა ვერ მოხერხდა (${response.status})`, 'error');
+        }
       }
     } catch (error) {
       console.error('სტატისტიკის შეცდომა:', error);

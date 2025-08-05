@@ -16,7 +16,7 @@ const createTables = async () => {
         id SERIAL PRIMARY KEY,
         username VARCHAR(255) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
-        role VARCHAR(50) DEFAULT 'user',
+        role VARCHAR(50) DEFAULT 'user' CHECK (role IN ('admin', 'manager', 'sales', 'marketing', 'user')),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -286,6 +286,13 @@ const createTables = async () => {
         ) THEN
           ALTER TABLE exhibitions ADD COLUMN updated_at TIMESTAMP;
         END IF;
+
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'exhibitions' AND column_name = 'price_per_sqm'
+        ) THEN
+          ALTER TABLE exhibitions ADD COLUMN price_per_sqm DECIMAL(10,2);
+        END IF;
       END $$;
     `);
 
@@ -480,6 +487,116 @@ const createTables = async () => {
         booking_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         created_by INTEGER REFERENCES users(id)
       );
+    `);
+
+    // Event completion reports table (ივენთის დასრულების ანგარიშები)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS event_completion_reports (
+        id SERIAL PRIMARY KEY,
+        event_id INTEGER NOT NULL,
+        event_name VARCHAR(255) NOT NULL,
+        completion_date DATE NOT NULL DEFAULT CURRENT_DATE,
+        total_participants INTEGER DEFAULT 0,
+        total_booths INTEGER DEFAULT 0,
+        total_revenue DECIMAL(15,2) DEFAULT 0.00,
+        total_equipment_revenue DECIMAL(15,2) DEFAULT 0.00,
+        participant_data JSONB,
+        equipment_data JSONB,
+        booth_data JSONB,
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_by_user_id INTEGER REFERENCES users(id)
+      );
+    `);
+
+    // Archived participants table (არქივირებული მონაწილეები)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS archived_event_participants (
+        id SERIAL PRIMARY KEY,
+        original_participant_id INTEGER,
+        completion_report_id INTEGER REFERENCES event_completion_reports(id) ON DELETE CASCADE,
+        event_id INTEGER NOT NULL,
+        company_id INTEGER,
+        company_name VARCHAR(255),
+        registration_status VARCHAR(50),
+        payment_status VARCHAR(50),
+        booth_number VARCHAR(20),
+        booth_size DECIMAL(10,2),
+        notes TEXT,
+        contact_person VARCHAR(255),
+        contact_position VARCHAR(255),
+        contact_email VARCHAR(255),
+        contact_phone VARCHAR(50),
+        payment_amount DECIMAL(10,2),
+        payment_due_date DATE,
+        payment_method VARCHAR(50),
+        invoice_number VARCHAR(100),
+        invoice_file VARCHAR(500),
+        contract_file VARCHAR(500),
+        handover_file VARCHAR(500),
+        registration_date DATE,
+        equipment_bookings JSONB,
+        archived_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Add missing columns to users table if they don't exist
+    await pool.query(`
+      DO $$ 
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'users' AND column_name = 'created_at'
+        ) THEN
+          ALTER TABLE users ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+        END IF;
+      END $$;
+    `);
+
+    // Update existing users without created_at
+    await pool.query(`
+      UPDATE users SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL
+    `);
+
+    // Add tracking columns to companies table
+    await pool.query(`
+      DO $$ 
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'companies' AND column_name = 'created_by_user_id'
+        ) THEN
+          ALTER TABLE companies ADD COLUMN created_by_user_id INTEGER REFERENCES users(id);
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'companies' AND column_name = 'updated_by_user_id'
+        ) THEN
+          ALTER TABLE companies ADD COLUMN updated_by_user_id INTEGER REFERENCES users(id);
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'companies' AND column_name = 'created_at'
+        ) THEN
+          ALTER TABLE companies ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'companies' AND column_name = 'updated_at'
+        ) THEN
+          ALTER TABLE companies ADD COLUMN updated_at TIMESTAMP;
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'companies' AND column_name = 'selected_exhibitions'
+        ) THEN
+          ALTER TABLE companies ADD COLUMN selected_exhibitions JSONB;
+        END IF;
+      END $$;
     `);
 
     console.log('Database tables created successfully');

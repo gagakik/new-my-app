@@ -110,6 +110,7 @@ const UserManagement = ({ showNotification, userRole }) => {
                                 <th>სახელი</th>
                                 <th>ეიმეილი</th>
                                 <th>როლი</th>
+                                <th>ბოლო კავშირი</th>
                                 <th>მოქმედება</th>
                             </tr>
                         </thead>
@@ -134,6 +135,18 @@ const UserManagement = ({ showNotification, userRole }) => {
                                         </select>
                                     </td>
                                     <td>
+                                        {user.last_login 
+                                            ? new Date(user.last_login).toLocaleString('ka-GE', {
+                                                year: 'numeric', 
+                                                month: '2-digit', 
+                                                day: '2-digit',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                              })
+                                            : 'არასდროს'
+                                        }
+                                    </td>
+                                    <td>
                                         <button onClick={() => handleRoleChange(user.id, user.role)}>
                                             განახლება
                                         </button>
@@ -152,6 +165,16 @@ const UserManagement = ({ showNotification, userRole }) => {
                                     <span><strong>ID:</strong> {user.id}</span>
                                     <span><strong>ეიმეილი:</strong> {user.email}</span>
                                     <span><strong>შექმნის თარიღი:</strong> {new Date(user.created_at).toLocaleDateString('ka-GE')}</span>
+                                    <span><strong>ბოლო კავშირი:</strong> {user.last_login 
+                                        ? new Date(user.last_login).toLocaleString('ka-GE', {
+                                            year: 'numeric', 
+                                            month: '2-digit', 
+                                            day: '2-digit',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                          })
+                                        : 'არასდროს'
+                                    }</span>
                                 </div>
                                 <select 
                                     className="user-role-select"

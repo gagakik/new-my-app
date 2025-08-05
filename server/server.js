@@ -1,348 +1,392 @@
-require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
-const db = require('./db');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const db = require('./db');
+
+require('dotenv').config();
+
 const app = express();
-const PORT = process.env.PORT || (process.env.NODE_ENV === 'production' ? 80 : 5000);
+const PORT = process.env.PORT || 5000;
 
-// uploads ფოლდერის შექმნა
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-    try {
-        fs.mkdirSync(uploadsDir, { recursive: true });
-        console.log('uploads ფოლდერი შეიქმნა:', uploadsDir);
-    } catch (error) {
-        console.error('uploads ფოლდერის შექმნის შეცდომა:', error);
-    }
-}
-
-// ფოლდერის უფლებების დაყენება
-try {
-    fs.chmodSync(uploadsDir, 0o755);
-    console.log('uploads ფოლდერს მიენიჭა სწორი უფლებები');
-} catch (error) {
-    console.error('uploads ფოლდერის უფლებების დაყენების შეცდომა:', error);
-}
-
-// CORS configuration for all environments
-app.use(cors({
-    origin: [
-        'http://localhost:5173', 
-        'http://localhost:5174',
-        'https://*.replit.dev', 
-        'https://*.replit.app',
-        'http://209.38.237.197',
-        'https://209.38.237.197'
-    ],
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
+// Middleware
+app.use(cors());
 app.use(express.json());
 
-// Request logging middleware for debugging
-app.use((req, res, next) => {
-    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-    if (req.method === 'POST' || req.method === 'PUT') {
-        console.log('Request body:', req.body);
+// Static files
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// File upload configuration
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadPath = path.join(__dirname, 'uploads');
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
     }
+    cb(null, uploadPath);
+  },
+  filename: function (req, file, cb) {
+    const timestamp = Date.now();
+    const randomNum = Math.floor(Math.random() * 1000000000);
+    const extension = path.extname(file.originalname);
+    const filename = `${file.fieldname}-${timestamp}-${randomNum}${extension}`;
+    cb(null, filename);
+  }
+});
+
+const upload = multer({ storage: storage });
+
+// Token verification middleware
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ message: 'Access token არ არის მოწოდებული' });
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret', (err, user) => {
+    if (err) {
+      return res.status(403).json({ message: 'არასწორი token' });
+    }
+    req.user = user;
     next();
-});
-
-// Production-ში static files-ების სერვირება
-if (process.env.NODE_ENV === 'production') {
-    app.use(express.static(path.join(__dirname, '../client/dist')));
-
-    // React router-ისთვის catch-all handler
-    app.get('*', (req, res, next) => {
-        if (!req.path.startsWith('/api') && !req.path.startsWith('/uploads')) {
-            res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
-        } else {
-            next();
-        }
-    });
-}
-
-// --- multer კონფიგურაცია სურათების ატვირთვისთვის ---
-const multerStorage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        let uploadPath = path.join(__dirname, 'uploads');
-
-        // თუ ეს participants-ის ფაილია, ცალკე საქაღალდეში შევინახოთ
-        if (req.url && req.url.includes('participants')) {
-            uploadPath = path.join(__dirname, 'uploads', 'participants');
-        }
-
-        // საქაღალდის შექმნა თუ არ არსებობს
-        if (!fs.existsSync(uploadPath)) {
-            try {
-                fs.mkdirSync(uploadPath, { recursive: true });
-                fs.chmodSync(uploadPath, 0o755);
-                console.log('Upload directory created:', uploadPath);
-            } catch (error) {
-                console.error('Error creating upload directory:', error);
-                return cb(error);
-            }
-        }
-        cb(null, uploadPath); 
-    },
-    filename: (req, file, cb) => {
-        try {
-            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-            const fileExtension = path.extname(file.originalname).toLowerCase();
-
-            // ფაილის ტიპის მიხედვით პრეფიქსის დაყენება
-            let prefix = 'file';
-            if (file.fieldname === 'invoice_file') prefix = 'invoice';
-            else if (file.fieldname === 'contract_file') prefix = 'contract';
-            else if (file.fieldname === 'handover_file') prefix = 'handover';
-            else if (file.mimetype && file.mimetype.startsWith('image/')) prefix = 'img';
-
-            const filename = prefix + '-' + uniqueSuffix + fileExtension;
-            console.log('Generated filename:', filename, 'for field:', file.fieldname);
-            console.log('File will be saved to:', req.uploadPath || path.join(__dirname, 'uploads'), filename);
-            
-            // შევამოწმოთ ფაილი ნამდვილად შეიქმნა თუ არა
-            setTimeout(() => {
-                const fullPath = path.join(req.uploadPath || path.join(__dirname, 'uploads'), filename);
-                fs.access(fullPath, fs.constants.F_OK, (err) => {
-                    if (err) {
-                        console.error('File was not created successfully:', fullPath);
-                    } else {
-                        console.log('File created successfully:', fullPath);
-                    }
-                });
-            }, 100);
-            
-            cb(null, filename);
-        } catch (error) {
-            console.error('Error generating filename:', error);
-            cb(error);
-        }
-    }
-});
-
-const upload = multer({ 
-    storage: multerStorage,
-    limits: {
-        fileSize: 5 * 1024 * 1024 // 5MB ლიმიტი
-    },
-    fileFilter: (req, file, cb) => {
-        const imageTypes = /jpeg|jpg|png|gif|webp/;
-        const documentTypes = /pdf|xlsx|xls/;
-        const extname = path.extname(file.originalname).toLowerCase();
-        const isImage = imageTypes.test(extname) && imageTypes.test(file.mimetype);
-        const isDocument = documentTypes.test(extname) && (
-            file.mimetype.includes('pdf') || 
-            file.mimetype.includes('spreadsheet') || 
-            file.mimetype.includes('excel') ||
-            file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-            file.mimetype === 'application/vnd.ms-excel'
-        );
-
-        if (isImage || isDocument) {
-            return cb(null, true);
-        } else {
-            cb(new Error('მხოლოდ სურათების (jpg, png, gif, webp) ან დოკუმენტების (pdf, xlsx, xls) ფაილები დაშვებულია!'));
-        }
-    }
-});
-
-// სურათის ატვირთვის ფუნქცია
-function uploadImage(file) {
-    const filePath = `/uploads/${file.filename}`;
-    const fullPath = path.join(__dirname, 'uploads', file.filename);
-    
-    // შევამოწმოთ ფაილი არსებობს თუ არა
-    try {
-        if (fs.existsSync(fullPath)) {
-            console.log('File exists and accessible:', fullPath);
-        } else {
-            console.error('File does not exist after upload:', fullPath);
-        }
-    } catch (error) {
-        console.error('Error checking file existence:', error);
-    }
-    
-    // შედარებითი მისამართის გამოყენება ყველა გარემოში
-    return filePath;
-}
-
-// სტატიკური საქაღალდე ატვირთული სურათებისთვის
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
-    setHeaders: (res, filePath) => {
-        console.log('Static file requested:', filePath);
-        // Cache control headers
-        res.setHeader('Cache-Control', 'public, max-age=31536000');
-    }
-}));
-
-// 404 error handling for missing uploads
-app.use('/uploads', (req, res, next) => {
-    console.log('File not found:', req.path);
-    console.log('Full path attempted:', path.join(__dirname, 'uploads', req.path));
-    res.status(404).json({ error: 'ფაილი ვერ მოიძებნა' });
-});
-
-
-// --- middleware-ის შექმნა ტოკენის შესამოწმებლად ---
-function authenticateToken(req, res, next) {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-
-    if (token == null) {
-        return res.status(401).json({ error: 'ავტორიზაციის ტოკენი არ არის მოწოდებული.' });
-    }
-
-    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-        if (err) {
-            return res.status(403).json({ error: 'არასწორი ან ვადაგასული ავტორიზაციის ტოკენი.' });
-        }
-        req.user = user; // მომხმარებლის მონაცემების დამატება მოთხოვნაში (id, username, role)
-        next();
-    });
-}
-
-// დამხმარე ფუნქცია როლის შემოწმებისთვის (კომპანიების მართვა)
-const authorizeCompanyManagement = (req, res, next) => {
-    const allowedRoles = ['admin', 'sales']; // მხოლოდ admin და sales
-    if (!req.user || !allowedRoles.includes(req.user.role)) {
-        return res.status(403).json({ error: 'წვდომა აკრძალულია: არ გაქვთ კომპანიების მართვის უფლება.' });
-    }
-    next();
+  });
 };
 
-
-// დამხმარე ფუნქცია როლის შემოწმებისთვის (კომპანიების მართვა)
-const authorizeSpaceManagement = (req, res, next) => {
-    const allowedRoles = ['admin', 'sales']; // მხოლოდ admin და sales
-    if (!req.user || !allowedRoles.includes(req.user.role)) {
-        return res.status(403).json({ error: 'წვდომა აკრძალულია: არ გაქვთ კომპანიების მართვის უფლება.' });
+// Authorization middleware
+const authorizeRoles = (...roles) => {
+  return (req, res, next) => {
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({ message: 'არ გაქვთ ამ მოქმედების ნებართვა' });
     }
     next();
+  };
 };
 
-// დამხმარე ფუნქცია როლის შემოწმებისთვის (აღჭურვილობის მართვა)
-const authorizeEquipmentManagement = (req, res, next) => {
-    const allowedRoles = ['admin', 'operation'];
-    if (!req.user || !allowedRoles.includes(req.user.role)) {
-        return res.status(403).json({ error: 'წვდომა აკრძალულია: არ გაქვთ აღჭურვილობის მართვის უფლება.' });
-    }
-    next();
-};
-
-
-// API ენდპოინტი მომხმარებლის რეგისტრაციისთვის
+// Auth routes - Fixed endpoints to match frontend
 app.post('/api/register', async (req, res) => {
-  const { username, password } = req.body;
-  const defaultRole = 'user';
   try {
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    const { username, password, role = 'user' } = req.body;
 
+    // Check if user exists
+    const existingUser = await db.query(
+      'SELECT * FROM users WHERE username = $1',
+      [username]
+    );
+
+    if (existingUser.rows.length > 0) {
+      return res.status(400).json({ message: 'მომხმარებელი უკვე არსებობს' });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create user
     const result = await db.query(
       'INSERT INTO users (username, password, role) VALUES ($1, $2, $3) RETURNING id, username, role',
-      [username, hashedPassword, defaultRole]
+      [username, hashedPassword, role]
     );
-    res.status(201).json({ message: 'რეგისტრაცია წარმატებით დასრულდა.', user: result.rows[0] });
+
+    const user = result.rows[0];
+    const token = jwt.sign(
+      { id: user.id, username: user.username, role: user.role },
+      process.env.JWT_SECRET || 'fallback_secret',
+      { expiresIn: '24h' }
+    );
+
+    res.status(201).json({
+      message: 'მომხმარებელი წარმატებით შეიქმნა',
+      token,
+      role: user.role,
+      userId: user.id,
+      username: user.username
+    });
   } catch (error) {
-    console.error('შეცდომა რეგისტრაციისას:', error);
-    res.status(500).json({ message: 'რეგისტრაცია ვერ მოხერხდა.', error: error.message });
+    console.error('Registration error:', error);
+    res.status(500).json({ message: 'სერვერის შეცდომა' });
   }
 });
 
-// API ენდპოინტი მომხმარებლის ავტორიზაციისთვის
 app.post('/api/login', async (req, res) => {
-  const { username, password } = req.body;
   try {
-    const result = await db.query('SELECT * FROM users WHERE username = $1', [username]);
+    const { username, password } = req.body;
 
-    if (result.rows.length > 0) {
-      const user = result.rows[0];
-      const isMatch = await bcrypt.compare(password, user.password);
-
-      if (isMatch) {
-        const token = jwt.sign(
-            { id: user.id, username: user.username, role: user.role },
-            process.env.JWT_SECRET,
-            { expiresIn: '1h' }
-        );
-        res.status(200).json({ message: 'შესვლა წარმატებით დასრულდა.', role: user.role, token: token, userId: user.id, username: user.username });
-      } else {
-        res.status(401).json({ message: 'არასწორი პაროლი.' });
-      }
-    } else {
-      res.status(401).json({ message: 'მომხმარებელი ვერ მოიძებნა.' });
-    }
-  } catch (error) {
-    console.error('შეცდომა ავტორიზაციისას:', error);
-    res.status(500).json({ message: 'შესვლა ვერ მოხერხდა.', error: error.message });
-  }
-});
-
-// GET: მომხმარებლების სიის მიღება (მხოლოდ ადმინისთვის)
-app.get('/api/users', authenticateToken, async (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'წვდომა აკრძალულია: არ ხართ ადმინი.' });
-  }
-  try {
-    const result = await db.query('SELECT id, username, role FROM users ORDER BY id ASC');
-    res.status(200).json(result.rows);
-  } catch (error) {
-    console.error('შეცდომა მომხმარებლების სიის მიღებისას:', error);
-    res.status(500).json({ message: 'მომხმარებლების სიის მიღება ვერ მოხერხდა.', error: error.message });
-  }
-});
-
-// PUT: მომხმარებლის როლის განახლება (მხოლოდ ადმინისთვის)
-app.put('/api/users/:id/role', authenticateToken, async (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'წვდომა აკრძალულია: არ ხართ ადმინი.' });
-  }
-  const { id } = req.params;
-  const { role } = req.body;
-  try {
+    // Find user
     const result = await db.query(
-      'UPDATE users SET role = $1 WHERE id = $2 RETURNING id, username, role',
-      [role, id]
+      'SELECT * FROM users WHERE username = $1',
+      [username]
     );
 
-    if (result.rows.length > 0) {
-      res.status(200).json({ message: 'მომხმარებლის როლი წარმატებით განახლდა.', user: result.rows[0] });
-    } else {
-      res.status(404).json({ message: 'მომხმარებელი ვერ მოიძებნა.' });
+    if (result.rows.length === 0) {
+      return res.status(400).json({ message: 'არასწორი მომხმარებლის სახელი ან პაროლი' });
     }
+
+    const user = result.rows[0];
+
+    // Check password
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    if (!isValidPassword) {
+      return res.status(400).json({ message: 'არასწორი მომხმარებლის სახელი ან პაროლი' });
+    }
+
+    // Create token
+    const token = jwt.sign(
+      { id: user.id, username: user.username, role: user.role },
+      process.env.JWT_SECRET || 'fallback_secret',
+      { expiresIn: '24h' }
+    );
+
+    res.json({
+      message: 'წარმატებით შესვლა',
+      token,
+      role: user.role,
+      userId: user.id,
+      username: user.username
+    });
   } catch (error) {
-    console.error('შეცდომა მომხმარებლის როლის განახლებისას:', error);
-    res.status(500).json({ message: 'მომხმარებლის როლის განახლება ვერ მოხერხდა.', error: error.message });
+    console.error('Login error:', error);
+    res.status(500).json({ message: 'სერვერის შეცდომა' });
   }
 });
 
-// DELETE: მომხმარებლის წაშლა (მხოლოდ ადმინისთვის)
-app.delete('/api/users/:id', authenticateToken, async (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'წვდომა აკრძალულია: არ ხართ ადმინი.' });
-  }
-  const { id } = req.params;
+// Companies routes - using separate router
+const companiesRouter = require('./routes/companies');
+app.use('/api/companies', companiesRouter);
+
+// Equipment routes
+app.get('/api/equipment', authenticateToken, async (req, res) => {
   try {
-    const result = await db.query('DELETE FROM users WHERE id = $1 RETURNING *', [id]);
-    if (result.rows.length > 0) {
-      res.status(200).json({ message: 'მომხმარებელი წარმატებით წაიშალა.' });
-    } else {
-      res.status(404).json({ message: 'მომხმარებელი ვერ მოიძებნა.' });
-    }
+    const result = await db.query(`
+      SELECT 
+        e.*,
+        u1.username as created_by,
+        u2.username as updated_by
+      FROM equipment e
+      LEFT JOIN users u1 ON e.created_by_id = u1.id
+      LEFT JOIN users u2 ON e.updated_by_id = u2.id
+      ORDER BY e.id DESC
+    `);
+    res.json(result.rows);
   } catch (error) {
-    console.error('შეცდომა მომხმარებლის წაშლისას:', error);
-    res.status(500).json({ message: 'მომხმარებლის წაშლა ვერ მოხერხდა.', error: error.message });
+    console.error('აღჭურვილობის მიღების შეცდომა:', error);
+    res.status(500).json({ message: 'აღჭურვილობის მიღება ვერ მოხერხდა' });
   }
 });
 
-// GET: ყველა გამოფენის მიღება
+app.post('/api/equipment', authenticateToken, authorizeRoles('admin', 'operation'), upload.single('image'), async (req, res) => {
+  try {
+    const { code_name, description, quantity, price } = req.body;
+    const image_url = req.file ? `/uploads/${req.file.filename}` : null;
+
+    const result = await db.query(
+      'INSERT INTO equipment (code_name, description, quantity, price, image_url, created_by_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+      [code_name, description, parseInt(quantity), parseFloat(price), image_url, req.user.id]
+    );
+
+    res.status(201).json({
+      message: 'აღჭურვილობა წარმატებით დაემატა',
+      equipment: result.rows[0]
+    });
+  } catch (error) {
+    console.error('აღჭურვილობის დამატების შეცდომა:', error);
+    res.status(500).json({ message: 'აღჭურვილობის დამატება ვერ მოხერხდა' });
+  }
+});
+
+app.put('/api/equipment/:id', authenticateToken, authorizeRoles('admin', 'operation'), upload.single('image'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { code_name, description, quantity, price, image_url_existing } = req.body;
+
+    console.log('Equipment update request:', { id, code_name, description, quantity, price });
+
+    // Get current equipment to check existing image
+    const currentEquipment = await db.query('SELECT * FROM equipment WHERE id = $1', [id]);
+    if (currentEquipment.rows.length === 0) {
+      return res.status(404).json({ message: 'აღჭურვილობა ვერ მოიძებნა' });
+    }
+
+    let image_url = currentEquipment.rows[0].image_url;
+
+    if (req.file) {
+      // Delete old image if exists
+      if (image_url && image_url.startsWith('/uploads/')) {
+        const oldImagePath = path.join(__dirname, image_url);
+        if (fs.existsSync(oldImagePath)) {
+          fs.unlinkSync(oldImagePath);
+        }
+      }
+      image_url = `/uploads/${req.file.filename}`;
+    } else if (image_url_existing) {
+      // Keep existing image URL if provided
+      image_url = image_url_existing;
+    }
+
+    const result = await db.query(
+      'UPDATE equipment SET code_name = $1, description = $2, quantity = $3, price = $4, image_url = $5, updated_by_id = $6 WHERE id = $7 RETURNING *',
+      [code_name, description, parseInt(quantity), parseFloat(price), image_url, req.user.id, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'აღჭურვილობა ვერ მოიძებნა' });
+    }
+
+    console.log('Equipment updated successfully:', result.rows[0]);
+
+    res.json({
+      message: 'აღჭურვილობა წარმატებით განახლდა',
+      equipment: result.rows[0]
+    });
+  } catch (error) {
+    console.error('აღჭურვილობის განახლების შეცდომა:', error);
+    res.status(500).json({ message: 'აღჭურვილობის განახლება ვერ მოხერხდა' });
+  }
+});
+
+app.delete('/api/equipment/:id', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get equipment to delete associated image
+    const equipment = await db.query('SELECT * FROM equipment WHERE id = $1', [id]);
+    if (equipment.rows.length === 0) {
+      return res.status(404).json({ message: 'აღჭურვილობა ვერ მოიძებნა' });
+    }
+
+    // Delete image file if exists
+    const image_url = equipment.rows[0].image_url;
+    if (image_url && image_url.startsWith('/uploads/')) {
+      const imagePath = path.join(__dirname, image_url);
+      if (fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath);
+      }
+    }
+
+    await db.query('DELETE FROM equipment WHERE id = $1', [id]);
+    res.json({ message: 'აღჭურვილობა წარმატებით წაიშალა' });
+  } catch (error) {
+    console.error('აღჭურვილობის წაშლის შეცდომა:', error);
+    res.status(500).json({ message: 'აღჭურვილობის წაშლა ვერ მოხერხდა' });
+  }
+});
+
+// Equipment availability for events
+app.get('/api/equipment/availability/:eventId', authenticateToken, async (req, res) => {
+  try {
+    const { eventId } = req.params;
+
+    const query = `
+      SELECT 
+        e.id,
+        e.code_name,
+        e.quantity,
+        e.price,
+        e.description,
+        e.image_url,
+        e.created_at,
+        COALESCE(e.created_by_id, e.created_by_user_id) as created_by_user_id,
+        COALESCE(e.quantity - COALESCE(SUM(eb.quantity), 0), e.quantity) as available_quantity,
+        COALESCE(SUM(eb.quantity), 0) as booked_quantity
+      FROM equipment e
+      LEFT JOIN event_participants ep ON ep.event_id = $1
+      LEFT JOIN equipment_bookings eb ON eb.participant_id = ep.id AND eb.equipment_id = e.id
+      GROUP BY e.id, e.code_name, e.quantity, e.price, e.description, e.image_url, e.created_at, e.created_by_id, e.created_by_user_id
+      ORDER BY e.code_name
+    `;
+
+    const result = await db.query(query, [eventId]);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('აღჭურვილობის ხელმისაწვდომობის შეცდომა:', error);
+    res.status(500).json({ message: 'აღჭურვილობის ხელმისაწვდომობის მიღება ვერ მოხერხდა' });
+  }
+});
+
+// Spaces routes
+app.get('/api/spaces', authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT 
+        s.*,
+        u1.username as created_by,
+        u2.username as updated_by
+      FROM spaces s
+      LEFT JOIN users u1 ON s.created_by_user_id = u1.id
+      LEFT JOIN users u2 ON s.updated_by_user_id = u2.id
+      ORDER BY s.created_at DESC
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('სივრცეების მიღების შეცდომა:', error);
+    res.status(500).json({ message: 'სივრცეების მიღება ვერ მოხერხდა' });
+  }
+});
+
+app.post('/api/spaces', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res) => {
+  try {
+    const { category, building_name, description, area_sqm } = req.body;
+
+    const result = await db.query(
+      'INSERT INTO spaces (category, building_name, description, area_sqm, created_by_user_id) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [category, building_name, description, parseFloat(area_sqm) || 0, req.user.id]
+    );
+
+    res.status(201).json({
+      message: 'სივრცე წარმატებით დაემატა',
+      space: result.rows[0]
+    });
+  } catch (error) {
+    console.error('სივრცის დამატების შეცდომა:', error);
+    res.status(500).json({ message: 'სივრცის დამატება ვერ მოხერხდა' });
+  }
+});
+
+app.put('/api/spaces/:id', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { category, building_name, description, area_sqm } = req.body;
+
+    const result = await db.query(
+      'UPDATE spaces SET category = $1, building_name = $2, description = $3, area_sqm = $4, updated_at = CURRENT_TIMESTAMP, updated_by_user_id = $5 WHERE id = $6 RETURNING *',
+      [category, building_name, description, parseFloat(area_sqm) || 0, req.user.id, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'სივრცე ვერ მოიძებნა' });
+    }
+
+    res.json({
+      message: 'სივრცე წარმატებით განახლდა',
+      space: result.rows[0]
+    });
+  } catch (error) {
+    console.error('სივრცის განახლების შეცდომა:', error);
+    res.status(500).json({ message: 'სივრცის განახლება ვერ მოხერხდა' });
+  }
+});
+
+app.delete('/api/spaces/:id', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await db.query('DELETE FROM spaces WHERE id = $1 RETURNING *', [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'სივრცე ვერ მოიძებნა' });
+    }
+
+    res.json({ message: 'სივრცე წარმატებით წაიშალა' });
+  } catch (error) {
+    console.error('სივრცის წაშლის შეცდომა:', error);
+    res.status(500).json({ message: 'სივრცის წაშლა ვერ მოხერხდა' });
+  }
+});
+
+// Exhibitions routes
 app.get('/api/exhibitions', authenticateToken, async (req, res) => {
   try {
     const result = await db.query(`
@@ -353,1145 +397,1063 @@ app.get('/api/exhibitions', authenticateToken, async (req, res) => {
       FROM exhibitions e
       LEFT JOIN users u1 ON e.created_by_user_id = u1.id
       LEFT JOIN users u2 ON e.updated_by_user_id = u2.id
-      ORDER BY e.id ASC
+      ORDER BY e.created_at DESC
     `);
-    res.status(200).json(result.rows);
+    res.json(result.rows);
   } catch (error) {
-    console.error('შეცდომა გამოფენების მიღებისას:', error);
-    res.status(500).json({ message: 'გამოფენების მიღება ვერ მოხერხდა.', error: error.message });
+    console.error('გამოფენების მიღების შეცდომა:', error);
+    res.status(500).json({ message: 'გამოფენების მიღება ვერ მოხერხდა' });
   }
 });
 
-// POST: ახალი გამოფენის დამატება
-app.post('/api/exhibitions', authenticateToken, async (req, res) => {
-  if (req.user.role !== 'admin' && req.user.role !== 'sales' && req.user.role !== 'marketing') {
-    return res.status(403).json({ error: 'წვდომა აკრძალულია.' });
-  }
-  const { exhibition_name, comment, manager } = req.body;
-  const created_by_user_id = req.user.id;
-
+app.get('/api/exhibitions/:id', authenticateToken, async (req, res) => {
   try {
+    const { id } = req.params;
+    const result = await db.query('SELECT * FROM exhibitions WHERE id = $1', [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'გამოფენა ვერ მოიძებნა' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('გამოფენის მიღების შეცდომა:', error);
+    res.status(500).json({ message: 'გამოფენის მიღება ვერ მოხერხდა' });
+  }
+});
+
+app.post('/api/exhibitions', authenticateToken, authorizeRoles('admin', 'sales', 'marketing'), async (req, res) => {
+  try {
+    const { exhibition_name, comment, manager, price_per_sqm = 0 } = req.body;
+
     const result = await db.query(
-      'INSERT INTO exhibitions (exhibition_name, comment, manager, created_by_user_id, created_at) VALUES ($1, $2, $3, $4, NOW()) RETURNING *',
-      [exhibition_name, comment, manager, created_by_user_id]
+      'INSERT INTO exhibitions (exhibition_name, comment, manager, price_per_sqm, created_by_user_id) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [exhibition_name, comment, manager, parseFloat(price_per_sqm) || 0, req.user.id]
     );
-    res.status(201).json({ message: 'გამოფენა წარმატებით დაემატა!', exhibition: result.rows[0] });
-  } catch (error) {
-    console.error('შეცდომა გამოფენის დამატებისას:', error);
-    res.status(500).json({ message: 'გამოფენის დამატება ვერ მოხერხდა.', error: error.message });
-  }
-});
 
-// PUT: გამოფენის განახლება
-app.put('/api/exhibitions/:id', authenticateToken, async (req, res) => {
-  if (req.user.role !== 'admin' && req.user.role !== 'sales' && req.user.role !== 'marketing') {
-    return res.status(403).json({ error: 'წვდომა აკრძალულია.' });
-  }
-  const { id } = req.params;
-  const { exhibition_name, comment, manager } = req.body;
-  const updated_by_user_id = req.user.id;
-
-  try {
-    const result = await db.query(
-      'UPDATE exhibitions SET exhibition_name = $1, comment = $2, manager = $3, updated_by_user_id = $4, updated_at = NOW() WHERE id = $5 RETURNING *',
-      [exhibition_name, comment, manager, updated_by_user_id, id]
-    );
-    if (result.rows.length > 0) {
-      res.status(200).json({ message: 'გამოფენა წარმატებით განახლდა!', exhibition: result.rows[0] });
-    } else {
-      res.status(404).json({ message: 'გამოფენა ვერ მოიძებნა.' });
-    }
-  } catch (error) {
-    console.error('შეცდომა გამოფენის განახლებისას:', error);
-    res.status(500).json({ message: 'გამოფენის განახლება ვერ მოხერხდა.', error: error.message });
-  }
-});
-
-// DELETE: გამოფენის წაშლა ID-ის მიხედვით
-app.delete('/api/exhibitions/:id', authenticateToken, async (req, res) => {
-  const allowedRoles = ['admin', 'sales', 'marketing'];
-  if (!req.user || !allowedRoles.includes(req.user.role)) {
-    return res.status(403).json({ error: 'წვდომა აკრძალულია: არ გაქვთ გამოფენების მართვის უფლება.' });
-  }
-  const { id } = req.params;
-  try {
-    const result = await db.query('DELETE FROM exhibitions WHERE id = $1 RETURNING *', [id]);
-    if (result.rows.length > 0) {
-      res.status(200).json({ message: 'გამოფენა წარმატებით წაიშალა.' });
-    } else {
-      res.status(404).json({ message: 'გამოფენა ვერ მოიძებნა.' });
-    }
-  } catch (error) {
-    console.error('შეცდომა გამოფენის წაშლისას:', error);
-    res.status(500).json({ message: 'გამოფენის წაშლა ვერ მოხერხდა.', error: error.message });
-  }
-});
-
-// --- აღჭურვილობის API ენდპოინტები ---
-
-
-
-// GET: ყველა აღჭურვილობის მიღება (ყველა ავტორიზებული მომხმარებლისთვის)
-app.get('/api/equipment', authenticateToken, async (req, res) => {
-    try {
-        console.log('აღჭურვილობის მოთხოვნა მიღებულია');
-        const result = await db.query('SELECT * FROM equipment ORDER BY id ASC');
-        console.log(`მოიძებნა ${result.rows.length} აღჭურვილობა`);
-        res.status(200).json(result.rows);
-    } catch (error) {
-        console.error('შეცდომა აღჭურვილობის მიღებისას:', error);
-        console.error('Error details:', {
-            message: error.message,
-            code: error.code,
-            detail: error.detail
-        });
-        res.status(500).json({ message: 'აღჭურვილობის მიღება ვერ მოხერხდა.', error: error.message });
-    }
-});
-
-// POST: ახალი აღჭურვილობის დამატება (მხოლოდ admin, operation)
-app.post('/api/equipment', authenticateToken, authorizeEquipmentManagement, upload.single('image'), async (req, res) => {
-    const { code_name, quantity, price, description } = req.body;
-
-    let image_url = null;
-    if (req.file) {
-        image_url = uploadImage(req.file);
-    }
-
-    const created_by_user_id = req.user.id; 
-
-    try {
-        const result = await db.query(
-            'INSERT INTO equipment (code_name, quantity, price, description, image_url, created_by_user_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-            [code_name, quantity, price, description, image_url, created_by_user_id]
-        );
-        res.status(201).json({ message: 'აღჭურვილობა წარმატებით დაემატა.', equipment: result.rows[0] });
-    } catch (error) {
-        console.error('შეცდომა აღჭურვილობის დამატებისას:', error);
-        if (error.code === '23505') {
-            return res.status(409).json({ message: 'აღჭვილობა ამ კოდური სახელით უკვე არსებობს.' });
-        }
-        res.status(500).json({ message: 'აღჭურვილობის დამატება ვერ მოხერხდა.', error: error.message });
-    }
-});
-
-// PUT: აღჭურვილობის რედაქტირება ID-ის მიხედვით (მხოლოდ admin, operation)
-app.put('/api/equipment/:id', authenticateToken, authorizeEquipmentManagement, upload.single('image'), async (req, res) => {
-    const { id } = req.params;
-    const { code_name, quantity, price, description } = req.body;
-    let image_url = req.body.image_url_existing || null;
-
-    if (req.file) {
-        image_url = uploadImage(req.file);
-    }
-
-    try {
-        const result = await db.query(
-            'UPDATE equipment SET code_name = $1, quantity = $2, price = $3, description = $4, image_url = $5 WHERE id = $6 RETURNING *',
-            [code_name, quantity, price, description, image_url, id]
-        );
-        if (result.rows.length > 0) {
-            res.status(200).json({ message: 'აღჭურვილობა წარმატებით განახლდა.', equipment: result.rows[0] });
-        } else {
-            res.status(404).json({ message: 'აღჭურვილობა ვერ მოიძებნა.' });
-        }
-    } catch (error) {
-        console.error('შეცდომა აღჭურვილობის განახლებისას:', error);
-        if (error.code === '23505') {
-            return res.status(409).json({ message: 'აღჭვილობა ამ კოდური სახელით უკვე არსებობს.' });
-        }
-        res.status(500).json({ message: 'აღჭურვილობის განახლება ვერ მოხერხდა.', error: error.message });
-    }
-});
-
-// DELETE: აღჭურვილობის წაშლა ID-ის მიხედვით (მხოლოდ admin, operation)
-app.delete('/api/equipment/:id', authenticateToken, authorizeEquipmentManagement, async (req, res) => {
-    const { id } = req.params;
-    try {
-        const result = await db.query('DELETE FROM equipment WHERE id = $1 RETURNING *', [id]);
-        if (result.rows.length > 0) {
-            res.status(200).json({ message: 'აღჭურვილობა წარმატებით წაიშალა.' });
-        } else {
-            res.status(404).json({ message: 'აღჭურვილობა ვერ მოიძებნა.' });
-        }
-    } catch (error) {
-        console.error('შეცდომა აღჭურვილობის წაშლისას:', error);
-        res.status(500).json({ message: 'აღჭურვილობის წაშლა ვერ მოხერხდა.', error: error.message });
-    }
-});
-
-
-// --- კომპანიების API ენდპოინტები ---
-
-// GET: ყველა კომპანიის მიღება (ფილტრაციით და ძიებით)
-app.get('/api/companies', authenticateToken, async (req, res) => {
-    try {
-        console.log('კომპანიების მიღების მოთხოვნა:', req.query);
-
-        const { searchTerm, country, profile, status, identification_code, exhibition_id } = req.query;
-        
-        // company_exhibitions ცხრილის შექმნა თუ არ არსებობს
-        await db.query(`
-            CREATE TABLE IF NOT EXISTS company_exhibitions (
-                id SERIAL PRIMARY KEY,
-                company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
-                exhibition_id INTEGER NOT NULL REFERENCES exhibitions(id) ON DELETE CASCADE,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(company_id, exhibition_id)
-            );
-        `);
-
-        let query = `SELECT 
-            c.*,
-            creator.username as created_by_username,
-            updater.username as updated_by_username,
-            COALESCE(
-                ARRAY_AGG(DISTINCT ce.exhibition_id) FILTER (WHERE ce.exhibition_id IS NOT NULL), 
-                ARRAY[]::INTEGER[]
-            ) as exhibitions
-            FROM companies c
-            LEFT JOIN users creator ON c.created_by_user_id = creator.id
-            LEFT JOIN users updater ON c.updated_by_user_id = updater.id
-            LEFT JOIN company_exhibitions ce ON c.id = ce.company_id`;
-
-        let params = [];
-        let conditions = [];
-
-        if (searchTerm) {
-            conditions.push(`(c.company_name ILIKE $${params.length + 1} OR c.identification_code ILIKE $${params.length + 1})`);
-            params.push(`%${searchTerm}%`);
-        }
-
-        if (country) {
-            conditions.push(`c.country = $${params.length + 1}`);
-            params.push(country);
-        }
-
-        if (profile) {
-            conditions.push(`c.company_profile ILIKE $${params.length + 1}`);
-            params.push(`%${profile}%`);
-        }
-
-        if (status) {
-            conditions.push(`c.status = $${params.length + 1}`);
-            params.push(status);
-        }
-
-        if (identification_code) {
-            conditions.push(`c.identification_code = $${params.length + 1}`);
-            params.push(identification_code);
-        }
-
-        if (exhibition_id) {
-            conditions.push(`ce.exhibition_id = $${params.length + 1}`);
-            params.push(exhibition_id);
-        }
-
-        if (conditions.length > 0) {
-            query += ' WHERE ' + conditions.join(' AND ');
-        }
-
-        query += ' GROUP BY c.id, creator.username, updater.username ORDER BY c.created_at DESC';
-
-        console.log('SQL Query:', query);
-        console.log('Parameters:', params);
-
-        const result = await db.query(query, params);
-        console.log(`მოიძებნა ${result.rows.length} კომპანია`);
-        
-        res.status(200).json(result.rows);
-    } catch (error) {
-        console.error('შეცდომა კომპანიების მიღებისას:', error);
-        console.error('Error details:', {
-            message: error.message,
-            code: error.code,
-            detail: error.detail,
-            stack: error.stack
-        });
-        res.status(500).json({ message: 'კომპანიების სიის მიღება ვერ მოხერხდა.', error: error.message });
-    }
-});
-
-// POST: ახალი კომპანიის დამატება (მხოლოდ admin, sales)
-app.post('/api/companies', authenticateToken, authorizeCompanyManagement, async (req, res) => {
-    const { 
-        company_name, country, company_profile, identification_code, legal_address,
-        contact_persons, // შეცვლილია: ახალი ველი JSONB-ისთვის
-        website, comment, status, selected_exhibitions
-    } = req.body;
-    const created_by_user_id = req.user.id; // მომხმარებლის ID ტოკენიდან
-
-    try {
-        // contact_persons სვეტის დამატება თუ არ არსებობს
-        await db.query(`
-            DO $$ 
-            BEGIN
-                IF NOT EXISTS (
-                    SELECT 1 FROM information_schema.columns 
-                    WHERE table_name = 'companies' AND column_name = 'contact_persons'
-                ) THEN
-                    ALTER TABLE companies ADD COLUMN contact_persons JSONB;
-                END IF;
-            END $$;
-        `);
-
-        // კომპანიის დამატება
-        const result = await db.query(
-            `INSERT INTO companies (
-                company_name, country, company_profile, identification_code, legal_address,
-                contact_persons, 
-                website, comment, status, created_by_user_id
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
-            [
-                company_name, country, company_profile, identification_code, legal_address,
-                JSON.stringify(contact_persons), // JSONB ველისთვის
-                website, comment, status, created_by_user_id
-            ]
-        );
-
-        const company = result.rows[0];
-
-        // გამოფენების კავშირების დამატება
-        if (selected_exhibitions && selected_exhibitions.length > 0) {
-            for (const exhibitionId of selected_exhibitions) {
-                await db.query(
-                    'INSERT INTO company_exhibitions (company_id, exhibition_id) VALUES ($1, $2)',
-                    [company.id, exhibitionId]
-                );
-            }
-        }
-
-        res.status(201).json({ message: 'კომპანია წარმატებით დაემატა.', company });
-    } catch (error) {
-        console.error('შეცდომა კომპანიის დამატებისას:', error);
-        if (error.code === '23505') { // UNIQUE CONSTRAINT VIOLATION for identification_code
-            return res.status(409).json({ message: 'კომპანია ამ საიდენტიფიკაციო კოდით უკვე არსებობს.' });
-        }
-        res.status(500).json({ message: 'კომპანიის დამატება ვერ მოხერხდა.', error: error.message });
-    }
-});
-
-// PUT: კომპანიის განახლება
-app.put('/api/companies/:id', authenticateToken, async (req, res) => {
-    const { id } = req.params;
-    const { 
-        company_name, 
-        country, 
-        company_profile, 
-        identification_code, 
-        legal_address, 
-        contact_persons, 
-        website, 
-        comment, 
-        status,
-        selected_exhibitions
-    } = req.body;
-
-    console.log('კომპანიის განახლების მოთხოვნა:', { 
-        id, 
-        company_name, 
-        selected_exhibitions,
-        userRole: req.user?.role,
-        userId: req.user?.id
+    res.status(201).json({
+      message: 'გამოფენა წარმატებით დაემატა',
+      exhibition: result.rows[0]
     });
-
-    // Check authorization
-    const allowedRoles = ['admin', 'sales'];
-    if (!req.user || !allowedRoles.includes(req.user.role)) {
-        console.log('უფლება არ არის:', req.user);
-        return res.status(403).json({ error: 'წვდომა აკრძალულია: არ გაქვთ კომპანიების მართვის უფლება.' });
-    }
-
-    try {
-        // contact_persons სვეტის დამატება თუ არ არსებობს
-        await db.query(`
-            DO $$ 
-            BEGIN
-                IF NOT EXISTS (
-                    SELECT 1 FROM information_schema.columns 
-                    WHERE table_name = 'companies' AND column_name = 'contact_persons'
-                ) THEN
-                    ALTER TABLE companies ADD COLUMN contact_persons JSONB;
-                END IF;
-            END $$;
-        `);
-
-        // პირველად შევამოწმოთ კომპანია არსებობს თუ არა
-        const checkCompany = await db.query('SELECT id FROM companies WHERE id = $1', [id]);
-        if (checkCompany.rows.length === 0) {
-            console.log(`კომპანია ID ${id} ვერ მოიძებნა`);
-            return res.status(404).json({ message: 'კომპანია ვერ მოიძებნა.' });
-        }
-
-        // კომპანიის მონაცემების განახლება
-        const result = await db.query(
-            `UPDATE companies 
-             SET company_name = $1, country = $2, company_profile = $3, 
-                 identification_code = $4, legal_address = $5, contact_persons = $6,
-                 website = $7, comment = $8, status = $9, updated_at = CURRENT_TIMESTAMP,
-                 updated_by_user_id = $10
-             WHERE id = $11 RETURNING *`,
-            [
-                company_name, 
-                country, 
-                company_profile, 
-                identification_code, 
-                legal_address, 
-                contact_persons ? JSON.stringify(contact_persons) : null,
-                website, 
-                comment, 
-                status, 
-                req.user.id,
-                id
-            ]
-        );
-
-        if (result.rows.length === 0) {
-            console.log(`კომპანია ID ${id} განახლება ვერ მოხერხდა`);
-            return res.status(404).json({ message: 'კომპანია ვერ მოიძებნა.' });
-        }
-
-        console.log(`კომპანია ID ${id} წარმატებით განახლდა`);
-
-        // გამოფენების კავშირების განახლება
-        if (selected_exhibitions !== undefined && Array.isArray(selected_exhibitions)) {
-            console.log(`ვანახლებ გამოფენების კავშირებს: ${selected_exhibitions.length} კავშირი`);
-            
-            try {
-                // ჯერ ყველა არსებული კავშირი ვშლით ამ კომპანიისთვის
-                await db.query('DELETE FROM company_exhibitions WHERE company_id = $1', [id]);
-                console.log(`წაშლილია ძველი კავშირები კომპანიისთვის ${id}`);
-
-                // ახალი კავშირების დამატება
-                for (const exhibitionId of selected_exhibitions) {
-                    if (exhibitionId && !isNaN(exhibitionId)) {
-                        try {
-                            await db.query(
-                                'INSERT INTO company_exhibitions (company_id, exhibition_id) VALUES ($1, $2) ON CONFLICT (company_id, exhibition_id) DO NOTHING',
-                                [id, exhibitionId]
-                            );
-                            console.log(`დამატებული კავშირი: კომპანია ${id} - გამოფენა ${exhibitionId}`);
-                        } catch (linkError) {
-                            console.error(`შეცდომა კავშირის დამატებისას: კომპანია ${id} - გამოფენა ${exhibitionId}:`, linkError);
-                        }
-                    }
-                }
-            } catch (exhibitionsError) {
-                console.error('გამოფენების კავშირების განახლების შეცდომა:', exhibitionsError);
-                // არ ვაჩერებთ მთავარ ოპერაციას
-            }
-        }
-
-        res.status(200).json({ message: 'კომპანია წარმატებით განახლდა.', company: result.rows[0] });
-    } catch (error) {
-        console.error('შეცდომა კომპანიის განახლებისას:', error);
-        console.error('Error details:', {
-            message: error.message,
-            code: error.code,
-            detail: error.detail,
-            stack: error.stack
-        });
-        
-        // Check for specific error types
-        if (error.code === '23505') {
-            return res.status(409).json({ 
-                message: 'კომპანია ამ საიდენტიფიკაციო კოდით უკვე არსებობს.'
-            });
-        }
-        
-        if (error.code === '23503') {
-            return res.status(400).json({ 
-                message: 'მონაცემთა ბაზის თავსებადობის შეცდომა.'
-            });
-        }
-        
-        res.status(500).json({ 
-            message: 'კომპანიის განახლება ვერ მოხერხდა.', 
-            error: error.message
-        });
-    }
+  } catch (error) {
+    console.error('გამოფენის დამატების შეცდომა:', error);
+    res.status(500).json({ message: 'გამოფენის დამატება ვერ მოხერხდა' });
+  }
 });
 
-// DELETE: კომპანიის წაშლა ID-ის მიხედვით (მხოლოდ admin, sales)
-app.delete('/api/companies/:id', authenticateToken, authorizeCompanyManagement, async (req, res) => {
+app.put('/api/exhibitions/:id', authenticateToken, authorizeRoles('admin', 'sales', 'marketing'), async (req, res) => {
+  try {
     const { id } = req.params;
-    try {
-        const result = await db.query('DELETE FROM companies WHERE id = $1 RETURNING *', [id]);
-        if (result.rows.length > 0) {
-            res.status(200).json({ message: 'კომპანია წარმატებით წაიშალა.' });
-        } else {
-            res.status(404).json({ message: 'კომპანია ვერ მოიძებნა.' });
-        }
-    } catch (error) {
-        console.error('შეცდომა კომპანიის წაშლისას:', error);
-        res.status(500).json({ message: 'კომპანიის წაშლა ვერ მოხერხდა.', error: error.message });
+    const { exhibition_name, comment, manager, price_per_sqm } = req.body;
+
+    const result = await db.query(
+      'UPDATE exhibitions SET exhibition_name = $1, comment = $2, manager = $3, price_per_sqm = $4, updated_at = CURRENT_TIMESTAMP, updated_by_user_id = $5 WHERE id = $6 RETURNING *',
+      [exhibition_name, comment, manager, parseFloat(price_per_sqm) || 0, req.user.id, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'გამოფენა ვერ მოიძებნა' });
     }
+
+    res.json({
+      message: 'გამოფენა წარმატებით განახლდა',
+      exhibition: result.rows[0]
+    });
+  } catch (error) {
+    console.error('გამოფენის განახლების შეცდომა:', error);
+    res.status(500).json({ message: 'გამოფენის განახლება ვერ მოხერხდა' });
+  }
 });
 
-// --- სივრცეების API ენდპოინტები ---
-
-// GET: ყველა სივრცის მიღება (ყველა ავტორიზებული მომხმარებლისთვის)
-app.get('/api/spaces', authenticateToken, async (req, res) => {
-    try {
-        const result = await db.query('SELECT * FROM spaces ORDER BY id ASC');
-        res.status(200).json(result.rows);
-    } catch (error) {
-        console.error('შეცდომა სივრცეების მიღებისას:', error);
-        res.status(500).json({ message: 'სივრცეების მიღება ვერ მოხერხდა.', error: error.message });
-    }
-});
-
-// POST: ახალი სივრცის დამატება (მხოლოდ admin, manager)
-app.post('/api/spaces', authenticateToken, authorizeSpaceManagement, async (req, res) => {
-    const { category, building_name, description, area_sqm } = req.body;
-    const created_by_user_id = req.user.id; // მომხმარებლის ID ტოკენიდან
-
-    try {
-        const result = await db.query(
-            'INSERT INTO spaces (category, building_name, description, area_sqm, created_by_user_id) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-            [category, building_name, description, area_sqm, created_by_user_id]
-        );
-        res.status(201).json({ message: 'სივრცე წარმატებით დაემატა.', space: result.rows[0] });
-    } catch (error) {
-        console.error('შეცდომა სივრცის დამატებისას:', error);
-        if (error.code === '23505') { // UNIQUE CONSTRAINT VIOLATION (თუ დაემატება)
-            return res.status(409).json({ message: 'სივრცე ამ კოდური სახელით უკვე არსებობს.' });
-        }
-        res.status(500).json({ message: 'სივრცის დამატება ვერ მოხერხდა.', error: error.message });
-    }
-});
-
-// PUT: სივრცის რედაქტირება ID-ის მიხედვით (მხოლოდ admin, manager)
-app.put('/api/spaces/:id', authenticateToken, authorizeSpaceManagement, async (req, res) => {
+app.delete('/api/exhibitions/:id', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res) => {
+  try {
     const { id } = req.params;
-    const { category, building_name, description, area_sqm } = req.body;
-    const updated_by_user_id = req.user.id; // მომხმარებლის ID ტოკენიდან
 
-    try {
-        const result = await db.query(
-            'UPDATE spaces SET category = $1, building_name = $2, description = $3, area_sqm = $4, updated_at = CURRENT_TIMESTAMP, updated_by_user_id = $5 WHERE id = $6 RETURNING *',
-            [category, building_name, description, area_sqm, updated_by_user_id, id]
-        );
-        if (result.rows.length > 0) {
-            res.status(200).json({ message: 'სივრცე წარმატებით განახლდა.', space: result.rows[0] });
-        } else {
-            res.status(404).json({ message: 'სივრცე ვერ მოიძებნა.' });
-        }
-    } catch (error) {
-        console.error('შეცდომა სივრცის განახლებისას:', error);
-        if (error.code === '23505') {
-            return res.status(409).json({ message: 'სივრცე ამ კოდური სახელით უკვე არსებობს.' });
-        }
-        res.status(500).json({ message: 'სივრცის განახლება ვერ მოხერხდა.', error: error.message });
+    const result = await db.query('DELETE FROM exhibitions WHERE id = $1 RETURNING *', [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'გამოფენა ვერ მოიძებნა' });
     }
+
+    res.json({ message: 'გამოფენა წარმატებით წაიშალა' });
+  } catch (error) {
+    console.error('გამოფენის წაშლის შეცდომა:', error);
+    res.status(500).json({ message: 'გამოფენის წაშლა ვერ მოხერხდა' });
+  }
 });
 
-// DELETE: სივრცის წაშლა ID-ის მიხედვით (მხოლოდ admin, manager)
-app.delete('/api/spaces/:id', authenticateToken, authorizeSpaceManagement, async (req, res) => {
-    const { id } = req.params;
-    try {
-        const result = await db.query('DELETE FROM spaces WHERE id = $1 RETURNING *', [id]);
-        if (result.rows.length > 0) {
-            res.status(200).json({ message: 'სივრცე წარმატებით წაიშალა.' });
-        } else {
-            res.status(404).json({ message: 'სივრცე ვერ მოიძებნა.' });
-        }
-    } catch (error) {
-        console.error('შეცდომა სივრცის წაშლისას:', error);
-        res.status(500).json({ message: 'სივრცის წაშლა ვერ მოხერხდა.', error: error.message });
-    }
-});
-
-// ივენთების ცალკე API endpoint
+// Events routes - now using annual_services
 app.get('/api/events', authenticateToken, async (req, res) => {
   try {
-    console.log('Events endpoint called');
-
-    // ჯერ შევამოწმოთ annual_services ცხრილი არსებობს თუ არა
-    const tableCheckResult = await db.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        AND table_name = 'annual_services'
-      );
+    const result = await db.query(`
+      SELECT 
+        a.id,
+        a.service_name,
+        a.description,
+        a.year_selection,
+        a.start_date,
+        a.end_date,
+        a.service_type,
+        a.is_active,
+        a.is_archived,
+        a.created_at,
+        a.updated_at,
+        a.created_by_user_id,
+        a.exhibition_id,
+        COUNT(DISTINCT ss.space_id) as spaces_count,
+        e.exhibition_name,
+        e.price_per_sqm
+      FROM annual_services a
+      LEFT JOIN service_spaces ss ON a.id = ss.service_id
+      LEFT JOIN exhibitions e ON a.exhibition_id = e.id
+      WHERE a.is_archived = false OR a.is_archived IS NULL
+      GROUP BY a.id, a.service_name, a.description, a.year_selection, a.start_date, a.end_date, a.service_type, a.is_active, a.is_archived, a.created_at, a.updated_at, a.created_by_user_id, a.exhibition_id, e.exhibition_name, e.price_per_sqm
+      ORDER BY a.created_at DESC
     `);
-
-    if (!tableCheckResult.rows[0].exists) {
-      console.log('annual_services table does not exist, returning exhibitions as events');
-      // თუ annual_services ცხრილი არ არსებობს, გამოფენები დავაბრუნოთ როგორც ივენთები
-      const result = await db.query('SELECT * FROM exhibitions ORDER BY id ASC');
-      return res.status(200).json(result.rows);
-    }
-
-    // თუ ცხრილი არსებობს, ივენთების ფილტრაცია
-    const query = `
-      SELECT s.*, 
-             COALESCE(ss.spaces_count, 0) as spaces_count,
-             COALESCE(b.bookings_count, 0) as bookings_count
-      FROM annual_services s
-      LEFT JOIN (
-        SELECT service_id, COUNT(*) as spaces_count 
-        FROM service_spaces 
-        GROUP BY service_id
-      ) ss ON s.id = ss.service_id
-      LEFT JOIN (
-        SELECT service_id, COUNT(*) as bookings_count 
-        FROM bookings 
-        GROUP BY service_id
-      ) b ON s.id = b.service_id
-      WHERE (
-        s.service_type::text ILIKE '%ივენთ%' OR 
-        s.service_type::text ILIKE '%event%' OR 
-        s.service_type::text ILIKE '%ფესტივალ%' OR 
-        s.service_type::text ILIKE '%festival%' OR 
-        s.service_type::text ILIKE '%კონფერენც%' OR 
-        s.service_type::text ILIKE '%conference%' OR 
-        s.service_type::text ILIKE '%შოუ%' OR 
-        s.service_type::text ILIKE '%show%' OR 
-        s.service_type::text ILIKE '%გამოფენ%' OR 
-        s.service_type::text ILIKE '%exhibition%'
-      )
-      ORDER BY s.created_at DESC
-    `;
-
-    const result = await db.query(query);
-    console.log('Events endpoint called, returning:', result.rows.length, 'events');
-    res.status(200).json(result.rows);
+    res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching events:', error);
-    res.status(500).json({ message: 'ივენთების მიღება ვერ მოხერხდა', error: error.message });
+    console.error('ივენთების მიღების შეცდომა:', error);
+    res.status(500).json({ message: 'ივენთების მიღება ვერ მოხერხდა' });
   }
 });
 
+app.get('/api/events/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await db.query(`
+      SELECT 
+        a.id,
+        a.service_name,
+        a.description,
+        a.year_selection,
+        a.start_date,
+        a.end_date,
+        a.service_type,
+        a.is_active,
+        a.is_archived,
+        a.created_at,
+        a.updated_at,
+        a.created_by_user_id,
+        a.exhibition_id,
+        e.exhibition_name,
+        e.price_per_sqm
+      FROM annual_services a
+      LEFT JOIN exhibitions e ON a.exhibition_id = e.id 
+      WHERE a.id = $1
+    `, [id]);
 
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'ივენთი ვერ მოიძებნა' });
+    }
 
-// --- ივენთის მონაწილეების API ენდპოინტები ---
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('ივენთის მიღების შეცდომა:', error);
+    res.status(500).json({ message: 'ივენთის მიღება ვერ მოხერხდა' });
+  }
+});
 
-// GET: ივენთის მონაწილეების მიღება
+app.post('/api/events', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res) => {
+  try {
+    const { 
+      exhibition_id, 
+      service_name, 
+      description, 
+      start_date, 
+      end_date, 
+      service_type = 'ივენთი',
+      year_selection
+    } = req.body;
+
+    const result = await db.query(
+      `INSERT INTO annual_services (
+        exhibition_id, service_name, description, start_date, end_date, 
+        service_type, year_selection, created_by_user_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [
+        exhibition_id, 
+        service_name, 
+        description, 
+        start_date, 
+        end_date, 
+        service_type,
+        year_selection || new Date().getFullYear(),
+        req.user.id
+      ]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('ივენთის დამატების შეცდომა:', error);
+    res.status(500).json({ message: 'ივენთის დამატება ვერ მოხერხდა' });
+  }
+});
+
+app.put('/api/events/:id', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { 
+      exhibition_id, 
+      service_name, 
+      description, 
+      start_date, 
+      end_date, 
+      service_type,
+      year_selection
+    } = req.body;
+
+    const result = await db.query(
+      `UPDATE annual_services SET 
+        exhibition_id = $1, service_name = $2, description = $3, 
+        start_date = $4, end_date = $5, service_type = $6, 
+        year_selection = $7, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = $8 RETURNING *`,
+      [exhibition_id, service_name, description, start_date, end_date, service_type, year_selection, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'ივენთი ვერ მოიძებნა' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('ივენთის განახლების შეცდომა:', error);
+    res.status(500).json({ message: 'ივენთის განახლება ვერ მოხერხდა' });
+  }
+});
+
+app.delete('/api/events/:id', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await db.query('DELETE FROM annual_services WHERE id = $1 RETURNING *', [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'ივენთი ვერ მოიძებნა' });
+    }
+
+    res.json({ message: 'ივენთი წარმატებით წაიშალა' });
+  } catch (error) {
+    console.error('ივენთის წაშლის შეცდომა:', error);
+    res.status(500).json({ message: 'ივენთის წაშლა ვერ მოხერხდა' });
+  }
+});
+
+// Event participants routes
 app.get('/api/events/:eventId/participants', authenticateToken, async (req, res) => {
+  try {
     const { eventId } = req.params;
-    try {
-        console.log(`მონაწილეების მოძებნა ივენთისთვის: ${eventId}`);
 
-        // ჯერ შევამოწმოთ თუ event_participants ცხრილი არსებობს
-        const tableCheckResult = await db.query(`
-            SELECT EXISTS (
-                SELECT FROM information_schema.tables 
-                WHERE table_schema = 'public' 
-                AND table_name = 'event_participants'
-            );
-        `);
+    const result = await db.query(`
+      SELECT 
+        ep.*,
+        c.company_name,
+        c.country,
+        c.identification_code
+      FROM event_participants ep
+      JOIN companies c ON ep.company_id = c.id
+      WHERE ep.event_id = $1
+      ORDER BY ep.registration_date DESC
+    `, [eventId]);
 
-        if (!tableCheckResult.rows[0].exists) {
-            // თუ ცხრილი არ არსებობს, შევქმნათ იგი
-            console.log('event_participants ცხრილი არ არსებობს, ვქმნი...');
-            await db.query(`
-                CREATE TABLE IF NOT EXISTS event_participants (
-                    id SERIAL PRIMARY KEY,
-                    event_id INTEGER NOT NULL,
-                    company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
-                    registration_status VARCHAR(50) DEFAULT 'მონაწილეობის მოთხოვნა',
-                    payment_status VARCHAR(50) DEFAULT 'მომლოდინე',
-                    booth_number VARCHAR(20),
-                    booth_size DECIMAL(10,2),
-                    notes TEXT,
-                    contact_person VARCHAR(255),
-                    contact_email VARCHAR(255),
-                    contact_phone VARCHAR(50),
-                    payment_amount DECIMAL(10,2),
-                    payment_due_date DATE,
-                    payment_method VARCHAR(50),
-                    invoice_number VARCHAR(100),
-                    registration_date DATE DEFAULT CURRENT_DATE,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    created_by_user_id INTEGER REFERENCES users(id),
-                    UNIQUE(event_id, company_id)
-                );
-            `);
-            console.log('event_participants ცხრილი შეიქმნა');
-        } else {
-            // თუ ცხრილი არსებობს, შევამოწმოთ და დავამატოთ ნაკლული სვეტები
-            console.log('event_participants ცხრილი არსებობს, ვამოწმებ სვეტებს...');
+    // Get equipment bookings for each participant
+    for (let participant of result.rows) {
+      const equipmentBookings = await db.query(`
+        SELECT 
+          eb.*,
+          e.code_name as equipment_name,
+          e.code_name as equipment_code_name
+        FROM equipment_bookings eb
+        JOIN equipment e ON eb.equipment_id = e.id
+        WHERE eb.participant_id = $1
+      `, [participant.id]);
 
-            const missingColumns = [
-                { name: 'payment_amount', type: 'DECIMAL(10,2)' },
-                { name: 'payment_due_date', type: 'DATE' },
-                { name: 'payment_method', type: 'VARCHAR(50)' },
-                { name: 'invoice_number', type: 'VARCHAR(100)' },
-                { name: 'contact_person', type: 'VARCHAR(255)' },
-                { name: 'contact_email', type: 'VARCHAR(255)' },
-                { name: 'contact_phone', type: 'VARCHAR(50)' }
-            ];
-
-            for (const column of missingColumns) {
-                try {
-                    await db.query(`
-                        DO $$ 
-                        BEGIN
-                            IF NOT EXISTS (
-                                SELECT 1 FROM information_schema.columns 
-                                WHERE table_name = 'event_participants' AND column_name = '${column.name}'
-                            ) THEN
-                                ALTER TABLE event_participants ADD COLUMN ${column.name} ${column.type};
-                            END IF;
-                        END $$;
-                    `);
-                    console.log(`სვეტი ${column.name} შემოწმებული/დამატებული`);
-                } catch (columnError) {
-                    console.error(`შეცდომა სვეტის ${column.name} დამატებისას:`, columnError);
-                }
-            }
-        }
-
-        // ახლა მონაწილეების მოძებნა
-        const result = await db.query(`
-            SELECT ep.*, c.company_name, c.country, c.identification_code
-            FROM event_participants ep
-            JOIN companies c ON ep.company_id = c.id
-            WHERE ep.event_id = $1
-            ORDER BY ep.registration_date DESC
-        `, [eventId]);
-
-        console.log(`მოიძებნა ${result.rows.length} მონაწილე ივენთისთვის ${eventId}`);
-
-        // შევამოწმოთ არის თუ არა რომელიმე კომპანია ამ ივენთის გამოფენისთვის რეგისტრირებული
-        const eventResult = await db.query('SELECT exhibition_id FROM annual_services WHERE id = $1', [eventId]);
-        if (eventResult.rows.length > 0 && eventResult.rows[0].exhibition_id && result.rows.length === 0) {
-            console.log(`ივენთი ${eventId} დაკავშირებულია გამოფენასთან ${eventResult.rows[0].exhibition_id}, მონაწილეები არ არიან - ავტომატურად ვრეგისტრირებ`);
-
-            // მოვძებნოთ ამ გამოფენის კომპანიები
-            const companiesResult = await db.query(`
-                SELECT c.id, c.company_name 
-                FROM companies c
-                JOIN company_exhibitions ce ON c.id = ce.company_id
-                WHERE ce.exhibition_id = $1
-            `, [eventResult.rows[0].exhibition_id]);
-
-            // ავტომატური რეგისტრაცია
-            for (const company of companiesResult.rows) {
-                try {
-                    await db.query(`
-                        INSERT INTO event_participants (event_id, company_id, registration_status, created_by_user_id)
-                        VALUES ($1, $2, 'მონაწილეობის მოთხოვნა', $3)
-                        ON CONFLICT (event_id, company_id) DO NOTHING
-                    `, [eventId, company.id, req.user.id]);
-                } catch (regError) {
-                    console.error(`შეცდომა კომპანიის ${company.id} რეგისტრაციისას:`, regError);
-                }
-            }
-
-            // განახლებული სია
-            const updatedResult = await db.query(`
-                SELECT ep.*, c.company_name, c.country, c.identification_code
-                FROM event_participants ep
-                JOIN companies c ON ep.company_id = c.id
-                WHERE ep.event_id = $1
-                ORDER BY ep.registration_date DESC
-            `, [eventId]);
-
-            console.log(`რეგისტრაციის შემდეგ: ${updatedResult.rows.length} მონაწილე`);
-            res.status(200).json(updatedResult.rows);
-        } else {
-            res.status(200).json(result.rows);
-        }
-    } catch (error) {
-        console.error('შეცდომა მონაწილეების მიღებისას:', error);
-        res.status(500).json({ message: 'მონაწილეების მიღება ვერ მოხერხდა.', error: error.message });
+      participant.equipment_bookings = equipmentBookings.rows;
     }
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('მონაწილეების მიღების შეცდომა:', error);
+    res.status(500).json({ message: 'მონაწილეების მიღება ვერ მოხერხდა' });
+  }
 });
 
-// POST: ახალი მონაწილის რეგისტრაცია
-app.post('/api/events/:eventId/participants', authenticateToken, upload.fields([
+// Multiple file upload configuration for participants
+const participantStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadPath = path.join(__dirname, 'uploads', 'participants');
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
+  },
+  filename: function (req, file, cb) {
+    const timestamp = Date.now();
+    const randomNum = Math.floor(Math.random() * 1000000000);
+    const extension = path.extname(file.originalname);
+    const filename = `${file.fieldname}-${timestamp}-${randomNum}${extension}`;
+    cb(null, filename);
+  }
+});
+
+const participantUpload = multer({ storage: participantStorage });
+
+app.post('/api/events/:eventId/participants', 
+  authenticateToken, 
+  authorizeRoles('admin', 'manager', 'sales', 'marketing'), 
+  participantUpload.fields([
     { name: 'invoice_file', maxCount: 1 },
     { name: 'contract_file', maxCount: 1 },
     { name: 'handover_file', maxCount: 1 }
-]), async (req, res) => {
-    const allowedRoles = ['admin', 'sales', 'marketing'];
-    if (!req.user || !allowedRoles.includes(req.user.role)) {
-        return res.status(403).json({ error: 'წვდომა აკრძალულია: არ გაქვთ მონაწილეების მართვის უფლება.' });
-    }
-
-    const { eventId } = req.params;
-    const { 
-        company_id, booth_number, booth_size, notes, 
-        contact_person, contact_position, contact_email, contact_phone,
-        payment_amount, payment_due_date, payment_method, invoice_number
-    } = req.body;
-    const created_by_user_id = req.user.id;
-
+  ]), 
+  async (req, res) => {
     try {
-        // შევამოწმოთ თუ event_participants ცხრილი არსებობს
-        const tableCheckResult = await db.query(`
-            SELECT EXISTS (
-                SELECT FROM information_schema.tables 
-                WHERE table_schema = 'public' 
-                AND table_name = 'event_participants'
-            );
-        `);
+      const { eventId } = req.params;
+      const { 
+        company_id, 
+        registration_status = 'მონაწილეობის მოთხოვნა',
+        payment_status = 'მომლოდინე', 
+        booth_number, 
+        booth_size, 
+        notes,
+        contact_person,
+        contact_position,
+        contact_email,
+        contact_phone,
+        payment_amount,
+        payment_due_date,
+        payment_method,
+        invoice_number,
+        equipment_bookings
+      } = req.body;
 
-        if (tableCheckResult.rows[0].exists) {
-            // შევამოწმოთ რომელი სვეტები არსებობს ცხრილში
-            const columnsResult = await db.query(`
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = 'event_participants'
-            `);
+      console.log('Adding participant for event:', eventId);
+      console.log('Request body:', req.body);
+      console.log('Files:', req.files);
 
-            const existingColumns = columnsResult.rows.map(row => row.column_name);
-            console.log('არსებული სვეტები:', existingColumns);
+      // Handle file uploads
+      let invoice_file = null;
+      let contract_file = null;
+      let handover_file = null;
 
-            // ცხრილის განახლება ნაკლული სვეტების დამატებით
-            const missingColumns = [
-                { name: 'payment_amount', type: 'DECIMAL(10,2)' },
-                { name: 'payment_due_date', type: 'DATE' },
-                { name: 'payment_method', type: 'VARCHAR(50)' },
-                { name: 'invoice_number', type: 'VARCHAR(100)' },
-                { name: 'contact_person', type: 'VARCHAR(255)' },
-                { name: 'contact_email', type: 'VARCHAR(255)' },
-                { name: 'contact_phone', type: 'VARCHAR(50)' }
-            ];
-
-            for (const column of missingColumns) {
-                if (!existingColumns.includes(column.name)) {
-                    try {
-                        await db.query(`
-                            ALTER TABLE event_participants ADD COLUMN ${column.name} ${column.type}
-                        `);
-                        console.log(`დაემატა სვეტი: ${column.name}`);
-                    } catch (alterError) {
-                        console.error(`შეცდომა სვეტის ${column.name} დამატებისას:`, alterError);
-                    }
-                }
-            }
-
-            // ფაილების გზების მიღება
-            let invoice_file_path = null;
-            let contract_file_path = null;
-            let handover_file_path = null;
-
-            if (req.files) {
-                if (req.files.invoice_file) {
-                    invoice_file_path = `/uploads/participants/${req.files.invoice_file[0].filename}`;
-                }
-                if (req.files.contract_file) {
-                    contract_file_path = `/uploads/participants/${req.files.contract_file[0].filename}`;
-                }
-                if (req.files.handover_file) {
-                    handover_file_path = `/uploads/participants/${req.files.handover_file[0].filename}`;
-                }
-            }
-
-            const result = await db.query(
-            `INSERT INTO event_participants 
-             (event_id, company_id, booth_number, booth_size, notes, contact_person, contact_position, contact_email, contact_phone, payment_amount, payment_due_date, payment_method, invoice_number, invoice_file, contract_file, handover_file, registration_status, payment_status) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) 
-             RETURNING *`,
-            [eventId, company_id, booth_number, booth_size, notes, contact_person, contact_position, contact_email, contact_phone, payment_amount, payment_due_date, payment_method, invoice_number, invoice_file_path, contract_file_path, handover_file_path, 'მონაწილეობის მოთხოვნა', 'მომლოდინე']
-        );
-
-        const participantId = result.rows[0].id;
-
-        // Handle equipment bookings
-        if (req.body.equipment_bookings) {
-            try {
-                const equipment_bookings = JSON.parse(req.body.equipment_bookings);
-                if (Array.isArray(equipment_bookings) && equipment_bookings.length > 0) {
-                    // Get event dates for availability check
-                    const eventQuery = await db.query('SELECT start_date, end_date FROM events WHERE id = $1', [eventId]);
-                    const { start_date, end_date } = eventQuery.rows[0];
-
-                    for (const booking of equipment_bookings) {
-                        const { equipment_id, quantity, unit_price } = booking;
-
-                        if (!equipment_id || !quantity || quantity <= 0) continue;
-
-                        // Check availability
-                        const availabilityQuery = await db.query(`
-                            SELECT 
-                                e.quantity as total_quantity,
-                                COALESCE(SUM(eb.quantity), 0) as booked_quantity
-                            FROM equipment e
-                            LEFT JOIN equipment_bookings eb ON e.id = eb.equipment_id
-                            LEFT JOIN event_participants ep ON eb.participant_id = ep.id
-                            LEFT JOIN events ev ON ep.event_id = ev.id
-                            WHERE e.id = $1 
-                            AND (ev.start_date IS NULL OR (ev.start_date <= $3 AND ev.end_date >= $2))
-                            GROUP BY e.id, e.quantity
-                        `, [equipment_id, start_date, end_date]);
-
-                        if (availabilityQuery.rows.length > 0) {
-                            const { total_quantity, booked_quantity } = availabilityQuery.rows[0];
-                            const available_quantity = total_quantity - booked_quantity;
-
-                            if (quantity <= available_quantity) {
-                                const total_price = quantity * unit_price;
-                                await db.query(`
-                                    INSERT INTO equipment_bookings (participant_id, equipment_id, quantity, unit_price, total_price, created_by)
-                                    VALUES ($1, $2, $3, $4, $5, $6)
-                                `, [participantId, equipment_id, quantity, unit_price, total_price, req.user.id]);
-                            }
-                        }
-                    }
-                }
-            } catch (equipmentError) {
-                console.error('აღჭურვილობის ჯავშნის შეცდომა:', equipmentError);
-            }
-        }
-            res.status(201).json({ message: 'მონაწილე წარმატებით დარეგისტრირდა.', participant: result.rows[0] });
-        } else {
-            res.status(404).json({ message: 'მონაწილეების რეგისტრაციის ფუნქცია ამ ივენთისთვის ხელმისაწვდომი არ არის.' });
-        }
-    } catch (error) {
-        console.error('შეცდომა მონაწილის რეგისტრაციისას:', error);
-        if (error.code === '23505') {
-            return res.status(409).json({ message: 'ეს კომპანია უკვე რეგისტრირებულია ამ ივენთზე.' });
-        }
-        res.status(500).json({ message: 'მონაწილის რეგისტრაცია ვერ მოხერხდა.', error: error.message });
-    }
-});
-
-// PUT: მონაწილის სტატუსის განახლება
-app.put('/api/events/:eventId/participants/:participantId', authenticateToken, upload.fields([
-    { name: 'invoice_file', maxCount: 1 },
-    { name: 'contract_file', maxCount: 1 },
-    { name: 'handover_file', maxCount: 1 }
-]), async (req, res) => {
-    const allowedRoles = ['admin', 'sales', 'marketing'];
-    if (!req.user || !allowedRoles.includes(req.user.role)) {
-        return res.status(403).json({ error: 'წვდომა აკრძალულია: არ გაქვთ მონაწილეების მართვის უფლება.' });
-    }
-
-    const { participantId } = req.params;
-    const { 
-        registration_status, booth_number, booth_size, notes, 
-        payment_status, contact_person, contact_position, contact_email, contact_phone,
-        payment_amount, payment_due_date, payment_method, invoice_number
-    } = req.body;
-
-    // Handle file uploads
-    let invoice_file_path = null;
-    let contract_file_path = null;
-    let handover_file_path = null;
-
-    if (req.files) {
+      if (req.files) {
         if (req.files.invoice_file) {
-            invoice_file_path = `/uploads/participants/${req.files.invoice_file[0].filename}`;
+          invoice_file = `/uploads/participants/${req.files.invoice_file[0].filename}`;
         }
         if (req.files.contract_file) {
-            contract_file_path = `/uploads/participants/${req.files.contract_file[0].filename}`;
+          contract_file = `/uploads/participants/${req.files.contract_file[0].filename}`;
         }
         if (req.files.handover_file) {
-            handover_file_path = `/uploads/participants/${req.files.handover_file[0].filename}`;
+          handover_file = `/uploads/participants/${req.files.handover_file[0].filename}`;
         }
-    }
+      }
 
-    console.log('განახლების მონაცემები:', {
-        participantId,
-        registration_status,
-        payment_status,
-        payment_amount,
-        files: { invoice_file, contract_file, handover_file }
-    });
+      const result = await db.query(
+        `INSERT INTO event_participants (
+          event_id, company_id, registration_status, payment_status, 
+          booth_number, booth_size, notes, contact_person, contact_position,
+          contact_email, contact_phone, payment_amount, payment_due_date, 
+          payment_method, invoice_number, invoice_file, contract_file, handover_file,
+          created_by_user_id
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) RETURNING *`,
+        [
+          eventId, company_id, registration_status, payment_status, 
+          booth_number, booth_size, notes, contact_person, contact_position,
+          contact_email, contact_phone,
+          payment_amount ? parseFloat(payment_amount) : null,
+          payment_due_date || null,
+          payment_method || null,
+          invoice_number || null,
+          invoice_file,
+          contract_file,
+          handover_file,
+          req.user.id
+        ]
+      );
 
-    try {
-        // ჯერ შევამოწმოთ მონაწილე არსებობს თუ არა
-        const checkResult = await db.query(
-            'SELECT * FROM event_participants WHERE id = $1',
-            [participantId]
-        );
+      const participant = result.rows[0];
 
-        if (checkResult.rows.length === 0) {
-            console.log(`მონაწილე ${participantId} ვერ მოიძებნა`);
-            return res.status(404).json({ message: 'მონაწილე ვერ მოიძებნა.' });
-        }
-
-        console.log('მონაწილე მოიძებნა:', checkResult.rows[0]);
-
-        const final_invoice_file_path = invoice_file_path ? invoice_file_path : checkResult.rows[0].invoice_file;
-        const final_contract_file_path = contract_file_path ? contract_file_path : checkResult.rows[0].contract_file;
-        const final_handover_file_path = handover_file_path ? handover_file_path : checkResult.rows[0].handover_file;
-
-        const result = await db.query(
-            `UPDATE event_participants 
-             SET company_id = $2, booth_number = $3, booth_size = $4, notes = $5, 
-                 contact_person = $6, contact_position = $7, contact_email = $8, contact_phone = $9,
-                 registration_status = $10, payment_status = $11, payment_amount = $12, 
-                 payment_due_date = $13, payment_method = $14, invoice_number = $15,
-                 invoice_file = COALESCE($16, invoice_file),
-                 contract_file = COALESCE($17, contract_file),
-                 handover_file = COALESCE($18, handover_file),
-                 updated_at = CURRENT_TIMESTAMP
-             WHERE id = $1 AND event_id = $19
-             RETURNING *`,
-            [participantId, checkResult.rows[0].company_id, booth_number, booth_size, notes, contact_person, contact_position, contact_email, contact_phone, registration_status, payment_status, payment_amount, payment_due_date, payment_method, invoice_number, final_invoice_file_path, final_contract_file_path, final_handover_file_path, checkResult.rows[0].event_id]
-        );
-
-        // Handle equipment bookings update
-        if (req.body.equipment_bookings) {
-            try {
-                // First delete existing bookings
-                await db.query('DELETE FROM equipment_bookings WHERE participant_id = $1', [participantId]);
-
-                const equipment_bookings = JSON.parse(req.body.equipment_bookings);
-                if (Array.isArray(equipment_bookings) && equipment_bookings.length > 0) {
-                    // Get event dates for availability check
-                    const eventQuery = await db.query('SELECT start_date, end_date FROM events WHERE id = $1', [eventId]);
-                    const { start_date, end_date } = eventQuery.rows[0];
-
-                    for (const booking of equipment_bookings) {
-                        const { equipment_id, quantity, unit_price } = booking;
-
-                        if (!equipment_id || !quantity || quantity <= 0) continue;
-
-                        // Check availability (excluding current participant's bookings)
-                        const availabilityQuery = await db.query(`
-                            SELECT 
-                                e.quantity as total_quantity,
-                                COALESCE(SUM(eb.quantity), 0) as booked_quantity
-                            FROM equipment e
-                            LEFT JOIN equipment_bookings eb ON e.id = eb.equipment_id
-                            LEFT JOIN event_participants ep ON eb.participant_id = ep.id
-                            LEFT JOIN events ev ON ep.event_id = ev.id
-                            WHERE e.id = $1 
-                            AND eb.participant_id != $2
-                            AND (ev.start_date IS NULL OR (ev.start_date <= $4 AND ev.end_date >= $3))
-                            GROUP BY e.id, e.quantity
-                        `, [equipment_id, participantId, start_date, end_date]);
-
-                        const { total_quantity, booked_quantity } = availabilityQuery.rows.length > 0 
-                            ? availabilityQuery.rows[0]
-                            : { total_quantity: 0, booked_quantity: 0 };
-
-                        // Get total quantity if no bookings found
-                        if (availabilityQuery.rows.length === 0) {
-                            const equipQuery = await db.query('SELECT quantity FROM equipment WHERE id = $1', [equipment_id]);
-                            if (equipQuery.rows.length > 0) {
-                                const available_quantity = equipQuery.rows[0].quantity;
-                                if (quantity <= available_quantity) {
-                                    const total_price = quantity * unit_price;
-                                    await db.query(`
-                                        INSERT INTO equipment_bookings (participant_id, equipment_id, quantity, unit_price, total_price, created_by)
-                                        VALUES ($1, $2, $3, $4, $5, $6)
-                                    `, [participantId, equipment_id, quantity, unit_price, total_price, req.user.id]);
-                                }
-                            }
-                        } else {
-                            const available_quantity = total_quantity - booked_quantity;
-                            if (quantity <= available_quantity) {
-                                const total_price = quantity * unit_price;
-                                await db.query(`
-                                    INSERT INTO equipment_bookings (participant_id, equipment_id, quantity, unit_price, total_price, created_by)
-                                    VALUES ($1, $2, $3, $4, $5, $6)
-                                `, [participantId, equipment_id, quantity, unit_price, total_price, req.user.id]);
-                            }
-                        }
-                    }
-                }
-            } catch (equipmentError) {
-                console.error('აღჭურვილობის ჯავშნის განახლების შეცდომა:', equipmentError);
+      // Handle equipment bookings
+      if (equipment_bookings) {
+        try {
+          const bookings = JSON.parse(equipment_bookings);
+          for (const booking of bookings) {
+            if (booking.equipment_id && booking.quantity > 0) {
+              await db.query(
+                'INSERT INTO equipment_bookings (participant_id, equipment_id, quantity, unit_price, total_price, created_by) VALUES ($1, $2, $3, $4, $5, $6)',
+                [
+                  participant.id, 
+                  booking.equipment_id, 
+                  parseInt(booking.quantity), 
+                  parseFloat(booking.unit_price),
+                  parseFloat(booking.quantity) * parseFloat(booking.unit_price),
+                  req.user.id
+                ]
+              );
             }
+          }
+        } catch (equipmentError) {
+          console.error('Equipment bookings error:', equipmentError);
+          // Don't fail the whole request if equipment booking fails
         }
+      }
 
-        if (result.rows.length > 0) {
-            console.log(`მონაწილე ${participantId} წარმატებით განახლდა`);
-            res.status(200).json({ 
-                message: 'მონაწილის ინფორმაცია წარმატებით განახლდა.', 
-                participant: result.rows[0] 
-            });
-        } else {
-            console.log(`მონაწილე ${participantId} განახლება ვერ მოხერხდა`);
-            res.status(500).json({ message: 'მონაწილის განახლება ვერ მოხერხდა.' });
-        }
+      res.status(201).json({
+        message: 'მონაწილე წარმატებით დაემატა',
+        participant: participant
+      });
     } catch (error) {
-        console.error('შეცდომა მონაწილის განახლებისას:', error);
-        console.error('Error details:', {
-            message: error.message,
-            code: error.code,
-            detail: error.detail
-        });
-        res.status(500).json({ 
-            message: 'მონაწილის განახლება ვერ მოხერხდა.', 
-            error: error.message,
-            details: error.detail
-        });
+      console.error('მონაწილის დამატების შეცდომა:', error);
+      console.error('Error details:', error.message);
+      console.error('Error stack:', error.stack);
+      res.status(500).json({ 
+        message: 'მონაწილის დამატება ვერ მოხერხდა',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
-});
+  }
+);
 
-// DELETE: მონაწილის წაშლა
-app.delete('/api/events/:eventId/participants/:participantId', authenticateToken, async (req, res) => {
-    const allowedRoles = ['admin', 'sales', 'marketing'];
-    if (!req.user || !allowedRoles.includes(req.user.role)) {
-        return res.status(403).json({ error: 'წვდომა აკრძალულია: არ გაქვთ მონაწილეების წაშლის უფლება.' });
-    }
-
-    const { participantId } = req.params;
+app.put('/api/events/:eventId/participants/:participantId', 
+  authenticateToken, 
+  authorizeRoles('admin', 'manager', 'sales', 'marketing'), 
+  participantUpload.fields([
+    { name: 'invoice_file', maxCount: 1 },
+    { name: 'contract_file', maxCount: 1 },
+    { name: 'handover_file', maxCount: 1 }
+  ]), 
+  async (req, res) => {
     try {
-        const result = await db.query('DELETE FROM event_participants WHERE id = $1 RETURNING *', [participantId]);
-        if (result.rows.length > 0) {
-            res.status(200).json({ message: 'მონაწილე წარმატებით წაიშალა.' });
-        } else {
-            res.status(404).json({ message: 'მონაწილე ვერ მოიძებნა.' });
+      const { eventId, participantId } = req.params;
+      console.log('Update participant request:', { eventId, participantId });
+      console.log('Request body:', req.body);
+
+      const { 
+        company_id, 
+        registration_status, 
+        payment_status, 
+        booth_number, 
+        booth_size, 
+        notes,
+        contact_person,
+        contact_position,
+        contact_email,
+        contact_phone,
+        payment_amount,
+        payment_due_date,
+        payment_method,
+        invoice_number,
+        equipment_bookings
+      } = req.body;
+
+      // Handle file uploads
+      let invoice_file_path = null;
+      let contract_file_path = null;
+      let handover_file_path = null;
+
+      if (req.files) {
+        if (req.files.invoice_file) {
+          invoice_file_path = `/uploads/participants/${req.files.invoice_file[0].filename}`;
         }
+        if (req.files.contract_file) {
+          contract_file_path = `/uploads/participants/${req.files.contract_file[0].filename}`;
+        }
+        if (req.files.handover_file) {
+          handover_file_path = `/uploads/participants/${req.files.handover_file[0].filename}`;
+        }
+      }
+
+      // Get current participant data to preserve existing file paths
+      const currentParticipant = await db.query(
+        'SELECT * FROM event_participants WHERE id = $1 AND event_id = $2',
+        [participantId, eventId]
+      );
+
+      if (currentParticipant.rows.length === 0) {
+        return res.status(404).json({ message: 'მონაწილე ვერ მოიძებნა' });
+      }
+
+      const current = currentParticipant.rows[0];
+
+      // Use new file paths if uploaded, otherwise keep existing ones
+      const finalInvoicePath = invoice_file_path || current.invoice_file || current.invoice_file_path;
+      const finalContractPath = contract_file_path || current.contract_file || current.contract_file_path;
+      const finalHandoverPath = handover_file_path || current.handover_file || current.handover_file_path;
+
+      // Update participant with all required fields
+      const result = await db.query(`
+        UPDATE event_participants 
+        SET company_id = $1, registration_status = $2, payment_status = $3, 
+            booth_number = $4, booth_size = $5, notes = $6,
+            contact_person = $7, contact_position = $8, contact_email = $9, contact_phone = $10,
+            payment_amount = $11, payment_due_date = $12, payment_method = $13,
+            invoice_number = $14, invoice_file = $15, contract_file = $16,
+            handover_file = $17, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $18 AND event_id = $19 
+        RETURNING *
+      `, [
+        company_id || current.company_id, 
+        registration_status || current.registration_status, 
+        payment_status || current.payment_status, 
+        booth_number || current.booth_number, 
+        booth_size || current.booth_size, 
+        notes || current.notes,
+        contact_person || current.contact_person,
+        contact_position || current.contact_position,
+        contact_email || current.contact_email,
+        contact_phone || current.contact_phone,
+        payment_amount ? parseFloat(payment_amount) : current.payment_amount,
+        payment_due_date || current.payment_due_date,
+        payment_method || current.payment_method,
+        invoice_number || current.invoice_number,
+        finalInvoicePath,
+        finalContractPath,
+        finalHandoverPath,
+        participantId, eventId
+      ]);
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ message: 'მონაწილე ვერ მოიძებნა' });
+      }
+
+      // Handle equipment bookings
+      if (equipment_bookings) {
+        try {
+          // Delete existing bookings
+          await db.query('DELETE FROM equipment_bookings WHERE participant_id = $1', [participantId]);
+
+          // Add new bookings
+          const bookings = JSON.parse(equipment_bookings);
+          for (const booking of bookings) {
+            if (booking.equipment_id && booking.quantity > 0) {
+              await db.query(
+                'INSERT INTO equipment_bookings (participant_id, equipment_id, quantity, unit_price, total_price, created_by) VALUES ($1, $2, $3, $4, $5, $6)',
+                [
+                  participantId, 
+                  booking.equipment_id, 
+                  parseInt(booking.quantity), 
+                  parseFloat(booking.unit_price),
+                  parseFloat(booking.quantity) * parseFloat(booking.unit_price),
+                  req.user.id
+                ]
+              );
+            }
+          }
+        } catch (equipmentError) {
+          console.error('Equipment bookings update error:', equipmentError);
+          // Don't fail the whole request if equipment booking update fails
+        }
+      }
+
+      console.log('Participant updated successfully:', result.rows[0].id);
+      res.json({
+        message: 'მონაწილე წარმატებით განახლდა',
+        participant: result.rows[0]
+      });
     } catch (error) {
-        console.error('შეცდომა მონაწილის წაშლისას:', error);
-        res.status(500).json({ message: 'მონაწილის წაშლა ვერ მოხერხდა.', error: error.message });
+      console.error('მონაწილის განახლების შეცდომა:', error);
+      console.error('Error details:', error.message);
+      console.error('Error stack:', error.stack);
+      res.status(500).json({ 
+        message: 'მონაწილის განახლება ვერ მოხერხდა',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
+  }
+);
+
+app.delete('/api/events/:eventId/participants/:participantId', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res) => {
+  try {
+    const { eventId, participantId } = req.params;
+
+    // Delete equipment bookings first
+    await db.query('DELETE FROM equipment_bookings WHERE participant_id = $1', [participantId]);
+
+    // Delete participant
+    const result = await db.query(
+      'DELETE FROM event_participants WHERE id = $1 AND event_id = $2 RETURNING *',
+      [participantId, eventId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'მონაწილე ვერ მოიძებნა' });
+    }
+
+    res.json({ message: 'მონაწილე წარმატებით წაიშალა' });
+  } catch (error) {
+    console.error('მონაწილის წაშლის შეცდომა:', error);
+    res.status(500).json({ message: 'მონაწილის წაშლა ვერ მოხერხდა' });
+  }
 });
 
-// --- წლიური სერვისების/ივენთების API ენდპოინტები ---
+// Get participant equipment bookings
+app.get('/api/participants/:participantId/equipment-bookings', authenticateToken, async (req, res) => {
+  try {
+    const { participantId } = req.params;
 
-// GET: ყველა წლიური სერვისის მიღება
+    const result = await db.query(`
+      SELECT 
+        eb.*,
+        e.code_name as equipment_name,
+        e.code_name,
+        (eb.quantity * eb.unit_price) as total_price
+      FROM equipment_bookings eb
+      JOIN equipment e ON eb.equipment_id = e.id
+      WHERE eb.participant_id = $1
+    `, [participantId]);
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('აღჭურვილობის ჯავშნების მიღების შეცდომა:', error);
+    res.status(500).json({ message: 'აღჭურვილობის ჯავშნების მიღება ვერ მოხერხდა' });
+  }
+});
+
+// Event completion endpoint
+app.post('/api/events/:eventId/complete', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res) => {
+  try {
+    const { eventId } = req.params;
+
+    // First, get all participants and their data
+    const participants = await db.query(`
+      SELECT 
+        ep.*,
+        c.company_name,
+        c.country,
+        c.identification_code
+      FROM event_participants ep
+      JOIN companies c ON ep.company_id = c.id
+      WHERE ep.event_id = $1
+    `, [eventId]);
+
+    // Create completion records for each participant
+    for (const participant of participants.rows) {
+      // Get equipment bookings for this participant
+      const equipmentBookings = await db.query(`
+        SELECT 
+          eb.*,
+          e.name as equipment_name,
+          e.code_name as equipment_code_name
+        FROM equipment_bookings eb
+        JOIN equipment e ON eb.equipment_id = e.id
+        WHERE eb.participant_id = $1
+      `, [participant.id]);
+
+      // Insert into event_completion table
+      await db.query(`
+        INSERT INTO event_completion (
+          event_id, 
+          participant_id, 
+          company_id,
+          company_name,
+          registration_status,
+          payment_status,
+          payment_amount,
+          payment_method,
+          invoice_number,
+          booth_number,
+          booth_size,
+          invoice_file_path,
+          contract_file_path,
+          handover_file_path,
+          equipment_bookings,
+          completion_date,
+          notes
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+        ON CONFLICT (event_id, participant_id) DO UPDATE SET
+          registration_status = EXCLUDED.registration_status,
+          payment_status = EXCLUDED.payment_status,
+          payment_amount = EXCLUDED.payment_amount,
+          payment_method = EXCLUDED.payment_method,
+          invoice_number = EXCLUDED.invoice_number,
+          booth_number = EXCLUDED.booth_number,
+          booth_size = EXCLUDED.booth_size,
+          invoice_file_path = EXCLUDED.invoice_file_path,
+          contract_file_path = EXCLUDED.contract_file_path,
+          handover_file_path = EXCLUDED.handover_file_path,
+          equipment_bookings = EXCLUDED.equipment_bookings,
+          completion_date = EXCLUDED.completion_date,
+          notes = EXCLUDED.notes
+      `, [
+        eventId,
+        participant.id,
+        participant.company_id,
+        participant.company_name,
+        participant.registration_status,
+        participant.payment_status,
+        participant.payment_amount,
+        participant.payment_method,
+        participant.invoice_number,
+        participant.booth_number,
+        participant.booth_size,
+        participant.invoice_file_path,
+        participant.contract_file_path,
+        participant.handover_file_path,
+        JSON.stringify(equipmentBookings.rows),
+        new Date(),
+        participant.notes
+      ]);
+    }
+
+    // Update event status to completed
+    await db.query(
+      'UPDATE events SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      ['completed', eventId]
+    );
+
+    res.json({ 
+      message: 'ივენთი წარმატებით დასრულდა და მონაცემები შენახულია',
+      participantsCount: participants.rows.length
+    });
+  } catch (error) {
+    console.error('ივენთის დასრულების შეცდომა:', error);
+    res.status(500).json({ message: 'ივენთის დასრულება ვერ მოხერხდა' });
+  }
+});
+
+// Get completed event data
+app.get('/api/events/:eventId/completion', authenticateToken, async (req, res) => {
+  try {
+    const { eventId } = req.params;
+
+    const result = await db.query(`
+      SELECT * FROM event_completion 
+      WHERE event_id = $1 
+      ORDER BY completion_date DESC
+    `, [eventId]);
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('დასრულებული ივენთის მონაცემების მიღების შეცდომა:', error);
+    res.status(500).json({ message: 'დასრულებული ივენთის მონაცემების მიღება ვერ მოხერხდა' });
+  }
+});
+
+// Statistics routes
+app.get('/api/statistics/general', authenticateToken, async (req, res) => {
+  try {
+    const [companiesCount, equipmentCount, spacesCount, exhibitionsCount, usersCount] = await Promise.all([
+      db.query('SELECT COUNT(*) as count FROM companies'),
+      db.query('SELECT COUNT(*) as count FROM equipment'),
+      db.query('SELECT COUNT(*) as count FROM spaces'),
+      db.query('SELECT COUNT(*) as count FROM exhibitions'),
+      db.query('SELECT COUNT(*) as count FROM users')
+    ]);
+
+    res.json({
+      companies: parseInt(companiesCount.rows[0].count),
+      equipment: parseInt(equipmentCount.rows[0].count),
+      spaces: parseInt(spacesCount.rows[0].count),
+      exhibitions: parseInt(exhibitionsCount.rows[0].count),
+      users: parseInt(usersCount.rows[0].count)
+    });
+  } catch (error) {
+    console.error('ზოგადი სტატისტიკის შეცდომა:', error);
+    res.status(500).json({ message: 'ზოგადი სტატისტიკის მიღება ვერ მოხერხდა' });
+  }
+});
+
+// User management routes
+app.get('/api/users', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT 
+        id, 
+        username, 
+        role,
+        COALESCE(created_at, CURRENT_TIMESTAMP) as created_at
+      FROM users 
+      ORDER BY COALESCE(created_at, CURRENT_TIMESTAMP) DESC
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('მომხმარებლების მიღების შეცდომა:', error);
+    res.status(500).json({ message: 'მომხმარებლების მიღება ვერ მოხერხდა' });
+  }
+});
+
+app.put('/api/users/:id', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { username, role } = req.body;
+
+    const result = await db.query(
+      'UPDATE users SET username = $1, role = $2 WHERE id = $3 RETURNING id, username, role, created_at',
+      [username, role, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'მომხმარებელი ვერ მოიძებნა' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('მომხმარებლის განახლების შეცდომა:', error);
+    res.status(500).json({ message: 'მომხმარებლის განახლება ვერ მოხერხდა' });
+  }
+});
+
+app.delete('/api/users/:id', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Don't allow deleting yourself
+    if (parseInt(id) === req.user.id) {
+      return res.status(400).json({ message: 'საკუთარი თავის წაშლა შეუძლებელია' });
+    }
+
+    const result = await db.query('DELETE FROM users WHERE id = $1 RETURNING *', [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'მომხმარებელი ვერ მოიძებნა' });
+    }
+
+    res.json({ message: 'მომხმარებელი წარმატებით წაიშალა' });
+  } catch (error) {
+    console.error('მომხმარებლის წაშლის შეცდომა:', error);
+    res.status(500).json({ message: 'მომხმარებლის წაშლა ვერ მოხერხდა' });
+  }
+});
+
+// Annual Services routes
 app.get('/api/annual-services', authenticateToken, async (req, res) => {
   try {
     const result = await db.query(`
       SELECT 
-        a.*,
-        u1.username as created_by,
-        u2.username as updated_by,
-        COALESCE(ss.spaces_count, 0) as spaces_count
-      FROM annual_services a
-      LEFT JOIN users u1 ON a.created_by_user_id = u1.id
-      LEFT JOIN users u2 ON a.updated_by_user_id = u2.id
-      LEFT JOIN (
-        SELECT service_id, COUNT(*) as spaces_count 
-        FROM service_spaces 
-        GROUP BY service_id
-      ) ss ON a.id = ss.service_id
-      ORDER BY a.created_at DESC
+        as_main.*,
+        COUNT(DISTINCT ss.space_id) as spaces_count,
+        e.exhibition_name,
+        e.price_per_sqm
+      FROM annual_services as_main
+      LEFT JOIN service_spaces ss ON as_main.id = ss.service_id
+      LEFT JOIN exhibitions e ON as_main.exhibition_id = e.id
+      GROUP BY as_main.id, e.exhibition_name, e.price_per_sqm
+      ORDER BY as_main.created_at DESC
     `);
-    res.status(200).json(result.rows);
+    res.json(result.rows);
   } catch (error) {
-    console.error('შეცდომა სერვისების მიღებისას:', error);
-    res.status(500).json({ message: 'სერვისების მიღება ვერ მოხერხდა.', error: error.message });
+    console.error('სერვისების მიღების შეცდომა:', error);
+    res.status(500).json({ message: 'სერვისების მიღება ვერ მოხერხდა' });
   }
 });
 
-// POST: ახალი წლიური სერვისის დამატება
-app.post('/api/annual-services', authenticateToken, async (req, res) => {
-  const allowedRoles = ['admin', 'sales', 'marketing'];
-  if (!req.user || !allowedRoles.includes(req.user.role)) {
-    return res.status(403).json({ error: 'წვდომა აკრძალულია: არ გაქვთ სერვისების მართვის უფლება.' });
-  }
-
-  const { 
-    service_name, description, year_selection, start_date, end_date, 
-    service_type, is_active, selected_spaces, selected_exhibitions,
-    exhibition_id, selected_companies
-  } = req.body;
-  const created_by_user_id = req.user.id;
-
+app.get('/api/annual-services/:id', authenticateToken, async (req, res) => {
   try {
+    const { id } = req.params;
+    const result = await db.query(`
+      SELECT 
+        as_main.*,
+        e.exhibition_name,
+        e.price_per_sqm
+      FROM annual_services as_main
+      LEFT JOIN exhibitions e ON as_main.exhibition_id = e.id
+      WHERE as_main.id = $1
+    `, [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'სერვისი ვერ მოიძებნა' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('სერვისის მიღების შეცდომა:', error);
+    res.status(500).json({ message: 'სერვისის მიღება ვერ მოხერხდა' });
+  }
+});
+
+app.get('/api/annual-services/:id/details', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get service details
+    const serviceResult = await db.query(`
+      SELECT 
+        as_main.*,
+        e.exhibition_name,
+        e.price_per_sqm
+      FROM annual_services as_main
+      LEFT JOIN exhibitions e ON as_main.exhibition_id = e.id
+      WHERE as_main.id = $1
+    `, [id]);
+
+    if (serviceResult.rows.length === 0) {
+      return res.status(404).json({ message: 'სერვისი ვერ მოიძებნა' });
+    }
+
+    const service = serviceResult.rows[0];
+
+    // Get associated spaces
+    const spacesResult = await db.query(`
+      SELECT s.* 
+      FROM spaces s
+      JOIN service_spaces ss ON s.id = ss.space_id
+      WHERE ss.service_id = $1
+    `, [id]);
+
+    // Get participants/bookings
+    const bookingsResult = await db.query(`
+      SELECT 
+        ep.*,
+        c.company_name
+      FROM event_participants ep
+      JOIN companies c ON ep.company_id = c.id
+      WHERE ep.event_id = $1
+    `, [id]);
+
+    service.spaces = spacesResult.rows;
+    service.bookings = bookingsResult.rows;
+
+    res.json(service);
+  } catch (error) {
+    console.error('სერვისის დეტალების მიღების შეცდომა:', error);
+    res.status(500).json({ message: 'სერვისის დეტალების მიღება ვერ მოხერხდა' });
+  }
+});
+
+app.post('/api/annual-services', authenticateToken, authorizeRoles('admin', 'manager', 'sales', 'marketing'), async (req, res) => {
+  try {
+    const { 
+      service_name, 
+      description, 
+      year_selection, 
+      start_date, 
+      end_date, 
+      service_type = 'გამოფენა',
+      is_active = true,
+      exhibition_id,
+      space_ids = []
+    } = req.body;
+
     const result = await db.query(
-      `INSERT INTO annual_services 
-      (service_name, description, year_selection, start_date, end_date, service_type, is_active, created_by_user_id, exhibition_id) 
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-      [service_name, description, year_selection, start_date, end_date, service_type, is_active, created_by_user_id, exhibition_id]
+      `INSERT INTO annual_services (
+        service_name, description, year_selection, start_date, end_date, 
+        service_type, is_active, exhibition_id, created_by_user_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [
+        service_name, description, year_selection, start_date, end_date,
+        service_type, is_active, exhibition_id, req.user.id
+      ]
     );
 
     const service = result.rows[0];
 
-    // სივრცეების კავშირების დამატება
+    // Add space associations
+    for (const spaceId of space_ids) {
+      await db.query(
+        'INSERT INTO service_spaces (service_id, space_id) VALUES ($1, $2)',
+        [service.id, spaceId]
+      );
+    }
+
+    res.status(201).json({
+      message: 'სერვისი წარმატებით დაემატა',
+      service
+    });
+  } catch (error) {
+    console.error('სერვისის დამატების შეცდომა:', error);
+    res.status(500).json({ message: 'სერვისის დამატება ვერ მოხერხდა' });
+  }
+});
+
+app.put('/api/annual-services/:id', authenticateToken, authorizeRoles('admin', 'manager', 'sales', 'marketing'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { 
+      service_name, 
+      description, 
+      year_selection, 
+      start_date, 
+      end_date, 
+      service_type,
+      is_active,
+      exhibition_id,
+      space_ids = []
+    } = req.body;
+
+    const result = await db.query(
+      `UPDATE annual_services SET 
+        service_name = $1, description = $2, year_selection = $3, 
+        start_date = $4, end_date = $5, service_type = $6, 
+        is_active = $7, exhibition_id = $8, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = $9 RETURNING *`,
+      [
+        service_name, description, year_selection, start_date, end_date,
+        service_type, is_active, exhibition_id, id
+      ]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'სერვისი ვერ მოიძებნა' });
+    }
+
+    // Update space associations
+    await db.query('DELETE FROM service_spaces WHERE service_id = $1', [id]);
+    for (const spaceId of space_ids) {
+      await db.query(
+        'INSERT INTO service_spaces (service_id, space_id) VALUES ($1, $2)',
+        [id, spaceId]
+      );
+    }
+
+    res.json({
+      message: 'სერვისი წარმატებით განახლდა',
+      service: result.rows[0]
+    });
+  } catch (error) {
+    console.error('სერვისის განახლების შეცდომა:', error);
+    res.status(500).json({ message: 'სერვისის განახლება ვერ მოხერხდა' });
+  }
+});
+
+app.delete('/api/annual-services/:id', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Delete associated records first
+    await db.query('DELETE FROM service_spaces WHERE service_id = $1', [id]);
+    await db.query('DELETE FROM service_exhibitions WHERE service_id = $1', [id]);
+
+    const result = await db.query('DELETE FROM annual_services WHERE id = $1 RETURNING *', [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'სერვისი ვერ მოიძებნა' });
+    }
+
+    res.json({ message: 'სერვისი წარმატებით წაიშალა' });
+  } catch (error) {
+    console.error('სერვისის წაშლის შეცდომა:', error);
+    res.status(500).json({ message: 'სერვისის წაშლა ვერ მოხერხდა' });
+  }
+});
+
+app.post('/api/annual-services', authenticateToken, authorizeRoles('admin', 'manager', 'sales', 'marketing'), async (req, res) => {
+  try {
+    const { 
+      service_name, 
+      description, 
+      year_selection, 
+      start_date, 
+      end_date, 
+      service_type = 'გამოფენა',
+      is_active = true,
+      exhibition_id,
+      selected_spaces = []
+    } = req.body;
+
+    const result = await db.query(
+      `INSERT INTO annual_services (
+        service_name, description, year_selection, start_date, end_date, 
+        service_type, is_active, exhibition_id, created_by_user_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [
+        service_name, description, year_selection, start_date, end_date,
+        service_type, is_active, exhibition_id, req.user.id
+      ]
+    );
+
+    const service = result.rows[0];
+
+    // Add space associations
     if (selected_spaces && selected_spaces.length > 0) {
       for (const spaceId of selected_spaces) {
         await db.query(
@@ -1501,1243 +1463,89 @@ app.post('/api/annual-services', authenticateToken, async (req, res) => {
       }
     }
 
-    // event_participants ცხრილის შექმნა თუ არ არსებობს
-    await db.query(`
-      CREATE TABLE IF NOT EXISTS event_participants (
-        id SERIAL PRIMARY KEY,
-        event_id INTEGER NOT NULL,
-        company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
-        registration_status VARCHAR(50) DEFAULT 'მონაწილეობის მოთხოვნა',
-        payment_status VARCHAR(50) DEFAULT 'მომლოდინე',
-        booth_number VARCHAR(20),
-        booth_size DECIMAL(10,2),
-        notes TEXT,
-        contact_person VARCHAR(255),
-        contact_email VARCHAR(255),
-        contact_phone VARCHAR(50),
-        registration_date DATE DEFAULT CURRENT_DATE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        created_by_user_id INTEGER REFERENCES users(id),
-        UNIQUE(event_id, company_id)
-      );
-    `);
-
-    // თუ exhibition_id მითითებულია, კომპანიების ავტომატური რეგისტრაცია
-    if (exhibition_id) {
-      console.log(`ივენთისთვის ${service.id} ვეძებთ კომპანიებს გამოფენისთვის ${exhibition_id}`);
-
-      const companiesForExhibition = await db.query(`
-        SELECT c.id as company_id, c.company_name 
-        FROM companies c
-        JOIN company_exhibitions ce ON c.id = ce.company_id
-        WHERE ce.exhibition_id = $1
-      `, [exhibition_id]);
-
-      console.log(`მოიძებნა ${companiesForExhibition.rows.length} კომპანია გამოფენისთვის ${exhibition_id}`);
-
-      // ყველა კომპანიის ავტომატური რეგისტრაცია
-      for (const company of companiesForExhibition.rows) {
-        try {
-          await db.query(`
-            INSERT INTO event_participants (event_id, company_id, registration_status, created_by_user_id)
-            VALUES ($1, $2, 'მონაწილეობის მოთხოვნა', $3)
-            ON CONFLICT (event_id, company_id) DO NOTHING
-          `, [service.id, company.company_id, created_by_user_id]);
-
-          console.log(`კომპანია ${company.company_name} (ID: ${company.company_id}) რეგისტრირდა ივენთზე ${service.id}`);
-        } catch (regError) {
-          console.error(`შეცდომა კომპანიის ${company.company_id} რეგისტრაციისას:`, regError);
-        }
-      }
-
-      // საბოლოო რაოდენობის შემოწმება
-      const finalCountResult = await db.query(`
-        SELECT COUNT(*) as count FROM event_participants WHERE event_id = $1
-      `, [service.id]);
-
-      console.log(`საბოლოოდ ივენთზე ${service.id} დარეგისტრირებულია ${finalCountResult.rows[0].count} კომპანია`);
-    }
-
-    // დამატებით არჩეული კომპანიების რეგისტრაცია (თუ არის)
-    if (selected_companies && selected_companies.length > 0) {
-      for (const companyId of selected_companies) {
-        await db.query(`
-          INSERT INTO event_participants (event_id, company_id, registration_status, registration_date, created_by_user_id)
-          VALUES ($1, $2, 'მონაწილეობის მოთხოვნა', CURRENT_DATE, $3)
-          ON CONFLICT (event_id, company_id) DO NOTHING
-        `, [service.id, companyId, created_by_user_id]);
-      }
-    }
-
-    // პასუხის ჩამოყალიბება
-    let registeredCompaniesCount = 0;
-    if (exhibition_id) {
-      const companiesCountResult = await db.query(`
-        SELECT COUNT(*) as count FROM company_exhibitions WHERE exhibition_id = $1
-      `, [exhibition_id]);
-      registeredCompaniesCount = companiesCountResult.rows[0].count;
-    }
-
-    res.status(201).json({ 
-      message: `ივენთი წარმატებით შეიქმნა. ${registeredCompaniesCount} კომპანია ავტომატურად დარეგისტრირდა მონაწილეობის მოთხოვნის სტატუსით.`, 
-      event: service 
+    res.status(201).json({
+      message: 'სერვისი წარმატებით დაემატა',
+      service
     });
   } catch (error) {
-    console.error('შეცდომა სერვისის დამატებისას:', error);
-    res.status(500).json({ message: 'სერვისის დამატება ვერ მოხერხდა.', error: error.message });
+    console.error('სერვისის დამატების შეცდომა:', error);
+    res.status(500).json({ message: 'სერვისის დამატება ვერ მოხერხდა' });
   }
 });
 
-// PUT: წლიური სერვისის განახლება
-app.put('/api/annual-services/:id', authenticateToken, async (req, res) => {
-  const allowedRoles = ['admin', 'sales', 'marketing'];
-  if (!req.user || !allowedRoles.includes(req.user.role)) {
-    return res.status(403).json({ error: 'წვდომა აკრძალულია: არ გაქვთ სერვისების მართვის უფლება.' });
-  }
-
-  const { id } = req.params;
-  const { 
-    service_name, description, year_selection, start_date, end_date, 
-    service_type, is_active, selected_spaces, exhibition_id
-  } = req.body;
-  const updated_by_user_id = req.user.id;
-
-  console.log('განახლების მონაცემები:', {
-    id, service_name, selected_spaces, exhibition_id
-  });
-
+app.put('/api/annual-services/:id', authenticateToken, authorizeRoles('admin', 'manager', 'sales', 'marketing'), async (req, res) => {
   try {
-    // service_spaces ცხრილის შექმნა თუ არ არსებობს
-    await db.query(`
-      CREATE TABLE IF NOT EXISTS service_spaces (
-        id SERIAL PRIMARY KEY,
-        service_id INTEGER NOT NULL,
-        space_id INTEGER NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(service_id, space_id)
-      );
-    `);
+    const { id } = req.params;
+    const { 
+      service_name, 
+      description, 
+      year_selection, 
+      start_date, 
+      end_date, 
+      service_type,
+      is_active,
+      exhibition_id,
+      selected_spaces = []
+    } = req.body;
 
     const result = await db.query(
       `UPDATE annual_services SET 
-      service_name = $1, description = $2, year_selection = $3, start_date = $4, 
-      end_date = $5, service_type = $6, is_active = $7, exhibition_id = $8, 
-      updated_by_user_id = $9, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $10 RETURNING *`,
-      [service_name, description, year_selection, start_date, end_date, service_type, is_active, exhibition_id, updated_by_user_id, id]
+        service_name = $1, description = $2, year_selection = $3, 
+        start_date = $4, end_date = $5, service_type = $6, 
+        is_active = $7, exhibition_id = $8, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = $9 RETURNING *`,
+      [
+        service_name, description, year_selection, start_date, end_date,
+        service_type, is_active, exhibition_id, id
+      ]
     );
 
-    if (result.rows.length > 0) {
-      // არსებული სივრცეების კავშირების წაშლა
-      await db.query('DELETE FROM service_spaces WHERE service_id = $1', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'სერვისი ვერ მოიძებნა' });
+    }
 
-      // ახალი სივრცეების კავშირების დამატება
-      if (selected_spaces && Array.isArray(selected_spaces) && selected_spaces.length > 0) {
-        console.log(`ვამატებ ${selected_spaces.length} სივრცეს სერვისისთვის ${id}`);
-        for (const spaceId of selected_spaces) {
-          try {
-            await db.query(
-              'INSERT INTO service_spaces (service_id, space_id) VALUES ($1, $2) ON CONFLICT (service_id, space_id) DO NOTHING',
-              [id, spaceId]
-            );
-            console.log(`დამატებულია სივრცე ${spaceId} სერვისისთვის ${id}`);
-          } catch (spaceError) {
-            console.error(`შეცდომა სივრცის ${spaceId} დამატებისას:`, spaceError);
-          }
-        }
+    // Update space associations
+    await db.query('DELETE FROM service_spaces WHERE service_id = $1', [id]);
+    if (selected_spaces && selected_spaces.length > 0) {
+      for (const spaceId of selected_spaces) {
+        await db.query(
+          'INSERT INTO service_spaces (service_id, space_id) VALUES ($1, $2)',
+          [id, spaceId]
+        );
       }
-
-      // დავაბრუნოთ განახლებული სერვისი სივრცეების რაოდენობით
-      const spacesCountResult = await db.query(
-        'SELECT COUNT(*) as spaces_count FROM service_spaces WHERE service_id = $1',
-        [id]
-      );
-
-      const updatedService = {
-        ...result.rows[0],
-        spaces_count: spacesCountResult.rows[0].spaces_count
-      };
-
-      res.status(200).json({ message: 'სერვისი წარმატებით განახლდა.', service: updatedService });
-    } else {
-      res.status(404).json({ message: 'სერვისი ვერ მოიძებნა.' });
     }
+
+    res.json({
+      message: 'სერვისი წარმატებით განახლდა',
+      service: result.rows[0]
+    });
   } catch (error) {
-    console.error('შეცდომა სერვისის განახლებისას:', error);
-    res.status(500).json({ message: 'სერვისის განახლება ვერ მოხერხდა.', error: error.message });
+    console.error('სერვისის განახლების შეცდომა:', error);
+    res.status(500).json({ message: 'სერვისის განახლება ვერ მოხერხდა' });
   }
 });
 
-// DELETE: წლიური სერვისის წაშლა
-app.delete('/api/annual-services/:id', authenticateToken, async (req, res) => {
-  const allowedRoles = ['admin', 'sales', 'marketing'];
-  if (!req.user || !allowedRoles.includes(req.user.role)) {
-    return res.status(403).json({ error: 'წვდომა აკრძალულია: არ გაქვთ სერვისების წაშლის უფლება.' });
-  }
-
-  const { id } = req.params;
+app.put('/api/annual-services/:id/archive', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res) => {
   try {
-    const result = await db.query('DELETE FROM annual_services WHERE id = $1 RETURNING *', [id]);
-    if (result.rows.length > 0) {
-      res.status(200).json({ message: 'სერვისი წარმატებით წაიშალა.' });
-    } else {
-      res.status(404).json({ message: 'სერვისი ვერ მოიძებნა.' });
-    }
-  } catch (error) {
-    console.error('შეცდომა სერვისის წაშლისას:', error);
-    res.status(500).json({ message: 'სერვისის წაშლა ვერ მოხერხდა.', error: error.message });
-  }
-});
+    const { id } = req.params;
 
-// PUT: სერვისის არქივში გადატანა
-app.put('/api/annual-services/:id/archive', authenticateToken, async (req, res) => {
-  const allowedRoles = ['admin', 'sales', 'marketing'];
-  if (!req.user || !allowedRoles.includes(req.user.role)) {
-    return res.status(403).json({ error: 'წვდომა აკრძალულია: არ გაქვთ სერვისების მართვის უფლება.' });
-  }
-
-  const { id } = req.params;
-  try {
     const result = await db.query(
-      'UPDATE annual_services SET is_archived = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
+      'UPDATE annual_services SET is_archived = true, archived_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
       [id]
     );
-    if (result.rows.length > 0) {
-      res.status(200).json({ message: 'სერვისი წარმატებით არქივში გადაიტანა.', service: result.rows[0] });
-    } else {
-      res.status(404).json({ message: 'სერვისი ვერ მოიძებნა.' });
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'სერვისი ვერ მოიძებნა' });
     }
+
+    res.json({ message: 'სერვისი წარმატებით არქივში გადაიტანა' });
   } catch (error) {
-    console.error('შეცდომა სერვისის არქივში გადატანისას:', error);
-    res.status(500).json({ message: 'სერვისის არქივში გადატანა ვერ მოხერხდა.', error: error.message });
+    console.error('სერვისის არქივში გადატანის შეცდომა:', error);
+    res.status(500).json({ message: 'სერვისის არქივში გადატანა ვერ მოხერხდა' });
   }
 });
 
-// GET: სერვისის დეტალები
-app.get('/api/annual-services/:id/details', authenticateToken, async (req, res) => {
-  const { id } = req.params;
-  try {
-    const serviceResult = await db.query('SELECT * FROM annual_services WHERE id = $1', [id]);
-
-    if (serviceResult.rows.length === 0) {
-      return res.status(404).json({ message: 'სერვისი ვერ მოიძებნა.' });
-    }
-
-    const service = serviceResult.rows[0];
-
-    // service_spaces ცხრილის შექმნა თუ არ არსებობს
-    await db.query(`
-      CREATE TABLE IF NOT EXISTS service_spaces (
-        id SERIAL PRIMARY KEY,
-        service_id INTEGER NOT NULL,
-        space_id INTEGER NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(service_id, space_id)
-      );
-    `);
-
-    // სივრცეების მიღება
-    const spacesResult = await db.query(`
-      SELECT s.* FROM spaces s
-      JOIN service_spaces ss ON s.id = ss.space_id
-      WHERE ss.service_id = $1
-    `, [id]);
-
-    // ჯავშნების მიღება (თუ bookings ცხრილი არსებობს)
-    const bookingsResult = await db.query(`
-      SELECT b.*, c.company_name FROM bookings b
-      JOIN companies c ON b.company_id = c.id
-      WHERE b.service_id = $1
-    `).catch(() => ({ rows: [] })); // თუ bookings ცხრილი არ არსებობს
-
-    service.spaces = spacesResult.rows;
-    service.bookings = bookingsResult.rows;
-
-    console.log(`სერვისი ${id}: ${spacesResult.rows.length} სივრცე, ${bookingsResult.rows.length} ჯავშანი`);
-
-    res.status(200).json(service);
-  } catch (error) {
-    console.error('შეცდომა სერვისის დეტალების მიღებისას:', error);
-    res.status(500).json({ message: 'სერვისის დეტალების მიღება ვერ მოხერხდა.', error: error.message });
-  }
-});
-
-// --- ჯავშნების API ენდპოინტები ---
-
-// GET: ყველა ჯავშნის მიღება
-app.get('/api/bookings', authenticateToken, async (req, res) => {
-    try {
-        const result = await db.query(`
-            SELECT b.*, s.service_name, e.exhibition_name, c.company_name 
-            FROM bookings b
-            LEFT JOIN annual_services s ON b.service_id = s.id
-            LEFT JOIN exhibitions e ON b.exhibition_id = e.id
-            LEFT JOIN companies c ON b.company_id = c.id
-            ORDER BY b.booking_date DESC
-        `);
-        res.status(200).json(result.rows);
-    } catch (error) {
-        console.error('შეცდომა ჯავშნების მიღებისას:', error);
-        res.status(500).json({ message: 'ჯავშნების მიღება ვერ მოხერხდა.', error: error.message });
-    }
-});
-
-// POST: ახალი ჯავშნის დამატება
-app.post('/api/bookings', authenticateToken, async (req, res) => {
-    const { service_id, exhibition_id, company_id, booking_date, start_time, end_time, notes } = req.body;
-    const created_by_user_id = req.user.id;
-
-    try {
-        const result = await db.query(
-            'INSERT INTO bookings (service_id, exhibition_id, company_id, booking_date, start_time, end_time, notes, created_by_user_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
-            [service_id, exhibition_id, company_id, booking_date, start_time, end_time, notes, created_by_user_id]
-        );
-        res.status(201).json({ message: 'ჯავშანი წარმატებით დაემატა.', booking: result.rows[0] });
-    } catch (error) {
-        console.error('შეცდომა ჯავშნის დამატებისას:', error);
-        res.status(500).json({ message: 'ჯავშნის დამატება ვერ მოხერხდა.', error: error.message });
-    }
-});
-
-// PUT: ჯავშნის სტატუსის განახლება
-app.put('/api/bookings/:id/status', authenticateToken, async (req, res) => {
-    const { id } = req.params;
-    const { status } = req.body;
-
-    try {
-        const result = await db.query(
-            'UPDATE bookings SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
-            [status, id]
-        );
-        if (result.rows.length > 0) {
-            res.status(200).json({ message: 'ჯავშნის სტატუსი წარმატებით განახლდა.', booking: result.rows[0] });
-        } else {
-            res.status(404).json({ message: 'ჯავშანი ვერ მოიძებნა.' });
-        }
-    } catch (error) {
-        console.error('შეცდომა ჯავშნის განახლებისას:', error);
-        res.status(500).json({ message: 'ჯავშნის განახლება ვერ მოხერხდა.', error: error.message });
-    }
-});
-
-// DELETE: ჯავშნის წაშლა
-app.delete('/api/bookings/:id', authenticateToken, async (req, res) => {
-    const allowedRoles = ['admin', 'sales', 'marketing'];
-    if (!req.user || !allowedRoles.includes(req.user.role)) {
-        return res.status(403).json({ error: 'წვდომა აკრძალულია: არ გაქვთ ჯავშნების წაშლის უფლება.' });
-    }
-
-    const { id } = req.params;
-    try {
-        const result = await db.query('DELETE FROM bookings WHERE id = $1 RETURNING *', [id]);
-        if (result.rows.length > 0) {
-            res.status(200).json({ message: 'ჯავშანი წარმატებით წაიშალა.' });
-        } else {
-            res.status(404).json({ message: 'ჯავშანი ვერ მოიძებნა.' });
-        }
-    } catch (error) {
-        console.error('შეცდომა ჯავშნის წაშლისას:', error);
-        res.status(500).json({ message: 'ჯავშნის წაშლა ვერ მოხერხდა.', error: error.message });
-    }
-});
-
-// აღჭურვილობის სია (ყველა მომხმარებელი ხედავს)
-app.get('/api/equipment', authenticateToken, async (req, res) => {
-  try {
-    const result = await db.query('SELECT * FROM equipment ORDER BY id ASC');
-    console.log('აღჭურვილობის მოძებნის შედეგი:', result.rows.length, 'ჩანაწერი');
-    res.status(200).json(result.rows);
-  } catch (error) {
-    console.error('შეცდომა აღჭურვილობის მოძებნისას:', error);
-    res.status(500).json({ message: 'აღჭურვილობის მოძებნა ვერ მოხერხდა', error: error.message });
-  }
-});
-
-// აღჭურვილობის ხელმისაწვდომობის შემოწმება კონკრეტული ივენთისთვის
-app.get('/api/equipment/availability/:eventId', authenticateToken, async (req, res) => {
-  try {
-    const { eventId } = req.params;
-
-    // ივენთის მიღება და თარიღების შემოწმება
-    const eventResult = await db.query('SELECT start_date, end_date FROM annual_services WHERE id = $1', [eventId]);
-
-    if (eventResult.rows.length === 0) {
-      return res.status(404).json({ message: 'ივენთი ვერ მოიძებნა' });
-    }
-
-    const { start_date, end_date } = eventResult.rows[0];
-
-    // ყველა აღჭურვილობის მიღება
-    const equipmentResult = await db.query('SELECT id, code_name, quantity, price, description FROM equipment ORDER BY code_name');
-
-    // დაჯავშნილი რაოდენობების მიღება ამ პერიოდისთვის
-    const bookedResult = await db.query(`
-      SELECT 
-        eb.equipment_id,
-        COALESCE(SUM(eb.quantity), 0) as booked_quantity
-      FROM equipment_bookings eb
-      JOIN event_participants ep ON eb.participant_id = ep.id
-      JOIN annual_services e ON ep.event_id = e.id
-      WHERE (e.start_date <= $2 AND e.end_date >= $1)
-      AND e.id != $3
-      GROUP BY eb.equipment_id
-    `, [start_date, end_date, eventId]);
-
-    // დაჯავშნილი რაოდენობების რუკა
-    const bookedMap = {};
-    bookedResult.rows.forEach(row => {
-      bookedMap[row.equipment_id] = parseInt(row.booked_quantity) || 0;
-    });
-
-    // ხელმისაწვდომობის გათვლა
-    const availability = equipmentResult.rows.map(equipment => ({
-      id: equipment.id,
-      code_name: equipment.code_name,
-      description: equipment.description,
-      quantity: equipment.quantity,
-      price: equipment.price,
-      booked_quantity: bookedMap[equipment.id] || 0,
-      available_quantity: equipment.quantity - (bookedMap[equipment.id] || 0)
-    }));
-
-    console.log(`აღჭურვილობის ხელმისაწვდომობა ივენთისთვის ${eventId}:`, availability.length, 'ერთეული');
-    res.status(200).json(availability);
-  } catch (error) {
-    console.error('შეცდომა აღჭურვილობის ხელმისაწვდომობის შემოწმებისას:', error);
-    res.status(500).json({ message: 'აღჭურვილობის ხელმისაწვდომობის შემოწმება ვერ მოხერხდა', error: error.message });
-  }
-});
-
-// აღჭურვილობის ხელმისაწვდომი რაოდენობა ღონისძიების პერიოდისთვის
-app.get('/api/equipment/availability/:eventId', authenticateToken, async (req, res) => {
-  try {
-    const { eventId } = req.params;
-
-    // ღონისძიების პერიოდი
-    const eventQuery = await db.query('SELECT start_date, end_date FROM events WHERE id = $1', [eventId]);
-    if (eventQuery.rows.length === 0) {
-      return res.status(404).json({ message: 'ღონისძიება ვერ მოიძებნა' });
-    }
-
-    const { start_date, end_date } = eventQuery.rows[0];
-
-    // აღჭურვილობის საერთო რაოდენობა
-    const equipmentQuery = await db.query('SELECT id, code_name, quantity, price FROM equipment ORDER BY code_name');
-
-    // დაჯავშნილი რაოდენობები ამ პერიოდში
-    const bookedQuery = await db.query(`
-      SELECT 
-        eb.equipment_id,
-        SUM(eb.quantity) as booked_quantity
-      FROM equipment_bookings eb
-      JOIN event_participants ep ON eb.participant_id = ep.id
-      JOIN annual_services e ON ep.event_id = e.id
-      WHERE e.start_date <= $2 AND e.end_date >= $1
-      GROUP BY eb.equipment_id
-    `, [start_date, end_date]);
-
-    const bookedMap = {};
-    bookedQuery.rows.forEach(row => {
-      bookedMap[row.equipment_id] = parseInt(row.booked_quantity);
-    });
-
-    const availability = equipmentQuery.rows.map(equipment => ({
-      ...equipment,
-      booked_quantity: bookedMap[equipment.id] || 0,
-      available_quantity: equipment.quantity - (bookedMap[equipment.id] || 0)
-    }));
-
-    res.json(availability);
-  } catch (error) {
-    console.error('შეცდომა აღჭურვილობის ხელმისაწვდომობის შემოწმებისას:', error);
-    res.status(500).json({ message: 'შეცდომა მოთხოვნის დამუშავებისას' });
-  }
-});
-
-// მონაწილის აღჭურვილობის ჯავშნები
-app.get('/api/participants/:participantId/equipment-bookings', authenticateToken, async (req, res) => {
-  try {
-    const { participantId } = req.params;
-
-    const result = await db.query(`
-      SELECT 
-        eb.*,
-        e.code_name,
-        e.description
-      FROM equipment_bookings eb
-      JOIN equipment e ON eb.equipment_id = e.id
-      WHERE eb.participant_id = $1
-      ORDER BY e.code_name
-    `, [participantId]);
-
-    res.json(result.rows);
-  } catch (error) {
-    console.error('შეცდომა აღჭურვილობის ჯავშნების მოძებნისას:', error);
-    res.status(500).json({ message: 'შეცდომა მოთხოვნის დამუშავებისას' });
-  }
-});
-
-// აღჭურვილობის ჯავშნის დამატება/განახლება
-app.post('/api/participants/:participantId/equipment-bookings', authenticateToken, async (req, res) => {
-  try {
-    const { participantId } = req.params;
-    const { equipment_bookings } = req.body;
-    const user_id = req.user.id;
-
-    if (!Array.isArray(equipment_bookings) || equipment_bookings.length === 0) {
-      return res.status(400).json({ message: 'აღჭურვილობის მონაცემები არასწორია' });
-    }
-
-    // Check if participant exists and get event info
-    const participantQuery = await db.query(`
-      SELECT ep.*, e.start_date, e.end_date 
-      FROM event_participants ep
-      JOIN annual_services e ON ep.event_id = e.id
-      WHERE ep.id = $1
-    `, [participantId]);
-
-    if (participantQuery.rows.length === 0) {
-      return res.status(404).json({ message: 'მონაწილე ვერ მოიძებნა' });
-    }
-
-    const participant = participantQuery.rows[0];
-    const { start_date, end_date } = participant;
-
-    // Delete existing bookings for this participant
-    await db.query('DELETE FROM equipment_bookings WHERE participant_id = $1', [participantId]);
-
-    // Add new bookings
-    for (const booking of equipment_bookings) {
-      const { equipment_id, quantity, unit_price } = booking;
-
-      if (!equipment_id || !quantity || quantity <= 0) {
-        continue; // Skip invalid bookings
-      }
-
-      // Check availability
-      const availabilityQuery = await db.query(`
-        SELECT 
-          e.quantity as total_quantity,
-          COALESCE(SUM(eb.quantity), 0) as booked_quantity
-        FROM equipment e
-        LEFT JOIN equipment_bookings eb ON e.id = eb.equipment_id
-        LEFT JOIN event_participants ep ON eb.participant_id = ep.id
-        LEFT JOIN events ev ON ep.event_id = ev.id
-        WHERE e.id = $1 
-        AND (ev.start_date IS NULL OR (ev.start_date <= $3 AND ev.end_date >= $2))
-        GROUP BY e.id, e.quantity
-      `, [equipment_id, start_date, end_date]);
-
-      if (availabilityQuery.rows.length === 0) {
-        return res.status(404).json({ message: 'აღჭურვილობა ვერ მოიძებნა' });
-      }
-
-      const { total_quantity, booked_quantity } = availabilityQuery.rows[0];
-      const available_quantity = total_quantity - booked_quantity;
-
-      if (quantity > available_quantity) {
-        return res.status(400).json({ 
-          message: `არასაკმარისი რაოდენობა. ხელმისაწვდომია: ${available_quantity}` 
-        });
-      }
-
-      const total_price = quantity * unit_price;
-
-      await db.query(`
-        INSERT INTO equipment_bookings (participant_id, equipment_id, quantity, unit_price, total_price, created_by)
-        VALUES ($1, $2, $3, $4, $5, $6)
-      `, [participantId, equipment_id, quantity, unit_price, total_price, user_id]);
-    }
-
-    res.json({ message: 'აღჭურვილობის ჯავშანი წარმატებით განახლდა' });
-  } catch (error) {
-    console.error('შეცდომა აღჭურვილობის ჯავშნისას:', error);
-    res.status(500).json({ message: 'შეცდომა მოთხოვნის დამუშავებისას' });
-  }
-});
-
-// ნოტიფიკაციების ცხრილის შექმნის ფუნქცია
-const createNotificationsTable = async () => {
-  try {
-    await db.query(`
-      CREATE TABLE IF NOT EXISTS notifications (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-        type VARCHAR(50) NOT NULL DEFAULT 'info',
-        title VARCHAR(255) NOT NULL,
-        message TEXT NOT NULL,
-        is_read BOOLEAN DEFAULT FALSE,
-        related_entity_type VARCHAR(50),
-        related_entity_id INTEGER,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    console.log('ნოტიფიკაციების ცხრილი შეიქმნა/შემოწმდა');
-  } catch (error) {
-    console.error('ნოტიფიკაციების ცხრილის შექმნის შეცდომა:', error);
-  }
-};
-
-// აღჭურვილობის ჯავშნების ცხრილის შექმნის ფუნქცია
-const createEquipmentBookingsTable = async () => {
-  try {
-    await db.query(`
-      CREATE TABLE IF NOT EXISTS equipment_bookings (
-        id SERIAL PRIMARY KEY,
-        participant_id INTEGER REFERENCES event_participants(id) ON DELETE CASCADE,
-        equipment_id INTEGER REFERENCES equipment(id) ON DELETE CASCADE,
-        quantity INTEGER NOT NULL CHECK (quantity > 0),
-        unit_price DECIMAL(10,2) NOT NULL,
-        total_price DECIMAL(10,2) NOT NULL,
-        booking_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        created_by INTEGER REFERENCES users(id)
-      )
-    `);
-    console.log('აღჭურვილობის ჯავშნების ცხრილი შეიქმნა/შემოწმდა');
-  } catch (error) {
-    console.error('აღჭურვილობის ჯავშნების ცხრილის შექმნის შეცდომა:', error);
-  }
-};
-
-// ყველა საჭირო ცხრილის შექმნა
-const initializeTables = async () => {
-  await createNotificationsTable();
-  await createEquipmentBookingsTable();
-};
-
-initializeTables();
-
-// ნოტიფიკაციების API
-app.get('/api/notifications', authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const result = await db.query(`
-      SELECT * FROM notifications 
-      WHERE user_id = $1 OR user_id IS NULL 
-      ORDER BY created_at DESC 
-      LIMIT 50
-    `, [userId]);
-    res.status(200).json(result.rows);
-  } catch (error) {
-    console.error('ნოტიფიკაციების მიღების შეცდომა:', error);
-    res.status(500).json({ message: 'ნოტიფიკაციების მიღება ვერ მოხერხდა.' });
-  }
-});
-
-app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const userId = req.user.id;
-
-    const result = await db.query(`
-      UPDATE notifications 
-      SET is_read = true, updated_at = NOW() 
-      WHERE id = $1 AND (user_id = $2 OR user_id IS NULL)
-      RETURNING *
-    `, [id, userId]);
-
-    if (result.rows.length > 0) {
-      res.status(200).json({ message: 'ნოტიფიკაცია განახლდა.' });
-    } else {
-      res.status(404).json({ message: 'ნოტიფიკაცია ვერ მოიძებნა.' });
-    }
-  } catch (error) {
-    console.error('ნოტიფიკაციის განახლების შეცდომა:', error);
-    res.status(500).json({ message: 'ნოტიფიკაციის განახლება ვერ მოხერხდა.' });
-  }
-});
-
-// ნოტიფიკაციის შექმნის ფუნქცია
-const createNotification = async (userId, type, title, message) => {
-  try {
-    await db.query(`
-      INSERT INTO notifications (user_id, type, title, message, is_read, created_at)
-      VALUES ($1, $2, $3, $4, false, NOW())
-    `, [userId, type, title, message]);
-  } catch (error) {
-    console.error('ნოტიფიკაციის შექმნის შეცდომა:', error);
-  }
-};
-
-// GET: ყველა სერვისის მიღება
-app.get('/api/annual-services', authenticateToken, async (req, res) => {
-  try {
-    const result = await db.query(`
-      SELECT 
-        a.*,
-        u1.username as created_by,
-        u2.username as updated_by
-      FROM annual_services a
-      LEFT JOIN users u1 ON a.created_by_user_id = u1.id
-      LEFT JOIN users u2 ON a.updated_by_user_id = u2.id
-      ORDER BY a.start_date DESC
-    `);
-    res.status(200).json(result.rows);
-  } catch (error) {
-    console.error('შეცდომა სერვისების მიღებისას:', error);
-    res.status(500).json({ message: 'სერვისების მიღება ვერ მოხერხდა.', error: error.message });
-  }
-});
-
-// ივენთები (annual_services) - POST: ახალი სერვისის დამატება
-app.post('/api/annual-services', authenticateToken, async (req, res) => {
-  // მხოლოდ admin, sales, marketing
-  if (!['admin', 'sales', 'marketing'].includes(req.user.role)) {
-    return res.status(403).json({ error: 'წვდომა აკრძალულია.' });
-  }
-
-  const {
-    service_name,
-    description,
-    year_selection,
-    service_type,
-    start_date,
-    end_date,
-    is_active = true
-  } = req.body;
-
-  const created_by_user_id = req.user.id;
-
-  try {
-    const result = await db.query(
-      `INSERT INTO annual_services
-       (service_name, description, year_selection, service_type, start_date, end_date, is_active, created_by_user_id, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING *`,
-      [service_name, description, year_selection, service_type, start_date, end_date, is_active, created_by_user_id]
-    );
-
-    res.status(201).json({
-      message: 'ივენთი წარმატებით დაემატა!',
-      event: result.rows[0]
-    });
-  } catch (error) {
-    console.error('შეცდომა ივენთის დამატებისას:', error);
-    res.status(500).json({
-      message: 'ივენთის დამატება ვერ მოხერხდა.',
-      error: error.message
-    });
-  }
-});
-
-// PUT: სერვისის განახლება
-app.put('/api/annual-services/:id', authenticateToken, async (req, res) => {
-  if (!['admin', 'sales', 'marketing'].includes(req.user.role)) {
-    return res.status(403).json({ error: 'წვდომა აკრძალულია.' });
-  }
-
-  const { id } = req.params;
-  const {
-    service_name,
-    description,
-    year_selection,
-    service_type,
-    start_date,
-    end_date,
-    is_active
-  } = req.body;
-
-  const updated_by_user_id = req.user.id;
-
-  try {
-    const result = await db.query(
-      `UPDATE annual_services
-       SET service_name = $1, description = $2, year_selection = $3,
-           service_type = $4, start_date = $5, end_date = $6, is_active = $7,
-           updated_by_user_id = $8, updated_at = NOW()
-       WHERE id = $9 RETURNING *`,
-      [service_name, description, year_selection, service_type, start_date, end_date, is_active, updated_by_user_id, id]
-    );
-
-    if (result.rows.length > 0) {
-      res.status(200).json({
-        message: 'ივენთი წარმატებით განახლდა!',
-        event: result.rows[0]
-      });
-    } else {
-      res.status(404).json({ message: 'ივენთი ვერ მოიძებნა.' });
-    }
-  } catch (error) {
-    console.error('შეცდომა ივენთის განახლებისას:', error);
-    res.status(500).json({
-      message: 'ივენთის განახლება ვერ მოხერხდა.',
-      error: error.message
-    });
-  }
-});
-
-// Error handling middleware for multer errors
-app.use((error, req, res, next) => {
-    console.error('Error occurred:', {
-        message: error.message,
-        stack: error.stack,
-        url: req.url,
-        method: req.method,
-        body: req.body,
-        headers: req.headers
-    });
-
-    if (error instanceof multer.MulterError) {
-        if (error.code === 'LIMIT_FILE_SIZE') {
-            return res.status(400).json({ message: 'ფაილი ძალიან დიდია. მაქსიმუმ 5MB.' });
-        }
-    }
-
-    if (error.message === 'მხოლოდ სურათების ფაილები დაშვებულია!') {
-        return res.status(400).json({ message: error.message });
-    }
-
-    res.status(500).json({ message: 'სერვერის შიდა შეცდომა', error: error.message });
-});
-
-// --- რეპორტების API ენდპოინტები ---
-
-// GET: ივენთების რეპორტები
-app.get('/api/reports/events', authenticateToken, async (req, res) => {
-    const { type, eventId, startDate, endDate } = req.query;
-
-    try {
-        let reportData = {};
-
-        switch (type) {
-            case 'participants':
-                if (!eventId) {
-                    return res.status(400).json({ message: 'ივენთის ID არ არის მითითებული' });
-                }
-
-                // მონაწილეების ანალიზი
-                const participantsResult = await db.query(`
-                    SELECT 
-                        ep.*, 
-                        c.company_name, 
-                        c.country, 
-                        c.identification_code
-                    FROM event_participants ep
-                    JOIN companies c ON ep.company_id = c.id
-                    WHERE ep.event_id = $1
-                    ${startDate ? 'AND ep.registration_date >= $2' : ''}
-                    ${endDate ? 'AND ep.registration_date <= $3' : ''}
-                    ORDER BY ep.registration_date DESC
-                `, eventId ? [eventId, startDate, endDate].filter(Boolean) : []);
-
-                const participants = participantsResult.rows;
-
-                reportData = {
-                    totalParticipants: participants.length,
-                    confirmedParticipants: participants.filter(p => p.registration_status === 'დადასტურებული').length,
-                    paidParticipants: participants.filter(p => p.payment_status === 'გადახდილი').length,
-                    totalRevenue: participants.reduce((sum, p) => sum + (parseFloat(p.payment_amount) || 0), 0),
-                    participants: participants
-                };
-                break;
-
-            case 'financial':
-                if (!eventId) {
-                    return res.status(400).json({ message: 'ივენთის ID არ არის მითითებული' });
-                }
-
-                // ფინანსური ანალიზი
-                const financialResult = await db.query(`
-                    SELECT 
-                        SUM(CASE WHEN payment_amount IS NOT NULL THEN payment_amount ELSE 0 END) as expected_revenue,
-                        SUM(CASE WHEN payment_status = 'გადახდილი' THEN payment_amount ELSE 0 END) as actual_revenue,
-                        SUM(CASE WHEN payment_due_date < CURRENT_DATE AND payment_status != 'გადახდილი' THEN payment_amount ELSE 0 END) as overdue_amount
-                    FROM event_participants 
-                    WHERE event_id = $1
-                `, [eventId]);
-
-                const financial = financialResult.rows[0];
-
-                reportData = {
-                    expectedRevenue: parseFloat(financial.expected_revenue) || 0,
-                    actualRevenue: parseFloat(financial.actual_revenue) || 0,
-                    overdueAmount: parseFloat(financial.overdue_amount) || 0
-                };
-                break;
-
-            case 'summary':
-                // ზოგადი მიმოხილვა
-                const summaryResult = await db.query(`
-                    SELECT 
-                        COUNT(DISTINCT s.id) as total_events,
-                        COUNT(DISTINCT CASE WHEN s.is_active = true THEN s.id END) as active_events,
-                        COUNT(DISTINCT ep.id) as total_participants,
-                        SUM(CASE WHEN ep.payment_status = 'გადახდილი' THEN ep.payment_amount ELSE 0 END) as total_revenue
-                    FROM annual_services s
-                    LEFT JOIN event_participants ep ON s.id = ep.event_id
-                    WHERE 1=1
-                    ${startDate ? 'AND s.start_date >= $1' : ''}
-                    ${endDate ? 'AND s.end_date <= $2' : ''}
-                `, [startDate, endDate].filter(Boolean));
-
-                const summary = summaryResult.rows[0];
-
-                reportData = {
-                    totalEvents: parseInt(summary.total_events) || 0,
-                    activeEvents: parseInt(summary.active_events) || 0,
-                    totalParticipants: parseInt(summary.total_participants) || 0,
-                    totalRevenue: parseFloat(summary.total_revenue) || 0
-                };
-                break;
-
-            default:
-                return res.status(400).json({ message: 'არასწორი რეპორტის ტიპი' });
-        }
-
-        res.status(200).json(reportData);
-    } catch (error) {
-        console.error('შეცდომა რეპორტის გენერაციისას:', error);
-        res.status(500).json({ message: 'რეპორტის გენერაცია ვერ მოხერხდა', error: error.message });
-    }
-});
-
-// GET: კომპანიების რეპორტები
-app.get('/api/reports/companies', authenticateToken, async (req, res) => {
-    const { startDate, endDate, country, status } = req.query;
-
-    try {
-        let query = `
-            SELECT 
-                c.*,
-                COUNT(DISTINCT ce.exhibition_id) as exhibitions_count,
-                COUNT(DISTINCT ep.event_id) as events_participated,
-                COALESCE(SUM(ep.payment_amount), 0) as total_payments
-            FROM companies c
-            LEFT JOIN company_exhibitions ce ON c.id = ce.company_id
-            LEFT JOIN event_participants ep ON c.id = ep.company_id
-            WHERE 1=1
-        `;
-
-        const params = [];
-        let paramIndex = 1;
-
-        if (startDate) {
-            query += ` AND c.created_at >= $${paramIndex}`;
-            params.push(startDate);
-            paramIndex++;
-        }
-
-        if (endDate) {
-            query += ` AND c.created_at <= $${paramIndex}`;
-            params.push(endDate);
-            paramIndex++;
-        }
-
-        if (country) {
-            query += ` AND c.country = $${paramIndex}`;
-            params.push(country);
-            paramIndex++;
-        }
-
-        if (status) {
-            query += ` AND c.status = $${paramIndex}`;
-            params.push(status);
-            paramIndex++;
-        }
-
-        query += ` GROUP BY c.id ORDER BY c.created_at DESC`;
-
-        const result = await db.query(query, params);
-
-        const reportData = {
-            companies: result.rows,
-            totalCompanies: result.rows.length,
-            totalRevenue: result.rows.reduce((sum, c) => sum + parseFloat(c.total_payments), 0)
-        };
-
-        res.status(200).json(reportData);
-    } catch (error) {
-        console.error('შეცდომა კომპანიების რეპორტის გენერაციისას:', error);
-        res.status(500).json({ message: 'კომპანიების რეპორტის გენერაცია ვერ მოხერხდა', error: error.message });
-    }
-});
-
-// Routes იმპორტები - მხოლოდ არსებული ფაილებისთვის
-// app.use('/api/auth', require('./routes/auth')); // ეს ფაილი არ არსებობს
-app.use('/api/companies', require('./routes/companies'));
-app.use('/api/equipment', require('./routes/equipment'));
-// app.use('/api/annual-services', require('./routes/annualServices')); // ეს ფაილი არ არსებობს
-// app.use('/api/events', require('./routes/events')); // ეს ფაილი არ არსებობს
-app.use('/api/statistics', require('./routes/statistics'));
-
-// Spaces API
-app.get('/api/spaces', authenticateToken, async (req, res) => {
-  try {
-    const query = `
-      SELECT s.*, 
-             u1.username as created_by,
-             u2.username as updated_by
-      FROM spaces s
-      LEFT JOIN users u1 ON s.created_by_user_id = u1.id
-      LEFT JOIN users u2 ON s.updated_by_user_id = u2.id
-      ORDER BY s.created_at DESC
-    `;
-    const [rows] = await db.execute(query);
-    res.json(rows);
-  } catch (error) {
-    console.error('Error fetching spaces:', error);
-    res.status(500).json({ message: 'სივრცეების მიღება ვერ მოხერხდა' });
-  }
-});
-
-// Exhibitions API
-app.get('/api/exhibitions', authenticateToken, async (req, res) => {
-  try {
-    const query = `
-      SELECT e.*, 
-             u1.username as created_by,
-             u2.username as updated_by
-      FROM exhibitions e
-      LEFT JOIN users u1 ON e.created_by_user_id = u1.id
-      LEFT JOIN users u2 ON e.updated_by_user_id = u2.id
-      ORDER BY e.created_at DESC
-    `;
-    const [rows] = await db.execute(query);
-    res.json(rows);
-  } catch (error) {
-    console.error('Error fetching exhibitions:', error);
-    res.status(500).json({ message: 'გამოფენების მიღება ვერ მოხერხდა' });
-  }
-});
-
-// Events API (annual services)
-app.get('/api/events', authenticateToken, async (req, res) => {
-  try {
-    const query = `
-      SELECT a.*, 
-             u1.username as created_by,
-             u2.username as updated_by
-      FROM annual_services a
-      LEFT JOIN users u1 ON a.created_by_user_id = u1.id
-      LEFT JOIN users u2 ON a.updated_by_user_id = u2.id
-      ORDER BY a.created_at DESC
-    `;
-    const [rows] = await db.execute(query);
-    res.json(rows);
-  } catch (error) {
-    console.error('Error fetching events:', error);
-    res.status(500).json({ message: 'ივენთების მიღება ვერ მოხერხდა' });
-  }
-});
-
-// --- ნოტიფიკაციების API ენდპოინტები ---
-
-// GET: მომხმარებლის ნოტიფიკაციების მიღება
-app.get('/api/notifications', authenticateToken, async (req, res) => {
-    try {
-        // ჯერ შევქმნათ notifications ცხრილი თუ არ არსებობს
-        await db.query(`
-            CREATE TABLE IF NOT EXISTS notifications (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-                title VARCHAR(255) NOT NULL,
-                message TEXT NOT NULL,
-                type VARCHAR(50) DEFAULT 'info',
-                is_read BOOLEAN DEFAULT FALSE,
-                related_entity_type VARCHAR(50),
-                related_entity_id INTEGER,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
-
-        const result = await db.query(`
-            SELECT * FROM notifications 
-            WHERE user_id = $1 OR user_id IS NULL
-            ORDER BY created_at DESC 
-            LIMIT 50
-        `, [req.user.id]);
-
-        res.status(200).json(result.rows);
-    } catch (error) {
-        console.error('შეცდომა ნოტიფიკაციების მიღებისას:', error);
-        res.status(500).json({ message: 'ნოტიფიკაციების მიღება ვერ მოხერხდა', error: error.message });
-    }
-});
-
-// PUT: ნოტიფიკაციის წაკითხულად მონიშვნა
-app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
-    const { id } = req.params;
-
-    try {
-        const result = await db.query(`
-            UPDATE notifications 
-            SET is_read = TRUE 
-            WHERE id = $1 AND (user_id = $2 OR user_id IS NULL)
-            RETURNING *
-        `, [id, req.user.id]);
-
-        if (result.rows.length > 0) {
-            res.status(200).json({ message: 'ნოტიფიკაცია წაკითხულად მონიშნულია' });
-        } else {
-            res.status(404).json({ message: 'ნოტიფიკაცია ვერ მოიძებნა' });
-        }
-    } catch (error) {
-        console.error('შეცდომა ნოტიფიკაციის განახლებისას:', error);
-        res.status(500).json({ message: 'ნოტიფიკაციის განახლება ვერ მოხერხდა', error: error.message });
-    }
-});
-
-// POST: ახალი ნოტიფიკაციის შექმნა (ადმინისთვის)
-app.post('/api/notifications', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'admin') {
-        return res.status(403).json({ error: 'წვდომა აკრძალულია' });
-    }
-
-    const { title, message, type, user_id, related_entity_type, related_entity_id } = req.body;
-
-    try {
-        const result = await db.query(`
-            INSERT INTO notifications (title, message, type, user_id, related_entity_type, related_entity_id)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING *
-        `, [title, message, type || 'info', user_id || null, related_entity_type || null, related_entity_id || null]);
-
-        res.status(201).json({ message: 'ნოტიფიკაცია წარმატებით შეიქმნა', notification: result.rows[0] });
-    } catch (error) {
-        console.error('შეცდომა ნოტიფიკაციის შექმნისას:', error);
-        res.status(500).json({ message: 'ნოტიფიკაციის შექმნა ვერ მოხერხდა', error: error.message });
-    }
-});
-
-// --- დოკუმენტების გენერაციის API ენდპოინტები ---
-
-// GET: ინვოისის გენერაცია
-app.get('/api/documents/invoice/:participantId', authenticateToken, async (req, res) => {
-    const { participantId } = req.params;
-
-    try {
-        const participantResult = await db.query(`
-            SELECT 
-                ep.*,
-                c.company_name,
-                c.legal_address,
-                c.identification_code,
-                c.contact_persons,
-                s.service_name,
-                s.start_date,
-                s.end_date
-            FROM event_participants ep
-            JOIN companies c ON ep.company_id = c.id
-            JOIN annual_services s ON ep.event_id = s.id
-            WHERE ep.id = $1
-        `, [participantId]);
-
-        if (participantResult.rows.length === 0) {
-            return res.status(404).json({ message: 'მონაწილე ვერ მოიძებნა' });
-        }
-
-        const participant = participantResult.rows[0];
-
-        // ინვოისის ნომრის გენერაცია თუ არ არსებობს
-        let invoiceNumber = participant.invoice_number;
-        if (!invoiceNumber) {
-            const date = new Date();
-            invoiceNumber = `INV-${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(participantId).padStart(4, '0')}`;
-
-            // ინვოისის ნომრის შენახვა მონაცემთა ბაზაში
-            await db.query(`
-                UPDATE event_participants 
-                SET invoice_number = $1 
-                WHERE id = $2
-            `, [invoiceNumber, participantId]);
-        }
-
-        const invoiceData = {
-            invoiceNumber,
-            issueDate: new Date().toLocaleDateString('ka-GE'),
-            dueDate: participant.payment_due_date ? new Date(participant.payment_due_date).toLocaleDateString('ka-GE') : null,
-            company: {
-                name: participant.company_name,
-                address: participant.legal_address,
-                identificationCode: participant.identification_code,
-                contactPersons: participant.contact_persons
-            },
-            event: {
-                name: participant.service_name,
-                startDate: new Date(participant.start_date).toLocaleDateString('ka-GE'),
-                endDate: new Date(participant.end_date).toLocaleDateString('ka-GE')
-            },
-            services: [
-                {
-                    description: `მონაწილეობა ივენთში: ${participant.service_name}`,
-                    boothNumber: participant.booth_number,
-                    boothSize: participant.booth_size,
-                    amount: participant.payment_amount || 0
-                }
-            ],
-            totalAmount: participant.payment_amount || 0,
-            paymentStatus: participant.payment_status,
-            notes: participant.notes
-        };
-
-        res.status(200).json(invoiceData);
-    } catch (error) {
-        console.error('შეცდომა ინვოისის გენერაციისას:', error);
-        res.status(500).json({ message: 'ინვოისის გენერაცია ვერ მოხერხდა', error: error.message });
-    }
-});
-
-// GET: ხელშეკრულების გენერაცია
-app.get('/api/documents/contract/:participantId', authenticateToken, async (req, res) => {
-    const { participantId } = req.params;
-
-    try {
-        const participantResult = await db.query(`
-            SELECT 
-                ep.*,
-                c.*,
-                s.service_name,
-                s.description as event_description,
-                s.start_date,
-                s.end_date
-            FROM event_participants ep
-            JOIN companies c ON ep.company_id = c.id
-            JOIN annual_services s ON ep.event_id = s.id
-            WHERE ep.id = $1
-        `, [participantId]);
-
-        if (participantResult.rows.length === 0) {
-            return res.status(404).json({ message: 'მონაწილე ვერ მოიძებნა' });
-        }
-
-        const participant = participantResult.rows[0];
-
-        const contractData = {
-            contractNumber: `CONTRACT-${new Date().getFullYear()}-${String(participantId).padStart(4, '0')}`,
-            date: new Date().toLocaleDateString('ka-GE'),
-            company: {
-                name: participant.company_name,
-                address: participant.legal_address,
-                identificationCode: participant.identification_code,
-                contactPersons: participant.contact_persons,
-                website: participant.website
-            },
-            event: {
-                name: participant.service_name,
-                description: participant.event_description,
-                startDate: new Date(participant.start_date).toLocaleDateString('ka-GE'),
-                endDate: new Date(participant.end_date).toLocaleDateString('ka-GE')
-            },
-            terms: {
-                boothNumber: participant.booth_number,
-                boothSize: participant.booth_size,
-                paymentAmount: participant.payment_amount || 0,
-                paymentDueDate: participant.payment_due_date ? new Date(participant.payment_due_date).toLocaleDateString('ka-GE') : null,
-                paymentMethod: participant.payment_method
-            },
-            notes: participant.notes
-        };
-
-        res.status(200).json(contractData);
-    } catch (error) {
-        console.error('შეცდომა ხელშეკრულების გენერაციისას:', error);
-        res.status(500).json({ message: 'ხელშეკრულების გენერაცია ვერ მოხერხდა', error: error.message });
-    }
-});
-
+// Start server
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`სერვერი გაშვებულია http://0.0.0.0:${PORT}`);
-  console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
-  console.log(`მონაცემთა ბაზის კავშირი: ${process.env.DATABASE_URL ? 'კონფიგურირებული' : 'არ არის'}`);
+  console.log(`სერვერი მუშაობს პორტზე ${PORT}`);
 });

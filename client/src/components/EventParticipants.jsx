@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './EventParticipants.css';
+import InvoiceForm from './InvoiceForm';
 
 const EventParticipants = ({ eventId, eventName, onClose, showNotification, userRole }) => {
   const [participants, setParticipants] = useState([]);
@@ -14,20 +15,15 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
   const [countryFilter, setCountryFilter] = useState('');
   const [formData, setFormData] = useState({
     company_id: '',
+    registration_status: 'მონაწილეობის მოთხოვნა',
+    payment_status: 'მომლოდინე',
     booth_number: '',
     booth_size: '',
     notes: '',
-    contact_person: '',
-    contact_position: '',
-    contact_email: '',
-    contact_phone: '',
     payment_amount: '',
     payment_due_date: '',
     payment_method: '',
-    invoice_number: '',
-    invoice_file: null,
-    contract_file: null,
-    handover_file: null
+    invoice_number: ''
   });
   const [files, setFiles] = useState({
     invoice_file: null,
@@ -37,17 +33,43 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
   const [availableEquipment, setAvailableEquipment] = useState([]);
   const [selectedEquipment, setSelectedEquipment] = useState([]);
   const [equipmentTotal, setEquipmentTotal] = useState(0);
+  const [showCompanyDetails, setShowCompanyDetails] = useState(false);
+  const [selectedCompanyForDetails, setSelectedCompanyForDetails] = useState(null);
+  const [loadingCompanyDetails, setLoadingCompanyDetails] = useState(false);
+  const [exhibitionData, setExhibitionData] = useState(null);
+  const [showInvoiceForm, setShowInvoiceForm] = useState(false);
+  const [selectedParticipantForInvoice, setSelectedParticipantForInvoice] = useState(null);
+  const [eventDetails, setEventDetails] = useState(null);
 
-  const isAuthorizedForManagement = 
-    userRole === 'admin' || 
-    userRole === 'sales' || 
+
+  const isAuthorizedForManagement =
+    userRole === 'admin' ||
+    userRole === 'sales' ||
     userRole === 'marketing';
 
   useEffect(() => {
     fetchParticipants();
     fetchCompanies();
     fetchAvailableEquipment();
+    fetchEventDetails();
+    fetchExhibitionData(); // Fetch exhibition data for price calculation
   }, [eventId]);
+
+  const fetchEventDetails = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/events/${eventId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setEventDetails(data);
+      }
+    } catch (error) {
+      console.error('ივენთის დეტალების მიღების შეცდომა:', error);
+    }
+  };
 
   // აღჭურვილობის ჯამური ღირებულების გათვლა
   useEffect(() => {
@@ -57,6 +79,32 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
     setEquipmentTotal(total);
   }, [selectedEquipment]);
 
+  // ავტომატური გადახდის თანხის გათვლა (სტენდი + აღჭურვილობა)
+  useEffect(() => {
+    let calculatedAmount = 0;
+
+    // სტენდის ღირებულების გათვლა
+    if (formData.booth_size && exhibitionData && exhibitionData.price_per_sqm) {
+      const boothSize = parseFloat(formData.booth_size);
+      const pricePerSqm = parseFloat(exhibitionData.price_per_sqm);
+
+      if (!isNaN(boothSize) && !isNaN(pricePerSqm) && boothSize > 0 && pricePerSqm > 0) {
+        calculatedAmount = boothSize * pricePerSqm;
+        console.log(`სტენდის ღირებულება: ${boothSize} × ${pricePerSqm} = ${calculatedAmount}`);
+      }
+    }
+
+    // აღჭურვილობის ღირებულების დამატება
+    calculatedAmount += equipmentTotal;
+    console.log(`ჯამური თანხა: სტენდი ${calculatedAmount - equipmentTotal} + აღჭურვილობა ${equipmentTotal} = ${calculatedAmount}`);
+
+    // თანხის განახლება - ყოველთვის განვაახლოთ, თუნდაც 0 იყოს
+    setFormData(prev => ({
+      ...prev,
+      payment_amount: calculatedAmount.toFixed(2)
+    }));
+  }, [formData.booth_size, exhibitionData, equipmentTotal]);
+
   // ფილტრაცია და ძიება
   useEffect(() => {
     let filtered = participants;
@@ -65,8 +113,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
     if (searchTerm) {
       filtered = filtered.filter(participant =>
         participant.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        participant.identification_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (participant.contact_person && participant.contact_person.toLowerCase().includes(searchTerm.toLowerCase()))
+        participant.identification_code.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -172,6 +219,42 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
     }
   };
 
+  const fetchExhibitionData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/events/${eventId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const eventData = await response.json();
+        console.log('ივენთის მონაცემები:', eventData);
+
+        if (eventData.exhibition_id) {
+          console.log(`ვანახვებ გამოფენას ID-ით: ${eventData.exhibition_id}`);
+          const exhibitionResponse = await fetch(`/api/exhibitions/${eventData.exhibition_id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+
+          if (exhibitionResponse.ok) {
+            const exhibitionInfo = await exhibitionResponse.json();
+            setExhibitionData(exhibitionInfo);
+            console.log('გამოფენის მონაცემები მიღებულია:', exhibitionInfo);
+            console.log('price_per_sqm:', exhibitionInfo.price_per_sqm);
+          } else {
+            console.error('გამოფენის მონაცემების მიღება ვერ მოხერხდა:', exhibitionResponse.status);
+          }
+        } else {
+          console.log('ივენთს არ აქვს exhibition_id');
+        }
+      } else {
+        console.error('ივენთის მონაცემების მიღება ვერ მოხერხდა:', response.status);
+      }
+    } catch (error) {
+      console.error('გამოფენის მონაცემების მიღების შეცდომა:', error);
+    }
+  };
+
   const fetchParticipantEquipment = async (participantId) => {
     try {
       const token = localStorage.getItem('token');
@@ -208,7 +291,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
     try {
       const token = localStorage.getItem('token');
       const method = editingParticipant ? 'PUT' : 'POST';
-      const url = editingParticipant 
+      const url = editingParticipant
         ? `/api/events/${eventId}/participants/${editingParticipant.id}`
         : `/api/events/${eventId}/participants`;
 
@@ -217,7 +300,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
 
       // Add form fields
       Object.keys(formData).forEach(key => {
-        if (formData[key]) {
+        if (formData[key] !== null && formData[key] !== '') { // Append only if not null or empty
           submitData.append(key, formData[key]);
         }
       });
@@ -231,7 +314,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
 
       // Add equipment bookings
       if (selectedEquipment.length > 0) {
-        const validEquipment = selectedEquipment.filter(eq => 
+        const validEquipment = selectedEquipment.filter(eq =>
           eq.equipment_id && eq.quantity > 0
         );
         submitData.append('equipment_bookings', JSON.stringify(validEquipment));
@@ -252,100 +335,57 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
       if (response.ok) {
         const data = await response.json();
         console.log('Success response:', data);
-        showNotification(data.message, 'success');
+        showNotification(data.message || 'ოპერაცია წარმატებით დასრულდა', 'success');
         fetchParticipants();
         resetForm();
       } else {
         const errorText = await response.text();
         console.error('Error response:', errorText);
 
+        let errorMessage = 'შეცდომა მოთხოვნის დამუშავებისას';
         try {
           const errorData = JSON.parse(errorText);
-          showNotification(errorData.message || 'შეცდომა მოთხოვნის დამუშავებისას', 'error');
+          errorMessage = errorData.message || errorMessage;
         } catch (parseError) {
-          showNotification(`სერვერის შეცდომა: ${response.status}`, 'error');
+          errorMessage = `სერვერის შეცდომა: ${response.status}`;
         }
+        showNotification(errorMessage, 'error');
       }
     } catch (error) {
       console.error('Network error:', error);
-      showNotification('შეცდომა მოთხოვნის დამუშავებისას', 'error');
+      showNotification('შეცდომა ქსელურ მოთხოვნაში', 'error');
     }
   };
 
   const handleCompanyChange = (companyId) => {
-    const selectedCompany = companies.find(c => c.id == companyId);
-
-    if (selectedCompany && selectedCompany.contact_persons) {
-      try {
-        // Parse contact_persons JSON
-        const contactPersons = typeof selectedCompany.contact_persons === 'string' 
-          ? JSON.parse(selectedCompany.contact_persons) 
-          : selectedCompany.contact_persons;
-
-        // Get all contact persons info
-        if (Array.isArray(contactPersons) && contactPersons.length > 0) {
-          // Create single line format for each contact person: Name (Position); email, phone
-          const contactLines = contactPersons.map(cp => {
-            const parts = [];
-
-            // Name and position
-            if (cp.name) {
-              let nameWithPosition = cp.name;
-              if (cp.position) nameWithPosition += ` (${cp.position})`;
-              parts.push(nameWithPosition);
-            }
-
-            return parts.filter(Boolean).join(' ');
-          }).filter(Boolean);
-
-          // Get all emails, phones, and positions
-          const emailLines = contactPersons.map(cp => cp.email).filter(Boolean);
-          const phoneLines = contactPersons.map(cp => cp.phone).filter(Boolean);
-          const positionLines = contactPersons.map(cp => cp.position).filter(Boolean);
-
-          setFormData(prev => ({
-            ...prev,
-            company_id: companyId,
-            contact_person: contactLines.join('\n') || prev.contact_person,
-            contact_position: positionLines.join('\n') || prev.contact_position,
-            contact_email: emailLines.join('\n') || prev.contact_email,
-            contact_phone: phoneLines.join('\n') || prev.contact_phone
-          }));
-        } else if (contactPersons && typeof contactPersons === 'object') {
-          // Single contact person object
-          setFormData(prev => ({
-            ...prev,
-            company_id: companyId,
-            contact_person: contactPersons.name || prev.contact_person,
-            contact_position: contactPersons.position || prev.contact_position,
-            contact_email: contactPersons.email || prev.contact_email,
-            contact_phone: contactPersons.phone || prev.contact_phone
-          }));
-        } else {
-          setFormData(prev => ({
-            ...prev,
-            company_id: companyId
-          }));
-        }
-      } catch (error) {
-        console.error('Error parsing contact persons:', error);
-        setFormData(prev => ({
-          ...prev,
-          company_id: companyId
-        }));
-      }
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        company_id: companyId
-      }));
-    }
+    setFormData(prev => ({
+      ...prev,
+      company_id: companyId
+    }));
   };
 
   const handleEdit = (participant) => {
+    console.log('Editing participant:', participant);
     setEditingParticipant(participant);
+
+    // Calculate correct payment amount based on booth + equipment
+    const participantEquipment = participant.equipment_bookings || [];
+    const currentEquipmentTotal = participantEquipment.reduce((sum, booking) => {
+      const unitPrice = parseFloat(booking.unit_price) || 0;
+      const quantity = parseInt(booking.quantity) || 0;
+      return sum + (unitPrice * quantity);
+    }, 0);
+
+    const boothSize = parseFloat(participant.booth_size) || 0;
+    const pricePerSqm = parseFloat(exhibitionData?.price_per_sqm) || 0;
+    const boothTotal = boothSize * pricePerSqm;
+
+    const calculatedTotal = boothTotal + currentEquipmentTotal;
+
     setFormData({
-      company_id: participant.company_id,
+      company_id: participant.company_id || '',
+      registration_status: participant.registration_status || 'მონაწილეობის მოთხოვნა',
+      payment_status: participant.payment_status || 'მომლოდინე',
       booth_number: participant.booth_number || '',
       booth_size: participant.booth_size || '',
       notes: participant.notes || '',
@@ -353,15 +393,30 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
       contact_position: participant.contact_position || '',
       contact_email: participant.contact_email || '',
       contact_phone: participant.contact_phone || '',
-      registration_status: participant.registration_status,
-      payment_status: participant.payment_status,
-      payment_amount: participant.payment_amount || '',
-      payment_due_date: participant.payment_due_date || '',
+      payment_amount: participant.payment_amount || calculatedTotal.toFixed(2),
+      payment_due_date: participant.payment_due_date ? participant.payment_due_date.split('T')[0] : '',
       payment_method: participant.payment_method || '',
       invoice_number: participant.invoice_number || ''
     });
+    
+    // Load participant's equipment
     fetchParticipantEquipment(participant.id);
+    
+    // Show the form
     setShowAddForm(true);
+    
+    // Ensure exhibition data is loaded for price calculation
+    if (!exhibitionData) {
+      fetchExhibitionData();
+    }
+
+    // Scroll to form
+    setTimeout(() => {
+      const formElement = document.querySelector('.participant-form');
+      if (formElement) {
+        formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
   };
 
   const addEquipmentItem = () => {
@@ -370,38 +425,92 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
       code_name: '',
       quantity: 1,
       unit_price: 0,
-      available_quantity: 0
+      total_price: 0,
+      available_quantity: 0 // Initial value, will be updated when equipment is selected
     }]);
   };
 
   const removeEquipmentItem = (index) => {
-    const newEquipment = selectedEquipment.filter((_, i) => i !== index);
+    const newEquipment = [...selectedEquipment];
+    newEquipment.splice(index, 1);
     setSelectedEquipment(newEquipment);
+    // Recalculate total after removal
+    const newEquipmentTotal = calculateEquipmentTotal(newEquipment);
+    setEquipmentTotal(newEquipmentTotal);
+    // Update payment amount
+    const totalPayment = calculateTotalPaymentAmount(formData.booth_size, newEquipment, { price_per_sqm: eventData?.price_per_sqm });
+    setFormData(prev => ({ ...prev, payment_amount: totalPayment.toFixed(2) }));
   };
 
-  const updateEquipmentItem = (index, field, value) => {
-    const newEquipment = [...selectedEquipment];
+  const calculateEquipmentTotal = (equipmentList) => {
+    return equipmentList.reduce((total, item) => {
+      const unitPrice = parseFloat(item.unit_price) || 0;
+      const quantity = parseInt(item.quantity) || 1; // Default quantity to 1 if not set
+      return total + (unitPrice * quantity);
+    }, 0);
+  };
 
-    if (field === 'equipment_id') {
-      const selectedEquip = availableEquipment.find(eq => eq.id == value);
-      if (selectedEquip) {
-        newEquipment[index] = {
-          ...newEquipment[index],
-          equipment_id: value,
-          code_name: selectedEquip.code_name,
-          unit_price: selectedEquip.price,
-          available_quantity: selectedEquip.available_quantity,
-          quantity: Math.min(newEquipment[index].quantity, selectedEquip.available_quantity)
-        };
-      }
-    } else if (field === 'quantity') {
-      const maxQuantity = newEquipment[index].available_quantity || 0;
-      newEquipment[index][field] = Math.min(Math.max(1, parseInt(value) || 1), maxQuantity);
-    } else {
-      newEquipment[index][field] = value;
+  const calculateTotalPaymentAmount = (boothSize, equipmentList, eventData) => {
+    const equipmentTotal = calculateEquipmentTotal(equipmentList);
+    let boothTotal = 0;
+
+    const size = parseFloat(boothSize) || 0;
+    const pricePerSqm = parseFloat(eventData?.price_per_sqm) || 0;
+
+    if (size > 0 && pricePerSqm > 0) {
+      boothTotal = size * pricePerSqm;
     }
 
-    setSelectedEquipment(newEquipment);
+    return boothTotal + equipmentTotal;
+  };
+
+
+  const handleEquipmentChange = (index, field, value) => {
+    const updatedEquipment = [...selectedEquipment];
+    const item = updatedEquipment[index];
+
+    item[field] = value;
+
+    // Update unit_price and total_price based on selected equipment
+    if (field === 'equipment_id') {
+      const selectedEquip = availableEquipment.find(eq => eq.id === parseInt(value));
+      if (selectedEquip) {
+        item.code_name = selectedEquip.code_name;
+        item.unit_price = parseFloat(selectedEquip.price) || 0;
+        item.available_quantity = selectedEquip.available_quantity;
+        item.total_price = parseFloat((parseInt(item.quantity || 1) * parseFloat(selectedEquip.price || 0)).toFixed(2));
+      } else {
+        item.code_name = '';
+        item.unit_price = 0;
+        item.available_quantity = 0;
+        item.total_price = 0;
+      }
+    } else if (field === 'quantity') {
+      const quantity = parseInt(value) || 0;
+      item.quantity = quantity;
+      item.total_price = parseFloat((quantity * parseFloat(item.unit_price || 0)).toFixed(2));
+    } else if (field === 'unit_price') {
+      const unitPrice = parseFloat(value) || 0;
+      item.unit_price = unitPrice;
+      item.total_price = parseFloat((parseInt(item.quantity || 1) * unitPrice).toFixed(2));
+    }
+
+    setSelectedEquipment(updatedEquipment);
+
+    const newEquipmentTotal = calculateEquipmentTotal(updatedEquipment);
+    setEquipmentTotal(newEquipmentTotal);
+
+    // Calculate total payment amount (booth + equipment)
+    const totalPayment = calculateTotalPaymentAmount(
+      formData.booth_size,
+      updatedEquipment,
+      { price_per_sqm: eventDetails?.price_per_sqm }
+    );
+
+    setFormData(prev => ({
+      ...prev,
+      payment_amount: totalPayment.toFixed(2)
+    }));
   };
 
   const handleDelete = async (participantId) => {
@@ -419,9 +528,10 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
         fetchParticipants();
       } else {
         const errorData = await response.json();
-        showNotification(errorData.message, 'error');
+        showNotification(errorData.message || 'მონაწილის წაშლა ვერ მოხერხდა', 'error');
       }
     } catch (error) {
+      console.error('Delete error:', error);
       showNotification('შეცდომა წაშლისას', 'error');
     }
   };
@@ -429,20 +539,15 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
   const resetForm = () => {
     setFormData({
       company_id: '',
+      registration_status: 'მონაწილეობის მოთხოვნა',
+      payment_status: 'მომლოდინე',
       booth_number: '',
       booth_size: '',
       notes: '',
-      contact_person: '',
-      contact_position: '',
-      contact_email: '',
-      contact_phone: '',
       payment_amount: '',
       payment_due_date: '',
       payment_method: '',
-      invoice_number: '',
-      invoice_file: null,
-      contract_file: null,
-      handover_file: null
+      invoice_number: ''
     });
     setFiles({
       invoice_file: null,
@@ -460,6 +565,77 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
     setStatusFilter('');
     setPaymentFilter('');
     setCountryFilter('');
+  };
+
+  const fetchCompanyDetails = async (companyId) => {
+    setLoadingCompanyDetails(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/companies/${companyId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!response.ok) {
+        throw new Error('კომპანიის დეტალების მიღება ვერ მოხერხდა');
+      }
+
+      const companyData = await response.json();
+
+      // contact_persons-ის სწორი დამუშავება
+      if (companyData.contact_persons) {
+        if (Array.isArray(companyData.contact_persons)) {
+          // თუ უკვე array-ია, დავტოვოთ ისეთი როგორიცაა
+          companyData.contact_persons = companyData.contact_persons;
+        } else if (typeof companyData.contact_persons === 'string') {
+          try {
+            // თუ string-ია, ვცადოთ parsing
+            if (companyData.contact_persons === '[object Object]') {
+              companyData.contact_persons = [];
+            } else {
+              companyData.contact_persons = JSON.parse(companyData.contact_persons);
+            }
+          } catch (parseError) {
+            console.error('Contact persons parsing error:', parseError);
+            companyData.contact_persons = [];
+          }
+        } else {
+          companyData.contact_persons = [];
+        }
+      } else {
+        companyData.contact_persons = [];
+      }
+
+      // დარწმუნდეთ რომ contact_persons არის array
+      if (!Array.isArray(companyData.contact_persons)) {
+        companyData.contact_persons = [];
+      }
+
+      setSelectedCompanyForDetails(companyData);
+      setShowCompanyDetails(true);
+    } catch (error) {
+      console.error('კომპანიის დეტალების მიღება ვერ მოხერხდა', error);
+      showNotification('კომპანიის დეტალების მიღება ვერ მოხერხდა', 'error');
+    } finally {
+      setLoadingCompanyDetails(false);
+    }
+  };
+
+  const showCompanyDetailsModal = async (participant) => {
+    await fetchCompanyDetails(participant.company_id);
+  };
+
+  const handleGenerateInvoice = (participant) => {
+    setSelectedParticipantForInvoice({
+      ...participant,
+      event_id: eventId
+    });
+    setShowInvoiceForm(true);
+  };
+
+  const closeInvoiceForm = () => {
+    setShowInvoiceForm(false);
+    setSelectedParticipantForInvoice(null);
+    fetchParticipants(); // რეფრეში მონაწილეების სიის
   };
 
   // უნიკალური ქვეყნების სია
@@ -482,6 +658,33 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
       'არ არის საჭიროო': 'not-required'
     };
     return statusMap[status] || 'pending';
+  };
+
+  // Helper function to format date (used in participant display)
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    } catch (e) {
+      console.error("Date formatting error:", e);
+      return dateString; // Return original string if formatting fails
+    }
+  };
+
+  const calculateTotalPayment = () => {
+    const equipmentTotal = selectedEquipment.reduce((total, item) => {
+      return total + (item.quantity * item.unit_price);
+    }, 0);
+
+    const boothSize = parseFloat(formData.booth_size) || 0;
+    const pricePerSqm = eventDetails?.price_per_sqm || 0;
+    const exhibitionTotal = boothSize * pricePerSqm;
+
+    return exhibitionTotal + equipmentTotal;
   };
 
   if (loading) return <div>იტვირთება...</div>;
@@ -507,7 +710,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                   className="search-input"
                 />
               </div>
-              <button 
+              <button
                 className="reset-filters-btn"
                 onClick={resetFilters}
                 title="ფილტრების გასუფთავება"
@@ -517,7 +720,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
             </div>
 
             <div className="filters-row">
-              <select 
+              <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="filter-select"
@@ -529,7 +732,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                 <option value="გაუქმებული">გაუქმებული</option>
               </select>
 
-              <select 
+              <select
                 value={paymentFilter}
                 onChange={(e) => setPaymentFilter(e.target.value)}
                 className="filter-select"
@@ -540,7 +743,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                 <option value="არ არის საჭიროო">არ არის საჭიროო</option>
               </select>
 
-              <select 
+              <select
                 value={countryFilter}
                 onChange={(e) => setCountryFilter(e.target.value)}
                 className="filter-select"
@@ -555,9 +758,15 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
 
           {isAuthorizedForManagement && (
             <div className="participants-actions">
-              <button 
+              <button
                 className="add-participant-btn"
-                onClick={() => setShowAddForm(true)}
+                onClick={() => {
+                  resetForm(); // Reset form before adding new
+                  setShowAddForm(true);
+                  if (!exhibitionData) { // Fetch exhibition data if not already loaded for price calculation
+                    fetchExhibitionData();
+                  }
+                }}
               >
                 ახალი მონაწილის დამატება
               </button>
@@ -571,7 +780,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                 <div className="form-row">
                   <div className="form-group">
                     <label>კომპანია *</label>
-                    <select 
+                    <select
                       value={formData.company_id}
                       onChange={(e) => handleCompanyChange(e.target.value)}
                       required
@@ -586,7 +795,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                   </div>
                   <div className="form-group">
                     <label>სტენდის ნომერი</label>
-                    <input 
+                    <input
                       type="text"
                       value={formData.booth_number}
                       onChange={(e) => setFormData({...formData, booth_number: e.target.value})}
@@ -594,58 +803,33 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                   </div>
                   <div className="form-group">
                     <label>სტენდის ზომა (მ²)</label>
-                    <input 
+                    <input
                       type="number"
                       step="0.1"
                       value={formData.booth_size}
                       onChange={(e) => setFormData({...formData, booth_size: e.target.value})}
+                      onBlur={(e) => { // Recalculate on blur to ensure it uses the latest exhibitionData
+                        const totalPayment = calculateTotalPaymentAmount(
+                          e.target.value,
+                          selectedEquipment,
+                          { price_per_sqm: eventDetails?.price_per_sqm }
+                        );
+                        setFormData(prev => ({ ...prev, payment_amount: totalPayment.toFixed(2) }));
+                      }}
                     />
+                    {eventDetails?.price_per_sqm && (
+                      <small>1 მ² = €{parseFloat(eventDetails.price_per_sqm).toFixed(2)}</small>
+                    )}
                   </div>
                 </div>
 
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>საკონტაქტო პირი</label>
-                    <input 
-                      type="text"
-                      value={formData.contact_person}
-                      onChange={(e) => setFormData({...formData, contact_person: e.target.value})}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>პოზიცია</label>
-                    <input 
-                      type="text"
-                      value={formData.contact_position}
-                      onChange={(e) => setFormData({...formData, contact_position: e.target.value})}
-                    />
-                  </div>
-                </div>
 
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>ელ-ფოსტა</label>
-                    <input 
-                      type="email"
-                      value={formData.contact_email}
-                      onChange={(e) => setFormData({...formData, contact_email: e.target.value})}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>ტელეფონი</label>
-                    <input 
-                      type="tel"
-                      value={formData.contact_phone}
-                      onChange={(e) => setFormData({...formData, contact_phone: e.target.value})}
-                    />
-                  </div>
-                </div>
 
                 {editingParticipant && (
                   <div className="form-row">
                     <div className="form-group">
                       <label>რეგისტრაციის სტატუსი</label>
-                      <select 
+                      <select
                         value={formData.registration_status}
                         onChange={(e) => setFormData({...formData, registration_status: e.target.value})}
                       >
@@ -657,7 +841,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                     </div>
                     <div className="form-group">
                       <label>გადახდის სტატუსი</label>
-                      <select 
+                      <select
                         value={formData.payment_status}
                         onChange={(e) => setFormData({...formData, payment_status: e.target.value})}
                       >
@@ -672,16 +856,24 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                 <div className="form-row">
                   <div className="form-group">
                     <label>გადასახდელი თანხა (€)</label>
-                    <input 
+                    <input
                       type="number"
                       step="0.01"
                       value={formData.payment_amount}
                       onChange={(e) => setFormData({...formData, payment_amount: e.target.value})}
+                      readOnly // Make it read-only as it's calculated
                     />
+                    <div className="payment-breakdown">
+                      {formData.booth_size && eventDetails?.price_per_sqm && (
+                        <small>სტენდის ღირებულება: €{(parseFloat(formData.booth_size || 0) * parseFloat(eventDetails.price_per_sqm || 0)).toFixed(2)}</small>
+                      )}
+                      <small>აღჭურვილობის ჯამი: €{equipmentTotal.toFixed(2)}</small>
+                      <small><strong>სულ: €{calculateTotalPaymentAmount(formData.booth_size, selectedEquipment, { price_per_sqm: eventDetails?.price_per_sqm }).toFixed(2)}</strong></small>
+                    </div>
                   </div>
                   <div className="form-group">
                     <label>გადახდის ვადა</label>
-                    <input 
+                    <input
                       type="date"
                       value={formData.payment_due_date}
                       onChange={(e) => setFormData({...formData, payment_due_date: e.target.value})}
@@ -689,7 +881,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                   </div>
                   <div className="form-group">
                     <label>გადახდის მეთოდი</label>
-                    <select 
+                    <select
                       value={formData.payment_method}
                       onChange={(e) => setFormData({...formData, payment_method: e.target.value})}
                     >
@@ -705,7 +897,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                 <div className="form-row">
                   <div className="form-group">
                     <label>ინვოისის ნომერი</label>
-                    <input 
+                    <input
                       type="text"
                       value={formData.invoice_number}
                       onChange={(e) => setFormData({...formData, invoice_number: e.target.value})}
@@ -717,8 +909,8 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                 <div className="equipment-section">
                   <div className="equipment-header">
                     <h4>აღჭურვილობის არჩევა</h4>
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       className="add-equipment-btn"
                       onClick={addEquipmentItem}
                     >
@@ -731,14 +923,14 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                       <div className="form-row">
                         <div className="form-group">
                           <label>აღჭურვილობა</label>
-                          <select 
+                          <select
                             value={item.equipment_id}
-                            onChange={(e) => updateEquipmentItem(index, 'equipment_id', e.target.value)}
+                            onChange={(e) => handleEquipmentChange(index, 'equipment_id', e.target.value)}
                             required
                           >
                             <option value="">აირჩიეთ აღჭურვილობა</option>
                             {availableEquipment
-                              .filter(eq => eq.available_quantity > 0)
+                              .filter(eq => eq.available_quantity > 0 || (eq.id === parseInt(item.equipment_id) && item.quantity > 0)) // Show if available OR if it's the currently selected item
                               .map(equipment => (
                                 <option key={equipment.id} value={equipment.id}>
                                   {equipment.code_name} (ხელმისაწვდომი: {equipment.available_quantity}, ფასი: €{equipment.price})
@@ -748,12 +940,11 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                         </div>
                         <div className="form-group">
                           <label>რაოდენობა</label>
-                          <input 
+                          <input
                             type="number"
-                            min="1"
-                            max={item.available_quantity || 1}
+                            min="0" // Allow 0 quantity if needed
                             value={item.quantity}
-                            onChange={(e) => updateEquipmentItem(index, 'quantity', e.target.value)}
+                            onChange={(e) => handleEquipmentChange(index, 'quantity', e.target.value)}
                             required
                           />
                           {item.available_quantity > 0 && (
@@ -762,26 +953,26 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                         </div>
                         <div className="form-group">
                           <label>ერთეულის ფასი (€)</label>
-                          <input 
+                          <input
                             type="number"
                             step="0.01"
                             value={item.unit_price}
-                            onChange={(e) => updateEquipmentItem(index, 'unit_price', e.target.value)}
-                            readOnly
+                            onChange={(e) => handleEquipmentChange(index, 'unit_price', e.target.value)}
+                            readOnly // Unit price is determined by selected equipment
                           />
                         </div>
                         <div className="form-group">
                           <label>ჯამი (€)</label>
-                          <input 
+                          <input
                             type="number"
                             step="0.01"
-                            value={(item.quantity * item.unit_price).toFixed(2)}
+                            value={item.total_price ? (typeof item.total_price === 'number' ? item.total_price.toFixed(2) : parseFloat(item.total_price || 0).toFixed(2)) : (0).toFixed(2)}
                             readOnly
                           />
                         </div>
                         <div className="form-group">
-                          <button 
-                            type="button" 
+                          <button
+                            type="button"
                             className="remove-equipment-btn"
                             onClick={() => removeEquipmentItem(index)}
                           >
@@ -805,7 +996,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                   <div className="form-row">
                     <div className="form-group">
                       <label>ინვოისი (PDF ან Excel)</label>
-                      <input 
+                      <input
                         type="file"
                         accept=".pdf,.xlsx,.xls"
                         onChange={(e) => setFiles({...files, invoice_file: e.target.files[0]})}
@@ -819,7 +1010,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                     </div>
                     <div className="form-group">
                       <label>ხელშეკრულება (PDF ან Excel)</label>
-                      <input 
+                      <input
                         type="file"
                         accept=".pdf,.xlsx,.xls"
                         onChange={(e) => setFiles({...files, contract_file: e.target.files[0]})}
@@ -833,7 +1024,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                     </div>
                     <div className="form-group">
                       <label>მიღება-ჩაბარება (PDF ან Excel)</label>
-                      <input 
+                      <input
                         type="file"
                         accept=".pdf,.xlsx,.xls"
                         onChange={(e) => setFiles({...files, handover_file: e.target.files[0]})}
@@ -850,7 +1041,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
 
                 <div className="form-group">
                   <label>შენიშვნები</label>
-                  <textarea 
+                  <textarea
                     value={formData.notes}
                     onChange={(e) => setFormData({...formData, notes: e.target.value})}
                     rows="3"
@@ -872,7 +1063,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
           <div className="participants-list">
             {filteredParticipants.length === 0 ? (
               participants.length === 0 ? (
-              <div className="no-participants">
+                <div className="no-participants">
                   <p>ამ ივენთზე მონაწილეები ჯერ არ არის რეგისტრირებული.</p>
                   {isAuthorizedForManagement && (
                     <p className="hint">მონაწილის დამატებისთვის გამოიყენეთ ზემოთ მოცემული ღილაკი.</p>
@@ -885,72 +1076,103 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                 </div>
               )
             ) : (
-              <div className="participants-table">
+              <div className="participants-table compact">
                 <div className="table-header">
                   <div>კომპანია</div>
-                  <div>ქვეყანა</div>
                   <div>სტენდი</div>
                   <div>სტატუსი</div>
                   <div>გადახდა</div>
-                  <div>რეგისტრაცია</div>
-                  <div>დოკუმენტები</div>
-                  {isAuthorizedForManagement && <div>მოქმედებები</div>}
+                  <div>ქმედება</div>
                 </div>
                 {filteredParticipants.map(participant => (
-                  <div key={participant.id} className="table-row">
+                  <div key={participant.id} className="table-row compact">
                     <div className="company-info" data-label="კომპანია:">
-                      <strong>{participant.company_name}</strong>
-                      <small>{participant.identification_code}</small>
+                      <div className="company-main">
+                        <strong>{participant.company_name}</strong>
+                        <span className="country-tag">{participant.country}</span>
+                      </div>
+                      <small className="company-code">{participant.identification_code}</small>
                     </div>
-                    <div data-label="ქვეყანა:">{participant.country}</div>
-                    <div data-label="სტენდი:">
-                      {participant.booth_number && `#${participant.booth_number}`}
-                      {participant.booth_size && ` (${participant.booth_size}მ²)`}
+                    <div data-label="სტენდი:" className="booth-info">
+                      <div className="booth-main">
+                        {participant.booth_number && <span className="booth-number">#{participant.booth_number}</span>}
+                        {participant.booth_size && <span className="booth-size">{participant.booth_size}მ²</span>}
+                      </div>
+                      <small className="reg-date">{new Date(participant.registration_date).toLocaleDateString('ka-GE')}</small>
                     </div>
                     <div data-label="სტატუსი:">
-                      <span className={`status-badge ${getStatusBadge(participant.registration_status)}`}>
-                        {participant.registration_status}
+                      <span className={`status-badge ${getStatusBadge(participant.registration_status)} compact`}>
+                        {participant.registration_status === 'მონაწილეობის მოთხოვნა' ? 'მოთხოვნა' : 
+                         participant.registration_status === 'რეგისტრირებული' ? 'რეგისტრ.' : 
+                         participant.registration_status === 'დადასტურებული' ? 'დადასტ.' : 
+                         participant.registration_status}
                       </span>
                     </div>
                     <div data-label="გადახდა:">
-                      <span className={`payment-badge ${getPaymentBadge(participant.payment_status)}`}>
-                        {participant.payment_status}
+                      <span className={`payment-badge ${getPaymentBadge(participant.payment_status)} compact`}>
+                        {participant.payment_status === 'მომლოდინე' ? 'მომლოდ.' : 
+                         participant.payment_status === 'გადახდილი' ? 'გადახდ.' : 
+                         participant.payment_status === 'არ არის საჭიროო' ? 'არ საჭირო' : 
+                         participant.payment_status}
                       </span>
                     </div>
-                    <div data-label="რეგისტრაცია:">{new Date(participant.registration_date).toLocaleDateString('ka-GE')}</div>
-                    <div data-label="დოკუმენტები:" className="participant-files">
-                      {participant.invoice_file && (
-                        <a href={participant.invoice_file} target="_blank" rel="noopener noreferrer" className="file-link">
-                          📄 ინვოისი
-                        </a>
-                      )}
-                      {participant.contract_file && (
-                        <a href={participant.contract_file} target="_blank" rel="noopener noreferrer" className="file-link">
-                          📋 ხელშეკრულება
-                        </a>
-                      )}
-                      {participant.handover_file && (
-                        <a href={participant.handover_file} target="_blank" rel="noopener noreferrer" className="file-link">
-                          📦 მიღება-ჩაბარება
-                        </a>
+                    <div className="participant-actions-compact" data-label="ქმედება:">
+                      <div className="action-row">
+                        <button
+                          className="action-btn details-btn"
+                          onClick={() => showCompanyDetailsModal(participant)}
+                          disabled={loadingCompanyDetails}
+                          title="კომპანიის დეტალები"
+                        >
+                          📋
+                        </button>
+                        <button
+                          className="action-btn invoice-btn"
+                          onClick={() => handleGenerateInvoice(participant)}
+                          title="ინვოისის გენერაცია"
+                        >
+                          🧾
+                        </button>
+                        <div className="file-links">
+                          {participant.invoice_file && (
+                            <a href={participant.invoice_file} target="_blank" rel="noopener noreferrer" className="file-link" title="ინვოისი">📄</a>
+                          )}
+                          {participant.contract_file && (
+                            <a href={participant.contract_file} target="_blank" rel="noopener noreferrer" className="file-link" title="ხელშეკრულება">📋</a>
+                          )}
+                          {participant.handover_file && (
+                            <a href={participant.handover_file} target="_blank" rel="noopener noreferrer" className="file-link" title="მიღება-ჩაბარება">📦</a>
+                          )}
+                        </div>
+                      </div>
+                      {isAuthorizedForManagement && (
+                        <div className="edit-row">
+                          <button
+                            className="edit-btn compact"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              console.log('Edit button clicked for participant:', participant);
+                              handleEdit(participant);
+                            }}
+                            type="button"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            className="delete-btn compact"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleDelete(participant.id);
+                            }}
+                            type="button"
+                          >
+                            🗑️
+                          </button>
+                        </div>
                       )}
                     </div>
-                    {isAuthorizedForManagement && (
-                      <div className="participant-actions" data-label="მოქმედებები:">
-                        <button 
-                          className="edit-btn"
-                          onClick={() => handleEdit(participant)}
-                        >
-                          რედაქტირება
-                        </button>
-                        <button 
-                          className="delete-btn"
-                          onClick={() => handleDelete(participant.id)}
-                        >
-                          წაშლა
-                        </button>
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
@@ -958,6 +1180,119 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
           </div>
         </div>
       </div>
+
+      {/* Company Details Modal */}
+      {selectedCompanyForDetails && (
+        <div className="company-details-modal" onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            setSelectedCompanyForDetails(null);
+          }
+        }}>
+          <div className="company-modal-content">
+            <div className="company-modal-header">
+              <h3>{selectedCompanyForDetails.company_name} - დეტალური ინფორმაცია</h3>
+              <button
+                className="modal-close-btn"
+                onClick={() => setSelectedCompanyForDetails(null)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="company-modal-body">
+              <div className="company-info-section">
+                <h4>ძირითადი ინფორმაცია</h4>
+                <div className="info-grid">
+                  <div className="info-item">
+                    <strong>კომპანიის დასახელება</strong>
+                    <span>{selectedCompanyForDetails.company_name}</span>
+                  </div>
+                  <div className="info-item">
+                    <strong>საიდენტიფიკაციო კოდი</strong>
+                    <span>{selectedCompanyForDetails.identification_code}</span>
+                  </div>
+                  <div className="info-item">
+                    <strong>ქვეყანა</strong>
+                    <span>{selectedCompanyForDetails.country}</span>
+                  </div>
+                  <div className="info-item">
+                    <strong>სტატუსი</strong>
+                    <span className={`status-indicator ${selectedCompanyForDetails.status === 'აქტიური' ? 'active' : 'archived'}`}>
+                      {selectedCompanyForDetails.status || 'აქტიური'}
+                    </span>
+                  </div>
+                  <div className="info-item full-width">
+                    <strong>კომპანიის პროფილი</strong>
+                    <span>{selectedCompanyForDetails.company_profile || 'არ არის მითითებული'}</span>
+                  </div>
+                  <div className="info-item full-width">
+                    <strong>იურიდიული მისამართი</strong>
+                    <span>{selectedCompanyForDetails.legal_address || 'არ არის მითითებული'}</span>
+                  </div>
+                  <div className="info-item">
+                    <strong>ვებგვერდი</strong>
+                    {selectedCompanyForDetails.website ? (
+                      <a href={`http://${selectedCompanyForDetails.website}`} target="_blank" rel="noopener noreferrer">
+                        {selectedCompanyForDetails.website}
+                      </a>
+                    ) : (
+                      <span>არ არის მითითებული</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* კომენტარის სექცია */}
+              <div className="comment-section">
+                <h4>კომენტარი</h4>
+                {selectedCompanyForDetails.comment ? (
+                  <div className="comment-text">
+                    {selectedCompanyForDetails.comment}
+                  </div>
+                ) : (
+                  <div className="no-comment">
+                    კომენტარი არ არის დამატებული
+                  </div>
+                )}
+              </div>
+
+              {/* საკონტაქტო პირების სექცია */}
+              <div className="contact-persons-section">
+                <h4>საკონტაქტო პირები</h4>
+                {selectedCompanyForDetails.contact_persons &&
+                  Array.isArray(selectedCompanyForDetails.contact_persons) &&
+                  selectedCompanyForDetails.contact_persons.length > 0 ? (
+                    selectedCompanyForDetails.contact_persons
+                      .filter(person => person && (person.name || person.position || person.phone || person.email))
+                      .map((person, index) => (
+                        <div key={index} className="contact-card">
+                          <div className="contact-name">{person.name || 'უცნობი'}</div>
+                          <div className="contact-details">
+                            {person.position && <div className="contact-detail">👤 {person.position}</div>}
+                            {person.phone && <div className="contact-detail">📞 <a href={`tel:${person.phone}`}>{person.phone}</a></div>}
+                            {person.email && <div className="contact-detail">✉️ <a href={`mailto:${person.email}`}>{person.email}</a></div>}
+                          </div>
+                        </div>
+                      ))
+                  ) : (
+                    <div className="no-contacts">საკონტაქტო პირები არ არის დამატებული</div>
+                  )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Invoice Form Modal */}
+      {showInvoiceForm && selectedParticipantForInvoice && (
+        <InvoiceForm
+          participant={selectedParticipantForInvoice}
+          eventData={exhibitionData} // Pass exhibitionData for price per sqm
+          onClose={closeInvoiceForm}
+          showNotification={showNotification}
+        />
+      )}
+
+      {/* Add Form Modal */}
     </div>
   );
 };

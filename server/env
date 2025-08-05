@@ -1,0 +1,17 @@
+# Database Credentials
+DB_USER=postgres
+DB_PASSWORD=Sami4xuti
+DB_HOST=localhost
+DB_PORT=5432
+DB_DATABASE=my_app_db
+# ... სხვა ცვლადები ...
+JWT_SECRET=YOUR_SECRET_KEY
+
+# Local PostgreSQL Database Configuration
+DATABASE_URL=postgresql://postgres@localhost:5432/exhibition_management
+
+# JWT Secret - შეცვალეთ უსაფრთხო secret-ით
+JWT_SECRET=YOUR_SECRET_KEY
+
+# Node Environment
+NODE_ENV=development

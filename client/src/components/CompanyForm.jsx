@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import './CompanyForm.css';
 
 const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification /* userRole ამოღებულია */ }) => {
@@ -7,12 +7,15 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification /* user
   const [companyProfile, setCompanyProfile] = useState('');
   const [identificationCode, setIdentificationCode] = useState('');
   const [legalAddress, setLegalAddress] = useState('');
-  const [contactPersons, setContactPersons] = useState([]); // ახალი სტეიტი საკონტაქტო პირებისთვის
+  
   const [website, setWebsite] = useState('');
   const [comment, setComment] = useState('');
   const [status, setStatus] = useState('აქტიური'); // დეფაულტად აქტიური
   const [selectedExhibitions, setSelectedExhibitions] = useState([]); // ახალი სტეიტი გამოფენებისთვის
   const [exhibitions, setExhibitions] = useState([]); // ყველა გამოფენის სია
+  const [contactPersons, setContactPersons] = useState([
+    { name: '', position: '', phone: '', email: '' }
+  ]); // საკონტაქტო პირების სტეიტი
   const isEditing = !!companyToEdit;
 
   // გამოფენების ჩატვირთვა
@@ -35,6 +38,18 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification /* user
     fetchExhibitions();
   }, []);
 
+  // განახლდეს selected exhibitions როდესაც კომპანია იცვლება
+  useEffect(() => {
+    if (isEditing && companyToEdit && exhibitions.length > 0) {
+      if (companyToEdit.selected_exhibitions && Array.isArray(companyToEdit.selected_exhibitions)) {
+        const exhibitionIds = companyToEdit.selected_exhibitions.map(id => Number(id));
+        setSelectedExhibitions(exhibitionIds);
+      } else {
+        setSelectedExhibitions([]);
+      }
+    }
+  }, [companyToEdit, isEditing, exhibitions]);
+
   useEffect(() => {
     if (isEditing && companyToEdit) {
       setCompanyName(companyToEdit.company_name || '');
@@ -42,49 +57,63 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification /* user
       setCompanyProfile(companyToEdit.company_profile || '');
       setIdentificationCode(companyToEdit.identification_code || '');
       setLegalAddress(companyToEdit.legal_address || '');
-      setContactPersons(companyToEdit.contact_persons || []); // არსებული საკონტაქტო პირები
       setWebsite(companyToEdit.website || '');
       setComment(companyToEdit.comment || '');
       setStatus(companyToEdit.status || 'აქტიური');
-      setSelectedExhibitions(companyToEdit.exhibitions || []); // არსებული გამოფენები
-    } else {
+      
+      // საკონტაქტო პირების დატვირთვა
+      if (companyToEdit.contact_persons && Array.isArray(companyToEdit.contact_persons) && companyToEdit.contact_persons.length > 0) {
+        setContactPersons(companyToEdit.contact_persons);
+      } else {
+        setContactPersons([{ name: '', position: '', phone: '', email: '' }]);
+      }
+      
+    } else if (!isEditing) {
       setCompanyName('');
       setCountry('');
       setCompanyProfile('');
       setIdentificationCode('');
       setLegalAddress('');
-      setContactPersons([]);
       setWebsite('');
       setComment('');
       setStatus('აქტიური');
       setSelectedExhibitions([]);
+      setContactPersons([{ name: '', position: '', phone: '', email: '' }]);
     }
   }, [companyToEdit, isEditing]);
 
-  const handleAddContactPerson = () => {
-    setContactPersons([...contactPersons, { position: '', name: '', phone: '', email: '' }]);
-  };
+  
 
-  const handleContactPersonChange = (index, field, value) => {
-    const updatedPersons = [...contactPersons];
-    updatedPersons[index][field] = value;
-    setContactPersons(updatedPersons);
-  };
-
-  const handleRemoveContactPerson = (index) => {
-    const updatedPersons = [...contactPersons];
-    updatedPersons.splice(index, 1);
-    setContactPersons(updatedPersons);
-  };
-
-  const handleExhibitionToggle = (exhibitionId) => {
+  const handleExhibitionToggle = useCallback((exhibitionId, isChecked) => {
+    const numericId = Number(exhibitionId);
+    
     setSelectedExhibitions(prev => {
-      if (prev.includes(exhibitionId)) {
-        return prev.filter(id => id !== exhibitionId);
+      if (isChecked) {
+        // თუ checkbox მონიშნულია და ჯერ არ არის სიაში - დავამატოთ
+        return prev.includes(numericId) ? prev : [...prev, numericId];
       } else {
-        return [...prev, exhibitionId];
+        // თუ checkbox გაუქმებულია - ამოვიღოთ სიიდან
+        return prev.filter(id => id !== numericId);
       }
     });
+  }, []);
+
+  // საკონტაქტო პირების მართვის ფუნქციები
+  const addContactPerson = () => {
+    setContactPersons([...contactPersons, { name: '', position: '', phone: '', email: '' }]);
+  };
+
+  const removeContactPerson = (index) => {
+    if (contactPersons.length > 1) {
+      const updatedContacts = contactPersons.filter((_, i) => i !== index);
+      setContactPersons(updatedContacts);
+    }
+  };
+
+  const updateContactPerson = (index, field, value) => {
+    const updatedContacts = [...contactPersons];
+    updatedContacts[index][field] = value;
+    setContactPersons(updatedContacts);
   };
 
   const handleSubmit = async (e) => {
@@ -96,11 +125,15 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification /* user
       company_profile: companyProfile,
       identification_code: identificationCode,
       legal_address: legalAddress,
-      contact_persons: contactPersons, // გაგზავნა როგორც მასივი
+      
       website,
       comment,
       status,
       selected_exhibitions: selectedExhibitions, // გამოფენების IDs
+      contact_persons: contactPersons.filter(person => 
+        person.name.trim() !== '' || person.position.trim() !== '' || 
+        person.phone.trim() !== '' || person.email.trim() !== ''
+      ), // მხოლოდ შევსებული ველებით
     };
     
     const method = isEditing ? 'PUT' : 'POST';
@@ -193,35 +226,6 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification /* user
           <input type="text" value={legalAddress} onChange={(e) => setLegalAddress(e.target.value)} />
         </div>
         
-        <h4>საკონტაქტო პირები</h4>
-        {contactPersons.map((person, index) => (
-          <div key={index} className="contact-person-group">
-            <h5>კონტაქტი #{index + 1}</h5>
-            <div className="form-group">
-              <label>პოზიცია</label>
-              <input type="text" value={person.position} onChange={(e) => handleContactPersonChange(index, 'position', e.target.value)} />
-            </div>
-            <div className="form-group">
-              <label>სახელი გვარი</label>
-              <input type="text" value={person.name} onChange={(e) => handleContactPersonChange(index, 'name', e.target.value)} />
-            </div>
-            <div className="form-group">
-              <label>ტელეფონი</label>
-              <input type="text" value={person.phone} onChange={(e) => handleContactPersonChange(index, 'phone', e.target.value)} />
-            </div>
-            <div className="form-group">
-              <label>მეილი</label>
-              <input type="email" value={person.email} onChange={(e) => handleContactPersonChange(index, 'email', e.target.value)} />
-            </div>
-            <button type="button" className="remove-contact-btn" onClick={() => handleRemoveContactPerson(index)}>
-              წაშლა
-            </button>
-          </div>
-        ))}
-        <button type="button" className="add-contact-btn" onClick={handleAddContactPerson}>
-          კონტაქტის დამატება
-        </button>
-
         <div className="form-group">
           <label>ვებგვერდი</label>
           <input type="text" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="მაგალითად: expogeorgia.ge" />
@@ -241,17 +245,88 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification /* user
         <div className="form-group">
           <label>მონაწილეობა გამოფენებში</label>
           <div className="exhibitions-selection">
-            {exhibitions.map(exhibition => (
-              <label key={exhibition.id} className="exhibition-checkbox">
-                <input
-                  type="checkbox"
-                  checked={selectedExhibitions.includes(exhibition.id)}
-                  onChange={() => handleExhibitionToggle(exhibition.id)}
-                />
-                {exhibition.exhibition_name}
-              </label>
-            ))}
+            {exhibitions.map(exhibition => {
+              const exhibitionId = Number(exhibition.id);
+              const isChecked = selectedExhibitions.includes(exhibitionId);
+              
+              return (
+                <div key={`exhibition-wrapper-${exhibition.id}`} className="exhibition-checkbox-wrapper">
+                  <label className="exhibition-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      value={exhibitionId}
+                      onChange={(e) => handleExhibitionToggle(exhibitionId, e.target.checked)}
+                    />
+                    {exhibition.exhibition_name}
+                  </label>
+                </div>
+              );
+            })}
           </div>
+          
+        </div>
+
+        {/* საკონტაქტო პირების სექცია */}
+        <div className="form-group">
+          <label>საკონტაქტო პირები</label>
+          {contactPersons.map((person, index) => (
+            <div key={index} className="contact-person-group">
+              <h5>საკონტაქტო პირი {index + 1}</h5>
+              <div className="form-group">
+                <label>სახელი გვარი</label>
+                <input
+                  type="text"
+                  value={person.name}
+                  onChange={(e) => updateContactPerson(index, 'name', e.target.value)}
+                  placeholder="მაგ: ნინო გელაშვილი"
+                />
+              </div>
+              <div className="form-group">
+                <label>პოზიცია</label>
+                <input
+                  type="text"
+                  value={person.position}
+                  onChange={(e) => updateContactPerson(index, 'position', e.target.value)}
+                  placeholder="მაგ: გაყიდვების მენეჯერი"
+                />
+              </div>
+              <div className="form-group">
+                <label>ტელეფონის ნომერი</label>
+                <input
+                  type="tel"
+                  value={person.phone}
+                  onChange={(e) => updateContactPerson(index, 'phone', e.target.value)}
+                  placeholder="მაგ: +995 555 123 456"
+                />
+              </div>
+              <div className="form-group">
+                <label>ელ-ფოსტა</label>
+                <input
+                  type="email"
+                  value={person.email}
+                  onChange={(e) => updateContactPerson(index, 'email', e.target.value)}
+                  placeholder="მაგ: nino@company.ge"
+                />
+              </div>
+              {contactPersons.length > 1 && (
+                <button
+                  type="button"
+                  className="remove-contact-btn"
+                  onClick={() => removeContactPerson(index)}
+                >
+                  ამ კონტაქტის წაშლა
+                </button>
+              )}
+            </div>
+          ))}
+          <button
+            type="button"
+            className="add-contact-btn"
+            onClick={addContactPerson}
+          >
+            ახალი საკონტაქტო პირის დამატება
+          </button>
         </div>
         
         <button type="submit" className="submit-btn">

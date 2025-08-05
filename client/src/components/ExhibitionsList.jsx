@@ -40,6 +40,10 @@ const ExhibitionsList = ({ showNotification, userRole }) => { // მივიღ
         throw new Error(errorData.message || 'მონაცემების მიღება ვერ მოხერხდა.');
       }
       const data = await response.json();
+      console.log('მიღებული გამოფენების მონაცემები:', data);
+      if (data.length > 0) {
+        console.log('პირველი გამოფენის price_per_sqm:', data[0].price_per_sqm);
+      }
       setExhibitions(data);
     } catch (err) {
       setError(err.message);
@@ -125,6 +129,7 @@ const ExhibitionsList = ({ showNotification, userRole }) => { // მივიღ
               <th>გამოფენის სახელი</th>
               <th>კომენტარი</th>
               <th>მენეჯერი</th>
+              <th>1 კვმ ღირებულება (€)</th>
               <th>შექმნილია</th>
               <th>განახლებულია</th>
               {isAuthorizedForManagement && <th>მოქმედებები</th>}
@@ -136,6 +141,7 @@ const ExhibitionsList = ({ showNotification, userRole }) => { // მივიღ
                 <td>{exhibition.exhibition_name}</td>
                 <td>{exhibition.comment}</td>
                 <td>{exhibition.manager}</td>
+                <td>{exhibition.price_per_sqm ? `€${parseFloat(exhibition.price_per_sqm).toFixed(2)}` : '-'}</td>
                 <td className="date-info">
                   {exhibition.created_by && (
                     <div>

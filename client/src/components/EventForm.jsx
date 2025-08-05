@@ -262,7 +262,7 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
       showNotification(data.message, 'success');
 
       // თუ ახალი ივენთი შეიქმნა და გამოფენა არჩეული იყო, კომპანიები ავტომატურად უნდა დარეგისტრირდეს
-      if (!isEditing && data.event && selectedExhibitionId) {
+      if (!isEditing && data.service && selectedExhibitionId) {
         showNotification(`ივენთი შეიქმნა. ავტომატურად რეგისტრირდება ${availableCompanies.length} კომპანია.`, 'info');
       }
 
