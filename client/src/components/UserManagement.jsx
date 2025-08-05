@@ -34,13 +34,24 @@ const UserManagement = ({ showNotification, userRole }) => {
 
         try {
             const token = localStorage.getItem('token'); // ტოკენის აღება
-            const response = await fetch(`/api/users/${userId}/role`, {
+
+            // Get current user data first
+            const currentUser = users.find(u => u.id === userId);
+            if (!currentUser) {
+                showNotification('მომხმარებელი ვერ მოიძებნა', 'error');
+                return;
+            }
+
+            const response = await fetch(`/api/users/${userId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}` // ტოკენის გაგზავნა
                 },
-                body: JSON.stringify({ role: newRole }),
+                body: JSON.stringify({ 
+                    username: currentUser.username,
+                    role: newRole 
+                }),
             });
 
             if (response.ok) {
