@@ -242,3 +242,20 @@ createTables();
 როდესაც ბუკინგში შეყვანილი მონაცემებში მიუთითებ კონკრეტულ სერვის შემდეგ ამსერვიში რო შევალ იქ უნდა მიჩანდეს ბუკინგით დამატებული მონაწილეები, ასევე უნდა შემეძლოს მანდვე კომპანისს დეტალების ნახვა რედაქტირება,
 
 ჯერ ეს გავიაროთ და მერე კიდე დავხვეწოთ დეტალები.
+
+
+# Database Credentials
+DB_USER=postgres
+DB_PASSWORD=Sami4xuti
+DB_HOST=localhost
+DB_PORT=5432
+DB_DATABASE=my_app_db
+
+# Local PostgreSQL Database Configuration
+DATABASE_URL=postgresql://postgres:Sami4xuti@localhost:5432/my_app_db
+
+# JWT Secret
+JWT_SECRET=YOUR_SECRET_KEY
+
+# Node Environment
+NODE_ENV=development
