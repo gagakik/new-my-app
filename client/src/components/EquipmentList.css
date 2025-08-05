@@ -62,15 +62,7 @@
   align-items: center;
 }
 
-.equipment-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #667eea, #764ba2);
-}
+
 
 .equipment-card:hover {
   transform: translateY(-4px);
@@ -134,19 +126,20 @@
   font-size: 0.95rem;
   line-height: 1.5;
   padding: 0.5rem 0;
-  border-bottom: 1px solid #e2e8f0;
 }
 
 .equipment-info p strong {
   color: #2d3748;
   font-weight: 600;
+  font-size: 0.8rem;
 }
 
 .equipment-description {
   background-color: #f8f9fa;
-  padding: 0.8rem;
+  padding: 0.5rem;
   border-radius: 8px;
-  border-left: 3px solid #667eea;
+  font-size: 0.6rem;
+  border-left: 1px solid #667eea;
   margin-top: 0.5rem;
   max-height: 100px;
   overflow-y: auto;

@@ -11,7 +11,7 @@
 .events-container h2 {
   text-align: center;
   color: #343a40;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.2rem;
 }
 
 .events-container p.no-events {
@@ -50,6 +50,7 @@
   padding: 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s, box-shadow 0.2s;
+  font-size: 0.9rem;
 }
 
 .event-card:hover {
@@ -82,6 +83,19 @@
 .event-details p {
   margin: 8px 0;
   color: #555;
+}
+
+.date-label {
+  color: #495057;
+  margin-right: 5px;
+  font-size: 0.85rem;
+}
+
+.date-value {
+  font-weight: bold;
+  color: #242525;
+  font-size: 0.9rem;
+  margin-right: 5px;
 }
 
 .event-details strong {
@@ -179,6 +193,8 @@
   background-color: #c82333;
 }
 
+
+
 .event-details .date-info {
   margin-top: 10px;
   padding: 8px;
@@ -271,6 +287,7 @@
 
 .modal-body ul {
   padding-left: 20px;
+  
 }
 
 .modal-body li {

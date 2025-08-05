@@ -45,7 +45,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
   const isAuthorizedForManagement =
     userRole === 'admin' ||
     userRole === 'sales' ||
-    userRole === 'marketing';
+    userRole === 'manager';
 
   useEffect(() => {
     fetchParticipants();

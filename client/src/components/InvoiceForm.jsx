@@ -12,10 +12,10 @@ const InvoiceForm = ({ participant, onClose, showNotification, eventData }) => {
     total: 0,
     notes: '',
     companyInfo: {
-      name: 'თქვენი კომპანია',
-      address: 'თბილისი, საქართველო',
-      phone: '+995 XXX XXX XXX',
-      email: 'info@yourcompany.ge',
+      name: 'Expo Georgia Management 1958 LLC',
+      address: 'Georgia, Tbilisi, Tsereteli Ave. № 118; 0119',
+      phone: '+995 322 341 100',
+      email: 'finance@expogeorgia.ge',
       taxNumber: 'XXX-XXX-XXX'
     }
   });
@@ -228,15 +228,15 @@ const InvoiceForm = ({ participant, onClose, showNotification, eventData }) => {
         </div>
 
         {/* Invoice Document */}
-        <div className="invoice-document">
+        <div className="invoice-document print-version">
           {/* Company Header */}
-          <div className="invoice-company-header">
+          <div className="invoice-company-header print-header">
             <div className="company-info">
               <h2>{invoiceData.companyInfo.name}</h2>
               <p>{invoiceData.companyInfo.address}</p>
               <p>ტელ: {invoiceData.companyInfo.phone}</p>
               <p>მეილი: {invoiceData.companyInfo.email}</p>
-              <p>სს: {invoiceData.companyInfo.taxNumber}</p>
+              <p>ს/კ: {invoiceData.companyInfo.taxNumber}</p>
             </div>
             <div className="invoice-title">
               <h1>ინვოისი</h1>
@@ -248,7 +248,7 @@ const InvoiceForm = ({ participant, onClose, showNotification, eventData }) => {
           <div className="invoice-details">
             <div className="invoice-dates">
               <div className="date-group">
-                <label>გამოტანის თარიღი:</label>
+                <label>მომზადების თარიღი:</label>
                 <input
                   type="date"
                   value={invoiceData.issueDate}
@@ -257,7 +257,7 @@ const InvoiceForm = ({ participant, onClose, showNotification, eventData }) => {
                 />
               </div>
               <div className="date-group">
-                <label>გადახდის ვადა:</label>
+                <label>ვალიდურია:</label>
                 <input
                   type="date"
                   value={invoiceData.dueDate}
@@ -268,10 +268,9 @@ const InvoiceForm = ({ participant, onClose, showNotification, eventData }) => {
             </div>
 
             <div className="customer-info">
-              <h4>მიმღები:</h4>
+              <h4>მონაწილე:</h4>
               <div className="customer-details">
                 <p><strong>{participant.company_name}</strong></p>
-                <p>ქვეყანა: {participant.country}</p>
                 <p>ს/კ: {participant.identification_code}</p>
                 {participant.legal_address && <p>მისამართი: {participant.legal_address}</p>}
               </div>
@@ -330,8 +329,9 @@ const InvoiceForm = ({ participant, onClose, showNotification, eventData }) => {
                         className="item-input price-input"
                       />
                     </td>
-                    <td className="total-cell">
-                      {formatCurrency(item.total)}
+                    <td className="total-cell print-currency">
+                      <span className="print-only">{item.total.toFixed(2)} ₾</span>
+                      <span className="no-print">{formatCurrency(item.total)}</span>
                     </td>
                     <td className="no-print">
                       <button
@@ -362,38 +362,35 @@ const InvoiceForm = ({ participant, onClose, showNotification, eventData }) => {
           <div className="invoice-totals">
             <div className="totals-section">
               <div className="total-row">
-                <span>ქვეჯამი:</span>
-                <span>{formatCurrency(invoiceData.subtotal)}</span>
+                <span>ჯამი:</span>
+                <span>
+                  <span className="print-only">{invoiceData.subtotal.toFixed(2)} ₾</span>
+                  <span className="no-print">{formatCurrency(invoiceData.subtotal)}</span>
+                </span>
               </div>
               <div className="total-row">
                 <span>დღგ (18%):</span>
-                <span>{formatCurrency(invoiceData.tax)}</span>
+                <span>
+                  <span className="print-only">{invoiceData.tax.toFixed(2)} ₾</span>
+                  <span className="no-print">{formatCurrency(invoiceData.tax)}</span>
+                </span>
               </div>
               <div className="total-row final-total">
-                <span><strong>სავსო გადახდელი:</strong></span>
-                <span><strong>{formatCurrency(invoiceData.total)}</strong></span>
+                <span><strong>გადასახდელი:</strong></span>
+                <span><strong>
+                  <span className="print-only">{invoiceData.total.toFixed(2)} ₾</span>
+                  <span className="no-print">{formatCurrency(invoiceData.total)}</span>
+                </strong></span>
               </div>
             </div>
           </div>
 
-          {/* Notes */}
-          <div className="invoice-notes">
-            <label>შენიშვნები:</label>
-            <textarea
-              value={invoiceData.notes}
-              onChange={(e) => setInvoiceData(prev => ({...prev, notes: e.target.value}))}
-              className="notes-textarea"
-              placeholder="დამატებითი ინფორმაცია..."
-              rows="3"
-            />
-          </div>
-
           {/* Payment Information */}
           <div className="payment-info">
-            <h4>გადახდის ინფორმაცია:</h4>
-            <p>ბანკი: [თქვენი ბანკის მონაცემები]</p>
-            <p>ანგარიშის ნომერი: [IBAN]</p>
-            <p>სწიფტ კოდი: [SWIFT]</p>
+            <h4>საგადახდო ინფორმაცია:</h4>
+            <p>ბანკი: JSC "TBC Bank"</p>
+            <p>ანგარიშის ნომერი: GE12TB7373336020100002</p>
+            <p>სწიფტ კოდი: TBCBGE22</p>
           </div>
         </div>
 
