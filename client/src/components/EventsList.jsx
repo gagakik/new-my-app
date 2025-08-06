@@ -1,21 +1,30 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import './EventsList.css';
 import EventForm from './EventForm';
 import EventParticipants from './EventParticipants';
+import EventCompletion from './EventCompletion';
+import './EventsList.css';
 
 const EventsList = ({ showNotification, userRole }) => {
   const [events, setEvents] = useState([]);
+  const [filteredEvents, setFilteredEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
   const [showParticipants, setShowParticipants] = useState(false);
-  const [participantsEvent, setParticipantsEvent] = useState(null);
+  const [showEventCompletion, setShowEventCompletion] = useState(false);
+  const [selectedEventForCompletion, setSelectedEventForCompletion] = useState(null);
+  
+  // ფილტრებისა და ძიების სტეიტები
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedYear, setSelectedYear] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
 
-  const isAuthorizedForManagement = 
-    userRole === 'admin' || 
-    userRole === 'sales' || 
+  const isAuthorizedForManagement =
+    userRole === 'admin' ||
+    userRole === 'sales' ||
     userRole === 'marketing';
 
   const fetchEvents = useCallback(async () => {
@@ -26,7 +35,7 @@ const EventsList = ({ showNotification, userRole }) => {
         throw new Error('ავტორიზაცია საჭიროა ივენთების ნახვისთვის');
       }
 
-      const headers = { 
+      const headers = {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       };
@@ -85,6 +94,74 @@ const EventsList = ({ showNotification, userRole }) => {
   useEffect(() => {
     fetchEvents();
   }, [fetchEvents]);
+
+  // ფილტრაციის ლოგიკა
+  useEffect(() => {
+    let filtered = [...events];
+
+    // ძიება სახელის მიხედვით
+    if (searchTerm) {
+      filtered = filtered.filter(event =>
+        event.service_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        event.description?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // ფილტრაცია წლის მიხედვით
+    if (selectedYear) {
+      filtered = filtered.filter(event => {
+        const eventYear = new Date(event.start_date).getFullYear();
+        return eventYear.toString() === selectedYear;
+      });
+    }
+
+    // ფილტრაცია თვის მიხედვით
+    if (selectedMonth) {
+      filtered = filtered.filter(event => {
+        const eventMonth = new Date(event.start_date).getMonth() + 1;
+        return eventMonth.toString() === selectedMonth;
+      });
+    }
+
+    // ფილტრაცია სტატუსის მიხედვით
+    if (statusFilter) {
+      filtered = filtered.filter(event => {
+        const status = getStatusBadge(event);
+        return status.class === statusFilter;
+      });
+    }
+
+    setFilteredEvents(filtered);
+  }, [events, searchTerm, selectedYear, selectedMonth, statusFilter]);
+
+  // წლების სია
+  const getAvailableYears = () => {
+    const years = events.map(event => new Date(event.start_date).getFullYear());
+    return [...new Set(years)].sort((a, b) => b - a);
+  };
+
+  // თვეების სია
+  const months = [
+    { value: '1', label: 'იანვარი' },
+    { value: '2', label: 'თებერვალი' },
+    { value: '3', label: 'მარტი' },
+    { value: '4', label: 'აპრილი' },
+    { value: '5', label: 'მაისი' },
+    { value: '6', label: 'ივნისი' },
+    { value: '7', label: 'ივლისი' },
+    { value: '8', label: 'აგვისტო' },
+    { value: '9', label: 'სექტემბერი' },
+    { value: '10', label: 'ოქტომბერი' },
+    { value: '11', label: 'ნოემბერი' },
+    { value: '12', label: 'დეკემბერი' }
+  ];
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setSelectedYear('');
+    setSelectedMonth('');
+    setStatusFilter('');
+  };
 
   const handleDelete = async (id) => {
     const isConfirmed = window.confirm('ნამდვილად გსურთ ამ ივენთის წაშლა?');
@@ -171,13 +248,18 @@ const EventsList = ({ showNotification, userRole }) => {
   };
 
   const handleShowParticipants = (event) => {
-    setParticipantsEvent(event);
+    setSelectedEvent(event);
     setShowParticipants(true);
   };
 
-  const handleCloseParticipants = () => {
-    setShowParticipants(false);
-    setParticipantsEvent(null);
+  const handleCompleteEvent = (event) => {
+    setSelectedEventForCompletion(event);
+    setShowEventCompletion(true);
+  };
+
+  const handleCompletionSuccess = (report) => {
+    showNotification('ივენთი წარმატებით დასრულდა!', 'success');
+    fetchEvents(); // ივენთების სიის განახლება
   };
 
   if (loading) {
@@ -214,23 +296,94 @@ const EventsList = ({ showNotification, userRole }) => {
       )}
 
       {editingId !== null && isAuthorizedForManagement && (
-         <EventForm 
-            eventToEdit={events.find(e => e.id === editingId)} 
-            onEventUpdated={handleEventUpdated} 
-            showNotification={showNotification} 
+         <EventForm
+            eventToEdit={events.find(e => e.id === editingId)}
+            onEventUpdated={handleEventUpdated}
+            showNotification={showNotification}
          />
       )}
 
-      {events.length === 0 ? (
-        <p className="no-events">ივენთები არ მოიძებნა.</p>
+      <div className="events-filters">
+        <div className="filters-row">
+          <div className="search-group">
+            <label>ძიება</label>
+            <input
+              type="text"
+              placeholder="ძიება სახელით..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="search-input"
+            />
+          </div>
+          
+          <div className="filter-group">
+            <label>წელი</label>
+            <select 
+              value={selectedYear} 
+              onChange={(e) => setSelectedYear(e.target.value)}
+              className="filter-select"
+            >
+              <option value="">ყველა წელი</option>
+              {getAvailableYears().map(year => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label>თვე</label>
+            <select 
+              value={selectedMonth} 
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="filter-select"
+            >
+              <option value="">ყველა თვე</option>
+              {months.map(month => (
+                <option key={month.value} value={month.value}>{month.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label>სტატუსი</label>
+            <select 
+              value={statusFilter} 
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="filter-select"
+            >
+              <option value="">ყველა სტატუსი</option>
+              <option value="upcoming">მომავალი</option>
+              <option value="active">მიმდინარე</option>
+              <option value="finished">დასრულებული</option>
+              <option value="archived">არქივი</option>
+              <option value="inactive">არააქტიური</option>
+            </select>
+          </div>
+
+          <div className="filter-actions">
+            <button className="clear-filters" onClick={clearFilters}>
+              ფილტრების გასუფთავება
+            </button>
+          </div>
+        </div>
+        
+        <div className="results-info">
+          ნაპოვნია: {filteredEvents.length} ივენთი {events.length}-დან
+        </div>
+      </div>
+
+      {filteredEvents.length === 0 ? (
+        <p className="no-events">
+          {events.length === 0 ? 'ივენთები არ მოიძებნა.' : 'ფილტრების შესაბამისი ივენთები არ მოიძებნა.'}
+        </p>
       ) : (
         <div className="events-grid">
-          {events.map((event) => {
+          {filteredEvents.map((event) => {
             const status = getStatusBadge(event);
             return (
               <div key={event.id} className="event-card">
                 <div className="event-header">
-                  <h3 
+                  <h3
                     className="event-name"
                     onClick={() => viewEventDetails(event)}
                   >
@@ -241,7 +394,7 @@ const EventsList = ({ showNotification, userRole }) => {
                   </span>
                 </div>
 
-                
+
 
                 <div className="event-details">
                   <div className="event-dates">
@@ -273,12 +426,21 @@ const EventsList = ({ showNotification, userRole }) => {
                         რედაქტირება
                       </button>
                       {status.class === 'finished' && !event.is_archived && (
-                        <button className="archive" onClick={() => handleArchive(event.id)}>
-                          არქივი
-                        </button>
+                        <>
+                          <button
+                            className="complete"
+                            onClick={() => handleCompleteEvent(event)}>
+                            დასრულება
+                          </button>
+                          <button
+                            className="archive"
+                            onClick={() => handleArchive(event.id)}>
+                            არქივი
+                          </button>
+                        </>
                       )}
-                      <button 
-                        className="delete" 
+                      <button
+                        className="delete"
                         onClick={() => handleDelete(event.id)}>
                         წაშლა
                       </button>
@@ -296,8 +458,8 @@ const EventsList = ({ showNotification, userRole }) => {
           <div className="modal-content">
             <div className="modal-header">
               <h3>{selectedEvent.service_name}</h3>
-              <button 
-                className="close-modal" 
+              <button
+                className="close-modal"
                 onClick={() => setShowDetails(false)}
               >
                 ✕
@@ -340,13 +502,28 @@ const EventsList = ({ showNotification, userRole }) => {
         </div>
       )}
 
-      {showParticipants && participantsEvent && (
+      {showParticipants && selectedEvent && (
         <EventParticipants
-          eventId={participantsEvent.id}
-          eventName={participantsEvent.service_name}
-          onClose={handleCloseParticipants}
+          eventId={selectedEvent.id}
+          eventName={selectedEvent.service_name}
+          onClose={() => {
+            setShowParticipants(false);
+            setSelectedEvent(null);
+          }}
           showNotification={showNotification}
           userRole={userRole}
+        />
+      )}
+
+      {showEventCompletion && selectedEventForCompletion && (
+        <EventCompletion
+          eventId={selectedEventForCompletion.id}
+          eventName={selectedEventForCompletion.name}
+          onClose={() => {
+            setShowEventCompletion(false);
+            setSelectedEventForCompletion(null);
+          }}
+          onSuccess={handleCompletionSuccess}
         />
       )}
     </div>
