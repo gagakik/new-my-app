@@ -5,6 +5,59 @@ import MainContent from './components/MainContent';
 import Notification from './components/Notification';
 import './index.css';
 
+// Error Boundary Component
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('Error caught by boundary:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ 
+          padding: '2rem', 
+          textAlign: 'center', 
+          background: 'var(--surface-primary)',
+          color: 'var(--text-primary)',
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center'
+        }}>
+          <h1>შეცდომა მოხდა</h1>
+          <p>აპლიკაციაში შეცდომა მოხდა. გთხოვთ განაახლოთ გვერდი.</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            style={{
+              padding: '0.75rem 1.5rem',
+              background: '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              marginTop: '1rem'
+            }}
+          >
+            გვერდის განახლება
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState(null);
@@ -90,19 +143,21 @@ function App() {
   };
 
   return (
-    <div className="App">
-      <main>
-        {renderContent()}
-      </main>
-      <Footer />
-      {notification.message && (
-        <Notification
-          message={notification.message}
-          type={notification.type}
-          onClose={clearNotification}
-        />
-      )}
-    </div>
+    <ErrorBoundary>
+      <div className="App">
+        <main>
+          {renderContent()}
+        </main>
+        <Footer />
+        {notification.message && (
+          <Notification
+            message={notification.message}
+            type={notification.type}
+            onClose={clearNotification}
+          />
+        )}
+      </div>
+    </ErrorBoundary>
   );
 }
 

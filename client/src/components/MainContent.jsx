@@ -6,21 +6,32 @@ import SpacesList from './SpacesList';
 import UserManagement from './UserManagement';
 import EventsList from './EventsList';
 import Statistics from './Statistics';
+import EventReports from './EventReports';
 
 import './MainContent.css';
 
 const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
   const [activeSection, setActiveSection] = useState('dashboard');
-  const [activeComponent, setActiveComponent] = useState(null); // Initialize activeComponent state
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
 
   const handleSectionChange = (section) => {
-    setActiveSection(section);
-    setIsMenuOpen(false); // Close menu on mobile when section is selected
+    try {
+      setLoading(true);
+      setError(null);
+      setActiveSection(section);
+      setIsMenuOpen(false); // Close menu on mobile when section is selected
+    } catch (err) {
+      setError('Section change failed');
+      showNotification('სექციის ცვლილება ვერ მოხერხდა', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -44,65 +55,65 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
           </button>
 
           <div className="nav-items">
-            <button 
-              className={activeSection === 'dashboard' ? 'active' : ''} 
+            <button
+              className={activeSection === 'dashboard' ? 'active' : ''}
               onClick={() => handleSectionChange('dashboard')}
             >
               <i className="icon-dashboard"></i>
               დეშბორდი
             </button>
-            <button 
-              className={activeSection === 'exhibitions' ? 'active' : ''} 
+            <button
+              className={activeSection === 'exhibitions' ? 'active' : ''}
               onClick={() => handleSectionChange('exhibitions')}
             >
               <i className="icon-exhibitions"></i>
               გამოფენები
             </button>
-            <button 
-              className={activeSection === 'companies' ? 'active' : ''} 
+            <button
+              className={activeSection === 'companies' ? 'active' : ''}
               onClick={() => handleSectionChange('companies')}
             >
               <i className="icon-companies"></i>
               კომპანიები
             </button>
-            <button 
-              className={activeSection === 'equipment' ? 'active' : ''} 
+            <button
+              className={activeSection === 'equipment' ? 'active' : ''}
               onClick={() => handleSectionChange('equipment')}
             >
               <i className="icon-equipment"></i>
               აღჭურვილობა
             </button>
-            <button 
-              className={activeSection === 'spaces' ? 'active' : ''} 
+            <button
+              className={activeSection === 'spaces' ? 'active' : ''}
               onClick={() => handleSectionChange('spaces')}
             >
               <i className="icon-spaces"></i>
               სივრცეები
             </button>
-            <button 
-              className={activeSection === 'events' ? 'active' : ''} 
+            <button
+              className={activeSection === 'events' ? 'active' : ''}
               onClick={() => handleSectionChange('events')}
             >
               <i className="icon-events"></i>
               ივენთები
             </button>
-            <button 
-              className={activeSection === 'statistics' ? 'active' : ''} 
+            <button
+              className={activeSection === 'statistics' ? 'active' : ''}
               onClick={() => handleSectionChange('statistics')}
             >
               <i className="icon-statistics"></i>
               სტატისტიკა
             </button>
             {userRole === 'admin' && (
-              <button 
-                className={activeSection === 'users' ? 'active' : ''} 
+              <button
+                className={activeSection === 'users' ? 'active' : ''}
                 onClick={() => handleSectionChange('users')}
               >
                 <i className="icon-users"></i>
                 მომხმარებლები
               </button>
             )}
-             {(userRole === 'admin' || userRole === 'sales' || userRole === 'marketing') && (
+             {userRole === 'admin' && (
               <button
                 className={activeSection === 'eventReports' ? 'active' : ''}
                 onClick={() => handleSectionChange('eventReports')}
@@ -146,9 +157,10 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
             <UserManagement showNotification={showNotification} />
           )}
            {activeSection === 'eventReports' && (
-            <div>
-              <p>Event Reports Content</p>
-            </div>
+            <EventReports 
+              showNotification={showNotification} 
+              userRole={userRole} 
+            />
           )}
         </div>
       </div>

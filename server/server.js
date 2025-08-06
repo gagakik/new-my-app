@@ -1549,3 +1549,54 @@ app.put('/api/annual-services/:id/archive', authenticateToken, authorizeRoles('a
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`სერვერი მუშაობს პორტზე ${PORT}`);
 });
+
+
+// User Companies Report - რამდენი კომპანია აქვს თითოეულ იუზერს დარეგისტრირებული
+app.get('/api/reports/user-companies', authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT 
+        u.username,
+        COUNT(c.id) as companies_count,
+        MAX(u2.username) as last_updated_by,
+        MAX(c.updated_at) as last_update_date
+      FROM users u
+      LEFT JOIN companies c ON u.id = c.created_by_user_id
+      LEFT JOIN users u2 ON c.updated_by_user_id = u2.id
+      GROUP BY u.id, u.username
+      HAVING COUNT(c.id) > 0
+      ORDER BY companies_count DESC, u.username
+    `);
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('იუზერების კომპანიების სტატისტიკის შეცდომა:', error);
+    res.status(500).json({ message: 'იუზერების სტატისტიკის მიღება ვერ მოხერხდა' });
+  }
+});
+
+// Event Financials Report - ივენთების მიხედვით ფინანსური ანალიზი
+app.get('/api/reports/event-financials', authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT 
+        as1.service_name as event_name,
+        COUNT(ep.id) as participants_count,
+        COALESCE(SUM(CASE WHEN ep.payment_status = 'გადახდილი' THEN ep.payment_amount ELSE 0 END), 0) as total_paid,
+        COALESCE(SUM(CASE WHEN ep.payment_status != 'გადახდილი' THEN ep.payment_amount ELSE 0 END), 0) as total_pending,
+        COALESCE(SUM(ep.payment_amount), 0) as total_expected
+      FROM annual_services as1
+      LEFT JOIN event_participants ep ON as1.id = ep.event_id
+      WHERE as1.is_archived = FALSE
+      GROUP BY as1.id, as1.service_name
+      HAVING COUNT(ep.id) > 0
+      ORDER BY total_paid DESC, as1.service_name
+    `);
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('ივენთების ფინანსური ანალიზის შეცდომა:', error);
+    res.status(500).json({ message: 'ივენთების ფინანსური ანალიზის მიღება ვერ მოხერხდა' });
+  }
+});
+

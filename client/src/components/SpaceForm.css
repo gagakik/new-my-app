@@ -35,30 +35,41 @@
   box-sizing: border-box;
 }
 
-.submit-btn, .cancel-btn {
+.form-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.form-buttons button {
   padding: 12px 20px;
   border: none;
   border-radius: 5px;
   font-weight: bold;
   cursor: pointer;
   transition: background-color 0.3s;
-  margin-right: 10px;
 }
 
-.submit-btn {
+.form-buttons button[type="submit"] {
   background-color: #28a745;
   color: #fff;
 }
 
-.submit-btn:hover {
+.form-buttons button[type="submit"]:hover {
   background-color: #218838;
 }
 
-.cancel-btn {
+.form-buttons button[type="button"] {
   background-color: #6c757d;
   color: #fff;
 }
 
-.cancel-btn:hover {
+.form-buttons button[type="button"]:hover {
   background-color: #5a6268;
+}
+
+.form-buttons button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }

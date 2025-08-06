@@ -4,7 +4,28 @@ import './Header.css';
 const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewChange }) => {
   const [dropdownOpen, setDropdownOpen] = useState({});
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const dropdownRefs = useRef({});
+
+  // Initialize dark mode from localStorage
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+      setIsDarkMode(true);
+      document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+      setIsDarkMode(false);
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+  }, []);
+
+  const toggleDarkMode = () => {
+    const newMode = !isDarkMode;
+    setIsDarkMode(newMode);
+    const theme = newMode ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -206,11 +227,20 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
                 </div>
               ))}
 
+              <button onClick={toggleDarkMode} className="theme-toggle-btn mobile-theme">
+                <span className="theme-icon">{isDarkMode ? '☀️' : '🌙'}</span>
+                <span className="theme-text">{isDarkMode ? 'ნათელი რეჟიმი' : 'მუქი რეჟიმი'}</span>
+              </button>
+
               <button onClick={onLogout} className="logout-btn mobile-logout">
                 <span className="logout-icon">🚪</span>
                 <span className="logout-text">გასვლა</span>
               </button>
             </div>
+
+            <button onClick={toggleDarkMode} className="theme-toggle-btn desktop-only">
+              <span className="theme-icon">{isDarkMode ? '☀️' : '🌙'}</span>
+            </button>
 
             <button onClick={onLogout} className="logout-btn desktop-only">
               <span className="logout-icon">🚪</span>

@@ -4,22 +4,47 @@
   line-height: 1.6;
   font-weight: 400;
   
-  /* Modern Color System */
+  /* Light Mode Colors */
   --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
   --surface-glass: rgba(255, 255, 255, 0.1);
   --surface-glass-strong: rgba(255, 255, 255, 0.2);
   --text-primary: #1a202c;
   --text-secondary: #4a5568;
   --text-muted: #718096;
+  --bg-primary: #f7fafc;
+  --bg-secondary: #edf2f7;
+  --surface-primary: #ffffff;
+  --border-color: #e2e8f0;
+  --hover-bg: rgba(102, 126, 234, 0.02);
   
   color-scheme: light;
   color: var(--text-primary);
-  background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Dark Mode */
+[data-theme="dark"] {
+  /* Dark Mode Colors */
+  --primary-gradient: linear-gradient(135deg, #4a90e2 0%, #7b68ee 50%, #e74c3c 100%);
+  --surface-glass: rgba(0, 0, 0, 0.1);
+  --surface-glass-strong: rgba(0, 0, 0, 0.2);
+  --text-primary: #e2e8f0;
+  --text-secondary: #a0aec0;
+  --text-muted: #718096;
+  --bg-primary: #1a202c;
+  --bg-secondary: #2d3748;
+  --surface-primary: #2d3748;
+  --border-color: #4a5568;
+  --hover-bg: rgba(102, 126, 234, 0.1);
+  
+  color-scheme: dark;
+  color: var(--text-primary);
+  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
 }
 
 * {
@@ -151,14 +176,14 @@ table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  background: white;
+  background: var(--surface-primary);
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
 table th {
-  background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
   color: var(--text-primary);
   font-weight: 600;
   padding: 1rem 1.5rem;
@@ -170,21 +195,22 @@ table th {
 
 table td {
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--border-color);
   color: var(--text-secondary);
 }
 
 table tbody tr {
   transition: all 0.3s ease;
+  background: var(--surface-primary);
 }
 
 table tbody tr:hover {
-  background: rgba(102, 126, 234, 0.02);
+  background: var(--hover-bg);
   transform: scale(1.001);
 }
 
 table tbody tr:nth-child(even) {
-  background: rgba(247, 250, 252, 0.5);
+  background: rgba(102, 126, 234, 0.02);
 }
 
 /* Form styling improvements */
@@ -193,6 +219,11 @@ table tbody tr:nth-child(even) {
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="dark"] .form-container {
+  background: rgba(45, 55, 72, 0.95);
+  border: 1px solid rgba(45, 55, 72, 0.2);
 }
 
 /* Card components */
@@ -206,6 +237,11 @@ table tbody tr:nth-child(even) {
   transition: all 0.3s ease;
 }
 
+[data-theme="dark"] .card {
+  background: rgba(45, 55, 72, 0.9);
+  border: 1px solid rgba(45, 55, 72, 0.2);
+}
+
 .card:hover {
   transform: translateY(-4px);
   box-shadow: 0 12px 35px rgba(0, 0, 0, 0.12);
@@ -213,20 +249,21 @@ table tbody tr:nth-child(even) {
 
 /* Input styling */
 input, textarea, select {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(226, 232, 240, 0.8);
+  background: var(--surface-primary);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 0.75rem 1rem;
   font-size: 0.95rem;
   transition: all 0.3s ease;
   backdrop-filter: blur(10px);
+  color: var(--text-primary);
 }
 
 input:focus, textarea:focus, select:focus {
   outline: none;
   border-color: #667eea;
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-  background: white;
+  background: var(--surface-primary);
 }
 
 /* Loading and animation classes */

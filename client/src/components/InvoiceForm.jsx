@@ -202,7 +202,7 @@ const InvoiceForm = ({ participant, onClose, showNotification, eventData }) => {
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('ka-GE', {
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'EUR',
       minimumFractionDigits: 2
@@ -330,7 +330,7 @@ const InvoiceForm = ({ participant, onClose, showNotification, eventData }) => {
                       />
                     </td>
                     <td className="total-cell print-currency">
-                      <span className="print-only">{item.total.toFixed(2)} ₾</span>
+                      <span className="print-only">€{item.total.toFixed(2)}</span>
                       <span className="no-print">{formatCurrency(item.total)}</span>
                     </td>
                     <td className="no-print">
@@ -364,21 +364,21 @@ const InvoiceForm = ({ participant, onClose, showNotification, eventData }) => {
               <div className="total-row">
                 <span>ჯამი:</span>
                 <span>
-                  <span className="print-only">{invoiceData.subtotal.toFixed(2)} ₾</span>
+                  <span className="print-only">€{invoiceData.subtotal.toFixed(2)}</span>
                   <span className="no-print">{formatCurrency(invoiceData.subtotal)}</span>
                 </span>
               </div>
               <div className="total-row">
                 <span>დღგ (18%):</span>
                 <span>
-                  <span className="print-only">{invoiceData.tax.toFixed(2)} ₾</span>
+                  <span className="print-only">€{invoiceData.tax.toFixed(2)}</span>
                   <span className="no-print">{formatCurrency(invoiceData.tax)}</span>
                 </span>
               </div>
               <div className="total-row final-total">
                 <span><strong>გადასახდელი:</strong></span>
                 <span><strong>
-                  <span className="print-only">{invoiceData.total.toFixed(2)} ₾</span>
+                  <span className="print-only">€{invoiceData.total.toFixed(2)}</span>
                   <span className="no-print">{formatCurrency(invoiceData.total)}</span>
                 </strong></span>
               </div>

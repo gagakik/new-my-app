@@ -7,6 +7,7 @@ const EquipmentList = ({ showNotification, userRole }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editingId, setEditingId] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const isAuthorizedForManagement = 
     userRole === 'admin' || 
@@ -56,6 +57,12 @@ const EquipmentList = ({ showNotification, userRole }) => {
   useEffect(() => {
     fetchEquipment();
   }, [fetchEquipment]); // fetchEquipment დაემატა დამოკიდებულებებში
+
+  // ფილტრაცია ძიების ტერმინის მიხედვით
+  const filteredEquipment = equipment.filter(item =>
+    item.code_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const handleDelete = async (id) => {
     const isConfirmed = window.confirm('ნამდვილად გსურთ ამ აღჭურვილობის წაშლა?');
@@ -141,6 +148,18 @@ const EquipmentList = ({ showNotification, userRole }) => {
   return (
     <div className="equipment-container">
       <h2>აღჭურვილობის სია</h2>
+      
+      {/* ძიების ველი */}
+      <div className="search-container">
+        <input 
+          type="text" 
+          placeholder="ძებნა კოდური სახელით ან აღწერით..." 
+          value={searchTerm} 
+          onChange={(e) => setSearchTerm(e.target.value)} 
+          className="search-input"
+        />
+      </div>
+
       {isAuthorizedForManagement && (
         <button className="add-new" onClick={() => setEditingId(0)}>
           ახალი აღჭურვილობის დამატება
@@ -156,11 +175,13 @@ const EquipmentList = ({ showNotification, userRole }) => {
         />
       )}
 
-      {equipment.length === 0 ? (
-        <p className="no-equipment">აღჭურვილობა არ მოიძებნა.</p>
+      {filteredEquipment.length === 0 ? (
+        <p className="no-equipment">
+          {searchTerm ? 'ძიების კრიტერიუმებით აღჭურვილობა არ მოიძებნა.' : 'აღჭურვილობა არ მოიძებნა.'}
+        </p>
       ) : (
         <div className="equipment-grid">
-          {equipment.map((item) => (
+          {filteredEquipment.map((item) => (
             <div key={item.id} className="equipment-card">
               {item.image_url && (
                 <div className="equipment-image-container">

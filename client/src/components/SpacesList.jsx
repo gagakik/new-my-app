@@ -7,6 +7,7 @@ const SpacesList = ({ showNotification, userRole }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editingId, setEditingId] = useState(null);
+  const [showForm, setShowForm] = useState(false); // მოდალური ფანჯრის მართვისთვის
 
   // განსაზღვრეთ, აქვს თუ არა მომხმარებელს სივრცეების მართვის უფლება
   const isAuthorizedForManagement = 
@@ -80,10 +81,17 @@ const SpacesList = ({ showNotification, userRole }) => {
 
   const handleEditClick = (space) => {
     setEditingId(space.id);
+    setShowForm(true); // ფორმის ჩვენება
+  };
+
+  const handleAddSpaceClick = () => {
+    setEditingId(0); // 0-ის დანიშვნა ახალი სივრცის დამატების რეჟიმის აღსანიშნავად
+    setShowForm(true); // ფორმის ჩვენება
   };
 
   const handleSpaceUpdated = () => {
     setEditingId(null); // რედაქტირების რეჟიმიდან გასვლა
+    setShowForm(false); // ფორმის დამალვა
     fetchSpaces(); // სიის განახლება
   };
 
@@ -99,16 +107,26 @@ const SpacesList = ({ showNotification, userRole }) => {
     <div className="spaces-container">
       <h2>სივრცეების სია</h2>
       {isAuthorizedForManagement && (
-        <button className="add-new" onClick={() => setEditingId(0)}>ახალი სივრცის დამატება</button>
+        <button className="add-new" onClick={handleAddSpaceClick}>ახალი სივრცის დამატება</button>
       )}
 
-      {editingId !== null && isAuthorizedForManagement && (
-        <SpaceForm 
-          spaceToEdit={spaces.find(space => space.id === editingId)} 
-          onSpaceUpdated={handleSpaceUpdated} 
-          showNotification={showNotification} 
-          userRole={userRole}
-        />
+      {showForm && (
+        <div className="modal-overlay" onClick={() => {
+          setShowForm(false);
+          setEditingId(null);
+        }}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <SpaceForm 
+              spaceToEdit={editingId === 0 ? null : spaces.find(s => s.id === editingId)} // 0-ის შემთხვევაში null-ს გადაცემა
+              onFormClose={() => {
+                setShowForm(false);
+                setEditingId(null);
+              }}
+              onSpaceUpdated={handleSpaceUpdated}
+              showNotification={showNotification}
+            />
+          </div>
+        </div>
       )}
 
       {spaces.length === 0 ? (
