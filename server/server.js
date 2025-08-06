@@ -1305,8 +1305,14 @@ app.post('/api/annual-services', authenticateToken, authorizeRoles('admin', 'man
       service_type = 'გამოფენა',
       is_active = true,
       exhibition_id,
-      space_ids = []
+      space_ids = [],
+      selected_spaces = [],
+      selected_companies = []
     } = req.body;
+
+    console.log('Creating event with data:', {
+      service_name, exhibition_id, space_ids, selected_spaces, selected_companies
+    });
 
     const result = await db.query(
       `INSERT INTO annual_services (
@@ -1320,18 +1326,60 @@ app.post('/api/annual-services', authenticateToken, authorizeRoles('admin', 'man
     );
 
     const service = result.rows[0];
-
+    
+    // Use selected_spaces if available, fallback to space_ids
+    const spacesToAdd = selected_spaces.length > 0 ? selected_spaces : space_ids;
+    
     // Add space associations
-    for (const spaceId of space_ids) {
-      await db.query(
-        'INSERT INTO service_spaces (service_id, space_id) VALUES ($1, $2)',
-        [service.id, spaceId]
-      );
+    for (const spaceId of spacesToAdd) {
+      try {
+        await db.query(
+          'INSERT INTO service_spaces (service_id, space_id) VALUES ($1, $2)',
+          [service.id, spaceId]
+        );
+        console.log(`Added space ${spaceId} to service ${service.id}`);
+      } catch (spaceError) {
+        console.error(`Error adding space ${spaceId}:`, spaceError);
+      }
+    }
+
+    let registeredCompanies = 0;
+    
+    // Auto-register companies if exhibition_id is provided and companies are selected
+    if (exhibition_id && selected_companies && selected_companies.length > 0) {
+      console.log(`Auto-registering ${selected_companies.length} companies for event ${service.id}`);
+      
+      for (const companyId of selected_companies) {
+        try {
+          // Check if company is already registered for this event
+          const existingParticipant = await db.query(
+            'SELECT id FROM event_participants WHERE event_id = $1 AND company_id = $2',
+            [service.id, companyId]
+          );
+
+          if (existingParticipant.rows.length === 0) {
+            await db.query(
+              `INSERT INTO event_participants (
+                event_id, company_id, registration_status, payment_status, 
+                registration_date, created_by_user_id
+              ) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, $5)`,
+              [service.id, companyId, 'მონაწილეობის მოთხოვნა', 'მომლოდინე', req.user.id]
+            );
+            registeredCompanies++;
+            console.log(`Registered company ${companyId} for event ${service.id}`);
+          } else {
+            console.log(`Company ${companyId} already registered for event ${service.id}`);
+          }
+        } catch (companyError) {
+          console.error(`Error registering company ${companyId}:`, companyError);
+        }
+      }
     }
 
     res.status(201).json({
       message: 'სერვისი წარმატებით დაემატა',
-      service
+      service,
+      registeredCompanies
     });
   } catch (error) {
     console.error('სერვისის დამატების შეცდომა:', error);
@@ -1351,8 +1399,13 @@ app.put('/api/annual-services/:id', authenticateToken, authorizeRoles('admin', '
       service_type,
       is_active,
       exhibition_id,
-      space_ids = []
+      space_ids = [],
+      selected_spaces = []
     } = req.body;
+
+    console.log('Updating event with data:', {
+      id, service_name, exhibition_id, space_ids, selected_spaces
+    });
 
     const result = await db.query(
       `UPDATE annual_services SET 
@@ -1370,18 +1423,30 @@ app.put('/api/annual-services/:id', authenticateToken, authorizeRoles('admin', '
       return res.status(404).json({ message: 'სერვისი ვერ მოიძებნა' });
     }
 
-    // Update space associations
+    const service = result.rows[0];
+    
+    // Use selected_spaces if available, fallback to space_ids
+    const spacesToUpdate = selected_spaces.length > 0 ? selected_spaces : space_ids;
+    
+    // Update space associations - first remove existing ones
     await db.query('DELETE FROM service_spaces WHERE service_id = $1', [id]);
-    for (const spaceId of space_ids) {
-      await db.query(
-        'INSERT INTO service_spaces (service_id, space_id) VALUES ($1, $2)',
-        [id, spaceId]
-      );
+    
+    // Add new space associations
+    for (const spaceId of spacesToUpdate) {
+      try {
+        await db.query(
+          'INSERT INTO service_spaces (service_id, space_id) VALUES ($1, $2)',
+          [id, spaceId]
+        );
+        console.log(`Updated space ${spaceId} for service ${id}`);
+      } catch (spaceError) {
+        console.error(`Error updating space ${spaceId}:`, spaceError);
+      }
     }
 
     res.json({
       message: 'სერვისი წარმატებით განახლდა',
-      service: result.rows[0]
+      service
     });
   } catch (error) {
     console.error('სერვისის განახლების შეცდომა:', error);

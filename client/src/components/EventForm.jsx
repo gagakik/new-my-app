@@ -225,25 +225,34 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
 
     try {
       const token = localStorage.getItem('token');
+      
+      // Prepare data with proper formatting
+      const requestData = {
+        service_name: serviceName,
+        description,
+        year_selection: parseInt(yearSelection),
+        start_date: startDate,
+        end_date: endDate,
+        service_type: serviceType,
+        is_active: true,
+        selected_spaces: selectedSpaces,
+        space_ids: selectedSpaces, // Add this for backend compatibility
+        selected_exhibitions: selectedExhibitions,
+        exhibition_id: selectedExhibitionId ? parseInt(selectedExhibitionId) : null,
+        selected_companies: availableCompanies.map(company => company.id) // ყველა ხელმისაწვდომი კომპანია
+      };
+
+      console.log('Sending event data:', requestData);
+      console.log('Selected spaces:', selectedSpaces);
+      console.log('Available companies to register:', availableCompanies.length);
+
       const response = await fetch(url, {
         method,
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          service_name: serviceName,
-          description,
-          year_selection: parseInt(yearSelection),
-          start_date: startDate,
-          end_date: endDate,
-          service_type: serviceType,
-          is_active: true,
-          selected_spaces: selectedSpaces,
-          selected_exhibitions: selectedExhibitions,
-          exhibition_id: selectedExhibitionId ? parseInt(selectedExhibitionId) : null,
-          selected_companies: selectedCompanies
-        }),
+        body: JSON.stringify(requestData),
       });
 
       if (!response.ok) {
@@ -261,6 +270,7 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
 
       onEventUpdated(); // ფორმის გასუფთავება და სიის განახლება
     } catch (error) {
+      console.error('Event submission error:', error);
       showNotification(`შეცდომა: ${error.message}`, 'error');
     }
   };
