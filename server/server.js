@@ -19,6 +19,17 @@ app.use(express.json());
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Serve client build files in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../client/dist')));
+  
+  app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api/')) {
+      res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
+    }
+  });
+}
+
 // File upload configuration
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -1688,8 +1699,9 @@ app.put('/api/annual-services/:id/archive', authenticateToken, authorizeRoles('a
 });
 
 // Start server
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`სერვერი მუშაობს პორტზე ${PORT}`);
+const HOST = process.env.HOST || '0.0.0.0';
+app.listen(PORT, HOST, () => {
+  console.log(`სერვერი მუშაობს ${HOST}:${PORT}`);
 });
 
 

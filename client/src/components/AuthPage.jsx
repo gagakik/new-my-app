@@ -9,7 +9,7 @@ const AuthPage = ({ onLoginSuccess, showNotification }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const endpoint = isLoginView ? 'login' : 'register';
-    const response = await fetch(`/api/${endpoint}`, {
+    const response = await fetch(`${window.location.origin}/api/${endpoint}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
