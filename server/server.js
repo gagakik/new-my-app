@@ -639,69 +639,53 @@ app.delete('/api/events/:id', authenticateToken, authorizeRoles('admin', 'manage
   }
 });
 
-// Event participants routes
+// GET: Event Participants List
 app.get('/api/events/:eventId/participants', authenticateToken, async (req, res) => {
-  try {
-    const { eventId } = req.params;
+  const { eventId } = req.params;
 
-    const result = await db.query(`
+  try {
+    const query = `
       SELECT 
         ep.*,
         c.company_name,
         c.country,
-        c.identification_code
+        c.identification_code,
+        c.company_profile,
+        u.username as created_by_username
       FROM event_participants ep
       JOIN companies c ON ep.company_id = c.id
+      LEFT JOIN users u ON ep.created_by_user_id = u.id
       WHERE ep.event_id = $1
       ORDER BY ep.registration_date DESC
-    `, [eventId]);
+    `;
 
-    // Get equipment bookings for each participant
-    for (let participant of result.rows) {
-      const equipmentBookings = await db.query(`
-        SELECT 
-          eb.*,
-          e.code_name as equipment_name,
-          e.code_name as equipment_code_name
-        FROM equipment_bookings eb
-        JOIN equipment e ON eb.equipment_id = e.id
-        WHERE eb.participant_id = $1
-      `, [participant.id]);
+    const result = await db.query(query, [eventId]);
+    console.log(`ივენთი ${eventId}: მოიძებნა ${result.rows.length} მონაწილე`);
 
-      participant.equipment_bookings = equipmentBookings.rows;
-    }
+    // Parse equipment bookings for each participant
+    const participants = result.rows.map(participant => {
+      try {
+        if (participant.equipment_bookings && typeof participant.equipment_bookings === 'string') {
+          participant.equipment_bookings = JSON.parse(participant.equipment_bookings);
+        }
+      } catch (e) {
+        participant.equipment_bookings = [];
+      }
+      return participant;
+    });
 
-    res.json(result.rows);
+    res.json(participants);
   } catch (error) {
     console.error('მონაწილეების მიღების შეცდომა:', error);
     res.status(500).json({ message: 'მონაწილეების მიღება ვერ მოხერხდა' });
   }
 });
 
-// Multiple file upload configuration for participants
-const participantStorage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadPath = path.join(__dirname, 'uploads', 'participants');
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    cb(null, uploadPath);
-  },
-  filename: function (req, file, cb) {
-    const timestamp = Date.now();
-    const randomNum = Math.floor(Math.random() * 1000000000);
-    const extension = path.extname(file.originalname);
-    const filename = `${file.fieldname}-${timestamp}-${randomNum}${extension}`;
-    cb(null, filename);
-  }
-});
-
-const participantUpload = multer({ storage: participantStorage });
-
+// Event Participants Management
 app.post('/api/events/:eventId/participants', 
   authenticateToken, 
   authorizeRoles('admin', 'manager', 'sales', 'marketing'), 
-  participantUpload.fields([
+  upload.fields([
     { name: 'invoice_file', maxCount: 1 },
     { name: 'contract_file', maxCount: 1 },
     { name: 'handover_file', maxCount: 1 }
@@ -817,7 +801,7 @@ app.post('/api/events/:eventId/participants',
 app.put('/api/events/:eventId/participants/:participantId', 
   authenticateToken, 
   authorizeRoles('admin', 'manager', 'sales', 'marketing'), 
-  participantUpload.fields([
+  upload.fields([
     { name: 'invoice_file', maxCount: 1 },
     { name: 'contract_file', maxCount: 1 },
     { name: 'handover_file', maxCount: 1 }
@@ -1097,8 +1081,8 @@ app.post('/api/events/:eventId/complete', authenticateToken, authorizeRoles('adm
 
     // Update event status to completed
     await db.query(
-      'UPDATE events SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-      ['completed', eventId]
+      'UPDATE annual_services SET is_archived = true, archived_at = CURRENT_TIMESTAMP WHERE id = $1',
+      [eventId]
     );
 
     res.json({ 
@@ -1434,11 +1418,22 @@ app.post('/api/annual-services', authenticateToken, authorizeRoles('admin', 'man
       year_selection, 
       start_date, 
       end_date, 
-      service_type = 'გამოფენა',
+      service_type = 'ივენთი',
       is_active = true,
       exhibition_id,
       selected_spaces = []
     } = req.body;
+
+    console.log('Creating annual service with data:', { 
+      service_name, 
+      description, 
+      year_selection, 
+      start_date, 
+      end_date, 
+      service_type, 
+      exhibition_id, 
+      selected_spaces 
+    });
 
     const result = await db.query(
       `INSERT INTO annual_services (
@@ -1452,24 +1447,87 @@ app.post('/api/annual-services', authenticateToken, authorizeRoles('admin', 'man
     );
 
     const service = result.rows[0];
+    console.log('Service created with ID:', service.id);
 
     // Add space associations
     if (selected_spaces && selected_spaces.length > 0) {
+      console.log('Adding space associations:', selected_spaces);
       for (const spaceId of selected_spaces) {
-        await db.query(
-          'INSERT INTO service_spaces (service_id, space_id) VALUES ($1, $2)',
-          [service.id, spaceId]
-        );
+        try {
+          await db.query(
+            'INSERT INTO service_spaces (service_id, space_id) VALUES ($1, $2)',
+            [service.id, spaceId]
+          );
+          console.log(`Added space ${spaceId} to service ${service.id}`);
+        } catch (spaceError) {
+          console.error('Error adding space:', spaceError);
+        }
+      }
+    }
+
+    // ავტომატური კომპანიების რეგისტრაცია თუ გამოფენა არჩეულია
+    let registeredCompanies = 0;
+    if (exhibition_id) {
+      try {
+        console.log(`Starting automatic registration for exhibition ${exhibition_id}`);
+        
+        // ვიპოვოთ კომპანიები რომლებსაც ეს გამოფენა აქვთ მონიშნული
+        const companiesQuery = `
+          SELECT id, company_name, selected_exhibitions FROM companies 
+          WHERE selected_exhibitions IS NOT NULL 
+          AND selected_exhibitions != '[]'
+          AND (
+            selected_exhibitions::jsonb ? $1::text
+            OR selected_exhibitions::text LIKE $2
+            OR selected_exhibitions::text LIKE $3
+          )
+        `;
+        
+        const searchPatterns = [
+          exhibition_id.toString(),
+          `%"${exhibition_id}"%`,
+          `%[${exhibition_id}]%`
+        ];
+        
+        const companiesResult = await db.query(companiesQuery, searchPatterns);
+        console.log(`Found ${companiesResult.rows.length} companies for exhibition ${exhibition_id}`);
+
+        // დეტალური ლოგი თითოეული კომპანიისთვის
+        companiesResult.rows.forEach(company => {
+          console.log(`Company ${company.id} (${company.company_name}) selected_exhibitions:`, company.selected_exhibitions);
+        });
+
+        // თითოეული კომპანიისთვის ავტომატური რეგისტრაცია
+        for (const company of companiesResult.rows) {
+          try {
+            await db.query(
+              `INSERT INTO event_participants (
+                event_id, company_id, registration_status, payment_status,
+                created_by_user_id, registration_date
+              ) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)`,
+              [service.id, company.id, 'მონაწილეობის მოთხოვნა', 'მომლოდინე', req.user.id]
+            );
+            registeredCompanies++;
+            console.log(`Registered company ${company.id} (${company.company_name}) for event ${service.id}`);
+          } catch (insertError) {
+            console.error(`Error registering company ${company.id}:`, insertError.message);
+          }
+        }
+        console.log(`Auto-registered ${registeredCompanies} companies for event ${service.id}`);
+      } catch (autoRegError) {
+        console.error('ავტომატური რეგისტრაციის შეცდომა:', autoRegError);
+        // არ ვაფეილებთ მთელ ოპერაციას
       }
     }
 
     res.status(201).json({
-      message: 'სერვისი წარმატებით დაემატა',
-      service
+      message: 'ივენთი წარმატებით დაემატა',
+      service,
+      registeredCompanies
     });
   } catch (error) {
-    console.error('სერვისის დამატების შეცდომა:', error);
-    res.status(500).json({ message: 'სერვისის დამატება ვერ მოხერხდა' });
+    console.error('ივენთის დამატების შეცდომა:', error);
+    res.status(500).json({ message: 'ივენთის დამატება ვერ მოხერხდა' });
   }
 });
 
@@ -1488,6 +1546,17 @@ app.put('/api/annual-services/:id', authenticateToken, authorizeRoles('admin', '
       selected_spaces = []
     } = req.body;
 
+    console.log('Updating annual service:', id, { 
+      service_name, 
+      description, 
+      year_selection, 
+      start_date, 
+      end_date, 
+      service_type, 
+      exhibition_id, 
+      selected_spaces 
+    });
+
     const result = await db.query(
       `UPDATE annual_services SET 
         service_name = $1, description = $2, year_selection = $3, 
@@ -1501,27 +1570,35 @@ app.put('/api/annual-services/:id', authenticateToken, authorizeRoles('admin', '
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'სერვისი ვერ მოიძებნა' });
+      return res.status(404).json({ message: 'ივენთი ვერ მოიძებნა' });
     }
 
     // Update space associations
+    console.log('Updating space associations for service:', id);
     await db.query('DELETE FROM service_spaces WHERE service_id = $1', [id]);
+    
     if (selected_spaces && selected_spaces.length > 0) {
+      console.log('Adding spaces:', selected_spaces);
       for (const spaceId of selected_spaces) {
-        await db.query(
-          'INSERT INTO service_spaces (service_id, space_id) VALUES ($1, $2)',
-          [id, spaceId]
-        );
+        try {
+          await db.query(
+            'INSERT INTO service_spaces (service_id, space_id) VALUES ($1, $2)',
+            [id, spaceId]
+          );
+          console.log(`Updated space ${spaceId} for service ${id}`);
+        } catch (spaceError) {
+          console.error('Error updating space:', spaceError);
+        }
       }
     }
 
     res.json({
-      message: 'სერვისი წარმატებით განახლდა',
+      message: 'ივენთი წარმატებით განახლდა',
       service: result.rows[0]
     });
   } catch (error) {
-    console.error('სერვისის განახლების შეცდომა:', error);
-    res.status(500).json({ message: 'სერვისის განახლება ვერ მოხერხდა' });
+    console.error('ივენთის განახლების შეცდომა:', error);
+    res.status(500).json({ message: 'ივენთის განახლება ვერ მოხერხდა' });
   }
 });
 
@@ -1600,3 +1677,8 @@ app.get('/api/reports/event-financials', authenticateToken, async (req, res) => 
   }
 });
 
+
+// Routes
+app.use('/api/companies', require('./routes/companies'));
+app.use('/api/statistics', require('./routes/statistics'));
+app.use('/api/import', require('./routes/import'));

@@ -179,21 +179,86 @@
   font-style: italic;
 }
 
-.add-new {
-  display: block;
-  width: fit-content;
-  margin: 0 auto 1.5rem;
+.management-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.add-new,
+.import-btn {
   padding: 10px 20px;
-  background-color: #007bff;
-  color: #fff;
   border: none;
   border-radius: 5px;
   cursor: pointer;
   transition: background-color 0.3s;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.add-new {
+  background-color: #007bff;
+  color: #fff;
 }
 
 .add-new:hover {
   background-color: #0056b3;
+}
+
+.import-btn {
+  background-color: #28a745;
+  color: #fff;
+}
+
+.import-btn:hover {
+  background-color: #218838;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.close-modal {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1001;
+}
+
+.close-modal:hover {
+  background: #c82333;
 }
 
 /* ფილტრების სტილები */
@@ -227,8 +292,6 @@
 }
 
 /* კომპანიების ცხრილის სტილები */
-
-
 .companies-table {
   width: 100%;
   border-collapse: collapse;
@@ -238,7 +301,6 @@
   overflow: hidden;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   border: 1px solid #e9ecef;
-  
 }
 
 .companies-table th,
@@ -247,20 +309,15 @@
   text-align: left;
   border-bottom: 1px solid #f0f0f0;
   vertical-align: top;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
 }
 
 .companies-table th {
   background-color: #495057;
-  color: #6c757d;
+  color: white;
   font-weight: 600;
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  align-items: center;
-  justify-content: space-between
 }
 
 .companies-table tbody tr {

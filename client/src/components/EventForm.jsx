@@ -68,12 +68,19 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
         'Content-Type': 'application/json'
       };
 
-      const response = await fetch(`/api/companies?exhibition_id=${exhibitionId}`, { headers });
+      const response = await fetch(`/api/companies`, { headers });
       if (response.ok) {
         const companies = await response.json();
-        const filteredCompanies = companies.filter(company => 
-          company.exhibitions && company.exhibitions.includes(parseInt(exhibitionId))
-        );
+        console.log('ყველა კომპანია:', companies.length);
+        
+        const filteredCompanies = companies.filter(company => {
+          console.log(`კომპანია ${company.company_name}:`, company.selected_exhibitions);
+          return company.selected_exhibitions && 
+                 Array.isArray(company.selected_exhibitions) && 
+                 company.selected_exhibitions.includes(parseInt(exhibitionId));
+        });
+        
+        console.log(`გამოფენა ${exhibitionId}-ის კომპანიები:`, filteredCompanies.length);
         setAvailableCompanies(filteredCompanies);
 
         // ავტო-არჩევა მხოლოდ ახალი ივენთისთვის
@@ -211,20 +218,6 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
       return;
     }
 
-    const eventData = {
-      service_name: serviceName,
-      description,
-      year_selection: parseInt(yearSelection),
-      start_date: startDate,
-      end_date: endDate,
-      service_type: serviceType,
-      is_active: true,
-      selected_spaces: selectedSpaces,
-      selected_exhibitions: selectedExhibitions,
-      exhibition_id: selectedExhibitionId,
-      selected_companies: selectedCompanies,
-    };
-
     const method = isEditing ? 'PUT' : 'POST';
     const url = isEditing
       ? `/api/annual-services/${eventToEdit.id}`
@@ -241,7 +234,7 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
         body: JSON.stringify({
           service_name: serviceName,
           description,
-          year_selection: yearSelection,
+          year_selection: parseInt(yearSelection),
           start_date: startDate,
           end_date: endDate,
           service_type: serviceType,
@@ -261,9 +254,9 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
       const data = await response.json();
       showNotification(data.message, 'success');
 
-      // თუ ახალი ივენთი შეიქმნა და გამოფენა არჩეული იყო, კომპანიები ავტომატურად უნდა დარეგისტრირდეს
-      if (!isEditing && data.service && selectedExhibitionId) {
-        showNotification(`ივენთი შეიქმნა. ავტომატურად რეგისტრირდება ${availableCompanies.length} კომპანია.`, 'info');
+      // თუ კომპანიები ავტომატურად რეგისტრირდნენ
+      if (!isEditing && data.registeredCompanies > 0) {
+        showNotification(`${data.registeredCompanies} კომპანია ავტომატურად დარეგისტრირდა მომლოდინე სტატუსით`, 'info');
       }
 
       onEventUpdated(); // ფორმის გასუფთავება და სიის განახლება

@@ -144,13 +144,19 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
   const fetchParticipants = async () => {
     try {
       const token = localStorage.getItem('token');
+      console.log(`მონაწილეების მოთხოვნა ივენთისთვის: ${eventId}`);
       const response = await fetch(`/api/events/${eventId}/participants`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
+      console.log(`Response status: ${response.status}`);
+      
       if (response.ok) {
         const data = await response.json();
-        console.log(`ფეტჩი: მოვიღე ${data.length} მონაწილე ივენთისთვის ${eventId}`, data);
+        console.log(`ფეტჩი: მოვიღე ${data.length} მონაწილე ივენთისთვის ${eventId}`);
+        if (data.length > 0) {
+          console.log('პირველი მონაწილის ნიმუში:', data[0]);
+        }
         setParticipants(data);
         setFilteredParticipants(data);
       } else {
@@ -644,11 +650,12 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
   const getStatusBadge = (status) => {
     const statusMap = {
       'მონაწილეობის მოთხოვნა': 'requested',
+      'მომლოდინე': 'pending',
       'რეგისტრირებული': 'registered',
       'დადასტურებული': 'confirmed',
       'გაუქმებული': 'cancelled'
     };
-    return statusMap[status] || 'requested';
+    return statusMap[status] || 'pending';
   };
 
   const getPaymentBadge = (status) => {
@@ -727,6 +734,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
               >
                 <option value="">ყველა სტატუსი</option>
                 <option value="მონაწილეობის მოთხოვნა">მონაწილეობის მოთხოვნა</option>
+                <option value="მომლოდინე">მომლოდინე</option>
                 <option value="რეგისტრირებული">რეგისტრირებული</option>
                 <option value="დადასტურებული">დადასტურებული</option>
                 <option value="გაუქმებული">გაუქმებული</option>
@@ -1103,6 +1111,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                     <div data-label="სტატუსი:">
                       <span className={`status-badge ${getStatusBadge(participant.registration_status)} compact`}>
                         {participant.registration_status === 'მონაწილეობის მოთხოვნა' ? 'მოთხოვნა' : 
+                         participant.registration_status === 'მომლოდინე' ? 'მომლოდ.' :
                          participant.registration_status === 'რეგისტრირებული' ? 'რეგისტრ.' : 
                          participant.registration_status === 'დადასტურებული' ? 'დადასტ.' : 
                          participant.registration_status}

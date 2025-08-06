@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './CompaniesList.css';
 import CompanyForm from './CompanyForm'; // კომპანიის ფორმის იმპორტი
+import CompanyImport from './CompanyImport'; // კომპანიის იმპორტის კომპონენტის იმპორტი
 
 const CompaniesList = ({ showNotification, userRole }) => {
   const [companies, setCompanies] = useState([]);
@@ -13,6 +14,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
   const [filterStatus, setFilterStatus] = useState('');
   const [filterIdentificationCode, setFilterIdentificationCode] = useState(''); // ახალი სტეიტი საიდენტიფიკაციო კოდისთვის
   const [selectedCompany, setSelectedCompany] = useState(null); // დეტალური ხედვისთვის
+  const [showImport, setShowImport] = useState(false); // იმპორტის მოდალის საჩვენებლად
 
   // განსაზღვრეთ, აქვს თუ არა მომხმარებელს მართვის უფლება
   const isAuthorizedForManagement = 
@@ -99,6 +101,11 @@ const CompaniesList = ({ showNotification, userRole }) => {
     fetchCompanies();
   };
 
+  const handleImportComplete = () => {
+    setShowImport(false);
+    fetchCompanies();
+  };
+
   const handleViewDetails = (company) => {
     setSelectedCompany(company);
   };
@@ -181,7 +188,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
           <option value="იაპონია">იაპონია</option>
           <option value="ჩინეთი">ჩინეთი</option>
           <option value="ბრაზილია">ბრაზილია</option>
-          <option value="მექსიკო">მექსიკო</option>
+          <option value="მექსიკა">მექსიკა</option>
           <option value="არგენტინა">არგენტინა</option>
           <option value="ჩილე">ჩილე</option>
           <option value="ინდოეთი">ინდოეთი</option>
@@ -211,7 +218,10 @@ const CompaniesList = ({ showNotification, userRole }) => {
       </div> {/* filters დასასრული */}
 
       {isAuthorizedForManagement && (
-        <button className="add-new" onClick={() => setEditingId(0)}>ახალი კომპანიის დამატება</button>
+        <>
+          <button className="add-new" onClick={() => setEditingId(0)}>ახალი კომპანიის დამატება</button>
+          <button className="import-excel" onClick={() => setShowImport(true)}>Excel-ით იმპორტი</button>
+        </>
       )}
 
       {editingId !== null && isAuthorizedForManagement && (
@@ -220,6 +230,13 @@ const CompaniesList = ({ showNotification, userRole }) => {
           onCompanyUpdated={handleCompanyUpdated} 
           showNotification={showNotification} 
           userRole={userRole}
+        />
+      )}
+
+      {showImport && (
+        <CompanyImport 
+          onImportComplete={handleImportComplete} 
+          showNotification={showNotification} 
         />
       )}
 
