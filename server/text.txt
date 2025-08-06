@@ -259,6 +259,3 @@ JWT_SECRET=YOUR_SECRET_KEY
 
 # Node Environment
 NODE_ENV=development
-
-
-npm install xlsx multer

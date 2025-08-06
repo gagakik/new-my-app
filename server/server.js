@@ -33,7 +33,13 @@ if (process.env.NODE_ENV === 'production') {
 // File upload configuration
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const uploadPath = path.join(__dirname, 'uploads');
+    let uploadPath = path.join(__dirname, 'uploads');
+    
+    // Check if it's a participant file upload based on the route
+    if (req.route && req.route.path && req.route.path.includes('participants')) {
+      uploadPath = path.join(__dirname, 'uploads', 'participants');
+    }
+    
     if (!fs.existsSync(uploadPath)) {
       fs.mkdirSync(uploadPath, { recursive: true });
     }
@@ -49,6 +55,26 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage: storage });
+
+// Separate multer configuration for participant files
+const participantStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadPath = path.join(__dirname, 'uploads', 'participants');
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
+  },
+  filename: function (req, file, cb) {
+    const timestamp = Date.now();
+    const randomNum = Math.floor(Math.random() * 1000000000);
+    const extension = path.extname(file.originalname);
+    const filename = `${file.fieldname}-${timestamp}-${randomNum}${extension}`;
+    cb(null, filename);
+  }
+});
+
+const participantUpload = multer({ storage: participantStorage });
 
 // Token verification middleware
 const authenticateToken = (req, res, next) => {
@@ -81,7 +107,13 @@ const authorizeRoles = (...roles) => {
 // Auth routes - Fixed endpoints to match frontend
 app.post('/api/register', async (req, res) => {
   try {
+    console.log('Registration request received:', { body: req.body });
     const { username, password, role = 'user' } = req.body;
+
+    if (!username || !password) {
+      console.log('Missing username or password');
+      return res.status(400).json({ message: 'მომხმარებლის სახელი და პაროლი აუცილებელია' });
+    }
 
     // Check if user exists
     const existingUser = await db.query(
@@ -90,6 +122,7 @@ app.post('/api/register', async (req, res) => {
     );
 
     if (existingUser.rows.length > 0) {
+      console.log('User already exists:', username);
       return res.status(400).json({ message: 'მომხმარებელი უკვე არსებობს' });
     }
 
@@ -98,13 +131,18 @@ app.post('/api/register', async (req, res) => {
 
     // Create user
     const result = await db.query(
-      'INSERT INTO users (username, password, role) VALUES ($1, $2, $3) RETURNING id, username, role',
+      'INSERT INTO users (username, password, role) VALUES ($1, $2, $3) RETURNING *',
       [username, hashedPassword, role]
     );
 
-    const user = result.rows[0];
+    // Get the created user
+    const user = result;
+
+    const createdUser = user.rows[0];
+    console.log('User created successfully:', { id: createdUser.id, username: createdUser.username, role: createdUser.role });
+
     const token = jwt.sign(
-      { id: user.id, username: user.username, role: user.role },
+      { id: createdUser.id, username: createdUser.username, role: createdUser.role },
       process.env.JWT_SECRET || 'fallback_secret',
       { expiresIn: '24h' }
     );
@@ -112,19 +150,30 @@ app.post('/api/register', async (req, res) => {
     res.status(201).json({
       message: 'მომხმარებელი წარმატებით შეიქმნა',
       token,
-      role: user.role,
-      userId: user.id,
-      username: user.username
+      role: createdUser.role,
+      userId: createdUser.id,
+      username: createdUser.username
     });
   } catch (error) {
     console.error('Registration error:', error);
-    res.status(500).json({ message: 'სერვერის შეცდომა' });
+    console.error('Error details:', error.message);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      message: 'სერვერის შეცდომა',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
 app.post('/api/login', async (req, res) => {
   try {
+    console.log('Login request received:', { body: req.body, headers: req.headers });
     const { username, password } = req.body;
+
+    if (!username || !password) {
+      console.log('Missing username or password');
+      return res.status(400).json({ message: 'მომხმარებლის სახელი და პაროლი აუცილებელია' });
+    }
 
     // Find user
     const result = await db.query(
@@ -133,14 +182,19 @@ app.post('/api/login', async (req, res) => {
     );
 
     if (result.rows.length === 0) {
+      console.log('User not found:', username);
       return res.status(400).json({ message: 'არასწორი მომხმარებლის სახელი ან პაროლი' });
     }
 
     const user = result.rows[0];
+    console.log('User found:', { id: user.id, username: user.username, role: user.role });
 
     // Check password
     const isValidPassword = await bcrypt.compare(password, user.password);
+    console.log('Password valid:', isValidPassword);
+    
     if (!isValidPassword) {
+      console.log('Invalid password for user:', username);
       return res.status(400).json({ message: 'არასწორი მომხმარებლის სახელი ან პაროლი' });
     }
 
@@ -151,6 +205,7 @@ app.post('/api/login', async (req, res) => {
       { expiresIn: '24h' }
     );
 
+    console.log('Login successful for user:', username);
     res.json({
       message: 'წარმატებით შესვლა',
       token,
@@ -696,7 +751,7 @@ app.get('/api/events/:eventId/participants', authenticateToken, async (req, res)
 app.post('/api/events/:eventId/participants', 
   authenticateToken, 
   authorizeRoles('admin', 'manager', 'sales', 'marketing'), 
-  upload.fields([
+  participantUpload.fields([
     { name: 'invoice_file', maxCount: 1 },
     { name: 'contract_file', maxCount: 1 },
     { name: 'handover_file', maxCount: 1 }
@@ -812,7 +867,7 @@ app.post('/api/events/:eventId/participants',
 app.put('/api/events/:eventId/participants/:participantId', 
   authenticateToken, 
   authorizeRoles('admin', 'manager', 'sales', 'marketing'), 
-  upload.fields([
+  participantUpload.fields([
     { name: 'invoice_file', maxCount: 1 },
     { name: 'contract_file', maxCount: 1 },
     { name: 'handover_file', maxCount: 1 }
@@ -1145,6 +1200,25 @@ app.get('/api/statistics/general', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('ზოგადი სტატისტიკის შეცდომა:', error);
     res.status(500).json({ message: 'ზოგადი სტატისტიკის მიღება ვერ მოხერხდა' });
+  }
+});
+
+// User profile route (for any authenticated user)
+app.get('/api/user/profile', authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query(
+      'SELECT id, username, role, created_at FROM users WHERE id = $1',
+      [req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'მომხმარებელი ვერ მოიძებნა' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('მომხმარებლის პროფილის მიღების შეცდომა:', error);
+    res.status(500).json({ message: 'მომხმარებლის პროფილის მიღება ვერ მოხერხდა' });
   }
 });
 

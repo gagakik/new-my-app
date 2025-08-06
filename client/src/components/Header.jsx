@@ -133,10 +133,8 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
       key: 'profile',
       label: 'Profile',
       icon: '👤',
-      items: [
-        { key: 'profile-info', label: 'მომხმარებლის ინფორმაცია', icon: '📝' },
-        { key: 'profile-registration', label: 'რეგისტრაციის თარიღი', icon: '📅' }
-      ]
+      single: true,
+      action: () => handleViewChange('profile')
     });
 
     // Admin (admin only)

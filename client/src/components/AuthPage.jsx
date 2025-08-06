@@ -9,25 +9,52 @@ const AuthPage = ({ onLoginSuccess, showNotification }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const endpoint = isLoginView ? 'login' : 'register';
-    const response = await fetch(`${window.location.origin}/api/${endpoint}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ username, password }),
-    });
+    
+    console.log('Sending request to:', `/api/${endpoint}`);
+    console.log('Request data:', { username, password: '*'.repeat(password.length) });
+    
+    // Validation
+    if (!username.trim() || !password.trim()) {
+      showNotification('მომხმარებლის სახელი და პაროლი აუცილებელია', 'error');
+      return;
+    }
 
-    const data = await response.json();
-    if (response.ok) {
-      if (isLoginView) {
-        showNotification(data.message, 'success');
-        onLoginSuccess(data.role, data.token, data.userId, data.username); // გადავეცით userId და username
+    if (!isLoginView && password.length < 6) {
+      showNotification('პაროლი უნდა იყოს მინიმუმ 6 სიმბოლო', 'error');
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/api/${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      });
+
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+
+      const data = await response.json();
+      console.log('Response data:', data);
+      
+      if (response.ok) {
+        if (isLoginView) {
+          showNotification(data.message, 'success');
+          onLoginSuccess(data.role, data.token, data.userId, data.username);
+        } else {
+          showNotification('რეგისტრაცია წარმატებით დასრულდა. გთხოვთ, შეხვიდეთ სისტემაში.', 'success');
+          setIsLoginView(true);
+          setUsername('');
+          setPassword('');
+        }
       } else {
-        showNotification('რეგისტრაცია წარმატებით დასრულდა. გთხოვთ, შეხვიდეთ სისტემაში.', 'success');
-        setIsLoginView(true);
+        showNotification(data.message || 'შეცდომა დაფიქსირდა', 'error');
       }
-    } else {
-      showNotification(data.message, 'error');
+    } catch (error) {
+      console.error('Network error:', error);
+      showNotification('ქსელის შეცდომა. გთხოვთ, შეამოწმოთ ინტერნეტ კავშირი.', 'error');
     }
   };
 

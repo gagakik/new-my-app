@@ -7,6 +7,7 @@ import UserManagement from './UserManagement';
 import EventsList from './EventsList';
 import Statistics from './Statistics';
 import EventReports from './EventReports';
+import UserProfile from './UserProfile';
 
 import './MainContent.css';
 

@@ -1003,44 +1003,50 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                   <h4>დოკუმენტების მიმაგრება</h4>
                   <div className="form-row">
                     <div className="form-group">
-                      <label>ინვოისი (PDF ან Excel)</label>
+                      <label htmlFor="invoice-file">ინვოისი (PDF ან Excel)</label>
                       <input
+                        id="invoice-file"
                         type="file"
-                        accept=".pdf,.xlsx,.xls"
+                        accept=".pdf,.xlsx,.xls,.doc,.docx"
                         onChange={(e) => setFiles({...files, invoice_file: e.target.files[0]})}
                         className="file-input"
+                        style={{display: 'block', width: '100%'}}
                       />
                       {files.invoice_file && (
                         <div className="file-info">
-                          არჩეული: {files.invoice_file.name}
+                          ✓ არჩეული: {files.invoice_file.name}
                         </div>
                       )}
                     </div>
                     <div className="form-group">
-                      <label>ხელშეკრულება (PDF ან Excel)</label>
+                      <label htmlFor="contract-file">ხელშეკრულება (PDF ან Excel)</label>
                       <input
+                        id="contract-file"
                         type="file"
-                        accept=".pdf,.xlsx,.xls"
+                        accept=".pdf,.xlsx,.xls,.doc,.docx"
                         onChange={(e) => setFiles({...files, contract_file: e.target.files[0]})}
                         className="file-input"
+                        style={{display: 'block', width: '100%'}}
                       />
                       {files.contract_file && (
                         <div className="file-info">
-                          არჩეული: {files.contract_file.name}
+                          ✓ არჩეული: {files.contract_file.name}
                         </div>
                       )}
                     </div>
                     <div className="form-group">
-                      <label>მიღება-ჩაბარება (PDF ან Excel)</label>
+                      <label htmlFor="handover-file">მიღება-ჩაბარება (PDF ან Excel)</label>
                       <input
+                        id="handover-file"
                         type="file"
-                        accept=".pdf,.xlsx,.xls"
+                        accept=".pdf,.xlsx,.xls,.doc,.docx"
                         onChange={(e) => setFiles({...files, handover_file: e.target.files[0]})}
                         className="file-input"
+                        style={{display: 'block', width: '100%'}}
                       />
                       {files.handover_file && (
                         <div className="file-info">
-                          არჩეული: {files.handover_file.name}
+                          ✓ არჩეული: {files.handover_file.name}
                         </div>
                       )}
                     </div>
