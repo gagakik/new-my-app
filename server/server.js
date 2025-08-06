@@ -22,7 +22,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Serve client build files in production
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../client/dist')));
-  
+
   app.get('*', (req, res) => {
     if (!req.path.startsWith('/api/')) {
       res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
@@ -34,12 +34,12 @@ if (process.env.NODE_ENV === 'production') {
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     let uploadPath = path.join(__dirname, 'uploads');
-    
+
     // Check if it's a participant file upload based on the route
     if (req.route && req.route.path && req.route.path.includes('participants')) {
       uploadPath = path.join(__dirname, 'uploads', 'participants');
     }
-    
+
     if (!fs.existsSync(uploadPath)) {
       fs.mkdirSync(uploadPath, { recursive: true });
     }
@@ -192,7 +192,7 @@ app.post('/api/login', async (req, res) => {
     // Check password
     const isValidPassword = await bcrypt.compare(password, user.password);
     console.log('Password valid:', isValidPassword);
-    
+
     if (!isValidPassword) {
       console.log('Invalid password for user:', username);
       return res.status(400).json({ message: 'არასწორი მომხმარებლის სახელი ან პაროლი' });
@@ -572,7 +572,6 @@ app.get('/api/events', authenticateToken, async (req, res) => {
       FROM annual_services a
       LEFT JOIN service_spaces ss ON a.id = ss.service_id
       LEFT JOIN exhibitions e ON a.exhibition_id = e.id
-      WHERE a.is_archived = false OR a.is_archived IS NULL
       GROUP BY a.id, a.service_name, a.description, a.year_selection, a.start_date, a.end_date, a.service_type, a.is_active, a.is_archived, a.created_at, a.updated_at, a.created_by_user_id, a.exhibition_id, e.exhibition_name, e.price_per_sqm
       ORDER BY a.created_at DESC
     `);
@@ -1411,10 +1410,10 @@ app.post('/api/annual-services', authenticateToken, authorizeRoles('admin', 'man
     );
 
     const service = result.rows[0];
-    
+
     // Use selected_spaces if available, fallback to space_ids
     const spacesToAdd = selected_spaces.length > 0 ? selected_spaces : space_ids;
-    
+
     // Add space associations
     for (const spaceId of spacesToAdd) {
       try {
@@ -1429,11 +1428,11 @@ app.post('/api/annual-services', authenticateToken, authorizeRoles('admin', 'man
     }
 
     let registeredCompanies = 0;
-    
+
     // Auto-register companies if exhibition_id is provided and companies are selected
     if (exhibition_id && selected_companies && selected_companies.length > 0) {
       console.log(`Auto-registering ${selected_companies.length} companies for event ${service.id}`);
-      
+
       for (const companyId of selected_companies) {
         try {
           // Check if company is already registered for this event
@@ -1509,13 +1508,13 @@ app.put('/api/annual-services/:id', authenticateToken, authorizeRoles('admin', '
     }
 
     const service = result.rows[0];
-    
+
     // Use selected_spaces if available, fallback to space_ids
     const spacesToUpdate = selected_spaces.length > 0 ? selected_spaces : space_ids;
-    
+
     // Update space associations - first remove existing ones
     await db.query('DELETE FROM service_spaces WHERE service_id = $1', [id]);
-    
+
     // Add new space associations
     for (const spaceId of spacesToUpdate) {
       try {
@@ -1539,225 +1538,12 @@ app.put('/api/annual-services/:id', authenticateToken, authorizeRoles('admin', '
   }
 });
 
-app.delete('/api/annual-services/:id', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Delete associated records first
-    await db.query('DELETE FROM service_spaces WHERE service_id = $1', [id]);
-    await db.query('DELETE FROM service_exhibitions WHERE service_id = $1', [id]);
-
-    const result = await db.query('DELETE FROM annual_services WHERE id = $1 RETURNING *', [id]);
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'სერვისი ვერ მოიძებნა' });
-    }
-
-    res.json({ message: 'სერვისი წარმატებით წაიშალა' });
-  } catch (error) {
-    console.error('სერვისის წაშლის შეცდომა:', error);
-    res.status(500).json({ message: 'სერვისის წაშლა ვერ მოხერხდა' });
-  }
-});
-
-app.post('/api/annual-services', authenticateToken, authorizeRoles('admin', 'manager', 'sales', 'marketing'), async (req, res) => {
-  try {
-    const { 
-      service_name, 
-      description, 
-      year_selection, 
-      start_date, 
-      end_date, 
-      service_type = 'ივენთი',
-      is_active = true,
-      exhibition_id,
-      selected_spaces = []
-    } = req.body;
-
-    console.log('Creating annual service with data:', { 
-      service_name, 
-      description, 
-      year_selection, 
-      start_date, 
-      end_date, 
-      service_type, 
-      exhibition_id, 
-      selected_spaces 
-    });
-
-    const result = await db.query(
-      `INSERT INTO annual_services (
-        service_name, description, year_selection, start_date, end_date, 
-        service_type, is_active, exhibition_id, created_by_user_id
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-      [
-        service_name, description, year_selection, start_date, end_date,
-        service_type, is_active, exhibition_id, req.user.id
-      ]
-    );
-
-    const service = result.rows[0];
-    console.log('Service created with ID:', service.id);
-
-    // Add space associations
-    if (selected_spaces && selected_spaces.length > 0) {
-      console.log('Adding space associations:', selected_spaces);
-      for (const spaceId of selected_spaces) {
-        try {
-          await db.query(
-            'INSERT INTO service_spaces (service_id, space_id) VALUES ($1, $2)',
-            [service.id, spaceId]
-          );
-          console.log(`Added space ${spaceId} to service ${service.id}`);
-        } catch (spaceError) {
-          console.error('Error adding space:', spaceError);
-        }
-      }
-    }
-
-    // ავტომატური კომპანიების რეგისტრაცია თუ გამოფენა არჩეულია
-    let registeredCompanies = 0;
-    if (exhibition_id) {
-      try {
-        console.log(`Starting automatic registration for exhibition ${exhibition_id}`);
-        
-        // ვიპოვოთ კომპანიები რომლებსაც ეს გამოფენა აქვთ მონიშნული
-        const companiesQuery = `
-          SELECT id, company_name, selected_exhibitions FROM companies 
-          WHERE selected_exhibitions IS NOT NULL 
-          AND selected_exhibitions != '[]'
-          AND (
-            selected_exhibitions::jsonb ? $1::text
-            OR selected_exhibitions::text LIKE $2
-            OR selected_exhibitions::text LIKE $3
-          )
-        `;
-        
-        const searchPatterns = [
-          exhibition_id.toString(),
-          `%"${exhibition_id}"%`,
-          `%[${exhibition_id}]%`
-        ];
-        
-        const companiesResult = await db.query(companiesQuery, searchPatterns);
-        console.log(`Found ${companiesResult.rows.length} companies for exhibition ${exhibition_id}`);
-
-        // დეტალური ლოგი თითოეული კომპანიისთვის
-        companiesResult.rows.forEach(company => {
-          console.log(`Company ${company.id} (${company.company_name}) selected_exhibitions:`, company.selected_exhibitions);
-        });
-
-        // თითოეული კომპანიისთვის ავტომატური რეგისტრაცია
-        for (const company of companiesResult.rows) {
-          try {
-            await db.query(
-              `INSERT INTO event_participants (
-                event_id, company_id, registration_status, payment_status,
-                created_by_user_id, registration_date
-              ) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)`,
-              [service.id, company.id, 'მონაწილეობის მოთხოვნა', 'მომლოდინე', req.user.id]
-            );
-            registeredCompanies++;
-            console.log(`Registered company ${company.id} (${company.company_name}) for event ${service.id}`);
-          } catch (insertError) {
-            console.error(`Error registering company ${company.id}:`, insertError.message);
-          }
-        }
-        console.log(`Auto-registered ${registeredCompanies} companies for event ${service.id}`);
-      } catch (autoRegError) {
-        console.error('ავტომატური რეგისტრაციის შეცდომა:', autoRegError);
-        // არ ვაფეილებთ მთელ ოპერაციას
-      }
-    }
-
-    res.status(201).json({
-      message: 'ივენთი წარმატებით დაემატა',
-      service,
-      registeredCompanies
-    });
-  } catch (error) {
-    console.error('ივენთის დამატების შეცდომა:', error);
-    res.status(500).json({ message: 'ივენთის დამატება ვერ მოხერხდა' });
-  }
-});
-
-app.put('/api/annual-services/:id', authenticateToken, authorizeRoles('admin', 'manager', 'sales', 'marketing'), async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { 
-      service_name, 
-      description, 
-      year_selection, 
-      start_date, 
-      end_date, 
-      service_type,
-      is_active,
-      exhibition_id,
-      selected_spaces = []
-    } = req.body;
-
-    console.log('Updating annual service:', id, { 
-      service_name, 
-      description, 
-      year_selection, 
-      start_date, 
-      end_date, 
-      service_type, 
-      exhibition_id, 
-      selected_spaces 
-    });
-
-    const result = await db.query(
-      `UPDATE annual_services SET 
-        service_name = $1, description = $2, year_selection = $3, 
-        start_date = $4, end_date = $5, service_type = $6, 
-        is_active = $7, exhibition_id = $8, updated_at = CURRENT_TIMESTAMP 
-      WHERE id = $9 RETURNING *`,
-      [
-        service_name, description, year_selection, start_date, end_date,
-        service_type, is_active, exhibition_id, id
-      ]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'ივენთი ვერ მოიძებნა' });
-    }
-
-    // Update space associations
-    console.log('Updating space associations for service:', id);
-    await db.query('DELETE FROM service_spaces WHERE service_id = $1', [id]);
-    
-    if (selected_spaces && selected_spaces.length > 0) {
-      console.log('Adding spaces:', selected_spaces);
-      for (const spaceId of selected_spaces) {
-        try {
-          await db.query(
-            'INSERT INTO service_spaces (service_id, space_id) VALUES ($1, $2)',
-            [id, spaceId]
-          );
-          console.log(`Updated space ${spaceId} for service ${id}`);
-        } catch (spaceError) {
-          console.error('Error updating space:', spaceError);
-        }
-      }
-    }
-
-    res.json({
-      message: 'ივენთი წარმატებით განახლდა',
-      service: result.rows[0]
-    });
-  } catch (error) {
-    console.error('ივენთის განახლების შეცდომა:', error);
-    res.status(500).json({ message: 'ივენთის განახლება ვერ მოხერხდა' });
-  }
-});
-
-app.put('/api/annual-services/:id/archive', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res) => {
+app.put('/api/annual-services/:id/archive', authenticateToken, authorizeRoles('admin', 'sales', 'marketing'), async (req, res) => {
   try {
     const { id } = req.params;
 
     const result = await db.query(
-      'UPDATE annual_services SET is_archived = true, archived_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
+      'UPDATE annual_services SET is_archived = TRUE WHERE id = $1 RETURNING *',
       [id]
     );
 
@@ -1765,10 +1551,37 @@ app.put('/api/annual-services/:id/archive', authenticateToken, authorizeRoles('a
       return res.status(404).json({ message: 'სერვისი ვერ მოიძებნა' });
     }
 
-    res.json({ message: 'სერვისი წარმატებით არქივში გადაიტანა' });
+    res.json({ 
+      message: 'სერვისი წარმატებით არქივში გადაიტანა',
+      service: result.rows[0]
+    });
   } catch (error) {
-    console.error('სერვისის არქივში გადატანის შეცდომა:', error);
+    console.error('Archive service error:', error);
     res.status(500).json({ message: 'სერვისის არქივში გადატანა ვერ მოხერხდა' });
+  }
+});
+
+// Restore annual service from archive
+app.put('/api/annual-services/:id/restore', authenticateToken, authorizeRoles('admin', 'sales', 'marketing'), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await db.query(
+      'UPDATE annual_services SET is_archived = FALSE WHERE id = $1 RETURNING *',
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'სერვისი ვერ მოიძებნა' });
+    }
+
+    res.json({ 
+      message: 'სერვისი წარმატებით აღდგა არქივიდან',
+      service: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Restore service error:', error);
+    res.status(500).json({ message: 'სერვისის არქივიდან აღდგენა ვერ მოხერხდა' });
   }
 });
 

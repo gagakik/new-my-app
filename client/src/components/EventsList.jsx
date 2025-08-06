@@ -21,6 +21,7 @@ const EventsList = ({ showNotification, userRole }) => {
   const [selectedYear, setSelectedYear] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [showArchivedOnly, setShowArchivedOnly] = useState(false);
 
   const isAuthorizedForManagement =
     userRole === 'admin' ||
@@ -40,8 +41,8 @@ const EventsList = ({ showNotification, userRole }) => {
         'Content-Type': 'application/json'
       };
 
-      console.log('Fetching events from /api/events');
-      const response = await fetch('/api/events', { headers });
+      console.log('Fetching events from /api/annual-services');
+      const response = await fetch('/api/annual-services', { headers });
 
       if (!response.ok) {
         console.error('Events API failed with status:', response.status);
@@ -99,6 +100,13 @@ const EventsList = ({ showNotification, userRole }) => {
   useEffect(() => {
     let filtered = [...events];
 
+    // ფილტრაცია არქივის მიხედვით
+    if (showArchivedOnly) {
+      filtered = filtered.filter(event => event.is_archived);
+    } else {
+      filtered = filtered.filter(event => !event.is_archived);
+    }
+
     // ძიება სახელის მიხედვით
     if (searchTerm) {
       filtered = filtered.filter(event =>
@@ -132,7 +140,7 @@ const EventsList = ({ showNotification, userRole }) => {
     }
 
     setFilteredEvents(filtered);
-  }, [events, searchTerm, selectedYear, selectedMonth, statusFilter]);
+  }, [events, searchTerm, selectedYear, selectedMonth, statusFilter, showArchivedOnly]);
 
   // წლების სია
   const getAvailableYears = () => {
@@ -161,6 +169,7 @@ const EventsList = ({ showNotification, userRole }) => {
     setSelectedYear('');
     setSelectedMonth('');
     setStatusFilter('');
+    setShowArchivedOnly(false);
   };
 
   const handleDelete = async (id) => {
@@ -228,6 +237,31 @@ const EventsList = ({ showNotification, userRole }) => {
     }
   };
 
+  const handleRestore = async (id) => {
+    const isConfirmed = window.confirm('ნამდვილად გსურთ ამ ივენთის არქივიდან აღდგენა?');
+    if (!isConfirmed) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/annual-services/${id}/restore`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        showNotification('ივენთი წარმატებით აღდგა არქივიდან!', 'success');
+        fetchEvents();
+      } else {
+        const errorData = await response.json();
+        showNotification(`არქივიდან აღდგენა ვერ მოხერხდა: ${errorData.message}`, 'error');
+      }
+    } catch (error) {
+      showNotification('დაფიქსირდა შეცდომა სერვერთან კავშირისას.', 'error');
+    }
+  };
+
   const viewEventDetails = async (event) => {
     try {
       const token = localStorage.getItem('token');
@@ -288,12 +322,22 @@ const EventsList = ({ showNotification, userRole }) => {
 
   return (
     <div className="events-container">
-      <h2>ივენთები</h2>
-      {isAuthorizedForManagement && (
-        <button className="add-new" onClick={() => setEditingId(0)}>
-          ახალი ივენთის დამატება
-        </button>
-      )}
+      <div className="header-section">
+        <h2>{showArchivedOnly ? 'არქივი' : 'ივენთები'}</h2>
+        <div className="header-actions">
+          <button 
+            className={`archive-toggle ${showArchivedOnly ? 'active' : ''}`}
+            onClick={() => setShowArchivedOnly(!showArchivedOnly)}
+          >
+            {showArchivedOnly ? 'აქტიური ივენთები' : 'არქივი'}
+          </button>
+          {isAuthorizedForManagement && !showArchivedOnly && (
+            <button className="add-new" onClick={() => setEditingId(0)}>
+              ახალი ივენთის დამატება
+            </button>
+          )}
+        </div>
+      </div>
 
       {editingId !== null && isAuthorizedForManagement && (
          <EventForm
@@ -368,13 +412,15 @@ const EventsList = ({ showNotification, userRole }) => {
         </div>
         
         <div className="results-info">
-          ნაპოვნია: {filteredEvents.length} ივენთი {events.length}-დან
+          ნაპოვნია: {filteredEvents.length} {showArchivedOnly ? 'არქივული' : 'აქტიური'} ივენთი
         </div>
       </div>
 
       {filteredEvents.length === 0 ? (
         <p className="no-events">
-          {events.length === 0 ? 'ივენთები არ მოიძებნა.' : 'ფილტრების შესაბამისი ივენთები არ მოიძებნა.'}
+          {showArchivedOnly 
+            ? 'არქივში ივენთები არ მოიძებნა.' 
+            : (events.length === 0 ? 'ივენთები არ მოიძებნა.' : 'ფილტრების შესაბამისი ივენთები არ მოიძებნა.')}
         </p>
       ) : (
         <div className="events-grid">
@@ -422,9 +468,11 @@ const EventsList = ({ showNotification, userRole }) => {
                   </button>
                   {isAuthorizedForManagement && (
                     <>
-                      <button className="edit" onClick={() => handleEditClick(event)}>
-                        რედაქტირება
-                      </button>
+                      {!showArchivedOnly && (
+                        <button className="edit" onClick={() => handleEditClick(event)}>
+                          რედაქტირება
+                        </button>
+                      )}
                       {status.class === 'finished' && !event.is_archived && (
                         <>
                           <button
@@ -438,6 +486,13 @@ const EventsList = ({ showNotification, userRole }) => {
                             არქივი
                           </button>
                         </>
+                      )}
+                      {showArchivedOnly && event.is_archived && (
+                        <button
+                          className="restore"
+                          onClick={() => handleRestore(event.id)}>
+                          აღდგენა
+                        </button>
                       )}
                       <button
                         className="delete"
