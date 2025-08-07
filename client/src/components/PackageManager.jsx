@@ -215,7 +215,7 @@ const PackageManager = ({ exhibitionId, showNotification }) => {
                 </div>
 
                 <div className="form-group">
-                  <label>ფიქსირებული ღირებულება (€)</label>
+                  <label>ფიქსირებული ღირებულება (EUR)</label>
                   <input
                     type="number"
                     step="0.01"
