@@ -55,6 +55,26 @@
   content: "👁️";
 }
 
+.actions .participants::before,
+.participants::before {
+  content: "👥";
+}
+
+.actions .complete::before,
+.complete::before {
+  content: "✅";
+}
+
+.actions .archive::before,
+.archive::before {
+  content: "📁";
+}
+
+.actions .restore::before,
+.restore::before {
+  content: "🔄";
+}
+
 .actions .add::before {
   content: "➕";
 }

@@ -459,20 +459,18 @@ const EventsList = ({ showNotification, userRole }) => {
                   </div>
                 </div>
 
-                <div className="event-actions">
+                <div className="actions">
                   <button
                     className="view"
                     onClick={() => viewEventDetails(event)}
                     title="დეტალების ნახვა"
                   >
-                    👁️
                   </button>
                   <button
                     className="participants"
                     onClick={() => handleShowParticipants(event)}
                     title="მონაწილეები"
                   >
-                    👥
                   </button>
                   {isAuthorizedForManagement && (
                     <>
@@ -482,34 +480,33 @@ const EventsList = ({ showNotification, userRole }) => {
                           onClick={() => handleEditClick(event)}
                           title="რედაქტირება"
                         >
-                          ✏️
                         </button>
                       )}
                       {status.class === 'finished' && !event.is_archived && (
                         <>
                           <button
                             className="complete"
-                            onClick={() => handleCompleteEvent(event)}>
-                            ✅
+                            onClick={() => handleCompleteEvent(event)}
+                            title="ივენთის დასრულება">
                           </button>
                           <button
                             className="archive"
-                            onClick={() => handleArchive(event.id)}>
-                            📁
+                            onClick={() => handleArchive(event.id)}
+                            title="არქივში გადატანა">
                           </button>
                         </>
                       )}
                       {showArchivedOnly && event.is_archived && (
                         <button
                           className="restore"
-                          onClick={() => handleRestore(event.id)}>
-                          🔄
+                          onClick={() => handleRestore(event.id)}
+                          title="არქივიდან აღდგენა">
                         </button>
                       )}
                       <button
                         className="delete"
-                        onClick={() => handleDelete(event.id)}>
-                        🗑️
+                        onClick={() => handleDelete(event.id)}
+                        title="წაშლა">
                       </button>
                     </>
                   )}
