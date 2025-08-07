@@ -177,7 +177,7 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification, onCanc
           <h3>{companyToEdit ? 'კომპანიის რედაქტირება' : 'ახალი კომპანიის დამატება'}</h3>
           <button 
             className="modal-close" 
-            onClick={() => onCancel()}
+            onClick={onCancel}
           >
             ✕
           </button>

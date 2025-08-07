@@ -228,7 +228,11 @@ const ServiceForm = ({ serviceToEdit, onServiceUpdated, showNotification, onCanc
               <button type="submit" className="submit-btn">
                 {isEditing ? 'განახლება' : 'დამატება'}
               </button>
-              <button type="button" className="cancel-btn" onClick={onCancel}>
+              <button 
+                type="button" 
+                className="cancel-btn" 
+                onClick={onCancel}
+              >
                 გაუქმება
               </button>
             </div>

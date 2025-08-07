@@ -72,14 +72,14 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
       if (response.ok) {
         const companies = await response.json();
         console.log('ყველა კომპანია:', companies.length);
-        
+
         const filteredCompanies = companies.filter(company => {
           console.log(`კომპანია ${company.company_name}:`, company.selected_exhibitions);
           return company.selected_exhibitions && 
                  Array.isArray(company.selected_exhibitions) && 
                  company.selected_exhibitions.includes(parseInt(exhibitionId));
         });
-        
+
         console.log(`გამოფენა ${exhibitionId}-ის კომპანიები:`, filteredCompanies.length);
         setAvailableCompanies(filteredCompanies);
 
@@ -118,7 +118,7 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
           const spacesResponse = await fetch(`/api/annual-services/${eventToEdit.id}/details`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
-          
+
           if (spacesResponse.ok) {
             const serviceDetails = await spacesResponse.json();
             const spaceIds = serviceDetails.spaces ? serviceDetails.spaces.map(s => s.id) : [];
@@ -145,7 +145,7 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
           console.log('კომპანიების ჩატვირთვა რედაქტირებისას, გამოფენის ID:', exhibitionId);
           await fetchCompaniesByExhibition(exhibitionId, true, true);
         }
-        
+
         setSelectedCompanies(eventToEdit.selected_companies || []);
       }
     };
@@ -185,7 +185,7 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
     console.log('გამოფენის არჩევა:', exhibitionId, 'რედაქტირების რეჟიმი:', isEditing);
     setSelectedExhibitionId(exhibitionId);
     setSelectedExhibitions(exhibitionId ? [parseInt(exhibitionId)] : []);
-    
+
     // კომპანიების ჩატვირთვა
     if (exhibitionId) {
       // რედაქტირების დროს არ ვაფსებთ არჩეულ კომპანიებს
@@ -225,7 +225,7 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
 
     try {
       const token = localStorage.getItem('token');
-      
+
       // Prepare data with proper formatting
       const requestData = {
         service_name: serviceName,
@@ -411,7 +411,11 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
           <button type="submit" className="submit-btn">
             {isEditing ? 'განახლება' : 'დამატება'}
           </button>
-          <button type="button" className="cancel-btn" onClick={onEventUpdated}>
+          <button
+            type="button"
+            className="cancel-btn"
+            onClick={onEventUpdated}
+          >
             გაუქმება
           </button>
         </div>
