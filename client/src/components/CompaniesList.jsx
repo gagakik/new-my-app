@@ -15,11 +15,29 @@ const CompaniesList = ({ showNotification, userRole }) => {
   const [filterIdentificationCode, setFilterIdentificationCode] = useState(''); // ახალი სტეიტი საიდენტიფიკაციო კოდისთვის
   const [selectedCompany, setSelectedCompany] = useState(null); // დეტალური ხედვისთვის
   const [showImport, setShowImport] = useState(false); // იმპორტის მოდალის საჩვენებლად
+  const [exhibitions, setExhibitions] = useState([]); // გამოფენების სია
+  const [editingExhibitions, setEditingExhibitions] = useState(null); // რომელი კომპანიის გამოფენებს ვარედაქტირებთ
 
   // განსაზღვრეთ, აქვს თუ არა მომხმარებელს მართვის უფლება
   const isAuthorizedForManagement = 
     userRole === 'admin' || 
     userRole === 'sales';
+
+  // გამოფენების ჩატვირთვა
+  const fetchExhibitions = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/exhibitions', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setExhibitions(data);
+      }
+    } catch (error) {
+      console.error('გამოფენების ჩატვირთვის შეცდომა:', error);
+    }
+  }, []);
 
   const fetchCompanies = useCallback(async () => {
     try {
@@ -61,7 +79,8 @@ const CompaniesList = ({ showNotification, userRole }) => {
 
   useEffect(() => {
     fetchCompanies();
-  }, [fetchCompanies]);
+    fetchExhibitions();
+  }, [fetchCompanies, fetchExhibitions]);
 
   const handleDelete = async (id) => {
     const isConfirmed = window.confirm('ნამდვილად გსურთ ამ კომპანიის წაშლა?');
@@ -108,6 +127,60 @@ const CompaniesList = ({ showNotification, userRole }) => {
 
   const handleViewDetails = (company) => {
     setSelectedCompany(company);
+  };
+
+  const handleEditExhibitions = (company) => {
+    setEditingExhibitions({
+      companyId: company.id,
+      companyName: company.company_name,
+      selectedExhibitions: company.selected_exhibitions || []
+    });
+  };
+
+  const handleExhibitionToggle = (exhibitionId, isChecked) => {
+    const numericId = Number(exhibitionId);
+    
+    setEditingExhibitions(prev => {
+      const newSelectedExhibitions = isChecked
+        ? [...prev.selectedExhibitions, numericId]
+        : prev.selectedExhibitions.filter(id => id !== numericId);
+      
+      return {
+        ...prev,
+        selectedExhibitions: newSelectedExhibitions
+      };
+    });
+  };
+
+  const saveExhibitionChanges = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/companies/${editingExhibitions.companyId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          selected_exhibitions: editingExhibitions.selectedExhibitions
+        })
+      });
+
+      if (response.ok) {
+        showNotification('გამოფენები წარმატებით განახლდა!', 'success');
+        setEditingExhibitions(null);
+        fetchCompanies();
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'განახლება ვერ მოხერხდა');
+      }
+    } catch (error) {
+      showNotification(`შეცდომა: ${error.message}`, 'error');
+    }
+  };
+
+  const cancelExhibitionEdit = () => {
+    setEditingExhibitions(null);
   };
 
   if (loading) {
@@ -240,6 +313,40 @@ const CompaniesList = ({ showNotification, userRole }) => {
         />
       )}
 
+      {editingExhibitions && (
+        <div className="modal-overlay">
+          <div className="exhibition-edit-modal">
+            <h3>გამოფენების რედაქტირება: {editingExhibitions.companyName}</h3>
+            <div className="exhibitions-selection">
+              {exhibitions.map(exhibition => {
+                const isChecked = editingExhibitions.selectedExhibitions.includes(Number(exhibition.id));
+                
+                return (
+                  <div key={exhibition.id} className="exhibition-checkbox-wrapper">
+                    <label className="exhibition-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(e) => handleExhibitionToggle(exhibition.id, e.target.checked)}
+                      />
+                      {exhibition.exhibition_name}
+                    </label>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="modal-actions">
+              <button className="save-btn" onClick={saveExhibitionChanges}>
+                შენახვა
+              </button>
+              <button className="cancel-btn" onClick={cancelExhibitionEdit}>
+                გაუქმება
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {companies.length === 0 ? (
         <p className="no-companies">კომპანიები არ მოიძებნა.</p>
       ) : (
@@ -253,6 +360,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
                 <th>პროფილი</th>
                 <th>საიდ. კოდი</th>
                 <th>სტატუსი</th>
+                <th>გამოფენები</th>
                 <th>შექმნა</th>
                 <th>განახლება</th>
                 <th>მოქმედებები</th>
@@ -269,6 +377,44 @@ const CompaniesList = ({ showNotification, userRole }) => {
                     <span className={`status-badge ${company.status?.toLowerCase()}`}>
                       {company.status}
                     </span>
+                  </td>
+                  <td className="exhibitions-cell">
+                    <div className="exhibitions-display">
+                      {company.selected_exhibitions && company.selected_exhibitions.length > 0 ? (
+                        <>
+                          <span className="exhibitions-count">
+                            {company.selected_exhibitions.length} გამოფენა
+                          </span>
+                          <div className="exhibitions-list">
+                            {exhibitions
+                              .filter(ex => company.selected_exhibitions.includes(ex.id))
+                              .slice(0, 2)
+                              .map(ex => (
+                                <span key={ex.id} className="exhibition-tag">
+                                  {ex.exhibition_name}
+                                </span>
+                              ))
+                            }
+                            {company.selected_exhibitions.length > 2 && (
+                              <span className="exhibition-tag more">
+                                +{company.selected_exhibitions.length - 2}
+                              </span>
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        <span className="no-exhibitions">-</span>
+                      )}
+                    </div>
+                    {isAuthorizedForManagement && (
+                      <button 
+                        className="edit-exhibitions-btn"
+                        onClick={() => handleEditExhibitions(company)}
+                        title="გამოფენების რედაქტირება"
+                      >
+                        ✏️
+                      </button>
+                    )}
                   </td>
                   <td className="date-info">
                     <div className="date">{new Date(company.created_at).toLocaleDateString()}</div>

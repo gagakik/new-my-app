@@ -279,6 +279,44 @@ router.put('/:id', authenticateToken, async (req, res) => {
         selected_exhibitions
     } = req.body;
 
+    // თუ მხოლოდ selected_exhibitions არის გადმოცემული, განვაახლოთ მხოლოდ ის
+    if (Object.keys(req.body).length === 1 && req.body.hasOwnProperty('selected_exhibitions')) {
+        try {
+            let sanitizedExhibitions = [];
+            if (selected_exhibitions) {
+                if (Array.isArray(selected_exhibitions)) {
+                    sanitizedExhibitions = selected_exhibitions.filter(id => 
+                        Number.isInteger(Number(id))
+                    ).map(id => Number(id));
+                }
+            }
+
+            const result = await db.query(`
+                UPDATE companies SET
+                    selected_exhibitions = $1,
+                    updated_by_user_id = $2,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = $3
+                RETURNING *
+            `, [JSON.stringify(sanitizedExhibitions), req.user.id, id]);
+
+            if (result.rows.length === 0) {
+                return res.status(404).json({ message: 'კომპანია ვერ მოიძებნა' });
+            }
+
+            const company = result.rows[0];
+            company.selected_exhibitions = sanitizedExhibitions;
+
+            return res.json({
+                message: 'გამოფენები წარმატებით განახლდა',
+                company
+            });
+        } catch (error) {
+            console.error('გამოფენების განახლების შეცდომა:', error);
+            return res.status(500).json({ message: 'გამოფენების განახლება ვერ მოხერხდა' });
+        }
+    }
+
     const updated_by_user_id = req.user ? req.user.id : null;
 
     try {

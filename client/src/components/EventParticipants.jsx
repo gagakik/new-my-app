@@ -163,13 +163,27 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
         const isPackageEquipment = selectedPackage.equipment_list?.some(
           pkgEq => pkgEq.equipment_id === parseInt(item.equipment_id)
         );
-        // ყველა აღჭურვილობის ღირებულება ითვლება
+        
         const quantity = parseInt(item.quantity) || 0;
-        const unitPrice = parseFloat(item.unit_price) || 0;
-        return sum + (quantity * unitPrice);
+        const unitPriceWithoutVAT = parseFloat(item.unit_price) || 0;
+        const unitPrice = unitPriceWithoutVAT * 1.18; // 18% დღგ-ის დამატება
+        
+        // თუ პაკეტის აღჭურვილობაა
+        if (isPackageEquipment) {
+          const packageItem = selectedPackage.equipment_list.find(
+            pkgEq => pkgEq.equipment_id === parseInt(item.equipment_id)
+          );
+          const packageQuantity = packageItem?.quantity || 0;
+          const additionalQuantity = Math.max(0, quantity - packageQuantity);
+          return sum + (additionalQuantity * unitPrice);
+        } else {
+          // სრულად იხდის თუ პაკეტში არ შედის
+          return sum + (quantity * unitPrice);
+        }
       }, 0);
       
-      const totalAmount = parseFloat(selectedPackage.fixed_price) + additionalEquipmentCost;
+      const packagePriceWithVAT = parseFloat(selectedPackage.fixed_price) * 1.18; // 18% დღგ-ის დამატება
+      const totalAmount = packagePriceWithVAT + additionalEquipmentCost;
       setFormData(prev => ({
         ...prev,
         payment_amount: totalAmount.toFixed(2)
@@ -191,10 +205,11 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
       eventDetails: eventDetails
     });
 
-    // სტენდის ღირებულების გათვლა
+    // სტენდის ღირებულების გათვლა (დღგ-ის ჩათვლით)
     if (formData.booth_size && exhibitionData && exhibitionData.price_per_sqm) {
       const boothSize = parseFloat(formData.booth_size);
-      const pricePerSqm = parseFloat(exhibitionData.price_per_sqm);
+      const pricePerSqmWithoutVAT = parseFloat(exhibitionData.price_per_sqm);
+      const pricePerSqm = pricePerSqmWithoutVAT * 1.18; // 18% დღგ-ის დამატება
 
       if (!isNaN(boothSize) && !isNaN(pricePerSqm) && boothSize > 0 && pricePerSqm > 0) {
         boothTotal = boothSize * pricePerSqm;
@@ -202,8 +217,9 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
       }
     }
 
-    // აღჭურვილობის ღირებულების დამატება
-    calculatedAmount += equipmentTotal;
+    // აღჭურვილობის ღირებულების დამატება (დღგ-ის ჩათვლით)
+    const equipmentTotalWithVAT = equipmentTotal * 1.18; // 18% დღგ-ის დამატება
+    calculatedAmount += equipmentTotalWithVAT;
 
     console.log(`ჯამური თანხა: სტენდი ${boothTotal} + აღჭურვილობა ${equipmentTotal} = ${calculatedAmount}`);
 
@@ -595,13 +611,14 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
         // Calculate available quantity considering package equipment usage
         let availableQty = selectedEquip.available_quantity || selectedEquip.quantity || 100;
         
-        // If this is package equipment, reduce available quantity
+        // If this is package equipment, adjust available quantity
         if (registrationType === 'package' && selectedPackage) {
           const packageEquipment = selectedPackage.equipment_list?.find(
             pkgEq => pkgEq.equipment_id === parseInt(value)
           );
           if (packageEquipment) {
-            availableQty = Math.max(0, availableQty - packageEquipment.quantity);
+            // პაკეტში შემავალი რაოდენობა უფასოდ მიუწვდება
+            availableQty = availableQty; // მთლიანი რაოდენობა ხელმისაწვდომია
           }
         }
         
@@ -1210,20 +1227,25 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                           {availableEquipment && availableEquipment.length > 0 ? (
                             availableEquipment.map(equipment => {
                               let availableQty = equipment.available_quantity || equipment.quantity || 100;
+                              let displayText = '';
                               
-                              // If this is package equipment, show adjusted availability
+                              // If this is package equipment, show package info
                               if (registrationType === 'package' && selectedPackage) {
                                 const packageEquipment = selectedPackage.equipment_list?.find(
                                   pkgEq => pkgEq.equipment_id === equipment.id
                                 );
                                 if (packageEquipment) {
-                                  availableQty = Math.max(0, availableQty - packageEquipment.quantity);
+                                  displayText = `${equipment.code_name} (პაკეტში: ${packageEquipment.quantity} უფასო, სულ ხელმისაწვდომი: ${availableQty}, ფასი: €${equipment.price || 0})`;
+                                } else {
+                                  displayText = `${equipment.code_name} (ხელმისაწვდომი: ${availableQty}, ფასი: €${equipment.price || 0})`;
                                 }
+                              } else {
+                                displayText = `${equipment.code_name} (ხელმისაწვდომი: ${availableQty}, ფასი: €${equipment.price || 0})`;
                               }
                               
                               return (
                                 <option key={equipment.id} value={equipment.id}>
-                                  {equipment.code_name} (ხელმისაწვდომი: {availableQty}, ფასი: €{equipment.price || 0})
+                                  {displayText}
                                 </option>
                               );
                             })
@@ -1247,13 +1269,31 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                           }}
                           required
                         />
-                        {item.available_quantity === 0 ? (
-                          <small style={{color: '#ff4444'}}>ამოწურულია</small>
-                        ) : parseInt(item.quantity) > item.available_quantity ? (
-                          <small style={{color: '#ff4444'}}>მაქს: {item.available_quantity}</small>
-                        ) : (
-                          <small>ხელმისაწვდომი: {item.available_quantity}</small>
-                        )}
+                        {(() => {
+                          if (registrationType === 'package' && selectedPackage) {
+                            const packageItem = selectedPackage.equipment_list?.find(
+                              pkgEq => pkgEq.equipment_id === parseInt(item.equipment_id)
+                            );
+                            if (packageItem) {
+                              const freeQuantity = packageItem.quantity;
+                              const currentQuantity = parseInt(item.quantity) || 0;
+                              const paidQuantity = Math.max(0, currentQuantity - freeQuantity);
+                              return (
+                                <small style={{color: '#059669'}}>
+                                  უფასო: {Math.min(currentQuantity, freeQuantity)}, გადასახდელი: {paidQuantity}
+                                </small>
+                              );
+                            }
+                          }
+                          
+                          if (item.available_quantity === 0) {
+                            return <small style={{color: '#ff4444'}}>ამოწურულია</small>;
+                          } else if (parseInt(item.quantity) > item.available_quantity) {
+                            return <small style={{color: '#ff4444'}}>მაქს: {item.available_quantity}</small>;
+                          } else {
+                            return <small>ხელმისაწვდომი: {item.available_quantity}</small>;
+                          }
+                        })()}
                       </div>
                       <div className="form-group">
                         <label>ერთეულის ფასი (€)</label>

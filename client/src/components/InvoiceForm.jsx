@@ -39,28 +39,43 @@ const InvoiceForm = ({ participant, onClose, showNotification, eventData }) => {
     // ინვოისის ერთეულების ჩამოყალიბება
     const items = [];
 
-    // სტენდის ღირებულება
-    if (participant.booth_size && eventData?.price_per_sqm) {
-      const boothCost = parseFloat(participant.booth_size) * parseFloat(eventData.price_per_sqm);
+    // შევამოწმოთ არის თუ არა პაკეტი
+    const isPackageRegistration = participant.package_name || participant.selected_package_id;
+
+    // თუ პაკეტია - პაკეტის ღირებულება, სხვა შემთხვევაში სტენდის ღირებულება
+    if (isPackageRegistration && participant.package_name) {
+      // პაკეტის შემთხვევაში
+      items.push({
+        id: 'package',
+        description: `პაკეტი "${participant.package_name}"`,
+        details: `მონაწილეობა ღონისძიებაში "${eventData?.service_name || eventData?.exhibition_name || 'ღონისძიება'}" (${participant.booth_size || 'N/A'}მ²)`,
+        quantity: 1,
+        unitPrice: parseFloat(participant.payment_amount) || 0,
+        total: parseFloat(participant.payment_amount) || 0
+      });
+    } else if (participant.booth_size && eventData?.price_per_sqm) {
+      // ინდივიდუალური რეგისტრაციის შემთხვევაში
+      const boothCost = parseFloat(participant.booth_size) * parseFloat(eventData.price_per_sqm) * 1.18; // დღგ-ის ჩათვლით
       items.push({
         id: 'booth',
         description: `მონაწილეობა ღონისძიებაში "${eventData.service_name || eventData.exhibition_name}"`,
         details: `სტენდი #${participant.booth_number || 'TBD'} (${participant.booth_size}მ²)`,
         quantity: parseFloat(participant.booth_size),
-        unitPrice: parseFloat(eventData.price_per_sqm),
+        unitPrice: parseFloat(eventData.price_per_sqm) * 1.18, // დღგ-ის ჩათვლით
         total: boothCost
       });
     }
 
-    // აღჭურვილობის ღირებულება (თუ არსებობს)
-    if (participant.equipment_total && participant.equipment_total > 0) {
+    // აღჭურვილობის ღირებულება (მხოლოდ თუ პაკეტი არ არის ან დამატებითი აღჭურვილობაა)
+    if (participant.equipment_total && participant.equipment_total > 0 && !isPackageRegistration) {
+      const equipmentTotalWithVAT = parseFloat(participant.equipment_total) * 1.18; // დღგ-ის ჩათვლით
       items.push({
         id: 'equipment',
         description: 'დამატებითი აღჭურვილობა',
         details: 'მითითებული აღჭურვილობის ნაკრები',
         quantity: 1,
-        unitPrice: parseFloat(participant.equipment_total),
-        total: parseFloat(participant.equipment_total)
+        unitPrice: equipmentTotalWithVAT,
+        total: equipmentTotalWithVAT
       });
     }
 
@@ -76,9 +91,10 @@ const InvoiceForm = ({ participant, onClose, showNotification, eventData }) => {
       });
     }
 
-    const subtotal = items.reduce((sum, item) => sum + item.total, 0);
-    const tax = subtotal * 0.18; // 18% დღგ
-    const total = subtotal + tax;
+    const totalWithVAT = items.reduce((sum, item) => sum + item.total, 0);
+    const subtotal = totalWithVAT / 1.18; // დღგ-ის გარეშე ღირებულება
+    const tax = totalWithVAT - subtotal; // 18% დღგ
+    const total = totalWithVAT;
 
     setInvoiceData(prev => ({
       ...prev,
@@ -103,9 +119,10 @@ const InvoiceForm = ({ participant, onClose, showNotification, eventData }) => {
       newItems[index].total = parseFloat(newItems[index].quantity || 0) * parseFloat(newItems[index].unitPrice || 0);
     }
 
-    const subtotal = newItems.reduce((sum, item) => sum + item.total, 0);
-    const tax = subtotal * 0.18;
-    const total = subtotal + tax;
+    const totalWithVAT = newItems.reduce((sum, item) => sum + item.total, 0);
+    const subtotal = totalWithVAT / 1.18;
+    const tax = totalWithVAT - subtotal;
+    const total = totalWithVAT;
 
     setInvoiceData(prev => ({
       ...prev,
@@ -134,9 +151,10 @@ const InvoiceForm = ({ participant, onClose, showNotification, eventData }) => {
 
   const removeItem = (index) => {
     const newItems = invoiceData.items.filter((_, i) => i !== index);
-    const subtotal = newItems.reduce((sum, item) => sum + item.total, 0);
-    const tax = subtotal * 0.18;
-    const total = subtotal + tax;
+    const totalWithVAT = newItems.reduce((sum, item) => sum + item.total, 0);
+    const subtotal = totalWithVAT / 1.18;
+    const tax = totalWithVAT - subtotal;
+    const total = totalWithVAT;
 
     setInvoiceData(prev => ({
       ...prev,
