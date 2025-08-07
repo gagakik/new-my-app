@@ -190,11 +190,19 @@ const SpacesList = ({ showNotification, userRole }) => {
                   <td>
                     {isAuthorizedForManagement && (
                       <div className="actions">
-                        <button className="edit" onClick={() => handleEditClick(space)}>რედაქტირება</button>
+                        <button 
+                          className="edit" 
+                          onClick={() => handleEditClick(space)}
+                          title="რედაქტირება"
+                        >
+                          ✏️ რედაქტირება
+                        </button>
                         <button 
                           className="delete" 
-                          onClick={() => handleDelete(space.id)}>
-                          წაშლა
+                          onClick={() => handleDelete(space.id)}
+                          title="წაშლა"
+                        >
+                          🗑️ წაშლა
                         </button>
                       </div>
                     )}
@@ -216,11 +224,19 @@ const SpacesList = ({ showNotification, userRole }) => {
                 </div>
                 {isAuthorizedForManagement && (
                   <div className="space-actions">
-                    <button className="edit" onClick={() => handleEditClick(space)}>
-                      რედაქტირება
+                    <button 
+                      className="edit" 
+                      onClick={() => handleEditClick(space)}
+                      title="რედაქტირება"
+                    >
+                      ✏️ რედაქტირება
                     </button>
-                    <button className="delete" onClick={() => handleDelete(space.id)}>
-                      წაშლა
+                    <button 
+                      className="delete" 
+                      onClick={() => handleDelete(space.id)}
+                      title="წაშლა"
+                    >
+                      🗑️ წაშლა
                     </button>
                   </div>
                 )}

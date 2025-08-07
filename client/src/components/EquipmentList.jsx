@@ -148,7 +148,7 @@ const EquipmentList = ({ showNotification, userRole }) => {
   return (
     <div className="equipment-container">
       <h2>აღჭურვილობის სია</h2>
-      
+
       {/* ძიების ველი */}
       <div className="search-container">
         <input 
@@ -248,13 +248,19 @@ const EquipmentList = ({ showNotification, userRole }) => {
 
               {isAuthorizedForManagement && (
                 <div className="equipment-actions">
-                  <button className="edit" onClick={() => handleEditClick(item)}>
-                    რედაქტირება
+                  <button
+                    className="edit"
+                    onClick={() => handleEditClick(item)}
+                    title="რედაქტირება"
+                  >
+                    ✏️ რედაქტირება
                   </button>
-                  <button 
-                    className="delete" 
-                    onClick={() => handleDelete(item.id)}>
-                    წაშლა
+                  <button
+                    className="delete"
+                    onClick={() => handleDelete(item.id)}
+                    title="წაშლა"
+                  >
+                    🗑️ წაშლა
                   </button>
                 </div>
               )}

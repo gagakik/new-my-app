@@ -179,11 +179,19 @@ const ExhibitionsList = ({ showNotification, userRole }) => { // მივიღ
                 {isAuthorizedForManagement && (
                   <td>
                     <div className="actions">
-                      <button className="edit" onClick={() => handleEditClick(exhibition)}>რედაქტირება</button>
-                      <button 
-                        className="delete" 
-                        onClick={() => handleDelete(exhibition.id)}>
-                        წაშლა
+                      <button
+                        className="edit"
+                        onClick={() => handleEditClick(exhibition)}
+                        title="რედაქტირება"
+                      >
+                        ✏️ რედაქტირება
+                      </button>
+                      <button
+                        className="delete"
+                        onClick={() => handleDelete(exhibition.id)}
+                        title="წაშლა"
+                      >
+                        🗑️ წაშლა
                       </button>
                     </div>
                   </td>

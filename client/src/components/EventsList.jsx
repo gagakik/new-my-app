@@ -15,7 +15,7 @@ const EventsList = ({ showNotification, userRole }) => {
   const [showParticipants, setShowParticipants] = useState(false);
   const [showEventCompletion, setShowEventCompletion] = useState(false);
   const [selectedEventForCompletion, setSelectedEventForCompletion] = useState(null);
-  
+
   // ფილტრებისა და ძიების სტეიტები
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
@@ -325,7 +325,7 @@ const EventsList = ({ showNotification, userRole }) => {
       <div className="header-section">
         <h2>{showArchivedOnly ? 'არქივი' : 'ივენთები'}</h2>
         <div className="header-actions">
-          <button 
+          <button
             className={`archive-toggle ${showArchivedOnly ? 'active' : ''}`}
             onClick={() => setShowArchivedOnly(!showArchivedOnly)}
           >
@@ -359,11 +359,11 @@ const EventsList = ({ showNotification, userRole }) => {
               className="search-input"
             />
           </div>
-          
+
           <div className="filter-group">
             <label>წელი</label>
-            <select 
-              value={selectedYear} 
+            <select
+              value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
               className="filter-select"
             >
@@ -376,8 +376,8 @@ const EventsList = ({ showNotification, userRole }) => {
 
           <div className="filter-group">
             <label>თვე</label>
-            <select 
-              value={selectedMonth} 
+            <select
+              value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
               className="filter-select"
             >
@@ -390,8 +390,8 @@ const EventsList = ({ showNotification, userRole }) => {
 
           <div className="filter-group">
             <label>სტატუსი</label>
-            <select 
-              value={statusFilter} 
+            <select
+              value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="filter-select"
             >
@@ -410,7 +410,7 @@ const EventsList = ({ showNotification, userRole }) => {
             </button>
           </div>
         </div>
-        
+
         <div className="results-info">
           ნაპოვნია: {filteredEvents.length} {showArchivedOnly ? 'არქივული' : 'აქტიური'} ივენთი
         </div>
@@ -418,8 +418,8 @@ const EventsList = ({ showNotification, userRole }) => {
 
       {filteredEvents.length === 0 ? (
         <p className="no-events">
-          {showArchivedOnly 
-            ? 'არქივში ივენთები არ მოიძებნა.' 
+          {showArchivedOnly
+            ? 'არქივში ივენთები არ მოიძებნა.'
             : (events.length === 0 ? 'ივენთები არ მოიძებნა.' : 'ფილტრების შესაბამისი ივენთები არ მოიძებნა.')}
         </p>
       ) : (
@@ -460,17 +460,29 @@ const EventsList = ({ showNotification, userRole }) => {
                 </div>
 
                 <div className="event-actions">
-                  <button className="view" onClick={() => viewEventDetails(event)}>
-                    ნახვა
+                  <button
+                    className="view"
+                    onClick={() => viewEventDetails(event)}
+                    title="დეტალების ნახვა"
+                  >
+                    👁️ დეტალები
                   </button>
-                  <button className="participants" onClick={() => handleShowParticipants(event)}>
-                    მონაწილეები
+                  <button
+                    className="participants"
+                    onClick={() => handleShowParticipants(event)}
+                    title="მონაწილეები"
+                  >
+                    👥 მონაწილეები
                   </button>
                   {isAuthorizedForManagement && (
                     <>
                       {!showArchivedOnly && (
-                        <button className="edit" onClick={() => handleEditClick(event)}>
-                          რედაქტირება
+                        <button
+                          className="edit"
+                          onClick={() => handleEditClick(event)}
+                          title="რედაქტირება"
+                        >
+                          ✏️ რედაქტირება
                         </button>
                       )}
                       {status.class === 'finished' && !event.is_archived && (
@@ -478,12 +490,12 @@ const EventsList = ({ showNotification, userRole }) => {
                           <button
                             className="complete"
                             onClick={() => handleCompleteEvent(event)}>
-                            დასრულება
+                            ✅ დასრულება
                           </button>
                           <button
                             className="archive"
                             onClick={() => handleArchive(event.id)}>
-                            არქივი
+                            📁 არქივი
                           </button>
                         </>
                       )}
@@ -497,7 +509,7 @@ const EventsList = ({ showNotification, userRole }) => {
                       <button
                         className="delete"
                         onClick={() => handleDelete(event.id)}>
-                        წაშლა
+                        🗑️ წაშლა
                       </button>
                     </>
                   )}

@@ -437,13 +437,27 @@ const CompaniesList = ({ showNotification, userRole }) => {
                   </td>
                   <td>
                     <div className="actions">
-                      <button className="view-details" onClick={() => handleViewDetails(company)}>დეტალები</button>
-                      {isAuthorizedForManagement && (
-                        <>
-                          <button className="edit" onClick={() => handleEditClick(company)}>რედაქტირება</button>
-                          <button className="delete" onClick={() => handleDelete(company.id)}>წაშლა</button>
-                        </>
-                      )}
+                      <button
+                        className="view-details"
+                        onClick={() => setSelectedCompany(company)}
+                        title="დეტალების ნახვა"
+                      >
+                        👁️ დეტალები
+                      </button>
+                      <button
+                        className="edit"
+                        onClick={() => handleEditClick(company)}
+                        title="რედაქტირება"
+                      >
+                        ✏️ რედაქტირება
+                      </button>
+                      <button
+                        className="delete"
+                        onClick={() => handleDelete(company.id)}
+                        title="წაშლა"
+                      >
+                        🗑️ წაშლა
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -462,13 +476,27 @@ const CompaniesList = ({ showNotification, userRole }) => {
                   <span><strong>სტატუსი:</strong> {company.status}</span>
                 </div>
                 <div className="company-actions">
-                  <button className="view-details" onClick={() => handleViewDetails(company)}>დეტალები</button>
-                  {isAuthorizedForManagement && (
-                    <>
-                      <button className="edit" onClick={() => handleEditClick(company)}>რედაქტირება</button>
-                      <button className="delete" onClick={() => handleDelete(company.id)}>წაშლა</button>
-                    </>
-                  )}
+                  <button
+                    className="view-details"
+                    onClick={() => setSelectedCompany(company)}
+                    title="დეტალების ნახვა"
+                  >
+                    👁️ დეტალები
+                  </button>
+                  <button
+                    className="edit"
+                    onClick={() => handleEditClick(company)}
+                    title="რედაქტირება"
+                  >
+                    ✏️ რედაქტირება
+                  </button>
+                  <button
+                    className="delete"
+                    onClick={() => handleDelete(company.id)}
+                    title="წაშლა"
+                  >
+                    🗑️ წაშლა
+                  </button>
                 </div>
               </div>
             ))}

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import './ServicesList.css';
 import ServiceForm from './ServiceForm';
@@ -73,11 +72,11 @@ const ServicesList = ({ showNotification, userRole }) => {
       showNotification('დაფიქსირდა შეცდომა სერვერთან კავშირისას.', 'error');
     }
   };
-  
+
   const handleEditClick = (service) => {
     setEditingId(service.id);
   };
-  
+
   const handleServiceUpdated = () => {
     setEditingId(null);
     fetchServices();
@@ -114,7 +113,7 @@ const ServicesList = ({ showNotification, userRole }) => {
       const response = await fetch(`/api/annual-services/${service.id}/details`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
+
       if (response.ok) {
         const details = await response.json();
         setSelectedService(details);
@@ -126,7 +125,7 @@ const ServicesList = ({ showNotification, userRole }) => {
       showNotification('შეცდომა სერვისის დეტალების ჩატვირთვისას', 'error');
     }
   };
-  
+
   if (loading) {
     return <div>იტვირთება...</div>;
   }
@@ -143,7 +142,7 @@ const ServicesList = ({ showNotification, userRole }) => {
     const now = new Date();
     const startDate = new Date(service.start_date);
     const endDate = new Date(service.end_date);
-    
+
     if (service.is_archived) return { text: 'არქივი', class: 'archived' };
     if (!service.is_active) return { text: 'არააქტიური', class: 'inactive' };
     if (now < startDate) return { text: 'მომავალი', class: 'upcoming' };
@@ -159,7 +158,7 @@ const ServicesList = ({ showNotification, userRole }) => {
           ახალი სერვისის დამატება
         </button>
       )}
-      
+
       {editingId !== null && isAuthorizedForManagement && (
          <ServiceForm 
             serviceToEdit={services.find(s => s.id === editingId)} 
@@ -167,7 +166,7 @@ const ServicesList = ({ showNotification, userRole }) => {
             showNotification={showNotification} 
          />
       )}
-      
+
       {services.length === 0 ? (
         <p className="no-services">სერვისები არ მოიძებნა.</p>
       ) : (
@@ -210,11 +209,19 @@ const ServicesList = ({ showNotification, userRole }) => {
                   {isAuthorizedForManagement && (
                     <td>
                       <div className="actions">
-                        <button className="view" onClick={() => viewServiceDetails(service)}>
-                          ნახვა
+                        <button
+                          className="view"
+                          onClick={() => viewServiceDetails(service)}
+                          title="დეტალების ნახვა"
+                        >
+                          👁️ დეტალები
                         </button>
-                        <button className="edit" onClick={() => handleEditClick(service)}>
-                          რედაქტირება
+                        <button
+                          className="edit"
+                          onClick={() => handleEditClick(service)}
+                          title="რედაქტირება"
+                        >
+                          ✏️ რედაქტირება
                         </button>
                         {status.class === 'finished' && !service.is_archived && (
                           <button className="archive" onClick={() => handleArchive(service.id)}>
@@ -223,8 +230,10 @@ const ServicesList = ({ showNotification, userRole }) => {
                         )}
                         <button 
                           className="delete" 
-                          onClick={() => handleDelete(service.id)}>
-                          წაშლა
+                          onClick={() => handleDelete(service.id)}
+                          title="წაშლა"
+                        >
+                          🗑️ წაშლა
                         </button>
                       </div>
                     </td>
@@ -253,7 +262,7 @@ const ServicesList = ({ showNotification, userRole }) => {
               <p><strong>წელი:</strong> {selectedService.year_selection}</p>
               <p><strong>ტიპი:</strong> {selectedService.service_type}</p>
               <p><strong>თარიღები:</strong> {formatDate(selectedService.start_date)} - {formatDate(selectedService.end_date)}</p>
-              
+
               {selectedService.spaces && selectedService.spaces.length > 0 && (
                 <div>
                   <h4>გამოყენებული სივრცეები:</h4>
@@ -267,7 +276,7 @@ const ServicesList = ({ showNotification, userRole }) => {
                   </ul>
                 </div>
               )}
-              
+
               {selectedService.bookings && selectedService.bookings.length > 0 && (
                 <div>
                   <h4>მონაწილე კომპანიები ({selectedService.bookings.length}):</h4>
