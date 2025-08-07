@@ -290,10 +290,14 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
         <div className="modal-header">
           <h3>{isEditing ? 'ივენთის რედაქტირება' : 'ახალი ივენთის დამატება'}</h3>
           <button 
+            type="button"
             className="modal-close" 
-            onClick={onEventUpdated}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onEventUpdated();
+            }}
           >
-            ✕
           </button>
         </div>
         <div className="modal-body">
@@ -414,7 +418,11 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
           <button
             type="button"
             className="cancel-btn"
-            onClick={onEventUpdated}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onEventUpdated();
+            }}
           >
             გაუქმება
           </button>

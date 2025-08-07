@@ -884,7 +884,6 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
               onClose();
             }}
           >
-            ✕
           </button>
         </div>
 
@@ -1419,7 +1418,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      setShowAddForm(false); // Corrected this line
+                      setShowAddForm(false);
                       setEditingParticipant(null);
                       resetForm();
                     }}
