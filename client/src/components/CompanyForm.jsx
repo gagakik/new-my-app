@@ -343,7 +343,7 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification, onCanc
               <button type="submit" className="submit-btn">
                 {isEditing ? 'განახლება' : 'დამატება'}
               </button>
-              <button type="button" className="cancel-btn" onClick={onCompanyUpdated}>
+              <button type="button" className="cancel-btn" onClick={onCancel}>
                 გაუქმება
               </button>
             </form>

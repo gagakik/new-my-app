@@ -74,6 +74,7 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
         <div className="modal-header">
           <h3>{isEditing ? 'გამოფენის რედაქტირება' : 'ახალი გამოფენის დამატება'}</h3>
           <button
+            type="button"
             className="modal-close"
             onClick={onCancel}
           >
@@ -124,7 +125,11 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
               <button type="submit">
                 {isEditing ? 'განახლება' : 'დამატება'}
               </button>
-              <button type="button" onClick={onCancel}>
+              <button 
+                type="button" 
+                className="cancel-btn"
+                onClick={onCancel}
+              >
                 გაუქმება
               </button>
             </div>
