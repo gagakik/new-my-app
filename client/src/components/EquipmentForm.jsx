@@ -139,12 +139,21 @@ const EquipmentForm = ({ equipmentToEdit, onEquipmentUpdated, showNotification, 
                 <p className="current-image-info">მიმდინარე სურათი: <a href={existingImageUrl} target="_blank" rel="noopener noreferrer">ნახვა</a></p>
               )}
             </div>
-            <button type="submit" className="submit-btn">
-              {isEditing ? 'განახლება' : 'დამატება'}
-            </button>
-            <button type="button" className="cancel-btn" onClick={onCancel}>
-              გაუქმება
-            </button>
+            <div className="form-actions">
+              <button type="submit" className="submit-btn">
+                {isEditing ? 'განახლება' : 'დამატება'}
+              </button>
+              <button 
+                type="button" 
+                className="cancel-btn" 
+                onClick={(e) => {
+                  e.preventDefault();
+                  onCancel();
+                }}
+              >
+                გაუქმება
+              </button>
+            </div>
           </form>
         </div>
       </div>
