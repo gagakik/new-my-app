@@ -78,7 +78,6 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
             className="modal-close"
             onClick={onCancel}
           >
-            ✕
           </button>
         </div>
         <div className="modal-body">

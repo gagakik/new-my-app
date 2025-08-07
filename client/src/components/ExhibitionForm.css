@@ -63,3 +63,18 @@
 .cancel-btn:hover {
   background-color: #5a6268;
 }
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: white;
+  padding: 5px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.modal-close::before {
+  content: "✕";
+}

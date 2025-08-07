@@ -180,7 +180,6 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification, onCanc
             className="modal-close" 
             onClick={onCancel}
           >
-            ✕
           </button>
         </div>
         <div className="modal-body">
