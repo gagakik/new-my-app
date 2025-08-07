@@ -78,3 +78,18 @@
 .modal-close::before {
   content: "✕";
 }
+
+.form-actions button:hover {
+  background-color: #45a049;
+}
+
+.form-actions .cancel-btn:hover {
+  background-color: #d32f2f;
+}
+
+/* პაკეტების სექცია */
+.package-section {
+  margin-top: 2rem;
+  border-top: 1px solid #ddd;
+  padding-top: 1.5rem;
+}

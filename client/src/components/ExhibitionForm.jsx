@@ -141,6 +141,16 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
               </button>
             </div>
           </form>
+
+          {/* პაკეტების მენეჯმენტი - მხოლოდ რედაქტირების დროს */}
+          {isEditing && exhibitionToEdit && exhibitionToEdit.id && (
+            <div className="package-section">
+              <PackageManager 
+                exhibitionId={exhibitionToEdit.id}
+                showNotification={showNotification}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>
