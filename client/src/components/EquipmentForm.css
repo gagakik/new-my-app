@@ -89,6 +89,7 @@
 .modal-close::before {
   content: "✕";
   font-size: 1.2rem;
+  display: block;
 }
 
 .form-actions {

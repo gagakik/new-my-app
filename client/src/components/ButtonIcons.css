@@ -152,9 +152,12 @@
   margin-right: 0.25rem;
 }
 
-.close-modal::before {
+.close-modal::before,
+.modal-close::before {
   content: "✕";
   margin-right: 0.25rem;
+  display: block;
+  font-size: 1.2rem;
 }
 
 .filter::before {
