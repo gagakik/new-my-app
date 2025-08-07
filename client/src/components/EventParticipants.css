@@ -80,6 +80,11 @@
   transform: scale(1.1);
 }
 
+.event-participants-modal .modal-close::before {
+  content: "✕";
+  font-size: 1.2rem;
+}
+
 /* Compact participant table styles */
 .participants-table.compact {
   display: grid;
@@ -417,14 +422,15 @@
 }
 
 .cancel-btn {
-  background: #f1f5f9;
-  color: #64748b;
-  border: 2px solid #e2e8f0;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
 
 .cancel-btn:hover {
-  background: #e2e8f0;
-  color: #475569;
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
 }
 
 .participants-filters {
