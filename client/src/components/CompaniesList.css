@@ -24,17 +24,35 @@
     font-size: 0.9rem;
   }
 
-  table {
-    font-size: 0.9rem;
-  }
-
-  table th, table td {
-    padding: 10px 12px;
-  }
-
-  .actions button {
-    padding: 6px 10px;
+  .companies-table {
     font-size: 0.8rem;
+  }
+
+  .companies-table th, 
+  .companies-table td {
+    padding: 0.5rem 0.6rem;
+  }
+
+  .companies-table .actions button {
+    padding: 3px 6px;
+    font-size: 0.65rem;
+  }
+
+  .companies-table .company-name {
+    max-width: 120px;
+    font-size: 0.85rem;
+  }
+
+  .companies-table .company-profile {
+    max-width: 100px;
+  }
+
+  .exhibitions-cell {
+    max-width: 120px;
+  }
+
+  .date-info {
+    max-width: 80px;
   }
 }
 
@@ -301,47 +319,54 @@
   overflow: hidden;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   border: 1px solid #e9ecef;
+  font-size: 0.85rem;
 }
 
 .companies-table th,
 .companies-table td {
-  padding: 1rem;
+  padding: 0.6rem 0.8rem;
   text-align: left;
   border-bottom: 1px solid #e9ecef;
-  vertical-align: top;
+  vertical-align: middle;
+}
+
+.companies-table th {
+  padding: 0.8rem;
+  font-size: 0.75rem;
 }
 
 .exhibitions-cell {
   position: relative;
-  max-width: 200px;
+  max-width: 160px;
+  min-width: 120px;
 }
 
 .exhibitions-display {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.3rem;
 }
 
 .exhibitions-count {
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   color: #6c757d;
   display: block;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.2rem;
 }
 
 .exhibitions-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem;
+  gap: 0.2rem;
 }
 
 .exhibition-tag {
   display: inline-block;
-  padding: 0.2rem 0.4rem;
+  padding: 0.15rem 0.3rem;
   background: #e3f2fd;
   color: #1565c0;
-  border-radius: 12px;
-  font-size: 0.7rem;
+  border-radius: 8px;
+  font-size: 0.65rem;
   font-weight: 500;
-  max-width: 80px;
+  max-width: 60px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -353,17 +378,19 @@
 }
 
 .edit-exhibitions-btn {
-  background: none;
-  border: none;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
   cursor: pointer;
-  font-size: 1rem;
-  padding: 0.25rem;
+  font-size: 0.8rem;
+  padding: 0.2rem 0.4rem;
   border-radius: 4px;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
+  color: #495057;
 }
 
 .edit-exhibitions-btn:hover {
-  background: #f8f9fa;
+  background: #e9ecef;
+  border-color: #adb5bd;
 }
 
 .modal-overlay {
@@ -485,23 +512,31 @@
 .companies-table .company-name {
   font-weight: 600;
   color: #2d3748;
-  font-size: 1.05rem;
-}
-
-.companies-table .company-profile {
-  max-width: 200px;
+  font-size: 0.9rem;
+  max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.status-badge {
-  padding: 4px 12px;
-  border-radius: 20px;
+.companies-table .company-profile {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 0.8rem;
+}
+
+.status-badge {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.7rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
+  display: inline-block;
+  min-width: 50px;
+  text-align: center;
 }
 
 .status-badge.აქტიური {
@@ -517,19 +552,22 @@
 }
 
 .date-info {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
+  max-width: 100px;
 }
 
 .date-info .date {
   font-weight: 600;
   color: #4a5568;
-  margin-bottom: 2px;
+  margin-bottom: 1px;
+  line-height: 1.2;
 }
 
 .date-info .user {
   color: #718096;
   font-style: italic;
-  font-size: 0.75rem;
+  font-size: 0.65rem;
+  line-height: 1.2;
 }
 
 .no-update {
@@ -545,15 +583,22 @@
 
 .companies-table .actions {
   display: flex;
-  gap: 8px;
-  justify-content: flex-start; /* ღილაკები მარცხნივ */
+  gap: 4px;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+  min-width: 140px;
 }
 
 .companies-table .actions button {
-  padding: 6px 10px;
-  font-size: 0.8rem;
+  padding: 4px 8px;
+  font-size: 0.7rem;
   border-radius: 4px;
-  white-space: nowrap; /* ხელს უშლის ტექსტის გადახვევას */
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  font-weight: 500;
+  min-width: auto;
 }
 
 .companies-table .edit {
@@ -561,18 +606,29 @@
   color: #fff;
 }
 
+.companies-table .edit:hover {
+  background-color: #218838;
+  transform: translateY(-1px);
+}
+
 .companies-table .delete {
   background-color: #dc3545;
   color: #fff;
 }
 
+.companies-table .delete:hover {
+  background-color: #c82333;
+  transform: translateY(-1px);
+}
+
 .companies-table .view-details {
-  background-color: #6c757d;
+  background-color: #17a2b8;
   color: #fff;
 }
 
-.companies-table .actions button:hover {
-  opacity: 0.9;
+.companies-table .view-details:hover {
+  background-color: #138496;
+  transform: translateY(-1px);
 }
 
 /* დეტალური ხედვის კონტეინერი */
