@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './ServiceForm.css';
 
-const ServiceForm = ({ serviceToEdit, onServiceUpdated, showNotification }) => {
+const ServiceForm = ({ serviceToEdit, onServiceUpdated, showNotification, onCancel }) => {
   const [serviceName, setServiceName] = useState('');
   const [description, setDescription] = useState('');
   const [yearSelection, setYearSelection] = useState(new Date().getFullYear());
@@ -117,112 +117,124 @@ const ServiceForm = ({ serviceToEdit, onServiceUpdated, showNotification }) => {
   };
 
   return (
-    <div className="form-container">
-      <h3>{isEditing ? 'სერვისის რედაქტირება' : 'ახალი სერვისის დამატება'}</h3>
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label>სერვისის სახელი</label>
-          <input 
-            type="text"
-            value={serviceName}
-            onChange={(e) => setServiceName(e.target.value)}
-            required
-          />
-        </div>
-
-        <div className="form-group">
-          <label>აღწერა</label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            required
-            rows="3"
-          />
-        </div>
-
-        <div className="form-group">
-          <label>წელი</label>
-          <select 
-            value={yearSelection} 
-            onChange={(e) => setYearSelection(parseInt(e.target.value))}
-            required
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <div className="modal-header">
+          <h3>{isEditing ? 'სერვისის რედაქტირება' : 'ახალი სერვისის დამატება'}</h3>
+          <button 
+            className="modal-close" 
+            onClick={onCancel}
           >
-            {generateYearOptions().map(year => (
-              <option key={year} value={year}>{year}</option>
-            ))}
-          </select>
+            ✕
+          </button>
         </div>
+        <div className="modal-body">
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label>სერვისის სახელი</label>
+              <input 
+                type="text"
+                value={serviceName}
+                onChange={(e) => setServiceName(e.target.value)}
+                required
+              />
+            </div>
 
-        <div className="form-group">
-          <label>დაწყების თარიღი</label>
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            required
-          />
-        </div>
+            <div className="form-group">
+              <label>აღწერა</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                required
+                rows="3"
+              />
+            </div>
 
-        <div className="form-group">
-          <label>დასრულების თარიღი</label>
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            required
-          />
-        </div>
+            <div className="form-group">
+              <label>წელი</label>
+              <select 
+                value={yearSelection} 
+                onChange={(e) => setYearSelection(parseInt(e.target.value))}
+                required
+              >
+                {generateYearOptions().map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
 
-        <div className="form-group">
-          <label>სერვისის ტიპი</label>
-          <select 
-            value={serviceType} 
-            onChange={(e) => setServiceType(e.target.value)}
-            required
-          >
-            <option value="გამოფენა">გამოფენა</option>
-            <option value="კონფერენცია">კონფერენცია</option>
-            <option value="გაქირავება">გაქირავება</option>
-            <option value="ივენთი">ივენთი</option>
-          </select>
-        </div>
+            <div className="form-group">
+              <label>დაწყების თარიღი</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                required
+              />
+            </div>
 
-        <div className="form-group">
-          <label>სივრცეების არჩევა</label>
-          <div className="spaces-selection">
-            {availableSpaces.map(space => (
-              <label key={space.id} className="space-checkbox">
+            <div className="form-group">
+              <label>დასრულების თარიღი</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label>სერვისის ტიპი</label>
+              <select 
+                value={serviceType} 
+                onChange={(e) => setServiceType(e.target.value)}
+                required
+              >
+                <option value="გამოფენა">გამოფენა</option>
+                <option value="კონფერენცია">კონფერენცია</option>
+                <option value="გაქირავება">გაქირავება</option>
+                <option value="ივენთი">ივენთი</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>სივრცეების არჩევა</label>
+              <div className="spaces-selection">
+                {availableSpaces.map(space => (
+                  <label key={space.id} className="space-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={selectedSpaces.includes(space.id)}
+                      onChange={() => handleSpaceToggle(space.id)}
+                    />
+                    <span>{space.building_name} - {space.category}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>
                 <input
                   type="checkbox"
-                  checked={selectedSpaces.includes(space.id)}
-                  onChange={() => handleSpaceToggle(space.id)}
+                  checked={isActive}
+                  onChange={(e) => setIsActive(e.target.checked)}
                 />
-                <span>{space.building_name} - {space.category}</span>
+                აქტიური სერვისი
               </label>
-            ))}
-          </div>
-        </div>
+            </div>
 
-        <div className="form-group">
-          <label>
-            <input
-              type="checkbox"
-              checked={isActive}
-              onChange={(e) => setIsActive(e.target.checked)}
-            />
-            აქტიური სერვისი
-          </label>
+            <div className="form-actions">
+              <button type="submit" className="submit-btn">
+                {isEditing ? 'განახლება' : 'დამატება'}
+              </button>
+              <button type="button" className="cancel-btn" onClick={onCancel}>
+                გაუქმება
+              </button>
+            </div>
+          </form>
         </div>
-
-        <div className="form-actions">
-          <button type="submit" className="submit-btn">
-            {isEditing ? 'განახლება' : 'დამატება'}
-          </button>
-          <button type="button" className="cancel-btn" onClick={onServiceUpdated}>
-            გაუქმება
-          </button>
-        </div>
-      </form>
+      </div>
     </div>
   );
 };

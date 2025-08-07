@@ -1,3 +1,6 @@
+/* Import universal modal styles */
+@import './Modal.css';
+
 .form-container {
   width: 100%;
   max-width: 600px;
@@ -127,7 +130,7 @@
   background-color: #dc3545;
   color: #fff;
   display: block;
-  margin: 0.5rem auto 0;ლაკი ცალკე ხაზზე */
+  margin: 0.5rem auto 0;
   margin: 0.5rem auto 0; /* ცენტრირება */
 }
 

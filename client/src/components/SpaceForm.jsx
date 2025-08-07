@@ -70,58 +70,76 @@ const SpaceForm = ({ spaceToEdit, onFormClose, onSpaceUpdated, showNotification 
     }
   };
 
+  const onCancel = () => {
+    if (onFormClose) {
+      onFormClose();
+    }
+  };
+
   return (
-    <div className="form-container">
-      <h3>{isEditing ? 'სივრცის რედაქტირება' : 'ახალი სივრცის დამატება'}</h3>
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label>კატეგორია</label>
-          <select value={category} onChange={(e) => setCategory(e.target.value)} required>
-            <option value="">აირჩიეთ კატეგორია</option>
-            <option value="საოფისე">საოფისე</option>
-            <option value="საგამოფენო">საგამოფენო</option>
-            <option value="საპარკინგე">საპარკინგე</option>
-            <option value="სასაწყობე">სასაწყობე</option>
-            <option value="საწარმო">საწარმო</option>
-            <option value="ივენთები">ივენთები</option>
-            <option value="საკომფერენციო">საკომფერენციო</option>
-          </select>
-        </div>
-        <div className="form-group">
-          <label>შენობის დასახელება</label>
-          <input 
-            type="text" 
-            value={buildingName} 
-            onChange={(e) => setBuildingName(e.target.value)} 
-            required 
-          />
-        </div>
-        <div className="form-group">
-          <label>აღწერა</label>
-          <textarea 
-            value={description} 
-            onChange={(e) => setDescription(e.target.value)}
-            rows="3"
-          />
-        </div>
-        <div className="form-group">
-          <label>ფართობი (კვ.მ.)</label>
-          <input 
-            type="number" 
-            step="0.01"
-            value={areaSqm} 
-            onChange={(e) => setAreaSqm(e.target.value)}
-          />
-        </div>
-        <div className="form-buttons">
-          <button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'მუშავდება...' : (isEditing ? 'განახლება' : 'დამატება')}
-          </button>
-          <button type="button" onClick={onFormClose}>
-            გაუქმება
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <div className="modal-header">
+          <h3>{isEditing ? 'სივრცის რედაქტირება' : 'ახალი სივრცის დამატება'}</h3>
+          <button 
+            className="modal-close" 
+            onClick={onCancel}
+          >
+            ✕
           </button>
         </div>
-      </form>
+        <div className="modal-body">
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label>კატეგორია</label>
+              <select value={category} onChange={(e) => setCategory(e.target.value)} required>
+                <option value="">აირჩიეთ კატეგორია</option>
+                <option value="საოფისე">საოფისე</option>
+                <option value="საგამოფენო">საგამოფენო</option>
+                <option value="საპარკინგე">საპარკინგე</option>
+                <option value="სასაწყობე">სასაწყობე</option>
+                <option value="საწარმო">საწარმო</option>
+                <option value="ივენთები">ივენთები</option>
+                <option value="საკომფერენციო">საკომფერენციო</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>შენობის დასახელება</label>
+              <input 
+                type="text" 
+                value={buildingName} 
+                onChange={(e) => setBuildingName(e.target.value)} 
+                required 
+              />
+            </div>
+            <div className="form-group">
+              <label>აღწერა</label>
+              <textarea 
+                value={description} 
+                onChange={(e) => setDescription(e.target.value)}
+                rows="3"
+              />
+            </div>
+            <div className="form-group">
+              <label>ფართობი (კვ.მ.)</label>
+              <input 
+                type="number" 
+                step="0.01"
+                value={areaSqm} 
+                onChange={(e) => setAreaSqm(e.target.value)}
+              />
+            </div>
+            <div className="form-buttons">
+              <button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'მუშავდება...' : (isEditing ? 'განახლება' : 'დამატება')}
+              </button>
+              <button type="button" onClick={onCancel}>
+                გაუქმება
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
   );
 };

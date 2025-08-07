@@ -285,9 +285,19 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
   };
 
   return (
-    <div className="form-container">
-      <h3>{isEditing ? 'ივენთის რედაქტირება' : 'ახალი ივენთის დამატება'}</h3>
-      <form onSubmit={handleSubmit}>
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <div className="modal-header">
+          <h3>{isEditing ? 'ივენთის რედაქტირება' : 'ახალი ივენთის დამატება'}</h3>
+          <button 
+            className="modal-close" 
+            onClick={onEventUpdated}
+          >
+            ✕
+          </button>
+        </div>
+        <div className="modal-body">
+          <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label>ივენთის სახელი</label>
           <input 
@@ -406,6 +416,8 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
           </button>
         </div>
       </form>
+        </div>
+      </div>
     </div>
   );
 };

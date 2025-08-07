@@ -1,12 +1,14 @@
-/* ExhibitionForm.css */
+/* Import universal modal styles */
+@import './Modal.css';
+
 .form-container {
   width: 100%;
   max-width: 600px;
-  margin: 2rem auto;
-  padding: 1.5rem;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .form-container h3 {
