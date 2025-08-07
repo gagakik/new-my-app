@@ -88,7 +88,6 @@ const EquipmentForm = ({ equipmentToEdit, onEquipmentUpdated, showNotification, 
             className="modal-close"
             onClick={onCancel}
           >
-            ✕
           </button>
         </div>
         <div className="modal-body">
