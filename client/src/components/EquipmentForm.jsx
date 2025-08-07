@@ -146,10 +146,7 @@ const EquipmentForm = ({ equipmentToEdit, onEquipmentUpdated, showNotification, 
               <button 
                 type="button" 
                 className="cancel-btn" 
-                onClick={(e) => {
-                  e.preventDefault();
-                  onCancel();
-                }}
+                onClick={onCancel}
               >
                 გაუქმება
               </button>

@@ -127,7 +127,11 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
               <button
                 type="button"
                 className="cancel-btn"
-                onClick={onCancel}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onCancel();
+                }}
               >
                 გაუქმება
               </button>
