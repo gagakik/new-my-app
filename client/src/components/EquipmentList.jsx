@@ -253,14 +253,12 @@ const EquipmentList = ({ showNotification, userRole }) => {
                     onClick={() => handleEditClick(item)}
                     title="რედაქტირება"
                   >
-                    ✏️ რედაქტირება
                   </button>
                   <button
                     className="delete"
                     onClick={() => handleDelete(item.id)}
                     title="წაშლა"
                   >
-                    🗑️ წაშლა
                   </button>
                 </div>
               )}
