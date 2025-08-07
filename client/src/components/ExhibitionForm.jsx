@@ -78,6 +78,7 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
             className="modal-close"
             onClick={onCancel}
           >
+            ✕
           </button>
         </div>
         <div className="modal-body">
@@ -127,7 +128,10 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
               <button 
                 type="button" 
                 className="cancel-btn"
-                onClick={onCancel}
+                onClick={(e) => {
+                  e.preventDefault();
+                  onCancel();
+                }}
               >
                 გაუქმება
               </button>
