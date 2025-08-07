@@ -195,14 +195,12 @@ const SpacesList = ({ showNotification, userRole }) => {
                           onClick={() => handleEditClick(space)}
                           title="რედაქტირება"
                         >
-                          ✏️ რედაქტირება
                         </button>
                         <button 
                           className="delete" 
                           onClick={() => handleDelete(space.id)}
                           title="წაშლა"
                         >
-                          🗑️ წაშლა
                         </button>
                       </div>
                     )}
@@ -229,14 +227,12 @@ const SpacesList = ({ showNotification, userRole }) => {
                       onClick={() => handleEditClick(space)}
                       title="რედაქტირება"
                     >
-                      ✏️ რედაქტირება
                     </button>
                     <button 
                       className="delete" 
                       onClick={() => handleDelete(space.id)}
                       title="წაშლა"
                     >
-                      🗑️ წაშლა
                     </button>
                   </div>
                 )}

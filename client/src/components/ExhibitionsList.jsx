@@ -184,14 +184,12 @@ const ExhibitionsList = ({ showNotification, userRole }) => { // მივიღ
                         onClick={() => handleEditClick(exhibition)}
                         title="რედაქტირება"
                       >
-                        ✏️ რედაქტირება
                       </button>
                       <button
                         className="delete"
                         onClick={() => handleDelete(exhibition.id)}
                         title="წაშლა"
                       >
-                        🗑️ წაშლა
                       </button>
                     </div>
                   </td>

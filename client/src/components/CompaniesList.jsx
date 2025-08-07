@@ -439,24 +439,21 @@ const CompaniesList = ({ showNotification, userRole }) => {
                     <div className="actions">
                       <button
                         className="view-details"
-                        onClick={() => setSelectedCompany(company)}
+                        onClick={() => handleViewDetails(company)}
                         title="დეტალების ნახვა"
                       >
-                        👁️ დეტალები
                       </button>
                       <button
                         className="edit"
                         onClick={() => handleEditClick(company)}
                         title="რედაქტირება"
                       >
-                        ✏️ რედაქტირება
                       </button>
                       <button
                         className="delete"
                         onClick={() => handleDelete(company.id)}
                         title="წაშლა"
                       >
-                        🗑️ წაშლა
                       </button>
                     </div>
                   </td>
@@ -477,25 +474,22 @@ const CompaniesList = ({ showNotification, userRole }) => {
                 </div>
                 <div className="company-actions">
                   <button
+                    onClick={() => handleViewDetails(company)}
                     className="view-details"
-                    onClick={() => setSelectedCompany(company)}
                     title="დეტალების ნახვა"
                   >
-                    👁️ დეტალები
                   </button>
                   <button
-                    className="edit"
                     onClick={() => handleEditClick(company)}
+                    className="edit"
                     title="რედაქტირება"
                   >
-                    ✏️ რედაქტირება
                   </button>
                   <button
-                    className="delete"
                     onClick={() => handleDelete(company.id)}
+                    className="delete"
                     title="წაშლა"
                   >
-                    🗑️ წაშლა
                   </button>
                 </div>
               </div>

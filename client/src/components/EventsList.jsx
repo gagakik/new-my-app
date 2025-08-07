@@ -465,14 +465,14 @@ const EventsList = ({ showNotification, userRole }) => {
                     onClick={() => viewEventDetails(event)}
                     title="დეტალების ნახვა"
                   >
-                    👁️ დეტალები
+                    👁️
                   </button>
                   <button
                     className="participants"
                     onClick={() => handleShowParticipants(event)}
                     title="მონაწილეები"
                   >
-                    👥 მონაწილეები
+                    👥
                   </button>
                   {isAuthorizedForManagement && (
                     <>
@@ -482,7 +482,7 @@ const EventsList = ({ showNotification, userRole }) => {
                           onClick={() => handleEditClick(event)}
                           title="რედაქტირება"
                         >
-                          ✏️ რედაქტირება
+                          ✏️
                         </button>
                       )}
                       {status.class === 'finished' && !event.is_archived && (
@@ -490,12 +490,12 @@ const EventsList = ({ showNotification, userRole }) => {
                           <button
                             className="complete"
                             onClick={() => handleCompleteEvent(event)}>
-                            ✅ დასრულება
+                            ✅
                           </button>
                           <button
                             className="archive"
                             onClick={() => handleArchive(event.id)}>
-                            📁 არქივი
+                            📁
                           </button>
                         </>
                       )}
@@ -503,13 +503,13 @@ const EventsList = ({ showNotification, userRole }) => {
                         <button
                           className="restore"
                           onClick={() => handleRestore(event.id)}>
-                          აღდგენა
+                          🔄
                         </button>
                       )}
                       <button
                         className="delete"
                         onClick={() => handleDelete(event.id)}>
-                        🗑️ წაშლა
+                        🗑️
                       </button>
                     </>
                   )}

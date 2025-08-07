@@ -9,8 +9,8 @@ const EquipmentList = ({ showNotification, userRole }) => {
   const [editingId, setEditingId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const isAuthorizedForManagement = 
-    userRole === 'admin' || 
+  const isAuthorizedForManagement =
+    userRole === 'admin' ||
     userRole === 'operation';
 
   // fetchEquipment ფუნქცია მოთავსებულია useCallback-ში
@@ -151,11 +151,11 @@ const EquipmentList = ({ showNotification, userRole }) => {
 
       {/* ძიების ველი */}
       <div className="search-container">
-        <input 
-          type="text" 
-          placeholder="ძებნა კოდური სახელით ან აღწერით..." 
-          value={searchTerm} 
-          onChange={(e) => setSearchTerm(e.target.value)} 
+        <input
+          type="text"
+          placeholder="ძებნა კოდური სახელით ან აღწერით..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
           className="search-input"
         />
       </div>
@@ -167,10 +167,10 @@ const EquipmentList = ({ showNotification, userRole }) => {
       )}
 
       {editingId !== null && isAuthorizedForManagement && (
-        <EquipmentForm 
-          equipmentToEdit={equipment.find(item => item.id === editingId)} 
-          onEquipmentUpdated={handleEquipmentUpdated} 
-          showNotification={showNotification} 
+        <EquipmentForm
+          equipmentToEdit={equipment.find(item => item.id === editingId)}
+          onEquipmentUpdated={handleEquipmentUpdated}
+          showNotification={showNotification}
           userRole={userRole}
         />
       )}
@@ -185,16 +185,16 @@ const EquipmentList = ({ showNotification, userRole }) => {
             <div key={item.id} className="equipment-card">
               {item.image_url && (
                 <div className="equipment-image-container">
-                  <img 
-                    src={getImageUrl(item.image_url)} 
-                    alt={item.code_name} 
+                  <img
+                    src={getImageUrl(item.image_url)}
+                    alt={item.code_name}
                     className="equipment-image"
                     onError={(e) => {
                       e.target.style.display = 'none';
                       console.log('სურათის ჩატვირთვის შეცდომა:', item.image_url);
                     }}
                     loading="lazy"
-                  /> 
+                  />
                 </div>
               )}
 

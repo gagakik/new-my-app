@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './ServicesList.css';
 import ServiceForm from './ServiceForm';
+import { useNavigate } from 'react-router-dom';
 
 const ServicesList = ({ showNotification, userRole }) => {
   const [services, setServices] = useState([]);
@@ -9,6 +10,7 @@ const ServicesList = ({ showNotification, userRole }) => {
   const [editingId, setEditingId] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
+  const navigate = useNavigate();
 
   const isAuthorizedForManagement = 
     userRole === 'admin' || 
@@ -214,18 +216,15 @@ const ServicesList = ({ showNotification, userRole }) => {
                           onClick={() => viewServiceDetails(service)}
                           title="დეტალების ნახვა"
                         >
-                          👁️ დეტალები
                         </button>
                         <button
+                          onClick={() => navigate(`/services/edit/${service.id}`)}
                           className="edit"
-                          onClick={() => handleEditClick(service)}
                           title="რედაქტირება"
                         >
-                          ✏️ რედაქტირება
                         </button>
                         {status.class === 'finished' && !service.is_archived && (
                           <button className="archive" onClick={() => handleArchive(service.id)}>
-                            არქივი
                           </button>
                         )}
                         <button 
@@ -233,7 +232,6 @@ const ServicesList = ({ showNotification, userRole }) => {
                           onClick={() => handleDelete(service.id)}
                           title="წაშლა"
                         >
-                          🗑️ წაშლა
                         </button>
                       </div>
                     </td>
