@@ -80,8 +80,8 @@ const EquipmentForm = ({ equipmentToEdit, onEquipmentUpdated, showNotification, 
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
+    <div className="modal-overlay" onClick={onCancel}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3>{isEditing ? 'აღჭურვილობის რედაქტირება' : 'ახალი აღჭურვილობის დამატება'}</h3>
           <button
@@ -146,7 +146,11 @@ const EquipmentForm = ({ equipmentToEdit, onEquipmentUpdated, showNotification, 
               <button 
                 type="button" 
                 className="cancel-btn" 
-                onClick={onCancel}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onCancel();
+                }}
               >
                 გაუქმება
               </button>
