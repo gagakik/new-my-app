@@ -81,7 +81,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
     try {
       const token = localStorage.getItem('token');
       console.log('Fetching exhibition data for event:', eventId);
-      
+
       const response = await fetch(`/api/events/${eventId}/exhibition`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -92,7 +92,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
         setExhibitionData(data);
       } else {
         console.error('Exhibition data fetch failed:', response.status);
-        
+
         // Fallback: try to get price from event details if available
         if (eventDetails?.price_per_sqm) {
           console.log('Using price from event details:', eventDetails.price_per_sqm);
@@ -101,7 +101,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
       }
     } catch (error) {
       console.error('გამოფენის მონაცემების მიღების შეცდომა:', error);
-      
+
       // Fallback: try to use event details price
       if (eventDetails?.price_per_sqm) {
         console.log('Using price from event details as fallback:', eventDetails.price_per_sqm);
@@ -133,7 +133,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
     if (eventDetails?.exhibition_id) {
       fetchAvailablePackages();
     }
-    
+
     // If exhibition data is not available but event has price_per_sqm, use it
     if (eventDetails?.price_per_sqm && !exhibitionData?.price_per_sqm) {
       console.log('Using event details price_per_sqm:', eventDetails.price_per_sqm);
@@ -163,11 +163,11 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
         const isPackageEquipment = selectedPackage.equipment_list?.some(
           pkgEq => pkgEq.equipment_id === parseInt(item.equipment_id)
         );
-        
+
         const quantity = parseInt(item.quantity) || 0;
         const unitPriceWithoutVAT = parseFloat(item.unit_price) || 0;
         const unitPrice = unitPriceWithoutVAT * 1.18; // 18% დღგ-ის დამატება
-        
+
         // თუ პაკეტის აღჭურვილობაა
         if (isPackageEquipment) {
           const packageItem = selectedPackage.equipment_list.find(
@@ -181,7 +181,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
           return sum + (quantity * unitPrice);
         }
       }, 0);
-      
+
       const packagePriceWithVAT = parseFloat(selectedPackage.fixed_price) * 1.18; // 18% დღგ-ის დამატება
       const totalAmount = packagePriceWithVAT + additionalEquipmentCost;
       setFormData(prev => ({
@@ -317,7 +317,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
     try {
       const token = localStorage.getItem('token');
       console.log('Fetching equipment for event:', eventId);
-      
+
       // პირდაპირ ვიღებთ ზოგად აღჭურვილობის სიას
       const response = await fetch('/api/equipment', {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -326,14 +326,14 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
       if (response.ok) {
         const data = await response.json();
         console.log('Raw equipment data:', data);
-        
+
         // ყველა აღჭურვილობა ხელმისაწვდომია
         const equipmentWithAvailability = data.map(equipment => ({
           ...equipment,
           booked_quantity: 0,
           available_quantity: equipment.quantity || 100 // default value
         }));
-        
+
         setAvailableEquipment(equipmentWithAvailability);
         console.log('Processed equipment data:', equipmentWithAvailability);
       } else {
@@ -479,7 +479,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
         // Load package equipment
         const participantEquipment = participant.equipment_bookings || [];
         const packageEquipment = pkg.equipment_list || [];
-        
+
         const initialSelectedEquipment = packageEquipment.map(eq => {
           const bookedItem = participantEquipment.find(pe => pe.equipment_id === eq.equipment_id);
           return {
@@ -591,7 +591,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
 
   const handleEquipmentChange = (index, field, value) => {
     const updatedEquipment = [...selectedEquipment];
-    
+
     if (!updatedEquipment[index]) {
       console.error(`Equipment item at index ${index} does not exist.`);
       return;
@@ -607,10 +607,10 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
       if (selectedEquip) {
         newItem.code_name = selectedEquip.code_name;
         newItem.unit_price = parseFloat(selectedEquip.price) || 0;
-        
+
         // Calculate available quantity considering package equipment usage
         let availableQty = selectedEquip.available_quantity || selectedEquip.quantity || 100;
-        
+
         // If this is package equipment, adjust available quantity
         if (registrationType === 'package' && selectedPackage) {
           const packageEquipment = selectedPackage.equipment_list?.find(
@@ -621,7 +621,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
             availableQty = availableQty; // მთლიანი რაოდენობა ხელმისაწვდომია
           }
         }
-        
+
         newItem.available_quantity = availableQty;
         const quantity = parseInt(newItem.quantity) || 1;
         newItem.total_price = quantity * newItem.unit_price;
@@ -875,7 +875,17 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
       <div className="modal-content">
         <div className="modal-header">
           <h3>{eventName} - მონაწილეები ({filteredParticipants.length} / {participants.length})</h3>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <button
+            type="button"
+            className="modal-close"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onClose();
+            }}
+          >
+            ✕
+          </button>
         </div>
 
         <div className="modal-body">
@@ -1228,7 +1238,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                             availableEquipment.map(equipment => {
                               let availableQty = equipment.available_quantity || equipment.quantity || 100;
                               let displayText = '';
-                              
+
                               // If this is package equipment, show package info
                               if (registrationType === 'package' && selectedPackage) {
                                 const packageEquipment = selectedPackage.equipment_list?.find(
@@ -1242,7 +1252,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                               } else {
                                 displayText = `${equipment.code_name} (ხელმისაწვდომი: ${availableQty}, ფასი: €${equipment.price || 0})`;
                               }
-                              
+
                               return (
                                 <option key={equipment.id} value={equipment.id}>
                                   {displayText}
@@ -1285,7 +1295,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                               );
                             }
                           }
-                          
+
                           if (item.available_quantity === 0) {
                             return <small style={{color: '#ff4444'}}>ამოწურულია</small>;
                           } else if (parseInt(item.quantity) > item.available_quantity) {
@@ -1403,7 +1413,17 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                   <button type="submit" className="submit-btn">
                     {editingParticipant ? 'განახლება' : 'დამატება'}
                   </button>
-                  <button type="button" className="cancel-btn" onClick={resetForm}>
+                  <button 
+                    type="button" 
+                    className="cancel-btn" 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setShowAddForm(false); // Corrected this line
+                      setEditingParticipant(null);
+                      resetForm();
+                    }}
+                  >
                     გაუქმება
                   </button>
                 </div>
@@ -1545,7 +1565,11 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
               <h3>{selectedCompanyForDetails.company_name} - დეტალური ინფორმაცია</h3>
               <button
                 className="modal-close-btn"
-                onClick={() => setSelectedCompanyForDetails(null)}
+                onClick={(e) => { // Added event handlers
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setSelectedCompanyForDetails(null);
+                }}
               >
                 ×
               </button>

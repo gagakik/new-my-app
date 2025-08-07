@@ -83,6 +83,8 @@
 .event-participants-modal .modal-close::before {
   content: "✕";
   font-size: 1.2rem;
+  display: inline-block;
+  line-height: 1;
 }
 
 /* Compact participant table styles */
