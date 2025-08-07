@@ -1,22 +1,57 @@
 
-/* Button Icons */
+/* Button Icons - Universal styles for all action buttons */
+.actions button {
+  position: relative;
+  font-size: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
 .actions button::before {
   font-style: normal;
   font-weight: normal;
-  display: inline-block;
-  margin-right: 0.25rem;
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
 }
 
-.actions .edit::before {
+.actions .edit,
+.edit {
+  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+  color: white;
+}
+
+.actions .edit::before,
+.edit::before {
   content: "✏️";
 }
 
-.actions .delete::before {
+.actions .delete,
+.delete {
+  background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+  color: white;
+}
+
+.actions .delete::before,
+.delete::before {
   content: "🗑️";
 }
 
 .actions .view::before,
-.view-details::before {
+.view-details::before,
+.view::before {
   content: "👁️";
 }
 
@@ -120,6 +155,27 @@
 .service-name-link::before {
   content: "📋";
   margin-right: 0.25rem;
+}
+
+/* Hover effects */
+.actions button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.actions .edit:hover,
+.edit:hover {
+  background: linear-gradient(135deg, #38a169 0%, #2f855a 100%);
+}
+
+.actions .delete:hover,
+.delete:hover {
+  background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+}
+
+.actions .view:hover,
+.view:hover {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 /* Loading state for buttons */

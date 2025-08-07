@@ -221,7 +221,7 @@ const SpacesList = ({ showNotification, userRole }) => {
                   <span><strong>აღწერილობა:</strong> {space.description}</span>
                 </div>
                 {isAuthorizedForManagement && (
-                  <div className="space-actions">
+                  <div className="actions">
                     <button 
                       className="edit" 
                       onClick={() => handleEditClick(space)}

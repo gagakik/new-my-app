@@ -247,7 +247,7 @@ const EquipmentList = ({ showNotification, userRole }) => {
               </div>
 
               {isAuthorizedForManagement && (
-                <div className="equipment-actions">
+                <div className="actions">
                   <button
                     className="edit"
                     onClick={() => handleEditClick(item)}

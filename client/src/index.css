@@ -97,7 +97,13 @@ button {
   overflow: hidden;
 }
 
-button::before {
+/* Generic button styles - excluding action buttons */
+button:not(.actions button):not(.edit):not(.delete):not(.view):not(.archive) {
+  position: relative;
+  overflow: hidden;
+}
+
+button:not(.actions button):not(.edit):not(.delete):not(.view):not(.archive)::before {
   content: '';
   position: absolute;
   top: 0;
@@ -108,17 +114,17 @@ button::before {
   transition: left 0.6s;
 }
 
-button:hover::before {
+button:not(.actions button):not(.edit):not(.delete):not(.view):not(.archive):hover::before {
   left: 100%;
 }
 
-button:hover {
+button:not(.actions button):not(.edit):not(.delete):not(.view):not(.archive):hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(66, 153, 225, 0.4);
   background: linear-gradient(135deg, #3182ce 0%, #2c5282 100%);
 }
 
-button:active {
+button:not(.actions button):not(.edit):not(.delete):not(.view):not(.archive):active {
   transform: translateY(0);
   box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
 }
@@ -157,20 +163,7 @@ button:active {
   gap: 0.25rem;
 }
 
-.actions .edit {
-  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
-  box-shadow: 0 3px 10px rgba(72, 187, 120, 0.3);
-}
-
-.actions .edit:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(72, 187, 120, 0.4);
-}
-
-.actions .delete {
-  background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
-  box-shadow: 0 3px 10px rgba(245, 101, 101, 0.3);
-}
+/* Action button styles are now handled in ButtonIcons.css */
 
 .actions .delete:hover {
   transform: translateY(-2px);
