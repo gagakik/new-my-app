@@ -76,7 +76,11 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
           <button
             type="button"
             className="modal-close"
-            onClick={onCancel}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onExhibitionUpdated();
+            }}
           >
           </button>
         </div>
@@ -130,7 +134,7 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  onCancel();
+                  onExhibitionUpdated();
                 }}
               >
                 გაუქმება

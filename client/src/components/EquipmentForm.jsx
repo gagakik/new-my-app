@@ -85,8 +85,13 @@ const EquipmentForm = ({ equipmentToEdit, onEquipmentUpdated, showNotification, 
         <div className="modal-header">
           <h3>{isEditing ? 'აღჭურვილობის რედაქტირება' : 'ახალი აღჭურვილობის დამატება'}</h3>
           <button
+            type="button"
             className="modal-close"
-            onClick={onCancel}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onEquipmentUpdated();
+            }}
           >
           </button>
         </div>
@@ -143,9 +148,9 @@ const EquipmentForm = ({ equipmentToEdit, onEquipmentUpdated, showNotification, 
               <button type="submit" className="submit-btn">
                 {isEditing ? 'განახლება' : 'დამატება'}
               </button>
-              <button 
-                type="button" 
-                className="cancel-btn" 
+              <button
+                type="button"
+                className="cancel-btn"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();

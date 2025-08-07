@@ -159,6 +159,8 @@
   display: inline-block;
   line-height: 1;
   margin: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .filter::before {

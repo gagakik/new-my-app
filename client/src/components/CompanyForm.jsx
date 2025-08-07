@@ -174,11 +174,15 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification, onCanc
     <div className="modal-overlay" onClick={onCancel}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>{companyToEdit ? 'კომპანიის რედაქტირება' : 'ახალი კომპანიის დამატება'}</h3>
+          <h3>{isEditing ? 'კომპანიის რედაქტირება' : 'ახალი კომპანიის დამატება'}</h3>
           <button 
             type="button"
             className="modal-close" 
-            onClick={onCancel}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onCompanyUpdated();
+            }}
           >
           </button>
         </div>
@@ -343,9 +347,9 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification, onCanc
               <button type="submit" className="submit-btn">
                 {isEditing ? 'განახლება' : 'დამატება'}
               </button>
-              <button 
-                type="button" 
-                className="cancel-btn" 
+              <button
+                type="button"
+                className="cancel-btn"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
