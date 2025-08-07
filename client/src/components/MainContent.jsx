@@ -130,8 +130,22 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
           {activeSection === 'dashboard' && (
             <div className="dashboard">
               <div className="dashboard-header">
-                <h1>დეშბორდი</h1>
-                <p>მთავარი ინფორმაცია და სტატისტიკა</p>
+                <h1>მთავარი დეშბორდი</h1>
+                <p>თქვენი ბიზნესის მთავარი მეტრიკები და ანალიტიკა ერთ ადგილას. აქ თვალს ადევნებთ ყველა მნიშვნელოვან ინფორმაციას.</p>
+                <div className="dashboard-stats-preview">
+                  <div className="preview-stat">
+                    <div className="preview-stat-label">აქტიური</div>
+                    <div className="preview-stat-value">🟢</div>
+                  </div>
+                  <div className="preview-stat">
+                    <div className="preview-stat-label">სტატუსი</div>
+                    <div className="preview-stat-value">✅</div>
+                  </div>
+                  <div className="preview-stat">
+                    <div className="preview-stat-label">ონლაინ</div>
+                    <div className="preview-stat-value">👥</div>
+                  </div>
+                </div>
               </div>
               <Statistics showNotification={showNotification} userRole={userRole} />
             </div>
