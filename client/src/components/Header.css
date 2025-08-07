@@ -342,6 +342,23 @@
   display: flex;
 }
 
+/* QR Scanner Button Styles */
+.notification-btn, .qr-scanner-btn {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: white;
+  position: relative;
+  padding: 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.notification-btn:hover, .qr-scanner-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
 /* Responsive design */
 @media (max-width: 1024px) {
   .desktop-only {

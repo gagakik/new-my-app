@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './EventParticipants.css';
 import InvoiceForm from './InvoiceForm';
+import InvitationGenerator from './InvitationGenerator';
 
 const EventParticipants = ({ eventId, eventName, onClose, showNotification, userRole }) => {
   const [participants, setParticipants] = useState([]);
@@ -40,6 +41,10 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
   const [showInvoiceForm, setShowInvoiceForm] = useState(false);
   const [selectedParticipantForInvoice, setSelectedParticipantForInvoice] = useState(null);
   const [eventDetails, setEventDetails] = useState(null);
+  const [showInvitationGenerator, setShowInvitationGenerator] = useState(false);
+  const [availablePackages, setAvailablePackages] = useState([]);
+  const [selectedPackage, setSelectedPackage] = useState(null);
+  const [registrationType, setRegistrationType] = useState('individual'); // 'individual' or 'package'
 
 
   const isAuthorizedForManagement =
@@ -71,17 +76,120 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
     }
   };
 
+  // Fetch exhibition data for price calculation
+  const fetchExhibitionData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      console.log('Fetching exhibition data for event:', eventId);
+      
+      const response = await fetch(`/api/events/${eventId}/exhibition`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Exhibition data received:', data);
+        setExhibitionData(data);
+      } else {
+        console.error('Exhibition data fetch failed:', response.status);
+        
+        // Fallback: try to get price from event details if available
+        if (eventDetails?.price_per_sqm) {
+          console.log('Using price from event details:', eventDetails.price_per_sqm);
+          setExhibitionData({ price_per_sqm: eventDetails.price_per_sqm });
+        }
+      }
+    } catch (error) {
+      console.error('გამოფენის მონაცემების მიღების შეცდომა:', error);
+      
+      // Fallback: try to use event details price
+      if (eventDetails?.price_per_sqm) {
+        console.log('Using price from event details as fallback:', eventDetails.price_per_sqm);
+        setExhibitionData({ price_per_sqm: eventDetails.price_per_sqm });
+      }
+    }
+  };
+
+  const fetchAvailablePackages = async () => {
+    try {
+      if (!eventDetails?.exhibition_id) return;
+
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/packages/${eventDetails.exhibition_id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const packages = await response.json();
+        setAvailablePackages(packages);
+      }
+    } catch (error) {
+      console.error('პაკეტების მიღების შეცდომა:', error);
+    }
+  };
+
+  // Fetch packages when event details are loaded
+  useEffect(() => {
+    if (eventDetails?.exhibition_id) {
+      fetchAvailablePackages();
+    }
+    
+    // If exhibition data is not available but event has price_per_sqm, use it
+    if (eventDetails?.price_per_sqm && !exhibitionData?.price_per_sqm) {
+      console.log('Using event details price_per_sqm:', eventDetails.price_per_sqm);
+      setExhibitionData(prev => ({
+        ...prev,
+        price_per_sqm: eventDetails.price_per_sqm
+      }));
+    }
+  }, [eventDetails, exhibitionData]);
+
+
   // აღჭურვილობის ჯამური ღირებულების გათვლა
   useEffect(() => {
     const total = selectedEquipment.reduce((sum, item) => {
-      return sum + (item.quantity * item.unit_price);
+      const quantity = parseInt(item.quantity) || 0;
+      const unitPrice = parseFloat(item.unit_price) || 0;
+      return sum + (quantity * unitPrice);
     }, 0);
     setEquipmentTotal(total);
   }, [selectedEquipment]);
 
   // ავტომატური გადახდის თანხის გათვლა (სტენდი + აღჭურვილობა)
   useEffect(() => {
+    // პაკეტის შემთხვევაში
+    if (registrationType === 'package' && selectedPackage) {
+      const additionalEquipmentCost = selectedEquipment.reduce((sum, item) => {
+        const isPackageEquipment = selectedPackage.equipment_list?.some(
+          pkgEq => pkgEq.equipment_id === parseInt(item.equipment_id)
+        );
+        // ყველა აღჭურვილობის ღირებულება ითვლება
+        const quantity = parseInt(item.quantity) || 0;
+        const unitPrice = parseFloat(item.unit_price) || 0;
+        return sum + (quantity * unitPrice);
+      }, 0);
+      
+      const totalAmount = parseFloat(selectedPackage.fixed_price) + additionalEquipmentCost;
+      setFormData(prev => ({
+        ...prev,
+        payment_amount: totalAmount.toFixed(2)
+      }));
+      return;
+    }
+
+    // ინდივიდუალური რეგისტრაციის შემთხვევაში
     let calculatedAmount = 0;
+    let boothTotal = 0;
+
+    // Debug logging for booth calculation
+    console.log('Debug booth calculation:', {
+      boothSize: formData.booth_size,
+      boothSizeParsed: parseFloat(formData.booth_size),
+      exhibitionData: exhibitionData,
+      pricePerSqm: exhibitionData?.price_per_sqm,
+      pricePerSqmParsed: parseFloat(exhibitionData?.price_per_sqm || 0),
+      eventDetails: eventDetails
+    });
 
     // სტენდის ღირებულების გათვლა
     if (formData.booth_size && exhibitionData && exhibitionData.price_per_sqm) {
@@ -89,21 +197,22 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
       const pricePerSqm = parseFloat(exhibitionData.price_per_sqm);
 
       if (!isNaN(boothSize) && !isNaN(pricePerSqm) && boothSize > 0 && pricePerSqm > 0) {
-        calculatedAmount = boothSize * pricePerSqm;
-        console.log(`სტენდის ღირებულება: ${boothSize} × ${pricePerSqm} = ${calculatedAmount}`);
+        boothTotal = boothSize * pricePerSqm;
+        calculatedAmount = boothTotal;
       }
     }
 
     // აღჭურვილობის ღირებულების დამატება
     calculatedAmount += equipmentTotal;
-    console.log(`ჯამური თანხა: სტენდი ${calculatedAmount - equipmentTotal} + აღჭურვილობა ${equipmentTotal} = ${calculatedAmount}`);
 
-    // თანხის განახლება - ყოველთვის განვაახლოთ, თუნდაც 0 იყოს
+    console.log(`ჯამური თანხა: სტენდი ${boothTotal} + აღჭურვილობა ${equipmentTotal} = ${calculatedAmount}`);
+
+    // თანხის განახლება
     setFormData(prev => ({
       ...prev,
       payment_amount: calculatedAmount.toFixed(2)
     }));
-  }, [formData.booth_size, exhibitionData, equipmentTotal]);
+  }, [formData.booth_size, exhibitionData, equipmentTotal, registrationType, selectedPackage]);
 
   // ფილტრაცია და ძიება
   useEffect(() => {
@@ -150,7 +259,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
       });
 
       console.log(`Response status: ${response.status}`);
-      
+
       if (response.ok) {
         const data = await response.json();
         console.log(`ფეტჩი: მოვიღე ${data.length} მონაწილე ივენთისთვის ${eventId}`);
@@ -191,75 +300,37 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
   const fetchAvailableEquipment = async () => {
     try {
       const token = localStorage.getItem('token');
-      let response = await fetch(`/api/equipment/availability/${eventId}`, {
+      console.log('Fetching equipment for event:', eventId);
+      
+      // პირდაპირ ვიღებთ ზოგად აღჭურვილობის სიას
+      const response = await fetch('/api/equipment', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
       if (response.ok) {
         const data = await response.json();
-        setAvailableEquipment(data);
-        console.log('აღჭურვილობის ხელმისაწვდომობა მიღებულია:', data);
+        console.log('Raw equipment data:', data);
+        
+        // ყველა აღჭურვილობა ხელმისაწვდომია
+        const equipmentWithAvailability = data.map(equipment => ({
+          ...equipment,
+          booked_quantity: 0,
+          available_quantity: equipment.quantity || 100 // default value
+        }));
+        
+        setAvailableEquipment(equipmentWithAvailability);
+        console.log('Processed equipment data:', equipmentWithAvailability);
       } else {
-        // თუ availability endpoint არ მუშაობს, დავბრუნდეთ ზოგად აღჭურვილობის სიაზე
-        console.log('availability endpoint არ მუშაობს, ვიღებთ ზოგად სიას');
-        response = await fetch('/api/equipment', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          // ყველა აღჭურვილობა ხელმისაწვდომია
-          const equipmentWithAvailability = data.map(equipment => ({
-            ...equipment,
-            booked_quantity: 0,
-            available_quantity: equipment.quantity
-          }));
-          setAvailableEquipment(equipmentWithAvailability);
-          console.log('ზოგადი აღჭურვილობის სია მიღებულია:', equipmentWithAvailability);
-        }
+        console.error('Equipment fetch failed:', response.status);
+        showNotification('აღჭურვილობის ჩატვირთვა ვერ მოხერხდა', 'error');
       }
     } catch (error) {
       console.error('აღჭურვილობის ხელმისაწვდომობის მიღების შეცდომა:', error);
-      // fallback - ცარიელი მასივი
+      showNotification('აღჭურვილობის ჩატვირთვის შეცდომა', 'error');
       setAvailableEquipment([]);
     }
   };
 
-  const fetchExhibitionData = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/events/${eventId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        const eventData = await response.json();
-        console.log('ივენთის მონაცემები:', eventData);
-
-        if (eventData.exhibition_id) {
-          console.log(`ვანახვებ გამოფენას ID-ით: ${eventData.exhibition_id}`);
-          const exhibitionResponse = await fetch(`/api/exhibitions/${eventData.exhibition_id}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-
-          if (exhibitionResponse.ok) {
-            const exhibitionInfo = await exhibitionResponse.json();
-            setExhibitionData(exhibitionInfo);
-            console.log('გამოფენის მონაცემები მიღებულია:', exhibitionInfo);
-            console.log('price_per_sqm:', exhibitionInfo.price_per_sqm);
-          } else {
-            console.error('გამოფენის მონაცემების მიღება ვერ მოხერხდა:', exhibitionResponse.status);
-          }
-        } else {
-          console.log('ივენთს არ აქვს exhibition_id');
-        }
-      } else {
-        console.error('ივენთის მონაცემების მიღება ვერ მოხერხდა:', response.status);
-      }
-    } catch (error) {
-      console.error('გამოფენის მონაცემების მიღების შეცდომა:', error);
-    }
-  };
 
   const fetchParticipantEquipment = async (participantId) => {
     try {
@@ -326,6 +397,12 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
         submitData.append('equipment_bookings', JSON.stringify(validEquipment));
       }
 
+      // Add package information if applicable
+      if (registrationType === 'package' && selectedPackage) {
+        submitData.append('package_id', selectedPackage.id);
+        // Note: Booth size and base payment amount are already in formData
+      }
+
       console.log('Request details:', { method, url, formData, files, selectedEquipment });
 
       const response = await fetch(url, {
@@ -374,7 +451,41 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
     console.log('Editing participant:', participant);
     setEditingParticipant(participant);
 
-    // Calculate correct payment amount based on booth + equipment
+    // Determine registration type based on participant data
+    const isPackage = participant.package_id !== null && participant.package_id !== undefined;
+    setRegistrationType(isPackage ? 'package' : 'individual');
+
+    // Fetch selected package if it's a package registration
+    if (isPackage) {
+      const pkg = availablePackages.find(p => p.id === participant.package_id);
+      if (pkg) {
+        setSelectedPackage(pkg);
+        // Load package equipment
+        const participantEquipment = participant.equipment_bookings || [];
+        const packageEquipment = pkg.equipment_list || [];
+        
+        const initialSelectedEquipment = packageEquipment.map(eq => {
+          const bookedItem = participantEquipment.find(pe => pe.equipment_id === eq.equipment_id);
+          return {
+            equipment_id: eq.equipment_id,
+            code_name: eq.code_name,
+            quantity: bookedItem ? bookedItem.quantity : eq.quantity, // Use booked quantity if available
+            unit_price: eq.price,
+            total_price: (bookedItem ? bookedItem.quantity : eq.quantity) * eq.price,
+            available_quantity: eq.available_quantity // Assuming available_quantity is also part of package equipment
+          };
+        });
+        setSelectedEquipment(initialSelectedEquipment);
+      } else {
+        // Fallback if package details are not found, try to load participant's equipment
+        fetchParticipantEquipment(participant.id);
+      }
+    } else {
+      // For individual registrations, load participant's equipment
+      fetchParticipantEquipment(participant.id);
+    }
+
+
     const participantEquipment = participant.equipment_bookings || [];
     const currentEquipmentTotal = participantEquipment.reduce((sum, booking) => {
       const unitPrice = parseFloat(booking.unit_price) || 0;
@@ -404,17 +515,14 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
       payment_method: participant.payment_method || '',
       invoice_number: participant.invoice_number || ''
     });
-    
-    // Load participant's equipment
-    fetchParticipantEquipment(participant.id);
-    
-    // Show the form
-    setShowAddForm(true);
-    
+
     // Ensure exhibition data is loaded for price calculation
     if (!exhibitionData) {
       fetchExhibitionData();
     }
+
+    // Show the form
+    setShowAddForm(true);
 
     // Scroll to form
     setTimeout(() => {
@@ -425,27 +533,21 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
     }, 100);
   };
 
-  const addEquipmentItem = () => {
-    setSelectedEquipment([...selectedEquipment, {
+  const addEquipmentRow = () => {
+    const newEquipmentItem = {
       equipment_id: '',
       code_name: '',
       quantity: 1,
       unit_price: 0,
       total_price: 0,
-      available_quantity: 0 // Initial value, will be updated when equipment is selected
-    }]);
+      available_quantity: 0
+    };
+    setSelectedEquipment([...selectedEquipment, newEquipmentItem]);
   };
 
-  const removeEquipmentItem = (index) => {
-    const newEquipment = [...selectedEquipment];
-    newEquipment.splice(index, 1);
+  const removeEquipmentItem = (indexToRemove) => {
+    const newEquipment = selectedEquipment.filter((_, index) => index !== indexToRemove);
     setSelectedEquipment(newEquipment);
-    // Recalculate total after removal
-    const newEquipmentTotal = calculateEquipmentTotal(newEquipment);
-    setEquipmentTotal(newEquipmentTotal);
-    // Update payment amount
-    const totalPayment = calculateTotalPaymentAmount(formData.booth_size, newEquipment, { price_per_sqm: eventData?.price_per_sqm });
-    setFormData(prev => ({ ...prev, payment_amount: totalPayment.toFixed(2) }));
   };
 
   const calculateEquipmentTotal = (equipmentList) => {
@@ -473,50 +575,59 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
 
   const handleEquipmentChange = (index, field, value) => {
     const updatedEquipment = [...selectedEquipment];
-    const item = updatedEquipment[index];
+    
+    if (!updatedEquipment[index]) {
+      console.error(`Equipment item at index ${index} does not exist.`);
+      return;
+    }
 
-    item[field] = value;
+    // Create a new item object
+    const newItem = { ...updatedEquipment[index] };
+    newItem[field] = value;
 
-    // Update unit_price and total_price based on selected equipment
+    // Update related fields when equipment is selected
     if (field === 'equipment_id') {
       const selectedEquip = availableEquipment.find(eq => eq.id === parseInt(value));
       if (selectedEquip) {
-        item.code_name = selectedEquip.code_name;
-        item.unit_price = parseFloat(selectedEquip.price) || 0;
-        item.available_quantity = selectedEquip.available_quantity;
-        item.total_price = parseFloat((parseInt(item.quantity || 1) * parseFloat(selectedEquip.price || 0)).toFixed(2));
+        newItem.code_name = selectedEquip.code_name;
+        newItem.unit_price = parseFloat(selectedEquip.price) || 0;
+        
+        // Calculate available quantity considering package equipment usage
+        let availableQty = selectedEquip.available_quantity || selectedEquip.quantity || 100;
+        
+        // If this is package equipment, reduce available quantity
+        if (registrationType === 'package' && selectedPackage) {
+          const packageEquipment = selectedPackage.equipment_list?.find(
+            pkgEq => pkgEq.equipment_id === parseInt(value)
+          );
+          if (packageEquipment) {
+            availableQty = Math.max(0, availableQty - packageEquipment.quantity);
+          }
+        }
+        
+        newItem.available_quantity = availableQty;
+        const quantity = parseInt(newItem.quantity) || 1;
+        newItem.total_price = quantity * newItem.unit_price;
       } else {
-        item.code_name = '';
-        item.unit_price = 0;
-        item.available_quantity = 0;
-        item.total_price = 0;
+        newItem.code_name = '';
+        newItem.unit_price = 0;
+        newItem.available_quantity = 0;
+        newItem.total_price = 0;
       }
     } else if (field === 'quantity') {
       const quantity = parseInt(value) || 0;
-      item.quantity = quantity;
-      item.total_price = parseFloat((quantity * parseFloat(item.unit_price || 0)).toFixed(2));
+      const unitPrice = parseFloat(newItem.unit_price) || 0;
+      newItem.quantity = quantity;
+      newItem.total_price = quantity * unitPrice;
     } else if (field === 'unit_price') {
       const unitPrice = parseFloat(value) || 0;
-      item.unit_price = unitPrice;
-      item.total_price = parseFloat((parseInt(item.quantity || 1) * unitPrice).toFixed(2));
+      const quantity = parseInt(newItem.quantity) || 1;
+      newItem.unit_price = unitPrice;
+      newItem.total_price = quantity * unitPrice;
     }
 
+    updatedEquipment[index] = newItem;
     setSelectedEquipment(updatedEquipment);
-
-    const newEquipmentTotal = calculateEquipmentTotal(updatedEquipment);
-    setEquipmentTotal(newEquipmentTotal);
-
-    // Calculate total payment amount (booth + equipment)
-    const totalPayment = calculateTotalPaymentAmount(
-      formData.booth_size,
-      updatedEquipment,
-      { price_per_sqm: eventDetails?.price_per_sqm }
-    );
-
-    setFormData(prev => ({
-      ...prev,
-      payment_amount: totalPayment.toFixed(2)
-    }));
   };
 
   const handleDelete = async (participantId) => {
@@ -561,9 +672,55 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
       handover_file: null
     });
     setSelectedEquipment([]);
-    setEquipmentTotal(0);
+    setSelectedPackage(null);
+    setRegistrationType('individual');
     setEditingParticipant(null);
-    setShowAddForm(false);
+    setShowAddForm(false); // Hide form after reset
+  };
+
+  const handleRegistrationTypeChange = (type) => {
+    setRegistrationType(type);
+    setSelectedPackage(null);
+    setSelectedEquipment([]);
+
+    // Reset form data related to booth and equipment
+    setFormData(prev => ({
+      ...prev,
+      booth_size: '',
+      payment_amount: ''
+    }));
+  };
+
+  const handlePackageSelection = (packageId) => {
+    const selectedPkg = availablePackages.find(pkg => pkg.id === parseInt(packageId));
+    setSelectedPackage(selectedPkg);
+
+    if (selectedPkg) {
+      // Set package equipment as base equipment
+      const packageEquipment = selectedPkg.equipment_list || [];
+      setSelectedEquipment(packageEquipment.map(eq => ({
+        equipment_id: eq.equipment_id,
+        quantity: eq.quantity,
+        unit_price: eq.price,
+        code_name: eq.code_name,
+        available_quantity: eq.available_quantity // Assuming this is provided
+      })));
+
+      // Set package area and base price
+      setFormData(prev => ({
+        ...prev,
+        booth_size: selectedPkg.fixed_area_sqm.toString(),
+        payment_amount: selectedPkg.fixed_price.toString()
+      }));
+    } else {
+      // If no package selected or invalid ID, reset equipment and amounts
+      setSelectedEquipment([]);
+      setFormData(prev => ({
+        ...prev,
+        booth_size: '',
+        payment_amount: ''
+      }));
+    }
   };
 
   const resetFilters = () => {
@@ -771,20 +928,33 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                 onClick={() => {
                   resetForm(); // Reset form before adding new
                   setShowAddForm(true);
-                  if (!exhibitionData) { // Fetch exhibition data if not already loaded for price calculation
+                  // Ensure exhibition and package data are loaded for the form
+                  if (!exhibitionData) {
                     fetchExhibitionData();
+                  }
+                  if (eventDetails?.exhibition_id && availablePackages.length === 0) {
+                    fetchAvailablePackages();
                   }
                 }}
               >
                 ახალი მონაწილის დამატება
               </button>
+
+              {filteredParticipants.length > 0 && (
+                <button
+                  className="invitation-generator-btn"
+                  onClick={() => setShowInvitationGenerator(true)}
+                >
+                  QR მოსაწვევების გენერაცია
+                </button>
+              )}
             </div>
           )}
 
           {showAddForm && isAuthorizedForManagement && (
             <div className="participant-form">
               <h4>{editingParticipant ? 'მონაწილის რედაქტირება' : 'ახალი მონაწილის დამატება'}</h4>
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={handleSubmit} className="participant-form">
                 <div className="form-row">
                   <div className="form-group">
                     <label>კომპანია *</label>
@@ -801,6 +971,92 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                       ))}
                     </select>
                   </div>
+                </div>
+
+                {/* Registration Type Selection */}
+                <div className="form-group">
+                  <label>რეგისტრაციის ტიპი</label>
+                  <div className="radio-group">
+                    <label className="radio-option">
+                      <input
+                        type="radio"
+                        value="individual"
+                        checked={registrationType === 'individual'}
+                        onChange={(e) => handleRegistrationTypeChange(e.target.value)}
+                      />
+                      ინდივიდუალური კონფიგურაცია
+                    </label>
+                    <label className="radio-option">
+                      <input
+                        type="radio"
+                        value="package"
+                        checked={registrationType === 'package'}
+                        onChange={(e) => handleRegistrationTypeChange(e.target.value)}
+                      />
+                      პაკეტის არჩევა
+                    </label>
+                  </div>
+                </div>
+
+                {/* Package Selection */}
+                {registrationType === 'package' && (
+                  <div className="form-group">
+                    <label>აირჩიეთ პაკეტი</label>
+                    <select
+                      value={selectedPackage?.id || ''}
+                      onChange={(e) => handlePackageSelection(e.target.value)}
+                      required
+                    >
+                      <option value="">აირჩიეთ პაკეტი</option>
+                      {availablePackages.map(pkg => (
+                        <option key={pkg.id} value={pkg.id}>
+                          {pkg.package_name} - {pkg.fixed_area_sqm}კვმ - €{pkg.fixed_price}
+                        </option>
+                      ))}
+                    </select>
+
+                    {selectedPackage && (
+                      <div className="package-preview">
+                        <h4>პაკეტის დეტალები:</h4>
+                        <p><strong>სახელი:</strong> {selectedPackage.package_name}</p>
+                        <p><strong>ფართობი:</strong> {selectedPackage.fixed_area_sqm} კვმ</p>
+                        <p><strong>ბაზური ღირებულება:</strong> €{selectedPackage.fixed_price}</p>
+                        {selectedPackage.description && (
+                          <p><strong>აღწერა:</strong> {selectedPackage.description}</p>
+                        )}
+
+                        {selectedPackage.equipment_list && selectedPackage.equipment_list.length > 0 && (
+                          <div className="package-equipment-preview">
+                            <h5>შემავალი აღჭურვილობა:</h5>
+                            <ul>
+                              {selectedPackage.equipment_list.map((eq, idx) => (
+                                <li key={idx}>
+                                  {eq.code_name} - {eq.quantity} ცალი
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>სტენდის ზომა (კვმ)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={formData.booth_size}
+                      onChange={(e) => setFormData(prev => ({ ...prev, booth_size: e.target.value }))}
+                      disabled={registrationType === 'package'}
+                      required
+                    />
+                    {registrationType === 'package' && (
+                      <small className="field-note">პაკეტის ფართობი ავტომატურად განისაზღვრება</small>
+                    )}
+                  </div>
                   <div className="form-group">
                     <label>სტენდის ნომერი</label>
                     <input
@@ -809,29 +1065,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                       onChange={(e) => setFormData({...formData, booth_number: e.target.value})}
                     />
                   </div>
-                  <div className="form-group">
-                    <label>სტენდის ზომა (მ²)</label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      value={formData.booth_size}
-                      onChange={(e) => setFormData({...formData, booth_size: e.target.value})}
-                      onBlur={(e) => { // Recalculate on blur to ensure it uses the latest exhibitionData
-                        const totalPayment = calculateTotalPaymentAmount(
-                          e.target.value,
-                          selectedEquipment,
-                          { price_per_sqm: eventDetails?.price_per_sqm }
-                        );
-                        setFormData(prev => ({ ...prev, payment_amount: totalPayment.toFixed(2) }));
-                      }}
-                    />
-                    {eventDetails?.price_per_sqm && (
-                      <small>1 მ² = €{parseFloat(eventDetails.price_per_sqm).toFixed(2)}</small>
-                    )}
-                  </div>
                 </div>
-
-
 
                 {editingParticipant && (
                   <div className="form-row">
@@ -872,11 +1106,22 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                       readOnly // Make it read-only as it's calculated
                     />
                     <div className="payment-breakdown">
-                      {formData.booth_size && eventDetails?.price_per_sqm && (
-                        <small>სტენდის ღირებულება: €{(parseFloat(formData.booth_size || 0) * parseFloat(eventDetails.price_per_sqm || 0)).toFixed(2)}</small>
+                      {registrationType === 'package' && selectedPackage ? (
+                        <>
+                          <small>პაკეტი: €{selectedPackage.fixed_price}</small>
+                          <small>აღჭურვილობა: €{selectedEquipment.reduce((sum, item) => {
+                            return sum + ((parseInt(item.quantity) || 0) * (parseFloat(item.unit_price) || 0));
+                          }, 0).toFixed(2)}</small>
+                        </>
+                      ) : (
+                        <>
+                          {formData.booth_size && exhibitionData?.price_per_sqm && (
+                            <small>სტენდი: €{(parseFloat(formData.booth_size || 0) * parseFloat(exhibitionData.price_per_sqm || 0)).toFixed(2)}</small>
+                          )}
+                          <small>აღჭურვილობა: €{equipmentTotal.toFixed(2)}</small>
+                        </>
                       )}
-                      <small>აღჭურვილობის ჯამი: €{equipmentTotal.toFixed(2)}</small>
-                      <small><strong>სულ: €{calculateTotalPaymentAmount(formData.booth_size, selectedEquipment, { price_per_sqm: eventDetails?.price_per_sqm }).toFixed(2)}</strong></small>
+                      <small><strong>სულ: €{formData.payment_amount}</strong></small>
                     </div>
                   </div>
                   <div className="form-group">
@@ -913,90 +1158,142 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                   </div>
                 </div>
 
-                {/* აღჭურვილობის არჩევის სექცია */}
-                <div className="equipment-section">
-                  <div className="equipment-header">
-                    <h4>აღჭურვილობის არჩევა</h4>
-                    <button
-                      type="button"
-                      className="add-equipment-btn"
-                      onClick={addEquipmentItem}
-                    >
-                      + აღჭურვილობის დამატება
-                    </button>
-                  </div>
+                {/* აღჭურვილობის არჩევა */}
+              <div className="equipment-selection">
+                <div className="equipment-header">
+                  <h3>
+                    {registrationType === 'package' 
+                      ? 'პაკეტის აღჭურვილობა + დამატებითი' 
+                      : 'აღჭურვილობის არჩევა'
+                    }
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={addEquipmentRow}
+                    className="add-equipment-btn"
+                  >
+                    + აღჭურვილობის დამატება
+                  </button>
+                  {/* Debug info */}
+                  <small style={{color: '#666', marginLeft: '10px'}}>
+                    ხელმისაწვდომი: {availableEquipment.length} ცალი
+                  </small>
+                </div>
 
-                  {selectedEquipment.map((item, index) => (
-                    <div key={index} className="equipment-item">
-                      <div className="form-row">
-                        <div className="form-group">
-                          <label>აღჭურვილობა</label>
-                          <select
-                            value={item.equipment_id}
-                            onChange={(e) => handleEquipmentChange(index, 'equipment_id', e.target.value)}
-                            required
-                          >
-                            <option value="">აირჩიეთ აღჭურვილობა</option>
-                            {availableEquipment
-                              .filter(eq => eq.available_quantity > 0 || (eq.id === parseInt(item.equipment_id) && item.quantity > 0)) // Show if available OR if it's the currently selected item
-                              .map(equipment => (
+                {registrationType === 'package' && selectedPackage && (
+                  <div className="package-equipment-info">
+                    <h4>პაკეტში შემავალი აღჭურვილობა (უფასო):</h4>
+                    {selectedPackage.equipment_list && selectedPackage.equipment_list.length > 0 ? (
+                      <ul className="base-equipment-list">
+                        {selectedPackage.equipment_list.map((eq, idx) => (
+                          <li key={idx}>
+                            {eq.code_name} - {eq.quantity} ცალი
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p>პაკეტს არ აქვს ძირითადი აღჭურვილობა</p>
+                    )}
+                  </div>
+                )}
+
+                {selectedEquipment.map((item, index) => (
+                  <div key={index} className="equipment-item">
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>აღჭურვილობა</label>
+                        <select
+                          value={item.equipment_id || ''}
+                          onChange={(e) => handleEquipmentChange(index, 'equipment_id', e.target.value)}
+                        >
+                          <option value="">აირჩიეთ აღჭურვილობა</option>
+                          {availableEquipment && availableEquipment.length > 0 ? (
+                            availableEquipment.map(equipment => {
+                              let availableQty = equipment.available_quantity || equipment.quantity || 100;
+                              
+                              // If this is package equipment, show adjusted availability
+                              if (registrationType === 'package' && selectedPackage) {
+                                const packageEquipment = selectedPackage.equipment_list?.find(
+                                  pkgEq => pkgEq.equipment_id === equipment.id
+                                );
+                                if (packageEquipment) {
+                                  availableQty = Math.max(0, availableQty - packageEquipment.quantity);
+                                }
+                              }
+                              
+                              return (
                                 <option key={equipment.id} value={equipment.id}>
-                                  {equipment.code_name} (ხელმისაწვდომი: {equipment.available_quantity}, ფასი: €{equipment.price})
+                                  {equipment.code_name} (ხელმისაწვდომი: {availableQty}, ფასი: €{equipment.price || 0})
                                 </option>
-                              ))}
-                          </select>
-                        </div>
-                        <div className="form-group">
-                          <label>რაოდენობა</label>
-                          <input
-                            type="number"
-                            min="0" // Allow 0 quantity if needed
-                            value={item.quantity}
-                            onChange={(e) => handleEquipmentChange(index, 'quantity', e.target.value)}
-                            required
-                          />
-                          {item.available_quantity > 0 && (
-                            <small>მაქს: {item.available_quantity}</small>
+                              );
+                            })
+                          ) : (
+                            <option value="" disabled>აღჭურვილობა იტვირთება...</option>
                           )}
-                        </div>
-                        <div className="form-group">
-                          <label>ერთეულის ფასი (€)</label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={item.unit_price}
-                            onChange={(e) => handleEquipmentChange(index, 'unit_price', e.target.value)}
-                            readOnly // Unit price is determined by selected equipment
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label>ჯამი (€)</label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={item.total_price ? (typeof item.total_price === 'number' ? item.total_price.toFixed(2) : parseFloat(item.total_price || 0).toFixed(2)) : (0).toFixed(2)}
-                            readOnly
-                          />
-                        </div>
-                        <div className="form-group">
-                          <button
-                            type="button"
-                            className="remove-equipment-btn"
-                            onClick={() => removeEquipmentItem(index)}
-                          >
-                            ✕
-                          </button>
-                        </div>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>რაოდენობა</label>
+                        <input
+                          type="number"
+                          min="0"
+                          max={item.available_quantity || 999}
+                          value={item.quantity}
+                          onChange={(e) => handleEquipmentChange(index, 'quantity', e.target.value)}
+                          style={{
+                            borderColor: item.available_quantity === 0 ? '#ff4444' : 
+                                       parseInt(item.quantity) > item.available_quantity ? '#ff4444' : 
+                                       '#ddd'
+                          }}
+                          required
+                        />
+                        {item.available_quantity === 0 ? (
+                          <small style={{color: '#ff4444'}}>ამოწურულია</small>
+                        ) : parseInt(item.quantity) > item.available_quantity ? (
+                          <small style={{color: '#ff4444'}}>მაქს: {item.available_quantity}</small>
+                        ) : (
+                          <small>ხელმისაწვდომი: {item.available_quantity}</small>
+                        )}
+                      </div>
+                      <div className="form-group">
+                        <label>ერთეულის ფასი (€)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={item.unit_price}
+                          onChange={(e) => handleEquipmentChange(index, 'unit_price', e.target.value)}
+                          // Unit price should be editable if not part of a package, or if overridden
+                          readOnly={registrationType === 'package' && selectedPackage?.equipment_list?.some(pkgEq => pkgEq.equipment_id === parseInt(item.equipment_id))}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>ჯამი (€)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={item.total_price ? (typeof item.total_price === 'number' ? item.total_price.toFixed(2) : parseFloat(item.total_price || 0).toFixed(2)) : (0).toFixed(2)}
+                          readOnly
+                        />
+                      </div>
+                      <div className="form-group">
+                        <button
+                          type="button"
+                          className="remove-equipment-btn"
+                          onClick={() => removeEquipmentItem(index)}
+                        >
+                          ✕
+                        </button>
                       </div>
                     </div>
-                  ))}
+                  </div>
+                ))}
 
-                  {selectedEquipment.length > 0 && (
-                    <div className="equipment-total">
-                      <strong>აღჭურვილობის ჯამური ღირებულება: €{equipmentTotal.toFixed(2)}</strong>
-                    </div>
-                  )}
-                </div>
+                {selectedEquipment.length > 0 && (
+                  <div className="equipment-total">
+                    <strong>აღჭურვილობის ჯამური ღირებულება: €{equipmentTotal.toFixed(2)}</strong>
+                  </div>
+                )}
+              </div>
 
                 {/* ფაილების მიმაგრების სექცია */}
                 <div className="files-section">
@@ -1303,6 +1600,16 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
           participant={selectedParticipantForInvoice}
           eventData={exhibitionData} // Pass exhibitionData for price per sqm
           onClose={closeInvoiceForm}
+          showNotification={showNotification}
+        />
+      )}
+
+      {/* Invitation Generator Modal */}
+      {showInvitationGenerator && (
+        <InvitationGenerator
+          eventData={eventDetails || {}}
+          participants={filteredParticipants}
+          onClose={() => setShowInvitationGenerator(false)}
           showNotification={showNotification}
         />
       )}

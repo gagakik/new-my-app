@@ -51,18 +51,14 @@
   margin-top: 1.5rem;
 }
 
-
-
 .auth-btn:hover {
   background-color: #0056b3;
 }
 
 .toggle-btn {
   background-color: transparent;
-  color: #fff;
+  color: #007bff;
   margin-top: 1rem;
-  text-decoration: none;
-  cursor: pointer;
 }
 
 .toggle-btn:hover {

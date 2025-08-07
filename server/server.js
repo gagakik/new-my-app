@@ -759,21 +759,16 @@ app.post('/api/events/:eventId/participants',
     try {
       const { eventId } = req.params;
       const { 
-        company_id, 
-        registration_status = 'მონაწილეობის მოთხოვნა',
-        payment_status = 'მომლოდინე', 
-        booth_number, 
-        booth_size, 
-        notes,
-        contact_person,
-        contact_position,
-        contact_email,
-        contact_phone,
+        company_id,
+        booth_size,
+        booth_number,
         payment_amount,
-        payment_due_date,
-        payment_method,
-        invoice_number,
-        equipment_bookings
+        payment_status,
+        registration_status,
+        notes,
+        equipment_bookings,
+        package_id,
+        registration_type
       } = req.body;
 
       console.log('Adding participant for event:', eventId);
@@ -781,69 +776,68 @@ app.post('/api/events/:eventId/participants',
       console.log('Files:', req.files);
 
       // Handle file uploads
-      let invoice_file = null;
-      let contract_file = null;
-      let handover_file = null;
+      let invoice_file_path = null;
+      let contract_file_path = null;
+      let handover_file_path = null;
 
       if (req.files) {
         if (req.files.invoice_file) {
-          invoice_file = `/uploads/participants/${req.files.invoice_file[0].filename}`;
+          invoice_file_path = `/uploads/participants/${req.files.invoice_file[0].filename}`;
         }
         if (req.files.contract_file) {
-          contract_file = `/uploads/participants/${req.files.contract_file[0].filename}`;
+          contract_file_path = `/uploads/participants/${req.files.contract_file[0].filename}`;
         }
         if (req.files.handover_file) {
-          handover_file = `/uploads/participants/${req.files.handover_file[0].filename}`;
+          handover_file_path = `/uploads/participants/${req.files.handover_file[0].filename}`;
         }
       }
 
-      const result = await db.query(
-        `INSERT INTO event_participants (
-          event_id, company_id, registration_status, payment_status, 
-          booth_number, booth_size, notes, contact_person, contact_position,
-          contact_email, contact_phone, payment_amount, payment_due_date, 
-          payment_method, invoice_number, invoice_file, contract_file, handover_file,
-          created_by_user_id
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) RETURNING *`,
-        [
-          eventId, company_id, registration_status, payment_status, 
-          booth_number, booth_size, notes, contact_person, contact_position,
-          contact_email, contact_phone,
-          payment_amount ? parseFloat(payment_amount) : null,
-          payment_due_date || null,
-          payment_method || null,
-          invoice_number || null,
-          invoice_file,
-          contract_file,
-          handover_file,
-          req.user.id
-        ]
+      // Insert participant
+      const participantResult = await db.query(
+        `INSERT INTO event_participants 
+         (event_id, company_id, booth_size, booth_number, payment_amount, payment_status, registration_status, notes, created_by_user_id, invoice_file_path, contract_file_path, handover_file_path, package_id, registration_type)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
+        [eventId, company_id, booth_size, booth_number, payment_amount, payment_status, registration_status, notes, req.user.id, invoice_file_path, contract_file_path, handover_file_path, package_id || null, registration_type || 'individual']
       );
 
-      const participant = result.rows[0];
+      const participant = participantResult.rows[0];
 
       // Handle equipment bookings
       if (equipment_bookings) {
         try {
           const bookings = JSON.parse(equipment_bookings);
-          for (const booking of bookings) {
-            if (booking.equipment_id && booking.quantity > 0) {
-              await db.query(
-                'INSERT INTO equipment_bookings (participant_id, equipment_id, quantity, unit_price, total_price, created_by) VALUES ($1, $2, $3, $4, $5, $6)',
-                [
-                  participant.id, 
-                  booking.equipment_id, 
-                  parseInt(booking.quantity), 
-                  parseFloat(booking.unit_price),
-                  parseFloat(booking.quantity) * parseFloat(booking.unit_price),
-                  req.user.id
-                ]
-              );
-            }
+
+          // If package registration, get package equipment first
+          let packageEquipment = [];
+          if (registration_type === 'package' && package_id) {
+            const packageResult = await db.query(`
+              SELECT pe.equipment_id, pe.quantity 
+              FROM package_equipment pe 
+              WHERE pe.package_id = $1
+            `, [package_id]);
+            packageEquipment = packageResult.rows;
           }
-        } catch (equipmentError) {
-          console.error('Equipment bookings error:', equipmentError);
-          // Don't fail the whole request if equipment booking fails
+
+          for (const booking of bookings) {
+            // Check if this equipment is from package
+            const isFromPackage = packageEquipment.some(pe => 
+              pe.equipment_id === booking.equipment_id && pe.quantity >= booking.quantity
+            );
+
+            // Insert into equipment bookings for inventory tracking
+            await db.query(
+              'INSERT INTO equipment_bookings (participant_id, equipment_id, quantity) VALUES ($1, $2, $3)',
+              [participant.id, booking.equipment_id, booking.quantity]
+            );
+
+            // Insert into participant selected equipment for detailed tracking
+            await db.query(
+              'INSERT INTO participant_selected_equipment (participant_id, equipment_id, quantity, is_from_package) VALUES ($1, $2, $3, $4)',
+              [participant.id, booking.equipment_id, booking.quantity, isFromPackage]
+            );
+          }
+        } catch (bookingError) {
+          console.error('Equipment booking error:', bookingError);
         }
       }
 
@@ -1643,6 +1637,8 @@ app.get('/api/reports/event-financials', authenticateToken, async (req, res) => 
 
 
 // Routes
-app.use('/api/companies', require('./routes/companies'));
-app.use('/api/statistics', require('./routes/statistics'));
-app.use('/api/import', require('./routes/import'));
+app.use('/api/equipment', authenticateToken, require('./routes/equipment'));
+app.use('/api/companies', authenticateToken, require('./routes/companies'));
+app.use('/api/statistics', authenticateToken, require('./routes/statistics'));
+app.use('/api/import', authenticateToken, require('./routes/import'));
+app.use('/api/packages', authenticateToken, require('./routes/packages'));

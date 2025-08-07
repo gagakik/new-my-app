@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import './ExhibitionForm.css';
+import PackageManager from './PackageManager';
 
 const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotification }) => {
   const [exhibitionName, setExhibitionName] = useState('');
@@ -119,6 +120,14 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
           </button>
         </div>
       </form>
+
+      {/* პაკეტების მენეჯერი მხოლოდ არსებული გამოფენისთვის */}
+      {isEditing && exhibitionToEdit && (
+        <PackageManager 
+          exhibitionId={exhibitionToEdit.id}
+          showNotification={showNotification}
+        />
+      )}
     </div>
   );
 };

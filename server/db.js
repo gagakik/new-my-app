@@ -1,4 +1,3 @@
-
 const { Pool } = require('pg');
 require('dotenv').config();
 
@@ -22,7 +21,7 @@ pool.on('error', (err) => {
 // Promise wrapper for database queries
 const query = async (text, params = []) => {
   console.log('Executing PostgreSQL query:', text, 'with params:', params);
-  
+
   try {
     const result = await pool.query(text, params);
     console.log('PostgreSQL query result:', result.rowCount, 'rows affected');
@@ -142,48 +141,121 @@ const createTables = async () => {
       )
     `);
 
-    // Event participants table
-    await query(`
-      CREATE TABLE IF NOT EXISTS event_participants (
-        id SERIAL PRIMARY KEY,
-        event_id INTEGER NOT NULL,
-        company_id INTEGER NOT NULL,
-        registration_status VARCHAR(100) DEFAULT 'მონაწილეობის მოთხოვნა',
-        payment_status VARCHAR(50) DEFAULT 'მომლოდინე',
-        booth_number VARCHAR(50),
-        booth_size VARCHAR(50),
-        notes TEXT,
-        contact_person VARCHAR(255),
-        contact_position VARCHAR(255),
-        contact_email VARCHAR(255),
-        contact_phone VARCHAR(50),
-        payment_amount DECIMAL(10,2),
-        payment_due_date DATE,
-        payment_method VARCHAR(100),
-        invoice_number VARCHAR(100),
-        invoice_file VARCHAR(500),
-        contract_file VARCHAR(500),
-        handover_file VARCHAR(500),
-        registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        created_by_user_id INTEGER,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
+    // Event participants table - original version
+    // await query(`
+    //   CREATE TABLE IF NOT EXISTS event_participants (
+    //     id SERIAL PRIMARY KEY,
+    //     event_id INTEGER NOT NULL,
+    //     company_id INTEGER NOT NULL,
+    //     registration_status VARCHAR(100) DEFAULT 'მონაწილეობის მოთხოვნა',
+    //     payment_status VARCHAR(50) DEFAULT 'მომლოდინე',
+    //     booth_number VARCHAR(50),
+    //     booth_size VARCHAR(50),
+    //     notes TEXT,
+    //     contact_person VARCHAR(255),
+    //     contact_position VARCHAR(255),
+    //     contact_email VARCHAR(255),
+    //     contact_phone VARCHAR(50),
+    //     payment_amount DECIMAL(10,2),
+    //     payment_due_date DATE,
+    //     payment_method VARCHAR(100),
+    //     invoice_number VARCHAR(100),
+    //     invoice_file VARCHAR(500),
+    //     contract_file VARCHAR(500),
+    //     handover_file VARCHAR(500),
+    //     registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    //     created_by_user_id INTEGER,
+    //     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    //     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    //   )
+    // `);
 
     // Equipment bookings table
     await query(`
       CREATE TABLE IF NOT EXISTS equipment_bookings (
         id SERIAL PRIMARY KEY,
-        participant_id INTEGER NOT NULL,
-        equipment_id INTEGER NOT NULL,
+        participant_id INTEGER REFERENCES event_participants(id) ON DELETE CASCADE,
+        equipment_id INTEGER REFERENCES equipment(id) ON DELETE CASCADE,
         quantity INTEGER NOT NULL,
-        unit_price DECIMAL(10,2) NOT NULL,
-        total_price DECIMAL(10,2) NOT NULL,
-        created_by INTEGER,
+        booking_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // New event_participants table with package support
+    await query(`
+      CREATE TABLE IF NOT EXISTS event_participants (
+        id SERIAL PRIMARY KEY,
+        event_id INTEGER REFERENCES annual_services(id) ON DELETE CASCADE,
+        company_id INTEGER REFERENCES companies(id) ON DELETE CASCADE,
+        booth_size DECIMAL(10,2),
+        booth_number VARCHAR(50),
+        payment_amount DECIMAL(10,2),
+        payment_status VARCHAR(20) DEFAULT 'pending' CHECK (payment_status IN ('pending', 'paid', 'overdue')),
+        registration_status VARCHAR(20) DEFAULT 'registered' CHECK (registration_status IN ('registered', 'confirmed', 'cancelled', 'pending')),
+        registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        notes TEXT,
+        created_by_user_id INTEGER REFERENCES users(id),
+        invoice_file_path VARCHAR(500),
+        contract_file_path VARCHAR(500),
+        handover_file_path VARCHAR(500),
+        package_id INTEGER REFERENCES exhibition_packages(id),
+        registration_type VARCHAR(20) DEFAULT 'individual' CHECK (registration_type IN ('individual', 'package'))
+      )
+    `);
+
+    // Exhibitions packages
+    await query(`
+      CREATE TABLE IF NOT EXISTS exhibition_packages (
+        id SERIAL PRIMARY KEY,
+        exhibition_id INTEGER REFERENCES exhibitions(id) ON DELETE CASCADE,
+        package_name VARCHAR(255) NOT NULL,
+        description TEXT,
+        fixed_area_sqm DECIMAL(10,2) NOT NULL,
+        fixed_price DECIMAL(10,2) NOT NULL,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_by_user_id INTEGER REFERENCES users(id),
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_by_user_id INTEGER REFERENCES users(id)
+      )
+    `);
+
+    // Equipment included in the package
+    await query(`
+      CREATE TABLE IF NOT EXISTS package_equipment (
+        id SERIAL PRIMARY KEY,
+        package_id INTEGER REFERENCES exhibition_packages(id) ON DELETE CASCADE,
+        equipment_id INTEGER REFERENCES equipment(id) ON DELETE CASCADE,
+        quantity INTEGER NOT NULL,
+        UNIQUE(package_id, equipment_id)
+      )
+    `);
+
+    // Participant's package selection
+    await query(`
+      CREATE TABLE IF NOT EXISTS participant_package_selection (
+        id SERIAL PRIMARY KEY,
+        participant_id INTEGER REFERENCES event_participants(id) ON DELETE CASCADE,
+        package_id INTEGER REFERENCES exhibition_packages(id),
+        base_price DECIMAL(10,2),
+        additional_equipment JSONB,
+        total_price DECIMAL(10,2),
+        UNIQUE(participant_id)
+      )
+    `);
+
+    // New participant_selected_equipment table
+    await query(`
+      CREATE TABLE IF NOT EXISTS participant_selected_equipment (
+        id SERIAL PRIMARY KEY,
+        participant_id INTEGER REFERENCES event_participants(id) ON DELETE CASCADE,
+        equipment_id INTEGER REFERENCES equipment(id) ON DELETE CASCADE,
+        quantity INTEGER NOT NULL,
+        is_from_package BOOLEAN DEFAULT false,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
 
     console.log('ყველა PostgreSQL ცხრილა წარმატებით შეიქმნა');
   } catch (error) {

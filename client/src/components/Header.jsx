@@ -1,11 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './Header.css';
+import UserProfile from './UserProfile';
+import NotificationCenter from './NotificationCenter';
+import QRScanner from './QRScanner';
 
-const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewChange }) => {
+const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewChange, unreadCount, showNotification }) => {
   const [dropdownOpen, setDropdownOpen] = useState({});
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const dropdownRefs = useRef({});
+  const [showProfile, setShowProfile] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showQRScanner, setShowQRScanner] = useState(false);
+
 
   // Initialize dark mode from localStorage
   useEffect(() => {
@@ -240,6 +247,26 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
               <span className="theme-icon">{isDarkMode ? '☀️' : '🌙'}</span>
             </button>
 
+            <button 
+            className="notification-btn"
+            onClick={() => setShowNotifications(true)}
+            title="შეტყობინებები"
+          >
+            🔔
+            {unreadCount > 0 && (
+              <span className="notification-badge">{unreadCount}</span>
+            )}
+          </button>
+
+          <button
+            className="qr-scanner-btn"
+            onClick={() => setShowQRScanner(true)}
+            title="QR კოდის სკანერი"
+          >
+            📱
+          </button>
+
+
             <button onClick={onLogout} className="logout-btn desktop-only">
               <span className="logout-icon">🚪</span>
               <span className="logout-text">გასვლა</span>
@@ -249,6 +276,24 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
           <span className="guest-info">სტუმარი</span>
         )}
       </nav>
+
+      {showProfile && (
+        <UserProfile onClose={() => setShowProfile(false)} />
+      )}
+
+      {showNotifications && (
+        <NotificationCenter
+          onClose={() => setShowNotifications(false)}
+          showNotification={showNotification}
+        />
+      )}
+
+      {showQRScanner && (
+        <QRScanner
+          onClose={() => setShowQRScanner(false)}
+          showNotification={showNotification}
+        />
+      )}
     </header>
   );
 };
