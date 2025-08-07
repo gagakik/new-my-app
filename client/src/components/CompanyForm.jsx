@@ -171,15 +171,15 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification, onCanc
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
+    <div className="modal-overlay" onClick={onCancel}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3>{companyToEdit ? 'კომპანიის რედაქტირება' : 'ახალი კომპანიის დამატება'}</h3>
           <button 
+            type="button"
             className="modal-close" 
             onClick={onCancel}
           >
-            ✕
           </button>
         </div>
         <div className="modal-body">

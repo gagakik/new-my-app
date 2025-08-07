@@ -68,9 +68,8 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
     }
   };
 
-  return (
-    <div className="modal-overlay">
-      <div className="modal-content">
+  <div className="modal-overlay" onClick={onCancel}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3>{isEditing ? 'გამოფენის რედაქტირება' : 'ახალი გამოფენის დამატება'}</h3>
           <button
@@ -78,7 +77,6 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
             className="modal-close"
             onClick={onCancel}
           >
-            ✕
           </button>
         </div>
         <div className="modal-body">

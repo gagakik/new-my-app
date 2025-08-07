@@ -85,11 +85,49 @@
   justify-content: center;
   border-radius: 8px;
   transition: all 0.2s ease;
+  z-index: 1002;
+  position: relative;
 }
 
 .modal-close:hover {
   background: rgba(255, 255, 255, 0.3);
   transform: scale(1.1);
+}
+
+.modal-close:active {
+  transform: scale(0.95);
+}
+
+.modal-close::before {
+  content: "✕";
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+/* Cancel button styles */
+.cancel-btn {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  z-index: 1001;
+  position: relative;
+}
+
+.cancel-btn:hover {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+}
+
+.cancel-btn:active {
+  transform: translateY(0);
 }
 
 .modal-body {
