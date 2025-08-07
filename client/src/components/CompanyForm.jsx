@@ -347,10 +347,7 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification, onCanc
               <button 
                 type="button" 
                 className="cancel-btn" 
-                onClick={(e) => {
-                  e.preventDefault();
-                  onCancel();
-                }}
+                onClick={onCancel}
               >
                 გაუქმება
               </button>

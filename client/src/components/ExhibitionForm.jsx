@@ -125,13 +125,10 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
               <button type="submit">
                 {isEditing ? 'განახლება' : 'დამატება'}
               </button>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 className="cancel-btn"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onCancel();
-                }}
+                onClick={onCancel}
               >
                 გაუქმება
               </button>
