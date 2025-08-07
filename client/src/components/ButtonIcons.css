@@ -1,0 +1,56 @@
+
+/* Button Icons */
+.actions button::before {
+  font-style: normal;
+  font-weight: normal;
+  display: inline-block;
+  margin-right: 0.25rem;
+}
+
+.actions .edit::before {
+  content: "✏️";
+}
+
+.actions .delete::before {
+  content: "🗑️";
+}
+
+.actions .view::before {
+  content: "👁️";
+}
+
+.actions .add::before {
+  content: "➕";
+}
+
+.actions .save::before {
+  content: "💾";
+}
+
+.actions .cancel::before {
+  content: "❌";
+}
+
+.actions .download::before {
+  content: "⬇️";
+}
+
+.actions .upload::before {
+  content: "⬆️";
+}
+
+/* Loading state for buttons */
+.actions button.loading {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.actions button.loading::before {
+  content: "⏳";
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

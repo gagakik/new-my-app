@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './CompaniesList.css';
 import CompanyForm from './CompanyForm'; // კომპანიის ფორმის იმპორტი
-import CompanyImport from './CompanyImport'; // კომპანიის იმპორტის კომპონენტის იმპორტი
+import CompanyImport from './CompanyImport'; // კომპანიის იმპორტის კომპონენტის კომპონენტის იმპორტი
+import './ButtonIcons.css';
 
 const CompaniesList = ({ showNotification, userRole }) => {
   const [companies, setCompanies] = useState([]);
@@ -19,8 +20,8 @@ const CompaniesList = ({ showNotification, userRole }) => {
   const [editingExhibitions, setEditingExhibitions] = useState(null); // რომელი კომპანიის გამოფენებს ვარედაქტირებთ
 
   // განსაზღვრეთ, აქვს თუ არა მომხმარებელს მართვის უფლება
-  const isAuthorizedForManagement = 
-    userRole === 'admin' || 
+  const isAuthorizedForManagement =
+    userRole === 'admin' ||
     userRole === 'sales';
 
   // გამოფენების ჩატვირთვა
@@ -47,7 +48,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
         throw new Error('ავტორიზაცია საჭიროა კომპანიების ნახვისთვის');
       }
 
-      const headers = { 
+      const headers = {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       };
@@ -139,12 +140,12 @@ const CompaniesList = ({ showNotification, userRole }) => {
 
   const handleExhibitionToggle = (exhibitionId, isChecked) => {
     const numericId = Number(exhibitionId);
-    
+
     setEditingExhibitions(prev => {
       const newSelectedExhibitions = isChecked
         ? [...prev.selectedExhibitions, numericId]
         : prev.selectedExhibitions.filter(id => id !== numericId);
-      
+
       return {
         ...prev,
         selectedExhibitions: newSelectedExhibitions
@@ -219,14 +220,14 @@ const CompaniesList = ({ showNotification, userRole }) => {
         <p><strong>კომენტარი:</strong> {selectedCompany.comment}</p>
         <p><strong>სტატუსი:</strong> {selectedCompany.status}</p>
         <p className="meta-info">
-          <strong>შექმნის ინფორმაცია:</strong> 
-          {new Date(selectedCompany.created_at).toLocaleDateString()} 
+          <strong>შექმნის ინფორმაცია:</strong>
+          {new Date(selectedCompany.created_at).toLocaleDateString()}
           {selectedCompany.created_by_username && ` - ${selectedCompany.created_by_username}`}
         </p>
         {selectedCompany.updated_at && (
           <p className="meta-info">
-            <strong>განახლების ინფორმაცია:</strong> 
-            {new Date(selectedCompany.updated_at).toLocaleDateString()} 
+            <strong>განახლების ინფორმაცია:</strong>
+            {new Date(selectedCompany.updated_at).toLocaleDateString()}
             {selectedCompany.updated_by_username && ` - ${selectedCompany.updated_by_username}`}
           </p>
         )}
@@ -241,11 +242,11 @@ const CompaniesList = ({ showNotification, userRole }) => {
 
       {/* ფილტრები და ძებნა */}
       <div className="filters">
-        <input 
-          type="text" 
-          placeholder="ძებნა დასახელებით..." 
-          value={searchTerm} 
-          onChange={(e) => setSearchTerm(e.target.value)} 
+        <input
+          type="text"
+          placeholder="ძებნა დასახელებით..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
         />
         <select value={filterCountry} onChange={(e) => setFilterCountry(e.target.value)}>
           <option value="">ყველა ქვეყანა</option>
@@ -270,22 +271,22 @@ const CompaniesList = ({ showNotification, userRole }) => {
           <option value="უკრაინა">უკრაინა</option>
           <option value="პოლონეთი">პოლონეთი</option>
         </select>
-        <input 
-          type="text" 
-          placeholder="პროფილი..." 
-          value={filterProfile} 
-          onChange={(e) => setFilterProfile(e.target.value)} 
+        <input
+          type="text"
+          placeholder="პროფილი..."
+          value={filterProfile}
+          onChange={(e) => setFilterProfile(e.target.value)}
         />
         <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
           <option value="">ყველა სტატუსი</option>
           <option value="აქტიური">აქტიური</option>
           <option value="არქივი">არქივი</option>
         </select>
-        <input 
-          type="text" 
-          placeholder="საიდენტიფიკაციო კოდი..." 
-          value={filterIdentificationCode} 
-          onChange={(e) => setFilterIdentificationCode(e.target.value)} 
+        <input
+          type="text"
+          placeholder="საიდენტიფიკაციო კოდი..."
+          value={filterIdentificationCode}
+          onChange={(e) => setFilterIdentificationCode(e.target.value)}
         /> {/* ახალი ველი საიდენტიფიკაციო კოდისთვის */}
         <button onClick={fetchCompanies}>ფილტრი</button> {/* ფილტრის ღილაკი */}
       </div> {/* filters დასასრული */}
@@ -298,18 +299,18 @@ const CompaniesList = ({ showNotification, userRole }) => {
       )}
 
       {editingId !== null && isAuthorizedForManagement && (
-        <CompanyForm 
-          companyToEdit={companies.find(c => c.id === editingId)} 
-          onCompanyUpdated={handleCompanyUpdated} 
-          showNotification={showNotification} 
+        <CompanyForm
+          companyToEdit={companies.find(c => c.id === editingId)}
+          onCompanyUpdated={handleCompanyUpdated}
+          showNotification={showNotification}
           userRole={userRole}
         />
       )}
 
       {showImport && (
-        <CompanyImport 
-          onImportComplete={handleImportComplete} 
-          showNotification={showNotification} 
+        <CompanyImport
+          onImportComplete={handleImportComplete}
+          showNotification={showNotification}
         />
       )}
 
@@ -320,7 +321,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
             <div className="exhibitions-selection">
               {exhibitions.map(exhibition => {
                 const isChecked = editingExhibitions.selectedExhibitions.includes(Number(exhibition.id));
-                
+
                 return (
                   <div key={exhibition.id} className="exhibition-checkbox-wrapper">
                     <label className="exhibition-checkbox">
@@ -407,7 +408,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
                       )}
                     </div>
                     {isAuthorizedForManagement && (
-                      <button 
+                      <button
                         className="edit-exhibitions-btn"
                         onClick={() => handleEditExhibitions(company)}
                         title="გამოფენების რედაქტირება"
