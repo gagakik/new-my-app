@@ -1,0 +1,219 @@
+
+/* Button Icons - Universal styles for all action buttons */
+.actions button {
+  position: relative;
+  font-size: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.actions button::before {
+  font-style: normal;
+  font-weight: normal;
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.actions .edit,
+.edit {
+  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+  color: white;
+}
+
+.actions .edit::before,
+.edit::before {
+  content: "✏️";
+}
+
+.actions .delete,
+.delete {
+  background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+  color: white;
+}
+
+.actions .delete::before,
+.delete::before {
+  content: "🗑️";
+}
+
+.actions .view::before,
+.view-details::before,
+.view::before {
+  content: "👁️";
+}
+
+.actions .participants::before,
+.participants::before {
+  content: "👥";
+}
+
+.actions .complete::before,
+.complete::before {
+  content: "✅";
+}
+
+.actions .archive::before,
+.archive::before {
+  content: "📁";
+}
+
+.actions .restore::before,
+.restore::before {
+  content: "🔄";
+}
+
+.actions .add::before {
+  content: "➕";
+}
+
+.actions .save::before {
+  content: "💾";
+}
+
+.actions .cancel::before {
+  content: "❌";
+}
+
+.actions .download::before {
+  content: "⬇️";
+}
+
+.actions .upload::before {
+  content: "⬆️";
+}
+
+/* Specific button icons for all components */
+.view-details::before,
+.view::before {
+  content: "👁️";
+  margin-right: 0.25rem;
+}
+
+.participants::before {
+  content: "👥";
+  margin-right: 0.25rem;
+}
+
+.complete::before {
+  content: "✅";
+  margin-right: 0.25rem;
+}
+
+.archive::before {
+  content: "📁";
+  margin-right: 0.25rem;
+}
+
+.restore::before {
+  content: "♻️";
+  margin-right: 0.25rem;
+}
+
+.back-btn::before {
+  content: "⬅️";
+  margin-right: 0.25rem;
+}
+
+.add-new::before {
+  content: "➕";
+  margin-right: 0.25rem;
+}
+
+.import-excel::before {
+  content: "📊";
+  margin-right: 0.25rem;
+}
+
+.edit-exhibitions-btn::before {
+  content: "✏️";
+  margin-right: 0.25rem;
+}
+
+.save-btn::before {
+  content: "💾";
+  margin-right: 0.25rem;
+}
+
+.cancel-btn::before {
+  content: "❌";
+  margin-right: 0.25rem;
+}
+
+.close-modal::before,
+.modal-close::before {
+  content: "✕";
+  font-size: 1.2rem;
+  display: inline-block;
+  line-height: 1;
+  margin: 0;
+}
+
+.filter::before {
+  content: "🔍";
+  margin-right: 0.25rem;
+}
+
+.clear-filters::before {
+  content: "🗑️";
+  margin-right: 0.25rem;
+}
+
+.archive-toggle::before {
+  content: "📂";
+  margin-right: 0.25rem;
+}
+
+.service-name-link::before {
+  content: "📋";
+  margin-right: 0.25rem;
+}
+
+/* Hover effects */
+.actions button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.actions .edit:hover,
+.edit:hover {
+  background: linear-gradient(135deg, #38a169 0%, #2f855a 100%);
+}
+
+.actions .delete:hover,
+.delete:hover {
+  background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+}
+
+.actions .view:hover,
+.view:hover {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Loading state for buttons */
+.actions button.loading {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.actions button.loading::before {
+  content: "⏳";
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

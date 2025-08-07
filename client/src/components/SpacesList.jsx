@@ -190,11 +190,17 @@ const SpacesList = ({ showNotification, userRole }) => {
                   <td>
                     {isAuthorizedForManagement && (
                       <div className="actions">
-                        <button className="edit" onClick={() => handleEditClick(space)}>რედაქტირება</button>
+                        <button 
+                          className="edit" 
+                          onClick={() => handleEditClick(space)}
+                          title="რედაქტირება"
+                        >
+                        </button>
                         <button 
                           className="delete" 
-                          onClick={() => handleDelete(space.id)}>
-                          წაშლა
+                          onClick={() => handleDelete(space.id)}
+                          title="წაშლა"
+                        >
                         </button>
                       </div>
                     )}
@@ -215,12 +221,18 @@ const SpacesList = ({ showNotification, userRole }) => {
                   <span><strong>აღწერილობა:</strong> {space.description}</span>
                 </div>
                 {isAuthorizedForManagement && (
-                  <div className="space-actions">
-                    <button className="edit" onClick={() => handleEditClick(space)}>
-                      რედაქტირება
+                  <div className="actions">
+                    <button 
+                      className="edit" 
+                      onClick={() => handleEditClick(space)}
+                      title="რედაქტირება"
+                    >
                     </button>
-                    <button className="delete" onClick={() => handleDelete(space.id)}>
-                      წაშლა
+                    <button 
+                      className="delete" 
+                      onClick={() => handleDelete(space.id)}
+                      title="წაშლა"
+                    >
                     </button>
                   </div>
                 )}

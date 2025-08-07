@@ -448,7 +448,7 @@ app.delete('/api/spaces/:id', authenticateToken, authorizeRoles('admin', 'manage
     res.json({ message: 'სივრცე წარმატებით წაიშალა' });
   } catch (error) {
     console.error('სივრცის წაშლის შეცდომა:', error);
-    res.status(500).json({ message: 'სივრცის წაშლა ვერ მოხერხდა' });
+    res.status(500).json({ message: 'სიvრცის წაშლა ვერ მოხერხდა' });
   }
 });
 
@@ -1636,9 +1636,27 @@ app.get('/api/reports/event-financials', authenticateToken, async (req, res) => 
 });
 
 
+// User Analysis Report - (For future implementation)
+app.get('/api/reports/user-analysis', authenticateToken, async (req, res) => {
+  try {
+    // Placeholder for user analysis report logic
+    res.json({ message: 'User analysis report endpoint is not yet implemented.' });
+  } catch (error) {
+    console.error('User analysis report error:', error);
+    res.status(500).json({ message: 'User analysis report could not be retrieved.' });
+  }
+});
+
 // Routes
-app.use('/api/equipment', authenticateToken, require('./routes/equipment'));
-app.use('/api/companies', authenticateToken, require('./routes/companies'));
-app.use('/api/statistics', authenticateToken, require('./routes/statistics'));
-app.use('/api/import', authenticateToken, require('./routes/import'));
-app.use('/api/packages', authenticateToken, require('./routes/packages'));
+const companiesRoutes = require('./routes/companies');
+const equipmentRoutes = require('./routes/equipment');
+const importRoutes = require('./routes/import');
+const statisticsRoutes = require('./routes/statistics');
+const packagesRoutes = require('./routes/packages');
+const reportsRoutes = require('./routes/reports');
+app.use('/api/companies', companiesRoutes);
+app.use('/api/equipment', equipmentRoutes);
+app.use('/api/import', importRoutes);
+app.use('/api/statistics', statisticsRoutes);
+app.use('/api/packages', packagesRoutes);
+app.use('/api/reports', reportsRoutes);

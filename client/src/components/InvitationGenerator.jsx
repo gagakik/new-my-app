@@ -317,7 +317,7 @@ const InvitationGenerator = ({ eventData, participants, onClose, showNotificatio
       <div className="modal-content">
         <div className="modal-header">
           <h3>QR კოდებით მოსაწვევების გენერაცია</h3>
-          <button className="close-modal" onClick={onClose}>✕</button>
+          <button className="modal-close" onClick={onClose}>✕</button>
         </div>
 
         <div className="modal-body">
