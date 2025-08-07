@@ -15,7 +15,8 @@
   content: "🗑️";
 }
 
-.actions .view::before {
+.actions .view::before,
+.view-details::before {
   content: "👁️";
 }
 
@@ -37,6 +38,88 @@
 
 .actions .upload::before {
   content: "⬆️";
+}
+
+/* Specific button icons for all components */
+.view-details::before,
+.view::before {
+  content: "👁️";
+  margin-right: 0.25rem;
+}
+
+.participants::before {
+  content: "👥";
+  margin-right: 0.25rem;
+}
+
+.complete::before {
+  content: "✅";
+  margin-right: 0.25rem;
+}
+
+.archive::before {
+  content: "📁";
+  margin-right: 0.25rem;
+}
+
+.restore::before {
+  content: "♻️";
+  margin-right: 0.25rem;
+}
+
+.back-btn::before {
+  content: "⬅️";
+  margin-right: 0.25rem;
+}
+
+.add-new::before {
+  content: "➕";
+  margin-right: 0.25rem;
+}
+
+.import-excel::before {
+  content: "📊";
+  margin-right: 0.25rem;
+}
+
+.edit-exhibitions-btn::before {
+  content: "✏️";
+  margin-right: 0.25rem;
+}
+
+.save-btn::before {
+  content: "💾";
+  margin-right: 0.25rem;
+}
+
+.cancel-btn::before {
+  content: "❌";
+  margin-right: 0.25rem;
+}
+
+.close-modal::before {
+  content: "✕";
+  margin-right: 0.25rem;
+}
+
+.filter::before {
+  content: "🔍";
+  margin-right: 0.25rem;
+}
+
+.clear-filters::before {
+  content: "🗑️";
+  margin-right: 0.25rem;
+}
+
+.archive-toggle::before {
+  content: "📂";
+  margin-right: 0.25rem;
+}
+
+.service-name-link::before {
+  content: "📋";
+  margin-right: 0.25rem;
 }
 
 /* Loading state for buttons */

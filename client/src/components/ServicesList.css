@@ -191,16 +191,30 @@
 }
 
 .services-table .actions button {
-  padding: 6px 10px;
+  padding: 6px 12px;
   font-size: 0.8rem;
   border-radius: 4px;
   white-space: nowrap;
   border: none;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 2px;
+}
+
+.services-table .view {
+  background-color: #3b82f6;
+  color: #fff;
 }
 
 .services-table .edit {
   background-color: #28a745;
+  color: #fff;
+}
+
+.services-table .archive {
+  background-color: #6b7280;
   color: #fff;
 }
 
@@ -209,8 +223,16 @@
   color: #fff;
 }
 
+.services-table .view:hover {
+  background-color: #2563eb;
+}
+
 .services-table .edit:hover {
   background-color: #218838;
+}
+
+.services-table .archive:hover {
+  background-color: #4b5563;
 }
 
 .services-table .delete:hover {
