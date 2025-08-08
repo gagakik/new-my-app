@@ -1,12 +1,14 @@
-/* ExhibitionForm.css */
+/* Import universal modal styles */
+@import './Modal.css';
+
 .form-container {
   width: 100%;
   max-width: 600px;
-  margin: 2rem auto;
-  padding: 1.5rem;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .form-container h3 {
@@ -60,4 +62,34 @@
 
 .cancel-btn:hover {
   background-color: #5a6268;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: white;
+  padding: 5px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.modal-close::before {
+  content: "✕";
+}
+
+.form-actions button:hover {
+  background-color: #45a049;
+}
+
+.form-actions .cancel-btn:hover {
+  background-color: #d32f2f;
+}
+
+/* პაკეტების სექცია */
+.package-section {
+  margin-top: 2rem;
+  border-top: 1px solid #ddd;
+  padding-top: 1.5rem;
 }

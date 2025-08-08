@@ -259,3 +259,35 @@ JWT_SECRET=YOUR_SECRET_KEY
 
 # Node Environment
 NODE_ENV=development
+
+
+
+cd ~
+rm -rf new-my-app
+
+git clone https://github.com/gagakik/new-my-app.git new-my-app
+
+# გადადით server საქაღალდეში
+cd new-my-app/server
+
+# ბექენდის დამოკიდებულებების დაყენება
+npm install
+
+# გადადით client საქაღალდეში
+cd ../client
+
+# ფრონტენდის დამოკიდებულებების დაყენება
+npm install
+
+# ფრონტენდის პროდუქციული ვერსიის შექმნა
+npm run build
+
+
+cd ../server # დარწმუნდით, რომ server საქაღალდეში ხართ
+nano .env
+
+
+pm2 restart server.js
+
+sudo nginx -t
+sudo systemctl restart nginx

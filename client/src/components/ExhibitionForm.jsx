@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import './ExhibitionForm.css';
 import PackageManager from './PackageManager';
 
-const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotification }) => {
+const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotification, onCancel }) => {
   const [exhibitionName, setExhibitionName] = useState('');
   const [comment, setComment] = useState('');
   const [manager, setManager] = useState('');
@@ -15,7 +14,7 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
     if (isEditing) {
       console.log('რედაქტირების მონაცემები:', exhibitionToEdit);
       console.log('price_per_sqm ღირებულება:', exhibitionToEdit.price_per_sqm, 'ტიპი:', typeof exhibitionToEdit.price_per_sqm);
-      
+
       setExhibitionName(exhibitionToEdit.exhibition_name || '');
       setComment(exhibitionToEdit.comment || '');
       setManager(exhibitionToEdit.manager || '');
@@ -41,7 +40,7 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
     console.log('გაგზავნილი მონაცემები:', exhibitionData);
 
     const method = isEditing ? 'PUT' : 'POST';
-    const url = isEditing 
+    const url = isEditing
       ? `/api/exhibitions/${exhibitionToEdit.id}`
       : '/api/exhibitions';
 
@@ -49,7 +48,7 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
       const token = localStorage.getItem('token');
       const response = await fetch(url, {
         method,
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
@@ -70,64 +69,90 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
   };
 
   return (
-    <div className="form-container">
-      <h3>{isEditing ? 'გამოფენის რედაქტირება' : 'ახალი გამოფენის დამატება'}</h3>
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label>გამოფენის სახელი</label>
-          <input 
-            type="text"
-            value={exhibitionName}
-            onChange={(e) => setExhibitionName(e.target.value)}
-            required
-          />
-        </div>
-        <div className="form-group">
-          <label>მოკლე განმარტება</label>
-          <input
-            type="text"
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            required
-          />
-        </div>
-        <div className="form-group">
-          <label>გამოფენის მენეჯერი</label>
-          <input
-            type="text"
-            value={manager}
-            onChange={(e) => setManager(e.target.value)}
-            required
-          />
-        </div>
-        <div className="form-group">
-          <label>1 კვმ ღირებულება (ევროში)</label>
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            value={pricePerSqm}
-            onChange={(e) => setPricePerSqm(e.target.value)}
-            placeholder="მაგ: 150.00"
-          />
-        </div>
-        <div className="form-actions">
-          <button type="submit">
-            {isEditing ? 'განახლება' : 'დამატება'}
-          </button>
-          <button type="button" onClick={onExhibitionUpdated}>
-            გაუქმება
+    <div className="modal-overlay" onClick={onCancel}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>{isEditing ? 'გამოფენის რედაქტირება' : 'ახალი გამოფენის დამატება'}</h3>
+          <button
+            type="button"
+            className="modal-close"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onExhibitionUpdated();
+            }}
+          >
           </button>
         </div>
-      </form>
+        <div className="modal-body">
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label>გამოფენის სახელი</label>
+              <input
+                type="text"
+                value={exhibitionName}
+                onChange={(e) => setExhibitionName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>მოკლე განმარტება</label>
+              <input
+                type="text"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>გამოფენის მენეჯერი</label>
+              <input
+                type="text"
+                value={manager}
+                onChange={(e) => setManager(e.target.value)}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>1 კვმ ღირებულება (ევროში)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={pricePerSqm}
+                onChange={(e) => setPricePerSqm(e.target.value)}
+                placeholder="მაგ: 150.00"
+              />
+            </div>
+            <div className="form-actions">
+              <button type="submit">
+                {isEditing ? 'განახლება' : 'დამატება'}
+              </button>
+              <button
+                type="button"
+                className="cancel-btn"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onExhibitionUpdated();
+                }}
+              >
+                გაუქმება
+              </button>
+            </div>
+          </form>
 
-      {/* პაკეტების მენეჯერი მხოლოდ არსებული გამოფენისთვის */}
-      {isEditing && exhibitionToEdit && (
-        <PackageManager 
-          exhibitionId={exhibitionToEdit.id}
-          showNotification={showNotification}
-        />
-      )}
+          {/* პაკეტების მენეჯმენტი - მხოლოდ რედაქტირების დროს */}
+          {isEditing && exhibitionToEdit && exhibitionToEdit.id && (
+            <div className="package-section">
+              <PackageManager 
+                exhibitionId={exhibitionToEdit.id}
+                showNotification={showNotification}
+              />
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
