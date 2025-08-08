@@ -279,6 +279,13 @@ cd ../client
 # ფრონტენდის დამოკიდებულებების დაყენება
 npm install
 
+npm install react-qr-code
+npm install html2canvas
+npm install jspdf
+npm install qrcode-generator
+npm install jsqr
+
+
 # ფრონტენდის პროდუქციული ვერსიის შექმნა
 npm run build
 
