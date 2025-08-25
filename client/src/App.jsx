@@ -5,6 +5,7 @@ import Footer from './components/Footer';
 import AuthPage from './components/AuthPage';
 import MainContent from './components/MainContent';
 import Notification from './components/Notification';
+import BookingsList from './components/BookingsList';
 import './index.css';
 
 // Error Boundary Component
@@ -156,25 +157,29 @@ function App() {
           {activeSection === 'ai-analytics' && (
             <AIAnalyticsDashboard showNotification={showNotification} />
           )}
+          {activeSection === 'bookings' && (
+            <BookingsList 
+              showNotification={showNotification}
+              userRole={userRole}
+            />
+          )}
     </MainContent>;
   };
 
   return (
-    <ErrorBoundary>
-      <div className="App">
-        <main>
-          {renderContent()}
-        </main>
-        <Footer />
-        {notification.message && (
-          <Notification
-            message={notification.message}
-            type={notification.type}
-            onClose={clearNotification}
-          />
-        )}
-      </div>
-    </ErrorBoundary>
+    <div className="App">
+      <main>
+        {renderContent()}
+      </main>
+      <Footer />
+      {notification.message && (
+        <Notification
+          message={notification.message}
+          type={notification.type}
+          onClose={clearNotification}
+        />
+      )}
+    </div>
   );
 }
 

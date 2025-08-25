@@ -17,6 +17,8 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isMobileNavExpanded, setIsMobileNavExpanded] = useState(false);
+
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -28,12 +30,17 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
       setError(null);
       setActiveSection(section);
       setIsMenuOpen(false); // Close menu on mobile when section is selected
+      setIsMobileNavExpanded(false); // Close accordion when section is selected
     } catch (err) {
       setError('Section change failed');
       showNotification('სექციის ცვლილება ვერ მოხერხდა', 'error');
     } finally {
       setLoading(false);
     }
+  };
+
+  const toggleMobileNav = () => {
+    setIsMobileNavExpanded(!isMobileNavExpanded);
   };
 
   return (
@@ -49,14 +56,22 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
       </div>
       <div className="main-layout">
         <nav className={`main-nav ${isMenuOpen ? 'mobile-open' : ''}`}>
-          <button className="mobile-menu-toggle" onClick={toggleMenu}>
-            <span className="hamburger"></span>
-            <span className="hamburger"></span>
-            <span className="hamburger"></span>
+          <button 
+            className={`mobile-menu-toggle ${isMobileNavExpanded ? 'active' : ''}`}
+            onClick={toggleMobileNav}
+          >
+            <div>
+              <span className={`hamburger ${isMobileNavExpanded ? 'open' : ''}`}></span>
+              <span className={`hamburger ${isMobileNavExpanded ? 'open' : ''}`}></span>
+              <span className={`hamburger ${isMobileNavExpanded ? 'open' : ''}`}></span>
+            </div>
             <span className="menu-text">მენიუ</span>
+            <span className={`nav-icon ${isMobileNavExpanded ? 'expanded' : ''}`}>
+              {isMobileNavExpanded ? '▲' : '▼'}
+            </span>
           </button>
 
-          <div className="nav-items">
+          <div className={`nav-items ${isMobileNavExpanded ? 'expanded' : ''}`}>
             <button
               className={activeSection === 'dashboard' ? 'active' : ''}
               onClick={() => handleSectionChange('dashboard')}

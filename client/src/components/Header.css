@@ -1,29 +1,22 @@
-
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 1.5rem;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
+  padding: 1rem 2rem;
+  background: var(--surface-primary);
   border-bottom: 1px solid var(--border-color);
   position: sticky;
   top: 0;
   z-index: 100;
-  transition: all 0.3s ease;
-}
-
-[data-theme="dark"] .header {
-  background: rgba(45, 55, 72, 0.95);
-  border-bottom: 1px solid var(--border-color);
+  min-height: 70px;
 }
 
 .logo {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  font-size: 1.2rem;
-  font-weight: 700;
+  gap: 0.5rem;
+  font-size: 1.25rem;
+  font-weight: bold;
   color: var(--text-primary);
 }
 
@@ -32,10 +25,12 @@
 }
 
 .logo-text {
-  background: var(--primary-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .header {
+  background: rgba(45, 55, 72, 0.95);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .nav {
