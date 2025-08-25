@@ -8,10 +8,7 @@ import EventsList from './EventsList';
 import Statistics from './Statistics';
 import EventReports from './EventReports';
 import UserProfile from './UserProfile';
-<<<<<<< HEAD
 import QRScanner from './QRScanner'; // Import QRScanner
-=======
->>>>>>> ce4006cad59f36b84da1d9a0b1aeaf8cc643a5d8
 
 import './MainContent.css';
 

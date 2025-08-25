@@ -1,15 +1,12 @@
-<<<<<<< HEAD
+
 const { Pool } = require("pg");
 require("dotenv").config();
-=======
-const { Pool } = require('pg');
-require('dotenv').config();
->>>>>>> ce4006cad59f36b84da1d9a0b1aeaf8cc643a5d8
+
 
 // Create PostgreSQL connection pool
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-<<<<<<< HEAD
+
 });
 
 pool.on("connect", () => {
@@ -18,25 +15,12 @@ pool.on("connect", () => {
 
 pool.on("error", (err) => {
   console.error("PostgreSQL კავშირის შეცდომა:", err);
-=======
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  max: 10,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-});
 
-pool.on('connect', () => {
-  console.log('PostgreSQL ბაზასთან კავშირი დამყარდა');
-});
-
-pool.on('error', (err) => {
-  console.error('PostgreSQL კავშირის შეცდომა:', err);
->>>>>>> ce4006cad59f36b84da1d9a0b1aeaf8cc643a5d8
 });
 
 // Promise wrapper for database queries
 const query = async (text, params = []) => {
-<<<<<<< HEAD
+
   console.log("Executing PostgreSQL query:", text, "with params:", params);
 
   try {
@@ -45,16 +29,7 @@ const query = async (text, params = []) => {
     return result;
   } catch (error) {
     console.error("PostgreSQL query error:", error);
-=======
-  console.log('Executing PostgreSQL query:', text, 'with params:', params);
 
-  try {
-    const result = await pool.query(text, params);
-    console.log('PostgreSQL query result:', result.rowCount, 'rows affected');
-    return result;
-  } catch (error) {
-    console.error('PostgreSQL query error:', error);
->>>>>>> ce4006cad59f36b84da1d9a0b1aeaf8cc643a5d8
     throw error;
   }
 };
@@ -62,11 +37,8 @@ const query = async (text, params = []) => {
 // Initialize tables with PostgreSQL syntax
 const createTables = async () => {
   try {
-<<<<<<< HEAD
     console.log("PostgreSQL ცხრილების შექმნის დაწყება...");
-=======
-    console.log('PostgreSQL ცხრილების შექმნის დაწყება...');
->>>>>>> ce4006cad59f36b84da1d9a0b1aeaf8cc643a5d8
+
 
     // Users table
     await query(`
@@ -78,11 +50,9 @@ const createTables = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-<<<<<<< HEAD
+
     console.log("Users table created/verified successfully");
-=======
-    console.log('Users table created/verified successfully');
->>>>>>> ce4006cad59f36b84da1d9a0b1aeaf8cc643a5d8
+
 
     // Companies table
     await query(`
@@ -266,7 +236,6 @@ const createTables = async () => {
       )
     `);
 
-<<<<<<< HEAD
     // Dynamic pricing rules
     await query(`
       CREATE TABLE IF NOT EXISTS pricing_rules (
@@ -303,8 +272,7 @@ const createTables = async () => {
       )
     `);
 
-=======
->>>>>>> ce4006cad59f36b84da1d9a0b1aeaf8cc643a5d8
+
     // Participant's package selection
     await query(`
       CREATE TABLE IF NOT EXISTS participant_package_selection (
@@ -330,7 +298,7 @@ const createTables = async () => {
       )
     `);
 
-<<<<<<< HEAD
+
     // Participant check-ins table
     await query(`
       CREATE TABLE IF NOT EXISTS participant_checkins (
@@ -347,20 +315,14 @@ const createTables = async () => {
     console.log("ყველა PostgreSQL ცხრილა წარმატებით შეიქმნა");
   } catch (error) {
     console.error("PostgreSQL ცხრილების შექმნის შეცდომა:", error);
-=======
 
-    console.log('ყველა PostgreSQL ცხრილა წარმატებით შეიქმნა');
-  } catch (error) {
-    console.error('PostgreSQL ცხრილების შექმნის შეცდომა:', error);
->>>>>>> ce4006cad59f36b84da1d9a0b1aeaf8cc643a5d8
   }
 };
 
 // Initialize database
 createTables();
 
-<<<<<<< HEAD
+
 module.exports = { query, pool };
-=======
-module.exports = { query, pool };
->>>>>>> ce4006cad59f36b84da1d9a0b1aeaf8cc643a5d8
+
+

@@ -197,7 +197,7 @@ const EventsList = ({ showNotification, userRole }) => {
         const errorData = await response.json();
         showNotification(`წაშლა ვერ მოხერხდა: ${errorData.message}`, 'error');
       }
-    } catch  {
+    } catch {
       showNotification('დაფიქსირდა შეცდომა სერვერთან კავშირისას.', 'error');
     }
   };
@@ -257,31 +257,6 @@ const EventsList = ({ showNotification, userRole }) => {
         showNotification(`არქივიდან აღდგენა ვერ მოხერხდა: ${errorData.message}`, 'error');
       }
     } catch {
-      showNotification('დაფიქსირდა შეცდომა სერვერთან კავშირისას.', 'error');
-    }
-  };
-
-  const handleRestore = async (id) => {
-    const isConfirmed = window.confirm('ნამდვილად გსურთ ამ ივენთის არქივიდან აღდგენა?');
-    if (!isConfirmed) return;
-
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/annual-services/${id}/restore`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        showNotification('ივენთი წარმატებით აღდგა არქივიდან!', 'success');
-        fetchEvents();
-      } else {
-        const errorData = await response.json();
-        showNotification(`არქივიდან აღდგენა ვერ მოხერხდა: ${errorData.message}`, 'error');
-      }
-    } catch (error) {
       showNotification('დაფიქსირდა შეცდომა სერვერთან კავშირისას.', 'error');
     }
   };

@@ -12,12 +12,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-<<<<<<< HEAD
-  margin-bottom: 1.5rem;
-=======
   margin-bottom: 1.2rem;
   flex-wrap: wrap;
->>>>>>> ce4006cad59f36b84da1d9a0b1aeaf8cc643a5d8
   gap: 1rem;
 }
 
@@ -30,15 +26,8 @@
 
 .header-actions {
   display: flex;
-<<<<<<< HEAD
-  align-items: center;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 0.8rem;
-=======
   gap: 1rem;
   align-items: center;
->>>>>>> ce4006cad59f36b84da1d9a0b1aeaf8cc643a5d8
 }
 
 .archive-toggle {
@@ -535,6 +524,8 @@
 
   .header-actions {
     justify-content: center;
+    flex-wrap: wrap;
+  }
 
   .add-new {
     flex: 1;

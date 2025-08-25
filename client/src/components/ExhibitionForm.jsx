@@ -1,11 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import './ExhibitionForm.css';
 import PackageManager from './PackageManager';
-<<<<<<< HEAD
 import PricingManager from './PricingManager';
 import PriceCalculator from './PriceCalculator'; // Assuming PriceCalculator is in the same directory
-=======
->>>>>>> ce4006cad59f36b84da1d9a0b1aeaf8cc643a5d8
 
 const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotification, onCancel }) => {
   const [exhibitionName, setExhibitionName] = useState('');
@@ -156,7 +153,6 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
               />
             </div>
           )}
-<<<<<<< HEAD
 
           {/* ფასწარმოების მენეჯმენტი - მხოლოდ რედაქტირების დროს */}
           {isEditing && exhibitionToEdit && exhibitionToEdit.id && (
@@ -178,8 +174,6 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
               </div>
             </div>
           )}
-=======
->>>>>>> ce4006cad59f36b84da1d9a0b1aeaf8cc643a5d8
         </div>
       </div>
     </div>

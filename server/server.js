@@ -1650,7 +1650,6 @@ app.get('/api/reports/user-analysis', authenticateToken, async (req, res) => {
 // Routes
 const companiesRoutes = require('./routes/companies');
 const equipmentRoutes = require('./routes/equipment');
-<<<<<<< HEAD
 const statisticsRoutes = require('./routes/statistics');
 const reportsRoutes = require('./routes/reports');
 const importRoutes = require('./routes/import');
@@ -1666,15 +1665,3 @@ app.use('/api/import', importRoutes);
 app.use('/api/packages', packagesRoutes);
 app.use('/api/pricing', pricingRoutes);
 app.use('/api/checkin', checkinRoutes);
-=======
-const importRoutes = require('./routes/import');
-const statisticsRoutes = require('./routes/statistics');
-const packagesRoutes = require('./routes/packages');
-const reportsRoutes = require('./routes/reports');
-app.use('/api/companies', companiesRoutes);
-app.use('/api/equipment', equipmentRoutes);
-app.use('/api/import', importRoutes);
-app.use('/api/statistics', statisticsRoutes);
-app.use('/api/packages', packagesRoutes);
-app.use('/api/reports', reportsRoutes);
->>>>>>> ce4006cad59f36b84da1d9a0b1aeaf8cc643a5d8
