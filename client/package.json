@@ -10,9 +10,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+<<<<<<< HEAD
     "jspdf": "^3.0.1",
     "qrcode": "^1.5.4",
     "qrcode-generator": "^2.0.4",
+=======
+    "qrcode": "^1.5.4",
+>>>>>>> ce4006cad59f36b84da1d9a0b1aeaf8cc643a5d8
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-qr-code": "^2.0.18"

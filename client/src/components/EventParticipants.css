@@ -953,10 +953,13 @@
   color: #dc2626;
 }
 
+<<<<<<< HEAD
 .equipment-quantity.low-stock {
   color: #f59e0b;
 }
 
+=======
+>>>>>>> ce4006cad59f36b84da1d9a0b1aeaf8cc643a5d8
 .equipment-price {
   font-weight: 600;
   color: #059669;
@@ -1034,6 +1037,7 @@
 }
 
 .calculation-item.booth-cost {
+<<<<<<< HEAD
   color: #8b5cf6;
   font-weight: 500;
 }
@@ -1047,6 +1051,12 @@
   padding-top: 0.75rem;
 }
 
+=======
+  color: #7c3aed;
+  font-weight: 500;
+}
+
+>>>>>>> ce4006cad59f36b84da1d9a0b1aeaf8cc643a5d8
 .calculation-total {
   font-weight: 700;
   padding: 1rem 0;
@@ -1388,8 +1398,11 @@
 .file-link:hover {
   background-color: #cce7ff;
   text-decoration: none;
+<<<<<<< HEAD
 }
 
 .file-link:active {
   background-color: #99d6ff;
+=======
+>>>>>>> ce4006cad59f36b84da1d9a0b1aeaf8cc643a5d8
 }

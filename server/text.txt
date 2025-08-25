@@ -260,5 +260,42 @@ JWT_SECRET=YOUR_SECRET_KEY
 # Node Environment
 NODE_ENV=development
 
-npm install react-qr-code html2canvas jspdf
+
+
+cd ~
+rm -rf new-my-app
+
+git clone https://github.com/gagakik/new-my-app.git new-my-app
+
+# გადადით server საქაღალდეში
+cd new-my-app/server
+
+# ბექენდის დამოკიდებულებების დაყენება
+npm install
+
+# გადადით client საქაღალდეში
+cd ../client
+
+# ფრონტენდის დამოკიდებულებების დაყენება
+npm install
+
+npm install react-qr-code
+npm install html2canvas
+npm install jspdf
 npm install qrcode-generator
+npm install jsqr
+
+
+# ფრონტენდის პროდუქციული ვერსიის შექმნა
+npm run build
+
+
+cd ../server # დარწმუნდით, რომ server საქაღალდეში ხართ
+nano .env
+
+
+pm2 restart server.js
+
+sudo nginx -t
+sudo systemctl restart nginx
+>>>>>>> ce4006cad59f36b84da1d9a0b1aeaf8cc643a5d8
