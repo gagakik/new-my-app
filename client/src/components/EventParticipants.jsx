@@ -884,6 +884,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
               onClose();
             }}
           >
+             ✕
           </button>
         </div>
 

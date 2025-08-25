@@ -298,6 +298,7 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
               onEventUpdated();
             }}
           >
+             ✕
           </button>
         </div>
         <div className="modal-body">

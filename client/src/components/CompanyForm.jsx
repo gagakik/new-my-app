@@ -184,6 +184,7 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification, onCanc
               onCompanyUpdated();
             }}
           >
+             ✕
           </button>
         </div>
         <div className="modal-body">

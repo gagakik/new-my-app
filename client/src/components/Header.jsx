@@ -135,6 +135,15 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
       });
     }
 
+    // AI Analytics (for all users)
+    menus.push({
+      key: 'ai-analytics',
+      label: 'AI Analytics',
+      icon: '🧠',
+      single: true,
+      action: () => handleViewChange('ai-analytics')
+    });
+
     // Profile (for all users)
     menus.push({
       key: 'profile',

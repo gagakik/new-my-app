@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import UserStatistics from './components/UserStatistics';
+import AIAnalyticsDashboard from './components/AIAnalyticsDashboard';
 import Footer from './components/Footer';
 import AuthPage from './components/AuthPage';
 import MainContent from './components/MainContent';
@@ -65,6 +67,7 @@ function App() {
   const [activeView, setActiveView] = useState('auth');
   const [notification, setNotification] = useState({ message: '', type: '' });
   const [isAuthReady, setIsAuthReady] = useState(false);
+  const [activeSection, setActiveSection] = useState('dashboard'); // Added state for sections
 
   const handleLoginSuccess = (role, token, userId, username) => {
     setIsLoggedIn(true);
@@ -77,7 +80,7 @@ function App() {
     setActiveView('main'); 
     showNotification('შესვლა წარმატებით დასრულდა!', 'success');
   };
-  
+
   const handleLogout = () => {
     setIsLoggedIn(false);
     setUserRole(null);
@@ -89,15 +92,20 @@ function App() {
     localStorage.removeItem('userName');
     showNotification('თქვენ წარმატებით გამოხვედით სისტემიდან.', 'info');
   };
-  
+
   const handleViewChange = (view) => {
       setActiveView(view);
   };
-  
+
+  // Added handler for section changes within MainContent
+  const handleSectionChange = (section) => {
+    setActiveSection(section);
+  };
+
   const showNotification = (message, type) => {
     setNotification({ message, type });
   };
-  
+
   const clearNotification = () => {
     setNotification({ message: '', type: '' });
   };
@@ -107,7 +115,7 @@ function App() {
       const storedRole = localStorage.getItem('userRole');
       const storedToken = localStorage.getItem('token');
       const storedUserName = localStorage.getItem('userName');
-      
+
       if (storedRole && storedToken) {
         setIsLoggedIn(true);
         setUserRole(storedRole);
@@ -139,7 +147,16 @@ function App() {
       userRole={userRole} 
       userName={userName}
       onLogout={handleLogout}
-    />;
+      onSectionChange={handleSectionChange} // Pass the handler down
+      activeSection={activeSection} // Pass the current active section
+    >
+          {activeSection === 'user-statistics' && (
+            <UserStatistics showNotification={showNotification} />
+          )}
+          {activeSection === 'ai-analytics' && (
+            <AIAnalyticsDashboard showNotification={showNotification} />
+          )}
+    </MainContent>;
   };
 
   return (

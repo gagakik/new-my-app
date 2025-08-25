@@ -246,6 +246,10 @@
   position: relative;
 }
 
+.theme-toggle-btn.desktop-only {
+  display: flex;
+}
+
 [data-theme="dark"] .theme-toggle-btn,
 [data-theme="dark"] .notification-btn,
 [data-theme="dark"] .qr-scanner-btn,
@@ -284,7 +288,7 @@
 }
 
 .desktop-only {
-  display: flex;
+  display: flex !important;
 }
 
 .mobile-theme, .mobile-logout {
@@ -307,7 +311,7 @@
   }
 
   .desktop-only {
-    display: none;
+    display: none !important;
   }
 
   .mobile-menu-toggle {

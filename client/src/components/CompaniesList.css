@@ -8,7 +8,6 @@
   border-radius: 16px;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
   border: 1px solid var(--border-color);
-  transition: all 0.3s ease;
 }
 
 [data-theme="dark"] .companies-container {
@@ -420,8 +419,6 @@
   overflow-y: auto;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
   border: 1px solid var(--border-color);
-}: 1000;
-  padding: 1rem;
 }
 
 .modal-content {
