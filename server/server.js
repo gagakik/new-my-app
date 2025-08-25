@@ -704,6 +704,33 @@ app.delete('/api/events/:id', authenticateToken, authorizeRoles('admin', 'manage
   }
 });
 
+// GET: Participant Equipment Bookings
+app.get('/api/participants/:participantId/equipment-bookings', authenticateToken, async (req, res) => {
+  try {
+    const { participantId } = req.params;
+
+    const result = await db.query(`
+      SELECT 
+        eb.id,
+        eb.equipment_id,
+        eb.quantity,
+        e.code_name,
+        e.description,
+        e.price as unit_price,
+        (eb.quantity * e.price) as total_price
+      FROM equipment_bookings eb
+      JOIN equipment e ON eb.equipment_id = e.id
+      WHERE eb.participant_id = $1
+      ORDER BY e.code_name
+    `, [participantId]);
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('მონაწილის აღჭურვილობის მიღების შეცდომა:', error);
+    res.status(500).json({ message: 'აღჭურვილობის ინფორმაციის მიღება ვერ მოხერხდა' });
+  }
+});
+
 // GET: Event Participants List
 app.get('/api/events/:eventId/participants', authenticateToken, async (req, res) => {
   const { eventId } = req.params;
@@ -1656,12 +1683,19 @@ const importRoutes = require('./routes/import');
 const packagesRoutes = require('./routes/packages');
 const pricingRoutes = require('./routes/pricing');
 const checkinRoutes = require('./routes/checkin');
+const analyticsRoutes = require('./routes/analytics');
+const standsRoutes = require('./routes/stands');
+const operatorsRoutes = require('./routes/operators');
 
+// Use routes
 app.use('/api/companies', companiesRoutes);
-app.use('/api/equipment', equipmentRoutes);
+app.use('/api/operators', operatorsRoutes);
+app.use('/api/analytics', analyticsRoutes);
 app.use('/api/statistics', statisticsRoutes);
-app.use('/api/reports', reportsRoutes);
-app.use('/api/import', importRoutes);
+app.use('/api/equipment', equipmentRoutes);
+app.use('/api/stands', standsRoutes);
 app.use('/api/packages', packagesRoutes);
 app.use('/api/pricing', pricingRoutes);
 app.use('/api/checkin', checkinRoutes);
+app.use('/api/import', importRoutes);
+app.use('/api/reports', reportsRoutes);

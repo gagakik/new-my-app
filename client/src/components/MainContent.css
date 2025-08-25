@@ -82,7 +82,6 @@
   border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 1rem;
-  margin: 1rem;
   cursor: pointer;
   transition: all 0.3s ease;
   gap: 0.5rem;
@@ -432,6 +431,8 @@
     justify-content: space-between;
     align-items: center;
     backdrop-filter: blur(10px);
+    position: relative;
+    z-index: 10;
   }
 
   [data-theme="dark"] .mobile-menu-toggle {
@@ -473,16 +474,25 @@
     margin: 3px 0;
   }
 
+  .mobile-menu-toggle div {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
   .hamburger.open:nth-child(1) {
-    transform: rotate(45deg) translate(5px, 5px);
+    transform: rotate(45deg) translate(6px, 6px);
+    background-color: white;
   }
 
   .hamburger.open:nth-child(2) {
     opacity: 0;
+    background-color: white;
   }
 
   .hamburger.open:nth-child(3) {
     transform: rotate(-45deg) translate(6px, -6px);
+    background-color: white;
   }
 
   .menu-text {
@@ -505,17 +515,24 @@
   .nav-items {
     max-height: 0;
     overflow: hidden;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateY(-20px);
     padding: 0 1rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 0 0 12px 12px;
+  }
+
+  [data-theme="dark"] .nav-items {
+    background: rgba(45, 55, 72, 0.02);
   }
 
   .nav-items.expanded {
-    max-height: 600px;
-    opacity: 1;
-    transform: translateY(0);
-    padding: 0 1rem 1rem 1rem;
+    max-height: 700px !important;
+    opacity: 1 !important;
+    transform: translateY(0) !important;
+    padding: 1rem 1rem 1rem 1rem !important;
+    visibility: visible !important;
   }
 
   .main-nav button:not(.mobile-menu-toggle) {
@@ -1027,22 +1044,11 @@
   }
 
   .dashboard-header h1 {
-    font-size: 1.8rem;
+    font-size: 1.6rem;
   }
 
   .dashboard-header p {
-    font-size: 0.95rem;
-  }
-
-  .dashboard-stats-preview {
-    gap: 0.8rem;
-    flex-direction: column;
-  }
-
-  .preview-stat {
-    min-width: auto;
-    width: 100%;
-    padding: 0.7rem;
+    font-size: 0.9rem;
   }
 }
 

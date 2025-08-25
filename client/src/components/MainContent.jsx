@@ -9,7 +9,9 @@ import Statistics from './Statistics';
 import EventReports from './EventReports';
 import UserProfile from './UserProfile';
 import QRScanner from './QRScanner'; // Import QRScanner
-
+import StandManagement from './StandManagement'; // Import StandManagement
+import OperatorManagement from './OperatorManagement';
+import OperationalIntegratedView from './OperationalIntegratedView';
 import './MainContent.css';
 
 const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
@@ -40,7 +42,8 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
   };
 
   const toggleMobileNav = () => {
-    setIsMobileNavExpanded(!isMobileNavExpanded);
+    setIsMobileNavExpanded(prev => !prev);
+    console.log('Mobile nav toggled:', !isMobileNavExpanded); // Debug log
   };
 
   return (
@@ -144,9 +147,42 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
               className={activeSection === 'checkin' ? 'active' : ''}
               onClick={() => handleSectionChange('checkin')}
             >
-              <i className="icon-qr-scan">📱</i> {/* Added a placeholder icon class */}
+              <i className="icon-qr-scan">📱</i>
               მობაილური Check-in
             </button>
+
+            {/* Operational Section */}
+            {(userRole === 'admin' || userRole === 'operation') && (
+              <div className="nav-section">
+                <div className="nav-section-title">
+                  <i className="icon-operational">⚙️</i>
+                  საოპერაციო
+                </div>
+                <div className="nav-subsection">
+                  <button
+                    className={activeSection === 'operator-management' ? 'active subsection' : 'subsection'}
+                    onClick={() => handleSectionChange('operator-management')}
+                  >
+                    <i className="icon-operators">👷</i>
+                    ოპერატორების მართვა
+                  </button>
+                  <button
+                    className={activeSection === 'stands' ? 'active subsection' : 'subsection'}
+                    onClick={() => handleSectionChange('stands')}
+                  >
+                    <i className="icon-stands">🏗️</i>
+                    სტენდების მართვა
+                  </button>
+                  <button
+                    className={activeSection === 'operational-integrated' ? 'active subsection' : 'subsection'}
+                    onClick={() => handleSectionChange('operational-integrated')}
+                  >
+                    <i className="icon-integrated">🔗</i>
+                    ინტეგრირებული ხედვა
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </nav>
 
@@ -203,13 +239,22 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
           )}
           {/* Render QRScanner component */}
           {activeSection === 'checkin' && (
-            <QRScanner 
-              showNotification={showNotification}
-              onParticipantCheckedIn={(participant) => {
-                console.log('Participant checked in:', participant);
-                showNotification('მონაწილე წარმატებით დარეგისტრირდა!', 'success');
-              }}
-            />
+            <QRScanner showNotification={showNotification} userRole={userRole} />
+          )}
+
+          {/* Operational Section - Operator Management */}
+          {activeSection === 'operator-management' && (
+            <OperatorManagement showNotification={showNotification} userRole={userRole} />
+          )}
+
+          {/* Operational Section - Stand Management */}
+          {activeSection === 'stands' && (
+            <StandManagement showNotification={showNotification} userRole={userRole} />
+          )}
+
+          {/* Operational Section - Integrated View */}
+          {activeSection === 'operational-integrated' && (
+            <OperationalIntegratedView showNotification={showNotification} userRole={userRole} />
           )}
         </div>
       </div>

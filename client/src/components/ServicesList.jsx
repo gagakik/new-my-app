@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './ServicesList.css';
 import ServiceForm from './ServiceForm';
-import { useNavigate } from 'react-router-dom';
+
 
 const ServicesList = ({ showNotification, userRole }) => {
   const [services, setServices] = useState([]);
@@ -10,7 +10,6 @@ const ServicesList = ({ showNotification, userRole }) => {
   const [editingId, setEditingId] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
-  const navigate = useNavigate();
 
   const isAuthorizedForManagement = 
     userRole === 'admin' || 
@@ -218,7 +217,7 @@ const ServicesList = ({ showNotification, userRole }) => {
                         >
                         </button>
                         <button
-                          onClick={() => navigate(`/services/edit/${service.id}`)}
+                          onClick={() => handleEditClick(service)}
                           className="edit"
                           title="რედაქტირება"
                         >

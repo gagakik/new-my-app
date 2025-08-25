@@ -168,20 +168,13 @@ router.get('/ai-recommendations', authenticateToken, async (req, res) => {
           impact: 'ვიზიტორთა კმაყოფილება +25%'
         });
       }
-    });
 
-    res.json({
-      patterns: patterns.rows,
-      recommendations,
-      generatedAt: new Date()
-    });
-  } catch (error) {
-    console.error('AI რეკომენდაციების შეცდომა:', error);
-    res.status(500).json({ message: 'AI რეკომენდაციების მიღება ვერ მოხერხდა' });
-  }
-});
-
-module.exports = router</old_str>uggestion: 'დამატებითი თანამშრომლების განთავსება',
+      if (pattern.total_visits > 200) {
+        recommendations.push({
+          type: 'ოპტიმიზაცია',
+          priority: 'მაღალი',
+          title: `${pattern.booth_type} ზონაში გადატვირთულობა`,
+          suggestion: 'დამატებითი თანამშრომლების განთავსება',
           impact: 'ლიდების ზრდა +25%'
         });
       }

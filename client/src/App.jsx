@@ -6,6 +6,12 @@ import AuthPage from './components/AuthPage';
 import MainContent from './components/MainContent';
 import Notification from './components/Notification';
 import BookingsList from './components/BookingsList';
+import EquipmentList from './components/EquipmentList';
+import StandManagement from './components/StandManagement';
+import SpacesList from './components/SpacesList';
+import ServicesList from './components/ServicesList';
+import ExhibitionsList from './components/ExhibitionsList';
+import EventsList from './components/EventsList';
 import './index.css';
 
 // Error Boundary Component
@@ -69,6 +75,7 @@ function App() {
   const [notification, setNotification] = useState({ message: '', type: '' });
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [activeSection, setActiveSection] = useState('dashboard'); // Added state for sections
+  const [activeComponent, setActiveComponent] = useState('dashboard'); // State for active component in MainContent
 
   const handleLoginSuccess = (role, token, userId, username) => {
     setIsLoggedIn(true);
@@ -150,6 +157,8 @@ function App() {
       onLogout={handleLogout}
       onSectionChange={handleSectionChange} // Pass the handler down
       activeSection={activeSection} // Pass the current active section
+      activeComponent={activeComponent} // Pass activeComponent
+      onComponentChange={setActiveComponent} // Pass the function to change activeComponent
     >
           {activeSection === 'user-statistics' && (
             <UserStatistics showNotification={showNotification} />
@@ -163,6 +172,18 @@ function App() {
               userRole={userRole}
             />
           )}
+          {/* Render components based on activeComponent */}
+          {activeComponent === 'companies' && <CompaniesList showNotification={showNotification} userRole={userRole} />}
+          {activeComponent === 'equipment' && <EquipmentList showNotification={showNotification} userRole={userRole} />}
+          {activeComponent === 'stand-management' && <StandManagement showNotification={showNotification} userRole={userRole} />}
+          {activeComponent === 'spaces' && <SpacesList showNotification={showNotification} userRole={userRole} />}
+          {activeComponent === 'services' && <ServicesList showNotification={showNotification} userRole={userRole} />}
+          {activeComponent === 'exhibitions' && <ExhibitionsList showNotification={showNotification} userRole={userRole} />}
+          {activeComponent === 'events' && <EventsList showNotification={showNotification} userRole={userRole} />}
+          {activeComponent === 'pricing' && <PricingList showNotification={showNotification} userRole={userRole} />}
+          {activeComponent === 'statistics' && <StatisticsList showNotification={showNotification} userRole={userRole} />}
+          {activeComponent === 'reports' && <ReportsList showNotification={showNotification} userRole={userRole} />}
+
     </MainContent>;
   };
 

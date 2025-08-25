@@ -106,14 +106,58 @@ const QRScanner = ({ eventId, showNotification, onParticipantCheckedIn }) => {
     try {
       setLoading(true);
       
-      // Request camera access
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
+      // Check if mediaDevices is supported
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera not supported by this browser');
+      }
+
+      // Try different camera configurations
+      const constraints = [
+        // Try rear camera first (mobile)
+        { 
+          video: { 
+            facingMode: 'environment',
+            width: { ideal: 1280, min: 640 },
+            height: { ideal: 720, min: 480 }
+          }
+        },
+        // Fall back to front camera
+        { 
+          video: { 
+            facingMode: 'user',
+            width: { ideal: 1280, min: 640 },
+            height: { ideal: 720, min: 480 }
+          }
+        },
+        // Fall back to any camera
+        { 
+          video: { 
+            width: { ideal: 1280, min: 640 },
+            height: { ideal: 720, min: 480 }
+          }
+        },
+        // Minimal requirements
+        { video: true }
+      ];
+
+      let stream = null;
+      let lastError = null;
+
+      // Try each constraint until one works
+      for (const constraint of constraints) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia(constraint);
+          console.log('Camera started with constraint:', constraint);
+          break;
+        } catch (err) {
+          console.warn('Failed with constraint:', constraint, err.message);
+          lastError = err;
         }
-      });
+      }
+
+      if (!stream) {
+        throw lastError || new Error('No camera available');
+      }
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -129,7 +173,23 @@ const QRScanner = ({ eventId, showNotification, onParticipantCheckedIn }) => {
       }
     } catch (error) {
       console.error('Camera access error:', error);
-      showNotification('კამერის გაშვების შეცდომა. გთხოვთ დართოთ კამერის წვდომა.', 'error');
+      let errorMessage = 'კამერის გაშვების შეცდომა.';
+      
+      if (error.name === 'NotFoundError') {
+        errorMessage = 'კამერა ვერ მოიძებნა. დარწმუნდით, რომ თქვენს მოწყობილობას აქვს კამერა.';
+      } else if (error.name === 'NotAllowedError') {
+        errorMessage = 'კამერის წვდომა აკრძალულია. გთხოვთ დართოთ კამერის წვდომა ბრაუზერის პარამეტრებში.';
+      } else if (error.name === 'NotReadableError') {
+        errorMessage = 'კამერა დაკავებულია სხვა აპლიკაციის მიერ.';
+      } else if (error.message === 'Camera not supported by this browser') {
+        errorMessage = 'თქვენი ბრაუზერი არ უჭერს მხარს კამერას. გამოიყენეთ თანამედროვე ბრაუზერი.';
+      }
+      
+      showNotification(errorMessage, 'error');
+      
+      // Show manual check-in as alternative
+      setManualCheckin(true);
+      showNotification('ალტერნატივად გამოიყენეთ ხელით Check-in ფუნქცია.', 'info');
     } finally {
       setLoading(false);
     }
@@ -257,25 +317,46 @@ const QRScanner = ({ eventId, showNotification, onParticipantCheckedIn }) => {
   };
 
   const generateQRCodeDataURL = (participantId) => {
-    // Simple QR code simulation using SVG
+    // Enhanced QR code simulation using SVG with more realistic pattern
     const qrContent = `QR-${participantId}`;
+    const size = 120;
+    const moduleSize = 4;
+    const modules = Math.floor(size / moduleSize);
+    
+    // Generate a pseudo-random pattern based on participant ID
+    const seed = participantId * 12345;
+    const random = (n) => (seed * n * 9301 + 49297) % 233280;
+    
+    let pattern = '';
+    for (let i = 0; i < modules; i++) {
+      for (let j = 0; j < modules; j++) {
+        const shouldFill = (
+          // Corner markers
+          (i < 7 && j < 7) || 
+          (i < 7 && j >= modules - 7) || 
+          (i >= modules - 7 && j < 7) ||
+          // Random pattern for middle
+          (i >= 7 && i < modules - 7 && j >= 7 && j < modules - 7 && random(i * j) % 3 === 0)
+        );
+        
+        if (shouldFill) {
+          pattern += `<rect x="${j * moduleSize}" y="${i * moduleSize}" width="${moduleSize}" height="${moduleSize}" fill="black"/>`;
+        }
+      }
+    }
+    
     const svgString = `
-      <svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
-        <rect width="100" height="100" fill="white" stroke="#000" stroke-width="1"/>
-        <rect x="10" y="10" width="10" height="10" fill="black"/>
-        <rect x="30" y="10" width="10" height="10" fill="black"/>
-        <rect x="50" y="10" width="10" height="10" fill="black"/>
-        <rect x="70" y="10" width="10" height="10" fill="black"/>
-        <rect x="10" y="30" width="10" height="10" fill="black"/>
-        <rect x="50" y="30" width="10" height="10" fill="black"/>
-        <rect x="10" y="50" width="10" height="10" fill="black"/>
-        <rect x="30" y="50" width="10" height="10" fill="black"/>
-        <rect x="70" y="50" width="10" height="10" fill="black"/>
-        <rect x="10" y="70" width="10" height="10" fill="black"/>
-        <rect x="30" y="70" width="10" height="10" fill="black"/>
-        <rect x="50" y="70" width="10" height="10" fill="black"/>
-        <rect x="70" y="70" width="10" height="10" fill="black"/>
-        <text x="50" y="90" text-anchor="middle" font-size="8">${qrContent}</text>
+      <svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
+        <rect width="${size}" height="${size}" fill="white" stroke="#ccc" stroke-width="2"/>
+        ${pattern}
+        <!-- Corner markers -->
+        <rect x="0" y="0" width="28" height="28" fill="none" stroke="black" stroke-width="4"/>
+        <rect x="${size - 28}" y="0" width="28" height="28" fill="none" stroke="black" stroke-width="4"/>
+        <rect x="0" y="${size - 28}" width="28" height="28" fill="none" stroke="black" stroke-width="4"/>
+        <rect x="8" y="8" width="12" height="12" fill="black"/>
+        <rect x="${size - 20}" y="8" width="12" height="12" fill="black"/>
+        <rect x="8" y="${size - 20}" width="12" height="12" fill="black"/>
+        <text x="${size/2}" y="${size + 15}" text-anchor="middle" font-size="10" fill="black">${qrContent}</text>
       </svg>
     `;
     
@@ -417,13 +498,19 @@ const QRScanner = ({ eventId, showNotification, onParticipantCheckedIn }) => {
 
           <div className="scanner-actions">
             {!isScanning ? (
-              <button 
-                onClick={startScanning} 
-                className="start-scanning-btn"
-                disabled={!selectedEventId || loading || notCheckedInParticipants.length === 0}
-              >
-                {loading ? '⏳ იტვირთება...' : '📷 QR სკანერის გაშვება'}
-              </button>
+              <div className="camera-info">
+                <button 
+                  onClick={startScanning} 
+                  className="start-scanning-btn"
+                  disabled={!selectedEventId || loading || notCheckedInParticipants.length === 0}
+                >
+                  {loading ? '⏳ იტვირთება...' : '📷 QR სკანერის გაშვება'}
+                </button>
+                <small className="camera-note">
+                  💡 Replit-ში განვითარების რეჟიმში კამერა შეიძლება არ იმუშაოს. 
+                  გამოიყენეთ ხელით Check-in ან გატესტეთ ნამდვილ მოწყობილობაზე.
+                </small>
+              </div>
             ) : (
               <button 
                 onClick={stopScanning} 
