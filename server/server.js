@@ -22,7 +22,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Serve client build files in production
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../client/dist')));
-  
+
   app.get('*', (req, res) => {
     if (!req.path.startsWith('/api/')) {
       res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
@@ -33,7 +33,13 @@ if (process.env.NODE_ENV === 'production') {
 // File upload configuration
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const uploadPath = path.join(__dirname, 'uploads');
+    let uploadPath = path.join(__dirname, 'uploads');
+
+    // Check if it's a participant file upload based on the route
+    if (req.route && req.route.path && req.route.path.includes('participants')) {
+      uploadPath = path.join(__dirname, 'uploads', 'participants');
+    }
+
     if (!fs.existsSync(uploadPath)) {
       fs.mkdirSync(uploadPath, { recursive: true });
     }
@@ -49,6 +55,26 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage: storage });
+
+// Separate multer configuration for participant files
+const participantStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadPath = path.join(__dirname, 'uploads', 'participants');
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
+  },
+  filename: function (req, file, cb) {
+    const timestamp = Date.now();
+    const randomNum = Math.floor(Math.random() * 1000000000);
+    const extension = path.extname(file.originalname);
+    const filename = `${file.fieldname}-${timestamp}-${randomNum}${extension}`;
+    cb(null, filename);
+  }
+});
+
+const participantUpload = multer({ storage: participantStorage });
 
 // Token verification middleware
 const authenticateToken = (req, res, next) => {
@@ -81,7 +107,13 @@ const authorizeRoles = (...roles) => {
 // Auth routes - Fixed endpoints to match frontend
 app.post('/api/register', async (req, res) => {
   try {
+    console.log('Registration request received:', { body: req.body });
     const { username, password, role = 'user' } = req.body;
+
+    if (!username || !password) {
+      console.log('Missing username or password');
+      return res.status(400).json({ message: 'მომხმარებლის სახელი და პაროლი აუცილებელია' });
+    }
 
     // Check if user exists
     const existingUser = await db.query(
@@ -90,6 +122,7 @@ app.post('/api/register', async (req, res) => {
     );
 
     if (existingUser.rows.length > 0) {
+      console.log('User already exists:', username);
       return res.status(400).json({ message: 'მომხმარებელი უკვე არსებობს' });
     }
 
@@ -98,13 +131,18 @@ app.post('/api/register', async (req, res) => {
 
     // Create user
     const result = await db.query(
-      'INSERT INTO users (username, password, role) VALUES ($1, $2, $3) RETURNING id, username, role',
+      'INSERT INTO users (username, password, role) VALUES ($1, $2, $3) RETURNING *',
       [username, hashedPassword, role]
     );
 
-    const user = result.rows[0];
+    // Get the created user
+    const user = result;
+
+    const createdUser = user.rows[0];
+    console.log('User created successfully:', { id: createdUser.id, username: createdUser.username, role: createdUser.role });
+
     const token = jwt.sign(
-      { id: user.id, username: user.username, role: user.role },
+      { id: createdUser.id, username: createdUser.username, role: createdUser.role },
       process.env.JWT_SECRET || 'fallback_secret',
       { expiresIn: '24h' }
     );
@@ -112,19 +150,30 @@ app.post('/api/register', async (req, res) => {
     res.status(201).json({
       message: 'მომხმარებელი წარმატებით შეიქმნა',
       token,
-      role: user.role,
-      userId: user.id,
-      username: user.username
+      role: createdUser.role,
+      userId: createdUser.id,
+      username: createdUser.username
     });
   } catch (error) {
     console.error('Registration error:', error);
-    res.status(500).json({ message: 'სერვერის შეცდომა' });
+    console.error('Error details:', error.message);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      message: 'სერვერის შეცდომა',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
 app.post('/api/login', async (req, res) => {
   try {
+    console.log('Login request received:', { body: req.body, headers: req.headers });
     const { username, password } = req.body;
+
+    if (!username || !password) {
+      console.log('Missing username or password');
+      return res.status(400).json({ message: 'მომხმარებლის სახელი და პაროლი აუცილებელია' });
+    }
 
     // Find user
     const result = await db.query(
@@ -133,14 +182,19 @@ app.post('/api/login', async (req, res) => {
     );
 
     if (result.rows.length === 0) {
+      console.log('User not found:', username);
       return res.status(400).json({ message: 'არასწორი მომხმარებლის სახელი ან პაროლი' });
     }
 
     const user = result.rows[0];
+    console.log('User found:', { id: user.id, username: user.username, role: user.role });
 
     // Check password
     const isValidPassword = await bcrypt.compare(password, user.password);
+    console.log('Password valid:', isValidPassword);
+
     if (!isValidPassword) {
+      console.log('Invalid password for user:', username);
       return res.status(400).json({ message: 'არასწორი მომხმარებლის სახელი ან პაროლი' });
     }
 
@@ -151,6 +205,7 @@ app.post('/api/login', async (req, res) => {
       { expiresIn: '24h' }
     );
 
+    console.log('Login successful for user:', username);
     res.json({
       message: 'წარმატებით შესვლა',
       token,
@@ -393,7 +448,7 @@ app.delete('/api/spaces/:id', authenticateToken, authorizeRoles('admin', 'manage
     res.json({ message: 'სივრცე წარმატებით წაიშალა' });
   } catch (error) {
     console.error('სივრცის წაშლის შეცდომა:', error);
-    res.status(500).json({ message: 'სივრცის წაშლა ვერ მოხერხდა' });
+    res.status(500).json({ message: 'სიvრცის წაშლა ვერ მოხერხდა' });
   }
 });
 
@@ -517,7 +572,6 @@ app.get('/api/events', authenticateToken, async (req, res) => {
       FROM annual_services a
       LEFT JOIN service_spaces ss ON a.id = ss.service_id
       LEFT JOIN exhibitions e ON a.exhibition_id = e.id
-      WHERE a.is_archived = false OR a.is_archived IS NULL
       GROUP BY a.id, a.service_name, a.description, a.year_selection, a.start_date, a.end_date, a.service_type, a.is_active, a.is_archived, a.created_at, a.updated_at, a.created_by_user_id, a.exhibition_id, e.exhibition_name, e.price_per_sqm
       ORDER BY a.created_at DESC
     `);
@@ -696,7 +750,7 @@ app.get('/api/events/:eventId/participants', authenticateToken, async (req, res)
 app.post('/api/events/:eventId/participants', 
   authenticateToken, 
   authorizeRoles('admin', 'manager', 'sales', 'marketing'), 
-  upload.fields([
+  participantUpload.fields([
     { name: 'invoice_file', maxCount: 1 },
     { name: 'contract_file', maxCount: 1 },
     { name: 'handover_file', maxCount: 1 }
@@ -705,21 +759,16 @@ app.post('/api/events/:eventId/participants',
     try {
       const { eventId } = req.params;
       const { 
-        company_id, 
-        registration_status = 'მონაწილეობის მოთხოვნა',
-        payment_status = 'მომლოდინე', 
-        booth_number, 
-        booth_size, 
-        notes,
-        contact_person,
-        contact_position,
-        contact_email,
-        contact_phone,
+        company_id,
+        booth_size,
+        booth_number,
         payment_amount,
-        payment_due_date,
-        payment_method,
-        invoice_number,
-        equipment_bookings
+        payment_status,
+        registration_status,
+        notes,
+        equipment_bookings,
+        package_id,
+        registration_type
       } = req.body;
 
       console.log('Adding participant for event:', eventId);
@@ -727,69 +776,68 @@ app.post('/api/events/:eventId/participants',
       console.log('Files:', req.files);
 
       // Handle file uploads
-      let invoice_file = null;
-      let contract_file = null;
-      let handover_file = null;
+      let invoice_file_path = null;
+      let contract_file_path = null;
+      let handover_file_path = null;
 
       if (req.files) {
         if (req.files.invoice_file) {
-          invoice_file = `/uploads/participants/${req.files.invoice_file[0].filename}`;
+          invoice_file_path = `/uploads/participants/${req.files.invoice_file[0].filename}`;
         }
         if (req.files.contract_file) {
-          contract_file = `/uploads/participants/${req.files.contract_file[0].filename}`;
+          contract_file_path = `/uploads/participants/${req.files.contract_file[0].filename}`;
         }
         if (req.files.handover_file) {
-          handover_file = `/uploads/participants/${req.files.handover_file[0].filename}`;
+          handover_file_path = `/uploads/participants/${req.files.handover_file[0].filename}`;
         }
       }
 
-      const result = await db.query(
-        `INSERT INTO event_participants (
-          event_id, company_id, registration_status, payment_status, 
-          booth_number, booth_size, notes, contact_person, contact_position,
-          contact_email, contact_phone, payment_amount, payment_due_date, 
-          payment_method, invoice_number, invoice_file, contract_file, handover_file,
-          created_by_user_id
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) RETURNING *`,
-        [
-          eventId, company_id, registration_status, payment_status, 
-          booth_number, booth_size, notes, contact_person, contact_position,
-          contact_email, contact_phone,
-          payment_amount ? parseFloat(payment_amount) : null,
-          payment_due_date || null,
-          payment_method || null,
-          invoice_number || null,
-          invoice_file,
-          contract_file,
-          handover_file,
-          req.user.id
-        ]
+      // Insert participant
+      const participantResult = await db.query(
+        `INSERT INTO event_participants 
+         (event_id, company_id, booth_size, booth_number, payment_amount, payment_status, registration_status, notes, created_by_user_id, invoice_file_path, contract_file_path, handover_file_path, package_id, registration_type)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
+        [eventId, company_id, booth_size, booth_number, payment_amount, payment_status, registration_status, notes, req.user.id, invoice_file_path, contract_file_path, handover_file_path, package_id || null, registration_type || 'individual']
       );
 
-      const participant = result.rows[0];
+      const participant = participantResult.rows[0];
 
       // Handle equipment bookings
       if (equipment_bookings) {
         try {
           const bookings = JSON.parse(equipment_bookings);
-          for (const booking of bookings) {
-            if (booking.equipment_id && booking.quantity > 0) {
-              await db.query(
-                'INSERT INTO equipment_bookings (participant_id, equipment_id, quantity, unit_price, total_price, created_by) VALUES ($1, $2, $3, $4, $5, $6)',
-                [
-                  participant.id, 
-                  booking.equipment_id, 
-                  parseInt(booking.quantity), 
-                  parseFloat(booking.unit_price),
-                  parseFloat(booking.quantity) * parseFloat(booking.unit_price),
-                  req.user.id
-                ]
-              );
-            }
+
+          // If package registration, get package equipment first
+          let packageEquipment = [];
+          if (registration_type === 'package' && package_id) {
+            const packageResult = await db.query(`
+              SELECT pe.equipment_id, pe.quantity 
+              FROM package_equipment pe 
+              WHERE pe.package_id = $1
+            `, [package_id]);
+            packageEquipment = packageResult.rows;
           }
-        } catch (equipmentError) {
-          console.error('Equipment bookings error:', equipmentError);
-          // Don't fail the whole request if equipment booking fails
+
+          for (const booking of bookings) {
+            // Check if this equipment is from package
+            const isFromPackage = packageEquipment.some(pe => 
+              pe.equipment_id === booking.equipment_id && pe.quantity >= booking.quantity
+            );
+
+            // Insert into equipment bookings for inventory tracking
+            await db.query(
+              'INSERT INTO equipment_bookings (participant_id, equipment_id, quantity) VALUES ($1, $2, $3)',
+              [participant.id, booking.equipment_id, booking.quantity]
+            );
+
+            // Insert into participant selected equipment for detailed tracking
+            await db.query(
+              'INSERT INTO participant_selected_equipment (participant_id, equipment_id, quantity, is_from_package) VALUES ($1, $2, $3, $4)',
+              [participant.id, booking.equipment_id, booking.quantity, isFromPackage]
+            );
+          }
+        } catch (bookingError) {
+          console.error('Equipment booking error:', bookingError);
         }
       }
 
@@ -812,7 +860,7 @@ app.post('/api/events/:eventId/participants',
 app.put('/api/events/:eventId/participants/:participantId', 
   authenticateToken, 
   authorizeRoles('admin', 'manager', 'sales', 'marketing'), 
-  upload.fields([
+  participantUpload.fields([
     { name: 'invoice_file', maxCount: 1 },
     { name: 'contract_file', maxCount: 1 },
     { name: 'handover_file', maxCount: 1 }
@@ -1148,6 +1196,25 @@ app.get('/api/statistics/general', authenticateToken, async (req, res) => {
   }
 });
 
+// User profile route (for any authenticated user)
+app.get('/api/user/profile', authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query(
+      'SELECT id, username, role, created_at FROM users WHERE id = $1',
+      [req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'მომხმარებელი ვერ მოიძებნა' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('მომხმარებლის პროფილის მიღების შეცდომა:', error);
+    res.status(500).json({ message: 'მომხმარებლის პროფილის მიღება ვერ მოხერხდა' });
+  }
+});
+
 // User management routes
 app.get('/api/users', authenticateToken, authorizeRoles('admin'), async (req, res) => {
   try {
@@ -1337,10 +1404,10 @@ app.post('/api/annual-services', authenticateToken, authorizeRoles('admin', 'man
     );
 
     const service = result.rows[0];
-    
+
     // Use selected_spaces if available, fallback to space_ids
     const spacesToAdd = selected_spaces.length > 0 ? selected_spaces : space_ids;
-    
+
     // Add space associations
     for (const spaceId of spacesToAdd) {
       try {
@@ -1355,11 +1422,11 @@ app.post('/api/annual-services', authenticateToken, authorizeRoles('admin', 'man
     }
 
     let registeredCompanies = 0;
-    
+
     // Auto-register companies if exhibition_id is provided and companies are selected
     if (exhibition_id && selected_companies && selected_companies.length > 0) {
       console.log(`Auto-registering ${selected_companies.length} companies for event ${service.id}`);
-      
+
       for (const companyId of selected_companies) {
         try {
           // Check if company is already registered for this event
@@ -1435,13 +1502,13 @@ app.put('/api/annual-services/:id', authenticateToken, authorizeRoles('admin', '
     }
 
     const service = result.rows[0];
-    
+
     // Use selected_spaces if available, fallback to space_ids
     const spacesToUpdate = selected_spaces.length > 0 ? selected_spaces : space_ids;
-    
+
     // Update space associations - first remove existing ones
     await db.query('DELETE FROM service_spaces WHERE service_id = $1', [id]);
-    
+
     // Add new space associations
     for (const spaceId of spacesToUpdate) {
       try {
@@ -1465,225 +1532,12 @@ app.put('/api/annual-services/:id', authenticateToken, authorizeRoles('admin', '
   }
 });
 
-app.delete('/api/annual-services/:id', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Delete associated records first
-    await db.query('DELETE FROM service_spaces WHERE service_id = $1', [id]);
-    await db.query('DELETE FROM service_exhibitions WHERE service_id = $1', [id]);
-
-    const result = await db.query('DELETE FROM annual_services WHERE id = $1 RETURNING *', [id]);
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'სერვისი ვერ მოიძებნა' });
-    }
-
-    res.json({ message: 'სერვისი წარმატებით წაიშალა' });
-  } catch (error) {
-    console.error('სერვისის წაშლის შეცდომა:', error);
-    res.status(500).json({ message: 'სერვისის წაშლა ვერ მოხერხდა' });
-  }
-});
-
-app.post('/api/annual-services', authenticateToken, authorizeRoles('admin', 'manager', 'sales', 'marketing'), async (req, res) => {
-  try {
-    const { 
-      service_name, 
-      description, 
-      year_selection, 
-      start_date, 
-      end_date, 
-      service_type = 'ივენთი',
-      is_active = true,
-      exhibition_id,
-      selected_spaces = []
-    } = req.body;
-
-    console.log('Creating annual service with data:', { 
-      service_name, 
-      description, 
-      year_selection, 
-      start_date, 
-      end_date, 
-      service_type, 
-      exhibition_id, 
-      selected_spaces 
-    });
-
-    const result = await db.query(
-      `INSERT INTO annual_services (
-        service_name, description, year_selection, start_date, end_date, 
-        service_type, is_active, exhibition_id, created_by_user_id
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-      [
-        service_name, description, year_selection, start_date, end_date,
-        service_type, is_active, exhibition_id, req.user.id
-      ]
-    );
-
-    const service = result.rows[0];
-    console.log('Service created with ID:', service.id);
-
-    // Add space associations
-    if (selected_spaces && selected_spaces.length > 0) {
-      console.log('Adding space associations:', selected_spaces);
-      for (const spaceId of selected_spaces) {
-        try {
-          await db.query(
-            'INSERT INTO service_spaces (service_id, space_id) VALUES ($1, $2)',
-            [service.id, spaceId]
-          );
-          console.log(`Added space ${spaceId} to service ${service.id}`);
-        } catch (spaceError) {
-          console.error('Error adding space:', spaceError);
-        }
-      }
-    }
-
-    // ავტომატური კომპანიების რეგისტრაცია თუ გამოფენა არჩეულია
-    let registeredCompanies = 0;
-    if (exhibition_id) {
-      try {
-        console.log(`Starting automatic registration for exhibition ${exhibition_id}`);
-        
-        // ვიპოვოთ კომპანიები რომლებსაც ეს გამოფენა აქვთ მონიშნული
-        const companiesQuery = `
-          SELECT id, company_name, selected_exhibitions FROM companies 
-          WHERE selected_exhibitions IS NOT NULL 
-          AND selected_exhibitions != '[]'
-          AND (
-            selected_exhibitions::jsonb ? $1::text
-            OR selected_exhibitions::text LIKE $2
-            OR selected_exhibitions::text LIKE $3
-          )
-        `;
-        
-        const searchPatterns = [
-          exhibition_id.toString(),
-          `%"${exhibition_id}"%`,
-          `%[${exhibition_id}]%`
-        ];
-        
-        const companiesResult = await db.query(companiesQuery, searchPatterns);
-        console.log(`Found ${companiesResult.rows.length} companies for exhibition ${exhibition_id}`);
-
-        // დეტალური ლოგი თითოეული კომპანიისთვის
-        companiesResult.rows.forEach(company => {
-          console.log(`Company ${company.id} (${company.company_name}) selected_exhibitions:`, company.selected_exhibitions);
-        });
-
-        // თითოეული კომპანიისთვის ავტომატური რეგისტრაცია
-        for (const company of companiesResult.rows) {
-          try {
-            await db.query(
-              `INSERT INTO event_participants (
-                event_id, company_id, registration_status, payment_status,
-                created_by_user_id, registration_date
-              ) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)`,
-              [service.id, company.id, 'მონაწილეობის მოთხოვნა', 'მომლოდინე', req.user.id]
-            );
-            registeredCompanies++;
-            console.log(`Registered company ${company.id} (${company.company_name}) for event ${service.id}`);
-          } catch (insertError) {
-            console.error(`Error registering company ${company.id}:`, insertError.message);
-          }
-        }
-        console.log(`Auto-registered ${registeredCompanies} companies for event ${service.id}`);
-      } catch (autoRegError) {
-        console.error('ავტომატური რეგისტრაციის შეცდომა:', autoRegError);
-        // არ ვაფეილებთ მთელ ოპერაციას
-      }
-    }
-
-    res.status(201).json({
-      message: 'ივენთი წარმატებით დაემატა',
-      service,
-      registeredCompanies
-    });
-  } catch (error) {
-    console.error('ივენთის დამატების შეცდომა:', error);
-    res.status(500).json({ message: 'ივენთის დამატება ვერ მოხერხდა' });
-  }
-});
-
-app.put('/api/annual-services/:id', authenticateToken, authorizeRoles('admin', 'manager', 'sales', 'marketing'), async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { 
-      service_name, 
-      description, 
-      year_selection, 
-      start_date, 
-      end_date, 
-      service_type,
-      is_active,
-      exhibition_id,
-      selected_spaces = []
-    } = req.body;
-
-    console.log('Updating annual service:', id, { 
-      service_name, 
-      description, 
-      year_selection, 
-      start_date, 
-      end_date, 
-      service_type, 
-      exhibition_id, 
-      selected_spaces 
-    });
-
-    const result = await db.query(
-      `UPDATE annual_services SET 
-        service_name = $1, description = $2, year_selection = $3, 
-        start_date = $4, end_date = $5, service_type = $6, 
-        is_active = $7, exhibition_id = $8, updated_at = CURRENT_TIMESTAMP 
-      WHERE id = $9 RETURNING *`,
-      [
-        service_name, description, year_selection, start_date, end_date,
-        service_type, is_active, exhibition_id, id
-      ]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'ივენთი ვერ მოიძებნა' });
-    }
-
-    // Update space associations
-    console.log('Updating space associations for service:', id);
-    await db.query('DELETE FROM service_spaces WHERE service_id = $1', [id]);
-    
-    if (selected_spaces && selected_spaces.length > 0) {
-      console.log('Adding spaces:', selected_spaces);
-      for (const spaceId of selected_spaces) {
-        try {
-          await db.query(
-            'INSERT INTO service_spaces (service_id, space_id) VALUES ($1, $2)',
-            [id, spaceId]
-          );
-          console.log(`Updated space ${spaceId} for service ${id}`);
-        } catch (spaceError) {
-          console.error('Error updating space:', spaceError);
-        }
-      }
-    }
-
-    res.json({
-      message: 'ივენთი წარმატებით განახლდა',
-      service: result.rows[0]
-    });
-  } catch (error) {
-    console.error('ივენთის განახლების შეცდომა:', error);
-    res.status(500).json({ message: 'ივენთის განახლება ვერ მოხერხდა' });
-  }
-});
-
-app.put('/api/annual-services/:id/archive', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res) => {
+app.put('/api/annual-services/:id/archive', authenticateToken, authorizeRoles('admin', 'sales', 'marketing'), async (req, res) => {
   try {
     const { id } = req.params;
 
     const result = await db.query(
-      'UPDATE annual_services SET is_archived = true, archived_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
+      'UPDATE annual_services SET is_archived = TRUE WHERE id = $1 RETURNING *',
       [id]
     );
 
@@ -1691,15 +1545,42 @@ app.put('/api/annual-services/:id/archive', authenticateToken, authorizeRoles('a
       return res.status(404).json({ message: 'სერვისი ვერ მოიძებნა' });
     }
 
-    res.json({ message: 'სერვისი წარმატებით არქივში გადაიტანა' });
+    res.json({ 
+      message: 'სერვისი წარმატებით არქივში გადაიტანა',
+      service: result.rows[0]
+    });
   } catch (error) {
-    console.error('სერვისის არქივში გადატანის შეცდომა:', error);
+    console.error('Archive service error:', error);
     res.status(500).json({ message: 'სერვისის არქივში გადატანა ვერ მოხერხდა' });
   }
 });
 
+// Restore annual service from archive
+app.put('/api/annual-services/:id/restore', authenticateToken, authorizeRoles('admin', 'sales', 'marketing'), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await db.query(
+      'UPDATE annual_services SET is_archived = FALSE WHERE id = $1 RETURNING *',
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'სერვისი ვერ მოიძებნა' });
+    }
+
+    res.json({ 
+      message: 'სერვისი წარმატებით აღდგა არქივიდან',
+      service: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Restore service error:', error);
+    res.status(500).json({ message: 'სერვისის არქივიდან აღდგენა ვერ მოხერხდა' });
+  }
+});
+
 // Start server
-const HOST = process.env.HOST || '0.0.0.0';
+const HOST = '0.0.0.0';
 app.listen(PORT, HOST, () => {
   console.log(`სერვერი მუშაობს ${HOST}:${PORT}`);
 });
@@ -1755,7 +1636,32 @@ app.get('/api/reports/event-financials', authenticateToken, async (req, res) => 
 });
 
 
+// User Analysis Report - (For future implementation)
+app.get('/api/reports/user-analysis', authenticateToken, async (req, res) => {
+  try {
+    // Placeholder for user analysis report logic
+    res.json({ message: 'User analysis report endpoint is not yet implemented.' });
+  } catch (error) {
+    console.error('User analysis report error:', error);
+    res.status(500).json({ message: 'User analysis report could not be retrieved.' });
+  }
+});
+
 // Routes
-app.use('/api/companies', require('./routes/companies'));
-app.use('/api/statistics', require('./routes/statistics'));
-app.use('/api/import', require('./routes/import'));
+const companiesRoutes = require('./routes/companies');
+const equipmentRoutes = require('./routes/equipment');
+const statisticsRoutes = require('./routes/statistics');
+const reportsRoutes = require('./routes/reports');
+const importRoutes = require('./routes/import');
+const packagesRoutes = require('./routes/packages');
+const pricingRoutes = require('./routes/pricing');
+const checkinRoutes = require('./routes/checkin');
+
+app.use('/api/companies', companiesRoutes);
+app.use('/api/equipment', equipmentRoutes);
+app.use('/api/statistics', statisticsRoutes);
+app.use('/api/reports', reportsRoutes);
+app.use('/api/import', importRoutes);
+app.use('/api/packages', packagesRoutes);
+app.use('/api/pricing', pricingRoutes);
+app.use('/api/checkin', checkinRoutes);

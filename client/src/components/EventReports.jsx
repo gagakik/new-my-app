@@ -93,11 +93,13 @@ const EventReports = ({ onClose, showNotification, userRole }) => {
         setReportData(data);
         showNotification('რეპორტი წარმატებით შეიქმნა', 'success');
       } else {
+        const errorText = await response.text();
+        console.error('Report error:', response.status, errorText);
         showNotification('რეპორტის შექმნა ვერ მოხერხდა', 'error');
       }
     } catch (error) {
-      console.error('რეპორტის შექმნის შეცდომა:', error);
-      showNotification('შეცდომა რეპორტის შექმნისას', 'error');
+      console.error('რეპორტის შექმნა ვერ მოხერხდა:', error);
+      showNotification('რეპორტის შექმნა ვერ მოხერხდა', 'error');
     } finally {
       setLoading(false);
     }
@@ -143,58 +145,50 @@ const EventReports = ({ onClose, showNotification, userRole }) => {
     showNotification('PDF ექსპორტი მომზადების ეტაპზეა', 'info');
   };
 
-  const renderReportContent = () => {
+  const renderReportData = () => {
     if (!reportData) return null;
 
     switch (reportType) {
       case 'participants':
         return (
-          <div className="report-content">
+          <div className="report-results">
             <div className="report-stats">
               <div className="stat-card">
                 <h4>სულ მონაწილეები</h4>
-                <span className="stat-number">{reportData.totalParticipants}</span>
+                <span className="stat-number">{reportData.totalParticipants || 0}</span>
               </div>
               <div className="stat-card">
                 <h4>დადასტურებული</h4>
-                <span className="stat-number confirmed">{reportData.confirmedParticipants}</span>
+                <span className="stat-number confirmed">{reportData.confirmedParticipants || 0}</span>
               </div>
               <div className="stat-card">
                 <h4>გადახდილი</h4>
-                <span className="stat-number paid">{reportData.paidParticipants}</span>
+                <span className="stat-number paid">{reportData.paidParticipants || 0}</span>
               </div>
               <div className="stat-card">
-                <h4>ჯამური შემოსავალი</h4>
-                <span className="stat-number revenue">€{reportData.totalRevenue}</span>
+                <h4>შემოსავალი</h4>
+                <span className="stat-number revenue">€{reportData.totalRevenue || '0.00'}</span>
               </div>
             </div>
 
-            {reportData.participants && (
-              <div className="participants-summary">
-                <h4>მონაწილეების დეტალები</h4>
+            {reportData.participants && reportData.participants.length > 0 && (
+              <div className="participants-list">
+                <h3>მონაწილეები</h3>
                 <div className="summary-table">
                   <div className="table-header">
                     <div>კომპანია</div>
                     <div>ქვეყანა</div>
                     <div>სტატუსი</div>
-                    <div>გადახდა</div>
+                    <div>გადახდის სტატუსი</div>
                     <div>თანხა</div>
                   </div>
                   {reportData.participants.map((participant, index) => (
                     <div key={index} className="table-row">
-                      <div>{participant.company_name}</div>
+                      <div><strong>{participant.company_name}</strong></div>
                       <div>{participant.country}</div>
-                      <div>
-                        <span className={`status-badge ${participant.registration_status.toLowerCase()}`}>
-                          {participant.registration_status}
-                        </span>
-                      </div>
-                      <div>
-                        <span className={`payment-badge ${participant.payment_status.toLowerCase()}`}>
-                          {participant.payment_status}
-                        </span>
-                      </div>
-                      <div>{participant.payment_amount}€</div>
+                      <div><span className={`status-badge ${participant.registration_status}`}>{participant.registration_status}</span></div>
+                      <div><span className={`payment-badge ${participant.payment_status}`}>{participant.payment_status}</span></div>
+                      <div><strong>€{parseFloat(participant.payment_amount || 0).toFixed(2)}</strong></div>
                     </div>
                   ))}
                 </div>
@@ -205,19 +199,19 @@ const EventReports = ({ onClose, showNotification, userRole }) => {
 
       case 'financial':
         return (
-          <div className="report-content">
+          <div className="report-results">
             <div className="financial-stats">
               <div className="stat-card">
                 <h4>მოსალოდნელი შემოსავალი</h4>
-                <span className="stat-number">{reportData.expectedRevenue}€</span>
+                <span className="stat-number expected">€{reportData.expectedRevenue || '0.00'}</span>
               </div>
               <div className="stat-card">
                 <h4>ფაქტიური შემოსავალი</h4>
-                <span className="stat-number paid">{reportData.actualRevenue}€</span>
+                <span className="stat-number actual">€{reportData.actualRevenue || '0.00'}</span>
               </div>
               <div className="stat-card">
-                <h4>ვადაგადაცილებული</h4>
-                <span className="stat-number overdue">{reportData.overdueAmount}€</span>
+                <h4>დავალიანება</h4>
+                <span className="stat-number overdue">€{reportData.overdueAmount || '0.00'}</span>
               </div>
             </div>
           </div>
@@ -225,84 +219,82 @@ const EventReports = ({ onClose, showNotification, userRole }) => {
 
       case 'summary':
         return (
-          <div className="report-content">
+          <div className="report-results">
             <div className="summary-stats">
               <div className="stat-card">
                 <h4>სულ ივენთები</h4>
-                <span className="stat-number">{reportData.totalEvents}</span>
+                <span className="stat-number">{reportData.totalEvents || 0}</span>
               </div>
               <div className="stat-card">
                 <h4>აქტიური ივენთები</h4>
-                <span className="stat-number active">{reportData.activeEvents}</span>
+                <span className="stat-number active">{reportData.activeEvents || 0}</span>
               </div>
               <div className="stat-card">
                 <h4>სულ მონაწილეები</h4>
-                <span className="stat-number">{reportData.totalParticipants}</span>
+                <span className="stat-number">{reportData.totalParticipants || 0}</span>
               </div>
               <div className="stat-card">
                 <h4>ჯამური შემოსავალი</h4>
-                <span className="stat-number revenue">€{reportData.totalRevenue}</span>
+                <span className="stat-number revenue">€{reportData.totalRevenue || '0.00'}</span>
               </div>
             </div>
-          </div>
-        );
 
-      case 'user-companies':
-        return (
-          <div className="report-content">
-            <div className="user-companies-report">
-              <h4>იუზერების მიერ დარეგისტრირებული კომპანიები</h4>
-              <div className="user-stats-table">
-                <div className="table-header">
-                  <div>იუზერი</div>
-                  <div>დარეგისტრირებული კომპანიები</div>
-                  <div>ბოლო განახლება</div>
-                  <div>ბოლო განახლების თარიღი</div>
-                </div>
-                {userStats.map((user, index) => (
-                  <div key={index} className="table-row">
-                    <div>{user.username}</div>
-                    <div><strong>{user.companies_count}</strong></div>
-                    <div>{user.last_updated_by || '-'}</div>
-                    <div>{user.last_update_date ? new Date(user.last_update_date).toLocaleDateString('ka-GE') : '-'}</div>
+            <div className="additional-reports">
+              <h3>იუზერების სტატისტიკა</h3>
+              {userStats && userStats.length > 0 ? (
+                <div className="user-stats-table">
+                  <div className="table-header">
+                    <div>იუზერი</div>
+                    <div>კომპანიები</div>
+                    <div>ბოლო განახლება</div>
+                    <div>განახლების თარიღი</div>
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        );
+                  {userStats.map((user, index) => (
+                    <div key={index} className="table-row">
+                      <div><strong>{user.username}</strong></div>
+                      <div>{user.companies_count}</div>
+                      <div>{user.last_updated_by || 'N/A'}</div>
+                      <div>{user.last_update_date ? new Date(user.last_update_date).toLocaleDateString('ka-GE') : 'N/A'}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p>იუზერების მონაცემები ვერ მოიძებნა</p>
+              )}
 
-      case 'event-financials':
-        return (
-          <div className="report-content">
-            <div className="event-financials-report">
-              <h4>ივენთების ფინანსური ანალიზი</h4>
-              <div className="financial-summary">
-                <div className="stat-card">
-                  <h4>ჯამური შემოსავალი ყველა ივენთიდან</h4>
-                  <span className="stat-number revenue">
-                    €{parseFloat(eventFinancials.reduce((sum, event) => sum + parseFloat(event.total_paid || 0), 0)).toFixed(2)}
-                  </span>
-                </div>
-              </div>
-              <div className="events-financial-table">
-                <div className="table-header">
-                  <div>ივენთი</div>
-                  <div>მონაწილეები</div>
-                  <div>გადახდილი თანხა</div>
-                  <div>მომლოდინე გადახდა</div>
-                  <div>ჯამი</div>
-                </div>
-                {eventFinancials.map((event, index) => (
-                  <div key={index} className="table-row">
-                    <div><strong>{event.event_name}</strong></div>
-                    <div>{event.participants_count}</div>
-                    <div><span className="paid-amount">{parseFloat(event.total_paid || 0).toFixed(2)}€</span></div>
-                    <div><span className="pending-amount">{parseFloat(event.total_pending || 0).toFixed(2)}€</span></div>
-                    <div><strong>{parseFloat(event.total_expected || 0).toFixed(2)}€</strong></div>
+              <h3>ივენთების ფინანსური ანალიზი</h3>
+              {eventFinancials && eventFinancials.length > 0 ? (
+                <>
+                  <div className="financial-summary">
+                    <div className="stat-card total-revenue">
+                      <h4>ჯამური შემოსავალი ყველა ივენთიდან</h4>
+                      <span className="stat-number revenue">
+                        €{parseFloat(eventFinancials.reduce((sum, event) => sum + parseFloat(event.total_paid || 0), 0)).toFixed(2)}
+                      </span>
+                    </div>
                   </div>
-                ))}
-              </div>
+                  <div className="events-financial-table">
+                    <div className="table-header">
+                      <div>ივენთი</div>
+                      <div>მონაწილეები</div>
+                      <div>გადახდილი თანხა</div>
+                      <div>მომლოდინე გადახდა</div>
+                      <div>ჯამი</div>
+                    </div>
+                    {eventFinancials.map((event, index) => (
+                      <div key={index} className="table-row">
+                        <div><strong>{event.event_name}</strong></div>
+                        <div>{event.participants_count}</div>
+                        <div><span className="paid-amount">{parseFloat(event.total_paid || 0).toFixed(2)}€</span></div>
+                        <div><span className="pending-amount">{parseFloat(event.total_pending || 0).toFixed(2)}€</span></div>
+                        <div><strong>{parseFloat(event.total_expected || 0).toFixed(2)}€</strong></div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p>ფინანსური მონაცემები ვერ მოიძებნა</p>
+              )}
             </div>
           </div>
         );
@@ -451,7 +443,7 @@ const EventReports = ({ onClose, showNotification, userRole }) => {
               </div>
             </div>
           ) : (
-            renderReportContent()
+            renderReportData()
           )}
         </div>
     </div>

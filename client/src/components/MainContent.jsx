@@ -7,6 +7,8 @@ import UserManagement from './UserManagement';
 import EventsList from './EventsList';
 import Statistics from './Statistics';
 import EventReports from './EventReports';
+import UserProfile from './UserProfile';
+import QRScanner from './QRScanner'; // Import QRScanner
 
 import './MainContent.css';
 
@@ -122,6 +124,14 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
                 Event Reports
               </button>
             )}
+            {/* New menu item for QR Scanner */}
+            <button
+              className={activeSection === 'checkin' ? 'active' : ''}
+              onClick={() => handleSectionChange('checkin')}
+            >
+              <i className="icon-qr-scan">📱</i> {/* Added a placeholder icon class */}
+              მობაილური Check-in
+            </button>
           </div>
         </nav>
 
@@ -129,8 +139,22 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
           {activeSection === 'dashboard' && (
             <div className="dashboard">
               <div className="dashboard-header">
-                <h1>დეშბორდი</h1>
-                <p>მთავარი ინფორმაცია და სტატისტიკა</p>
+                <h1>მთავარი დეშბორდი</h1>
+                <p>თქვენი ბიზნესის მთავარი მეტრიკები და ანალიტიკა ერთ ადგილას. აქ თვალს ადევნებთ ყველა მნიშვნელოვან ინფორმაციას.</p>
+                <div className="dashboard-stats-preview">
+                  <div className="preview-stat">
+                    <div className="preview-stat-label">აქტიური</div>
+                    <div className="preview-stat-value">🟢</div>
+                  </div>
+                  <div className="preview-stat">
+                    <div className="preview-stat-label">სტატუსი</div>
+                    <div className="preview-stat-value">✅</div>
+                  </div>
+                  <div className="preview-stat">
+                    <div className="preview-stat-label">ონლაინ</div>
+                    <div className="preview-stat-value">👥</div>
+                  </div>
+                </div>
               </div>
               <Statistics showNotification={showNotification} userRole={userRole} />
             </div>
@@ -160,6 +184,16 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
             <EventReports 
               showNotification={showNotification} 
               userRole={userRole} 
+            />
+          )}
+          {/* Render QRScanner component */}
+          {activeSection === 'checkin' && (
+            <QRScanner 
+              showNotification={showNotification}
+              onParticipantCheckedIn={(participant) => {
+                console.log('Participant checked in:', participant);
+                showNotification('მონაწილე წარმატებით დარეგისტრირდა!', 'success');
+              }}
             />
           )}
         </div>

@@ -243,20 +243,35 @@
 }
 
 .exhibitions-table .actions button {
-  padding: 6px 10px;
-  font-size: 0.8rem;
-  border-radius: 4px;
-  white-space: nowrap;
+  padding: 0.5rem 1rem;
+  margin: 0.25rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.exhibitions-table .edit {
-  background-color: #28a745;
-  color: #fff;
+.exhibitions-table .actions .edit {
+  background-color: #10b981;
+  color: white;
 }
 
-.exhibitions-table .delete {
-  background-color: #dc3545;
-  color: #fff;
+.exhibitions-table .actions .delete {
+  background-color: #ef4444;
+  color: white;
+}
+
+.exhibitions-table .actions .edit:hover {
+  background-color: #059669;
+}
+
+.exhibitions-table .actions .delete:hover {
+  background-color: #dc2626;
 }
 
 .creation-info, .update-info {

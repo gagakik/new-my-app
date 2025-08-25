@@ -8,10 +8,51 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.events-container h2 {
-  text-align: center;
+.header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  gap: 1rem;
+}
+
+.header-section h2 {
   color: #343a40;
-  margin-bottom: 1.2rem;
+  margin: 0;
+  flex: 1;
+  text-align: left;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+}
+
+.archive-toggle {
+  padding: 8px 16px;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+.archive-toggle:hover {
+  background-color: #5a6268;
+}
+
+.archive-toggle.active {
+  background-color: #007bff;
+}
+
+.archive-toggle.active:hover {
+  background-color: #0056b3;
 }
 
 .events-container p.no-events {
@@ -21,16 +62,15 @@
 }
 
 .add-new {
-  display: block;
-  width: fit-content;
-  margin: 0 auto 1.5rem;
-  padding: 10px 20px;
-  background-color: #007bff;
+  padding: 8px 16px;
+  background-color: #28a745;
   color: #fff;
   border: none;
-  border-radius: 5px;
+  border-radius: 4px;
   cursor: pointer;
+  font-size: 0.9rem;
   transition: background-color 0.3s;
+  white-space: nowrap;
 }
 
 .add-new:hover {
@@ -221,60 +261,49 @@
   flex-wrap: wrap;
 }
 
-.event-actions button {
-  padding: 6px 12px;
-  font-size: 0.8rem;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  font-weight: 500;
-}
-
-.event-actions .view {
-  background-color: #17a2b8;
+/* Event actions are now handled by ButtonIcons.css */
+.actions .participants,
+.participants {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
   color: white;
 }
 
-.event-actions .participants {
-  background-color: #6f42c1;
+.actions .participants:hover,
+.participants:hover {
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+}
+
+.actions .complete,
+.complete {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
   color: white;
 }
 
-.event-actions .edit {
-  background-color: #28a745;
+.actions .complete:hover,
+.complete:hover {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+}
+
+.actions .archive,
+.archive {
+  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
   color: white;
 }
 
-.event-actions .edit:hover {
-  background-color: #218838;
+.actions .archive:hover,
+.archive:hover {
+  background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
 }
 
-.event-actions .archive {
-  background-color: #ffc107;
-  color: #212529;
-}
-
-.event-actions .complete {
-  background-color: #dc3545;
+.actions .restore,
+.restore {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
   color: white;
 }
 
-.event-actions .complete:hover {
-  background-color: #c82333;
-}
-
-.event-actions .archive:hover {
-  background-color: #e0a800;
-}
-
-.event-actions .delete {
-  background-color: #dc3545;
-  color: white;
-}
-
-.event-actions .delete:hover {
-  background-color: #c82333;
+.actions .restore:hover,
+.restore:hover {
+  background: linear-gradient(135deg, #047857 0%, #065f46 100%);
 }
 
 
@@ -482,16 +511,35 @@
     padding-top: 10px;
   }
 
-  .events-container h2 {
+  .header-section {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+
+  .header-section h2 {
     font-size: 1.5rem;
+    text-align: center;
     margin-bottom: 1rem;
   }
 
+  .header-actions {
+    justify-content: center;
+    display: flex;
+    
+  }
+
   .add-new {
-    width: 100%;
+    flex: 1;
+    min-width: 200px;
     padding: 12px 20px;
     font-size: 1rem;
-    margin-bottom: 1rem;
+  }
+
+  .archive-toggle {
+    flex: 1;
+    min-width: 150px;
+    padding: 12px 16px;
   }
 
   /* Switch to single column layout on mobile */

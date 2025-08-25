@@ -9,8 +9,8 @@ const EquipmentList = ({ showNotification, userRole }) => {
   const [editingId, setEditingId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const isAuthorizedForManagement = 
-    userRole === 'admin' || 
+  const isAuthorizedForManagement =
+    userRole === 'admin' ||
     userRole === 'operation';
 
   // fetchEquipment ფუნქცია მოთავსებულია useCallback-ში
@@ -148,14 +148,14 @@ const EquipmentList = ({ showNotification, userRole }) => {
   return (
     <div className="equipment-container">
       <h2>აღჭურვილობის სია</h2>
-      
+
       {/* ძიების ველი */}
       <div className="search-container">
-        <input 
-          type="text" 
-          placeholder="ძებნა კოდური სახელით ან აღწერით..." 
-          value={searchTerm} 
-          onChange={(e) => setSearchTerm(e.target.value)} 
+        <input
+          type="text"
+          placeholder="ძებნა კოდური სახელით ან აღწერით..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
           className="search-input"
         />
       </div>
@@ -167,10 +167,10 @@ const EquipmentList = ({ showNotification, userRole }) => {
       )}
 
       {editingId !== null && isAuthorizedForManagement && (
-        <EquipmentForm 
-          equipmentToEdit={equipment.find(item => item.id === editingId)} 
-          onEquipmentUpdated={handleEquipmentUpdated} 
-          showNotification={showNotification} 
+        <EquipmentForm
+          equipmentToEdit={equipment.find(item => item.id === editingId)}
+          onEquipmentUpdated={handleEquipmentUpdated}
+          showNotification={showNotification}
           userRole={userRole}
         />
       )}
@@ -185,16 +185,16 @@ const EquipmentList = ({ showNotification, userRole }) => {
             <div key={item.id} className="equipment-card">
               {item.image_url && (
                 <div className="equipment-image-container">
-                  <img 
-                    src={getImageUrl(item.image_url)} 
-                    alt={item.code_name} 
+                  <img
+                    src={getImageUrl(item.image_url)}
+                    alt={item.code_name}
                     className="equipment-image"
                     onError={(e) => {
                       e.target.style.display = 'none';
                       console.log('სურათის ჩატვირთვის შეცდომა:', item.image_url);
                     }}
                     loading="lazy"
-                  /> 
+                  />
                 </div>
               )}
 
@@ -247,14 +247,18 @@ const EquipmentList = ({ showNotification, userRole }) => {
               </div>
 
               {isAuthorizedForManagement && (
-                <div className="equipment-actions">
-                  <button className="edit" onClick={() => handleEditClick(item)}>
-                    რედაქტირება
+                <div className="actions">
+                  <button
+                    className="edit"
+                    onClick={() => handleEditClick(item)}
+                    title="რედაქტირება"
+                  >
                   </button>
-                  <button 
-                    className="delete" 
-                    onClick={() => handleDelete(item.id)}>
-                    წაშლა
+                  <button
+                    className="delete"
+                    onClick={() => handleDelete(item.id)}
+                    title="წაშლა"
+                  >
                   </button>
                 </div>
               )}

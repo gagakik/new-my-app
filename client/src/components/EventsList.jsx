@@ -15,12 +15,13 @@ const EventsList = ({ showNotification, userRole }) => {
   const [showParticipants, setShowParticipants] = useState(false);
   const [showEventCompletion, setShowEventCompletion] = useState(false);
   const [selectedEventForCompletion, setSelectedEventForCompletion] = useState(null);
-  
+
   // ფილტრებისა და ძიების სტეიტები
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [showArchivedOnly, setShowArchivedOnly] = useState(false);
 
   const isAuthorizedForManagement =
     userRole === 'admin' ||
@@ -40,8 +41,8 @@ const EventsList = ({ showNotification, userRole }) => {
         'Content-Type': 'application/json'
       };
 
-      console.log('Fetching events from /api/events');
-      const response = await fetch('/api/events', { headers });
+      console.log('Fetching events from /api/annual-services');
+      const response = await fetch('/api/annual-services', { headers });
 
       if (!response.ok) {
         console.error('Events API failed with status:', response.status);
@@ -99,6 +100,13 @@ const EventsList = ({ showNotification, userRole }) => {
   useEffect(() => {
     let filtered = [...events];
 
+    // ფილტრაცია არქივის მიხედვით
+    if (showArchivedOnly) {
+      filtered = filtered.filter(event => event.is_archived);
+    } else {
+      filtered = filtered.filter(event => !event.is_archived);
+    }
+
     // ძიება სახელის მიხედვით
     if (searchTerm) {
       filtered = filtered.filter(event =>
@@ -132,7 +140,7 @@ const EventsList = ({ showNotification, userRole }) => {
     }
 
     setFilteredEvents(filtered);
-  }, [events, searchTerm, selectedYear, selectedMonth, statusFilter]);
+  }, [events, searchTerm, selectedYear, selectedMonth, statusFilter, showArchivedOnly]);
 
   // წლების სია
   const getAvailableYears = () => {
@@ -161,6 +169,7 @@ const EventsList = ({ showNotification, userRole }) => {
     setSelectedYear('');
     setSelectedMonth('');
     setStatusFilter('');
+    setShowArchivedOnly(false);
   };
 
   const handleDelete = async (id) => {
@@ -188,8 +197,7 @@ const EventsList = ({ showNotification, userRole }) => {
         const errorData = await response.json();
         showNotification(`წაშლა ვერ მოხერხდა: ${errorData.message}`, 'error');
       }
-    } catch (error) {
-      console.error('შეცდომა წაშლისას:', error);
+    } catch  {
       showNotification('დაფიქსირდა შეცდომა სერვერთან კავშირისას.', 'error');
     }
   };
@@ -223,7 +231,32 @@ const EventsList = ({ showNotification, userRole }) => {
         const errorData = await response.json();
         showNotification(`არქივში გადატანა ვერ მოხერხდა: ${errorData.message}`, 'error');
       }
-    } catch (error) {
+    } catch {
+      showNotification('დაფიქსირდა შეცდომა სერვერთან კავშირისას.', 'error');
+    }
+  };
+
+  const handleRestore = async (id) => {
+    const isConfirmed = window.confirm('ნამდვილად გსურთ ამ ივენთის არქივიდან აღდგენა?');
+    if (!isConfirmed) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/annual-services/${id}/restore`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        showNotification('ივენთი წარმატებით აღდგა არქივიდან!', 'success');
+        fetchEvents();
+      } else {
+        const errorData = await response.json();
+        showNotification(`არქივიდან აღდგენა ვერ მოხერხდა: ${errorData.message}`, 'error');
+      }
+    } catch {
       showNotification('დაფიქსირდა შეცდომა სერვერთან კავშირისას.', 'error');
     }
   };
@@ -242,7 +275,7 @@ const EventsList = ({ showNotification, userRole }) => {
       } else {
         showNotification('ივენთის დეტალების მიღება ვერ მოხერხდა', 'error');
       }
-    } catch (error) {
+    } catch {
       showNotification('შეცდომა ივენთის დეტალების ჩატვირთვისას', 'error');
     }
   };
@@ -257,7 +290,7 @@ const EventsList = ({ showNotification, userRole }) => {
     setShowEventCompletion(true);
   };
 
-  const handleCompletionSuccess = (report) => {
+  const handleCompletionSuccess = () => {
     showNotification('ივენთი წარმატებით დასრულდა!', 'success');
     fetchEvents(); // ივენთების სიის განახლება
   };
@@ -288,12 +321,22 @@ const EventsList = ({ showNotification, userRole }) => {
 
   return (
     <div className="events-container">
-      <h2>ივენთები</h2>
-      {isAuthorizedForManagement && (
-        <button className="add-new" onClick={() => setEditingId(0)}>
-          ახალი ივენთის დამატება
-        </button>
-      )}
+      <div className="header-section">
+        <h2>{showArchivedOnly ? 'არქივი' : 'ივენთები'}</h2>
+        <div className="header-actions">
+          <button
+            className={`archive-toggle ${showArchivedOnly ? 'active' : ''}`}
+            onClick={() => setShowArchivedOnly(!showArchivedOnly)}
+          >
+            {showArchivedOnly ? 'აქტიური ივენთები' : 'არქივი'}
+          </button>
+          {isAuthorizedForManagement && !showArchivedOnly && (
+            <button className="add-new" onClick={() => setEditingId(0)}>
+              ახალი ივენთის დამატება
+            </button>
+          )}
+        </div>
+      </div>
 
       {editingId !== null && isAuthorizedForManagement && (
          <EventForm
@@ -315,11 +358,11 @@ const EventsList = ({ showNotification, userRole }) => {
               className="search-input"
             />
           </div>
-          
+
           <div className="filter-group">
             <label>წელი</label>
-            <select 
-              value={selectedYear} 
+            <select
+              value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
               className="filter-select"
             >
@@ -332,8 +375,8 @@ const EventsList = ({ showNotification, userRole }) => {
 
           <div className="filter-group">
             <label>თვე</label>
-            <select 
-              value={selectedMonth} 
+            <select
+              value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
               className="filter-select"
             >
@@ -346,8 +389,8 @@ const EventsList = ({ showNotification, userRole }) => {
 
           <div className="filter-group">
             <label>სტატუსი</label>
-            <select 
-              value={statusFilter} 
+            <select
+              value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="filter-select"
             >
@@ -366,15 +409,17 @@ const EventsList = ({ showNotification, userRole }) => {
             </button>
           </div>
         </div>
-        
+
         <div className="results-info">
-          ნაპოვნია: {filteredEvents.length} ივენთი {events.length}-დან
+          ნაპოვნია: {filteredEvents.length} {showArchivedOnly ? 'არქივული' : 'აქტიური'} ივენთი
         </div>
       </div>
 
       {filteredEvents.length === 0 ? (
         <p className="no-events">
-          {events.length === 0 ? 'ივენთები არ მოიძებნა.' : 'ფილტრების შესაბამისი ივენთები არ მოიძებნა.'}
+          {showArchivedOnly
+            ? 'არქივში ივენთები არ მოიძებნა.'
+            : (events.length === 0 ? 'ივენთები არ მოიძებნა.' : 'ფილტრების შესაბამისი ივენთები არ მოიძებნა.')}
         </p>
       ) : (
         <div className="events-grid">
@@ -413,36 +458,54 @@ const EventsList = ({ showNotification, userRole }) => {
                   </div>
                 </div>
 
-                <div className="event-actions">
-                  <button className="view" onClick={() => viewEventDetails(event)}>
-                    ნახვა
+                <div className="actions">
+                  <button
+                    className="view"
+                    onClick={() => viewEventDetails(event)}
+                    title="დეტალების ნახვა"
+                  >
                   </button>
-                  <button className="participants" onClick={() => handleShowParticipants(event)}>
-                    მონაწილეები
+                  <button
+                    className="participants"
+                    onClick={() => handleShowParticipants(event)}
+                    title="მონაწილეები"
+                  >
                   </button>
                   {isAuthorizedForManagement && (
                     <>
-                      <button className="edit" onClick={() => handleEditClick(event)}>
-                        რედაქტირება
-                      </button>
+                      {!showArchivedOnly && (
+                        <button
+                          className="edit"
+                          onClick={() => handleEditClick(event)}
+                          title="რედაქტირება"
+                        >
+                        </button>
+                      )}
                       {status.class === 'finished' && !event.is_archived && (
                         <>
                           <button
                             className="complete"
-                            onClick={() => handleCompleteEvent(event)}>
-                            დასრულება
+                            onClick={() => handleCompleteEvent(event)}
+                            title="ივენთის დასრულება">
                           </button>
                           <button
                             className="archive"
-                            onClick={() => handleArchive(event.id)}>
-                            არქივი
+                            onClick={() => handleArchive(event.id)}
+                            title="არქივში გადატანა">
                           </button>
                         </>
                       )}
+                      {showArchivedOnly && event.is_archived && (
+                        <button
+                          className="restore"
+                          onClick={() => handleRestore(event.id)}
+                          title="არქივიდან აღდგენა">
+                        </button>
+                      )}
                       <button
                         className="delete"
-                        onClick={() => handleDelete(event.id)}>
-                        წაშლა
+                        onClick={() => handleDelete(event.id)}
+                        title="წაშლა">
                       </button>
                     </>
                   )}

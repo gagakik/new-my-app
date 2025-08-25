@@ -260,5 +260,5 @@ JWT_SECRET=YOUR_SECRET_KEY
 # Node Environment
 NODE_ENV=development
 
-
-npm install xlsx multer
+npm install react-qr-code html2canvas jspdf
+npm install qrcode-generator
