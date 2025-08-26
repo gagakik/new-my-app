@@ -12,6 +12,7 @@ import QRScanner from './QRScanner'; // Import QRScanner
 import StandManagement from './StandManagement'; // Import StandManagement
 import OperatorManagement from './OperatorManagement';
 import OperationalIntegratedView from './OperationalIntegratedView';
+
 import './MainContent.css';
 
 const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
@@ -20,6 +21,7 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isMobileNavExpanded, setIsMobileNavExpanded] = useState(false);
+  const [isOperationalExpanded, setIsOperationalExpanded] = useState(true);
 
 
   const toggleMenu = () => {
@@ -46,6 +48,10 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
     console.log('Mobile nav toggled:', !isMobileNavExpanded); // Debug log
   };
 
+  const toggleOperationalSection = () => {
+    setIsOperationalExpanded(!isOperationalExpanded);
+  };
+
   return (
     <div className="main-content">
       <div className="user-header">
@@ -59,7 +65,7 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
       </div>
       <div className="main-layout">
         <nav className={`main-nav ${isMenuOpen ? 'mobile-open' : ''}`}>
-          <button 
+          <button
             className={`mobile-menu-toggle ${isMobileNavExpanded ? 'active' : ''}`}
             onClick={toggleMobileNav}
           >
@@ -154,11 +160,15 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
             {/* Operational Section */}
             {(userRole === 'admin' || userRole === 'operation') && (
               <div className="nav-section">
-                <div className="nav-section-title">
+                <div
+                  className={`nav-section-title collapsible ${isOperationalExpanded ? 'expanded' : ''}`}
+                  onClick={toggleOperationalSection}
+                >
                   <i className="icon-operational">⚙️</i>
                   საოპერაციო
+                  <span className="collapse-icon">▶</span>
                 </div>
-                <div className="nav-subsection">
+                <div className={`nav-subsections ${isOperationalExpanded ? 'expanded' : 'collapsed'}`}>
                   <button
                     className={activeSection === 'operator-management' ? 'active subsection' : 'subsection'}
                     onClick={() => handleSectionChange('operator-management')}
@@ -232,9 +242,9 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
             <UserManagement showNotification={showNotification} />
           )}
            {activeSection === 'eventReports' && (
-            <EventReports 
-              showNotification={showNotification} 
-              userRole={userRole} 
+            <EventReports
+              showNotification={showNotification}
+              userRole={userRole}
             />
           )}
           {/* Render QRScanner component */}
