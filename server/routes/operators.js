@@ -23,7 +23,7 @@ router.get('/', (req, res) => {
 
 // ახალი ოპერატორის დამატება
 router.post('/', (req, res) => {
-  const { name, email, phone, role, status } = req.body;
+  const { name, phone, role, status } = req.body;
   const db = new sqlite3.Database(dbPath);
   
   // ცხრილის შექმნა თუ არ არსებობს
@@ -31,7 +31,7 @@ router.post('/', (req, res) => {
     CREATE TABLE IF NOT EXISTS operators (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
-      email TEXT UNIQUE NOT NULL,
+      email TEXT,
       phone TEXT,
       role TEXT DEFAULT 'operator',
       status TEXT DEFAULT 'active',
@@ -45,8 +45,8 @@ router.post('/', (req, res) => {
   });
   
   db.run(
-    'INSERT INTO operators (name, email, phone, role, status) VALUES (?, ?, ?, ?, ?)',
-    [name, email, phone, role, status],
+    'INSERT INTO operators (name, phone, role, status) VALUES (?, ?, ?, ?)',
+    [name, phone, role, status],
     function(err) {
       if (err) {
         console.error('ოპერატორის დამატების შეცდომა:', err);
@@ -55,7 +55,6 @@ router.post('/', (req, res) => {
       res.status(201).json({ 
         id: this.lastID,
         name,
-        email,
         phone,
         role,
         status
@@ -69,12 +68,12 @@ router.post('/', (req, res) => {
 // ოპერატორის განახლება
 router.put('/:id', (req, res) => {
   const { id } = req.params;
-  const { name, email, phone, role, status } = req.body;
+  const { name, phone, role, status } = req.body;
   const db = new sqlite3.Database(dbPath);
   
   db.run(
-    'UPDATE operators SET name = ?, email = ?, phone = ?, role = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-    [name, email, phone, role, status, id],
+    'UPDATE operators SET name = ?, phone = ?, role = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+    [name, phone, role, status, id],
     function(err) {
       if (err) {
         console.error('ოპერატორის განახლების შეცდომა:', err);

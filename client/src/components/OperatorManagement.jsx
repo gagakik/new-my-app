@@ -9,7 +9,6 @@ const OperatorManagement = ({ showNotification, userRole }) => {
   const [editingOperator, setEditingOperator] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
     phone: '',
     role: 'operator',
     status: 'active'
@@ -66,7 +65,7 @@ const OperatorManagement = ({ showNotification, userRole }) => {
         );
         setShowForm(false);
         setEditingOperator(null);
-        setFormData({ name: '', email: '', phone: '', role: 'operator', status: 'active' });
+        setFormData({ name: '', phone: '', role: 'operator', status: 'active' });
         fetchOperators();
       } else {
         throw new Error('ოპერატორის შენახვის შეცდომა');
@@ -80,7 +79,6 @@ const OperatorManagement = ({ showNotification, userRole }) => {
     setEditingOperator(operator);
     setFormData({
       name: operator.name,
-      email: operator.email,
       phone: operator.phone,
       role: operator.role,
       status: operator.status
@@ -122,7 +120,7 @@ const OperatorManagement = ({ showNotification, userRole }) => {
   const resetForm = () => {
     setShowForm(false);
     setEditingOperator(null);
-    setFormData({ name: '', email: '', phone: '', role: 'operator', status: 'active' });
+    setFormData({ name: '', phone: '', role: 'operator', status: 'active' });
   };
 
   return (
@@ -143,7 +141,7 @@ const OperatorManagement = ({ showNotification, userRole }) => {
             <h3>{editingOperator ? 'ოპერატორის რედაქტირება' : 'ახალი ოპერატორის დამატება'}</h3>
             <form onSubmit={handleSubmit}>
               <div className="form-group">
-                <label>სახელი</label>
+                <label>სახელი გვარი</label>
                 <input
                   type="text"
                   name="name"
@@ -153,17 +151,7 @@ const OperatorManagement = ({ showNotification, userRole }) => {
                 />
               </div>
               <div className="form-group">
-                <label>ელ. ფოსტა</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>ტელეფონი</label>
+                <label>ტელეფონის ნომერი</label>
                 <input
                   type="tel"
                   name="phone"
@@ -220,8 +208,7 @@ const OperatorManagement = ({ showNotification, userRole }) => {
                 <div key={operator.id} className="operator-card">
                   <div className="operator-info">
                     <h3>{operator.name}</h3>
-                    <p className="operator-email">{operator.email}</p>
-                    <p className="operator-phone">{operator.phone}</p>
+                    <p className="operator-phone">📞 {operator.phone}</p>
                     <div className="operator-meta">
                       <span className={`operator-role ${operator.role}`}>
                         {operator.role === 'operator' ? 'ოპერატორი' : 'ზედამხედველი'}

@@ -1686,10 +1686,12 @@ const checkinRoutes = require('./routes/checkin');
 const analyticsRoutes = require('./routes/analytics');
 const standsRoutes = require('./routes/stands');
 const operatorsRoutes = require('./routes/operators');
+const payrollRoutes = require('./routes/payroll');
 
 // Use routes
 app.use('/api/companies', companiesRoutes);
 app.use('/api/operators', operatorsRoutes);
+app.use('/api/payroll', payrollRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/statistics', statisticsRoutes);
 app.use('/api/equipment', equipmentRoutes);
