@@ -704,33 +704,6 @@ app.delete('/api/events/:id', authenticateToken, authorizeRoles('admin', 'manage
   }
 });
 
-// GET: Participant Equipment Bookings
-app.get('/api/participants/:participantId/equipment-bookings', authenticateToken, async (req, res) => {
-  try {
-    const { participantId } = req.params;
-
-    const result = await db.query(`
-      SELECT 
-        eb.id,
-        eb.equipment_id,
-        eb.quantity,
-        e.code_name,
-        e.description,
-        e.price as unit_price,
-        (eb.quantity * e.price) as total_price
-      FROM equipment_bookings eb
-      JOIN equipment e ON eb.equipment_id = e.id
-      WHERE eb.participant_id = $1
-      ORDER BY e.code_name
-    `, [participantId]);
-
-    res.json(result.rows);
-  } catch (error) {
-    console.error('მონაწილის აღჭურვილობის მიღების შეცდომა:', error);
-    res.status(500).json({ message: 'აღჭურვილობის ინფორმაციის მიღება ვერ მოხერხდა' });
-  }
-});
-
 // GET: Event Participants List
 app.get('/api/events/:eventId/participants', authenticateToken, async (req, res) => {
   const { eventId } = req.params;
@@ -1607,7 +1580,7 @@ app.put('/api/annual-services/:id/restore', authenticateToken, authorizeRoles('a
 });
 
 // Start server
-const HOST = '0.0.0.0';
+const HOST = process.env.HOST || '0.0.0.0';
 app.listen(PORT, HOST, () => {
   console.log(`სერვერი მუშაობს ${HOST}:${PORT}`);
 });
@@ -1677,7 +1650,6 @@ app.get('/api/reports/user-analysis', authenticateToken, async (req, res) => {
 // Routes
 const companiesRoutes = require('./routes/companies');
 const equipmentRoutes = require('./routes/equipment');
-<<<<<<< HEAD
 const importRoutes = require('./routes/import');
 const statisticsRoutes = require('./routes/statistics');
 const packagesRoutes = require('./routes/packages');
@@ -1687,29 +1659,4 @@ app.use('/api/equipment', equipmentRoutes);
 app.use('/api/import', importRoutes);
 app.use('/api/statistics', statisticsRoutes);
 app.use('/api/packages', packagesRoutes);
-=======
-const statisticsRoutes = require('./routes/statistics');
-const reportsRoutes = require('./routes/reports');
-const importRoutes = require('./routes/import');
-const packagesRoutes = require('./routes/packages');
-const pricingRoutes = require('./routes/pricing');
-const checkinRoutes = require('./routes/checkin');
-const analyticsRoutes = require('./routes/analytics');
-const standsRoutes = require('./routes/stands');
-const operatorsRoutes = require('./routes/operators');
-const payrollRoutes = require('./routes/payroll');
-
-// Use routes
-app.use('/api/companies', companiesRoutes);
-app.use('/api/operators', operatorsRoutes);
-app.use('/api/payroll', payrollRoutes);
-app.use('/api/analytics', analyticsRoutes);
-app.use('/api/statistics', statisticsRoutes);
-app.use('/api/equipment', equipmentRoutes);
-app.use('/api/stands', standsRoutes);
-app.use('/api/packages', packagesRoutes);
-app.use('/api/pricing', pricingRoutes);
-app.use('/api/checkin', checkinRoutes);
-app.use('/api/import', importRoutes);
->>>>>>> 69839e7f531fc0d1d2a33dd88efd1bda7a08baab
 app.use('/api/reports', reportsRoutes);

@@ -25,7 +25,7 @@ function authenticateToken(req, res, next) {
 router.get('/', authenticateToken, async (req, res) => {
     try {
         const { searchTerm, country, profile, status, identification_code } = req.query;
-
+        
         let query = `
             SELECT 
                 c.*,
@@ -36,50 +36,47 @@ router.get('/', authenticateToken, async (req, res) => {
             LEFT JOIN users u2 ON c.updated_by_user_id = u2.id
             WHERE 1=1
         `;
-
+        
         const queryParams = [];
         let paramCount = 0;
-
+        
         // ძებნა კომპანიის სახელით
         if (searchTerm) {
             paramCount++;
             query += ` AND LOWER(c.company_name) LIKE LOWER($${paramCount})`;
             queryParams.push(`%${searchTerm}%`);
         }
-
+        
         // ფილტრი ქვეყნის მიხედვით
         if (country) {
             paramCount++;
             query += ` AND c.country = $${paramCount}`;
             queryParams.push(country);
         }
-
+        
         // ფილტრი პროფილის მიხედვით
         if (profile) {
             paramCount++;
             query += ` AND LOWER(c.company_profile) LIKE LOWER($${paramCount})`;
             queryParams.push(`%${profile}%`);
         }
-
+        
         // ფილტრი სტატუსის მიხედვით
         if (status) {
             paramCount++;
             query += ` AND c.status = $${paramCount}`;
             queryParams.push(status);
         }
-
+        
         // ფილტრი საიდენტიფიკაციო კოდის მიხედვით
         if (identification_code) {
             paramCount++;
             query += ` AND c.identification_code LIKE $${paramCount}`;
             queryParams.push(`%${identification_code}%`);
         }
-
+        
         query += ` ORDER BY c.created_at DESC`;
-
-        console.log('Final query:', query);
-        console.log('Query params:', queryParams);
-
+        
         const result = await db.query(query, queryParams);
 
         // Parse contact_persons and selected_exhibitions JSON for each company
@@ -395,13 +392,13 @@ router.put('/:id', authenticateToken, async (req, res) => {
         }
 
         const company = result.rows[0];
-
+        
         // PostgreSQL returns JSON data as parsed objects, not strings
         // Handle contact_persons
         if (!company.contact_persons || !Array.isArray(company.contact_persons)) {
             company.contact_persons = [];
         }
-
+        
         // Handle selected_exhibitions  
         if (!company.selected_exhibitions || !Array.isArray(company.selected_exhibitions)) {
             company.selected_exhibitions = [];
