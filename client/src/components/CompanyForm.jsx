@@ -184,6 +184,10 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification, onCanc
               onCompanyUpdated();
             }}
           >
+<<<<<<< HEAD
+=======
+             ✕
+>>>>>>> 69839e7f531fc0d1d2a33dd88efd1bda7a08baab
           </button>
         </div>
         <div className="modal-body">

@@ -78,9 +78,9 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
     // Sales role
     if (userRole === 'sales' || userRole === 'admin') {
       menus.push({
-        key: 'sales',
-        label: 'Sales',
-        icon: '💼',
+        key: 'companies',
+        label: 'Companies',
+        icon: '🏬',
         items: [
           { key: 'companies', label: 'კომპანიები', icon: '🏬' },
           { key: 'spaces', label: 'სივრცეები', icon: '🏠' },
@@ -134,6 +134,25 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
         action: () => handleViewChange('exhibitions')
       });
     }
+
+    // AI Analytics (for all users)
+    menus.push({
+      key: 'ai-analytics',
+      label: 'AI Analytics',
+      icon: '🧠',
+      single: true,
+      action: () => handleViewChange('ai-analytics')
+    });
+
+    // Bookings List (for all users)
+    menus.push({
+      key: 'bookings',
+      label: 'Bookings List',
+      icon: '📋',
+      single: true,
+      action: () => handleViewChange('bookings')
+    });
+
 
     // Profile (for all users)
     menus.push({

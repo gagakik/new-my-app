@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import './ExhibitionForm.css';
 import PackageManager from './PackageManager';
+import PricingManager from './PricingManager';
+import PriceCalculator from './PriceCalculator'; // Assuming PriceCalculator is in the same directory
 
 const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotification, onCancel }) => {
   const [exhibitionName, setExhibitionName] = useState('');
@@ -82,6 +84,10 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
               onExhibitionUpdated();
             }}
           >
+<<<<<<< HEAD
+=======
+             ✕
+>>>>>>> 69839e7f531fc0d1d2a33dd88efd1bda7a08baab
           </button>
         </div>
         <div className="modal-body">
@@ -151,6 +157,30 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
               />
             </div>
           )}
+<<<<<<< HEAD
+=======
+
+          {/* ფასწარმოების მენეჯმენტი - მხოლოდ რედაქტირების დროს */}
+          {isEditing && exhibitionToEdit && exhibitionToEdit.id && (
+            <div className="pricing-section">
+              <PricingManager 
+                exhibitionId={exhibitionToEdit.id}
+                showNotification={showNotification}
+              />
+              <div className="price-preview">
+                <h4>ფასის პრევიუ</h4>
+                <PriceCalculator
+                  exhibitionId={exhibitionToEdit.id}
+                  boothSize="12" 
+                  showNotification={showNotification}
+                  onPriceCalculated={(pricing) => {
+                    console.log('Calculated pricing:', pricing);
+                  }}
+                />
+              </div>
+            </div>
+          )}
+>>>>>>> 69839e7f531fc0d1d2a33dd88efd1bda7a08baab
         </div>
       </div>
     </div>

@@ -8,6 +8,10 @@ import EventsList from './EventsList';
 import Statistics from './Statistics';
 import EventReports from './EventReports';
 import UserProfile from './UserProfile';
+import QRScanner from './QRScanner'; // Import QRScanner
+import StandManagement from './StandManagement'; // Import StandManagement
+import OperatorManagement from './OperatorManagement';
+import OperationalIntegratedView from './OperationalIntegratedView';
 
 import './MainContent.css';
 
@@ -16,6 +20,9 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isMobileNavExpanded, setIsMobileNavExpanded] = useState(false);
+  const [isOperationalExpanded, setIsOperationalExpanded] = useState(true);
+
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -27,12 +34,22 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
       setError(null);
       setActiveSection(section);
       setIsMenuOpen(false); // Close menu on mobile when section is selected
+      setIsMobileNavExpanded(false); // Close accordion when section is selected
     } catch (err) {
       setError('Section change failed');
       showNotification('სექციის ცვლილება ვერ მოხერხდა', 'error');
     } finally {
       setLoading(false);
     }
+  };
+
+  const toggleMobileNav = () => {
+    setIsMobileNavExpanded(prev => !prev);
+    console.log('Mobile nav toggled:', !isMobileNavExpanded); // Debug log
+  };
+
+  const toggleOperationalSection = () => {
+    setIsOperationalExpanded(!isOperationalExpanded);
   };
 
   return (
@@ -48,14 +65,22 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
       </div>
       <div className="main-layout">
         <nav className={`main-nav ${isMenuOpen ? 'mobile-open' : ''}`}>
-          <button className="mobile-menu-toggle" onClick={toggleMenu}>
-            <span className="hamburger"></span>
-            <span className="hamburger"></span>
-            <span className="hamburger"></span>
+          <button
+            className={`mobile-menu-toggle ${isMobileNavExpanded ? 'active' : ''}`}
+            onClick={toggleMobileNav}
+          >
+            <div>
+              <span className={`hamburger ${isMobileNavExpanded ? 'open' : ''}`}></span>
+              <span className={`hamburger ${isMobileNavExpanded ? 'open' : ''}`}></span>
+              <span className={`hamburger ${isMobileNavExpanded ? 'open' : ''}`}></span>
+            </div>
             <span className="menu-text">მენიუ</span>
+            <span className={`nav-icon ${isMobileNavExpanded ? 'expanded' : ''}`}>
+              {isMobileNavExpanded ? '▲' : '▼'}
+            </span>
           </button>
 
-          <div className="nav-items">
+          <div className={`nav-items ${isMobileNavExpanded ? 'expanded' : ''}`}>
             <button
               className={activeSection === 'dashboard' ? 'active' : ''}
               onClick={() => handleSectionChange('dashboard')}
@@ -123,6 +148,51 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
                 Event Reports
               </button>
             )}
+            {/* New menu item for QR Scanner */}
+            <button
+              className={activeSection === 'checkin' ? 'active' : ''}
+              onClick={() => handleSectionChange('checkin')}
+            >
+              <i className="icon-qr-scan">📱</i>
+              მობაილური Check-in
+            </button>
+
+            {/* Operational Section */}
+            {(userRole === 'admin' || userRole === 'operation') && (
+              <div className="nav-section">
+                <div
+                  className={`nav-section-title collapsible ${isOperationalExpanded ? 'expanded' : ''}`}
+                  onClick={toggleOperationalSection}
+                >
+                  <i className="icon-operational">⚙️</i>
+                  საოპერაციო
+                  <span className="collapse-icon">▶</span>
+                </div>
+                <div className={`nav-subsections ${isOperationalExpanded ? 'expanded' : 'collapsed'}`}>
+                  <button
+                    className={activeSection === 'operator-management' ? 'active subsection' : 'subsection'}
+                    onClick={() => handleSectionChange('operator-management')}
+                  >
+                    <i className="icon-operators">👷</i>
+                    ოპერატორების მართვა
+                  </button>
+                  <button
+                    className={activeSection === 'stands' ? 'active subsection' : 'subsection'}
+                    onClick={() => handleSectionChange('stands')}
+                  >
+                    <i className="icon-stands">🏗️</i>
+                    სტენდების მართვა
+                  </button>
+                  <button
+                    className={activeSection === 'operational-integrated' ? 'active subsection' : 'subsection'}
+                    onClick={() => handleSectionChange('operational-integrated')}
+                  >
+                    <i className="icon-integrated">🔗</i>
+                    ინტეგრირებული ხედვა
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </nav>
 
@@ -172,10 +242,29 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
             <UserManagement showNotification={showNotification} />
           )}
            {activeSection === 'eventReports' && (
-            <EventReports 
-              showNotification={showNotification} 
-              userRole={userRole} 
+            <EventReports
+              showNotification={showNotification}
+              userRole={userRole}
             />
+          )}
+          {/* Render QRScanner component */}
+          {activeSection === 'checkin' && (
+            <QRScanner showNotification={showNotification} userRole={userRole} />
+          )}
+
+          {/* Operational Section - Operator Management */}
+          {activeSection === 'operator-management' && (
+            <OperatorManagement showNotification={showNotification} userRole={userRole} />
+          )}
+
+          {/* Operational Section - Stand Management */}
+          {activeSection === 'stands' && (
+            <StandManagement showNotification={showNotification} userRole={userRole} />
+          )}
+
+          {/* Operational Section - Integrated View */}
+          {activeSection === 'operational-integrated' && (
+            <OperationalIntegratedView showNotification={showNotification} userRole={userRole} />
           )}
         </div>
       </div>

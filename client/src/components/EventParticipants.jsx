@@ -884,6 +884,10 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
               onClose();
             }}
           >
+<<<<<<< HEAD
+=======
+             ✕
+>>>>>>> 69839e7f531fc0d1d2a33dd88efd1bda7a08baab
           </button>
         </div>
 
@@ -1311,7 +1315,6 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                           step="0.01"
                           value={item.unit_price}
                           onChange={(e) => handleEquipmentChange(index, 'unit_price', e.target.value)}
-                          // Unit price should be editable if not part of a package, or if overridden
                           readOnly={registrationType === 'package' && selectedPackage?.equipment_list?.some(pkgEq => pkgEq.equipment_id === parseInt(item.equipment_id))}
                         />
                       </div>

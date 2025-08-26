@@ -334,6 +334,52 @@ input:focus, textarea:focus, select:focus {
   background-clip: text;
 }
 
+/* Missing CSS variables */
+:root {
+  --hover-bg: rgba(0, 0, 0, 0.05);
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+}
+
+[data-theme="dark"] {
+  --hover-bg: rgba(255, 255, 255, 0.05);
+  --bg-primary: #2d3748;
+  --bg-secondary: #4a5568;
+}
+
+/* Improved button styling */
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+}
+
+.btn-secondary {
+  background: transparent;
+  border: 2px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+  background: var(--hover-bg);
+  border-color: #667eea;
+}
+
 /* Responsive improvements */
 @media (max-width: 820px) and (min-width: 391px) {
   button {

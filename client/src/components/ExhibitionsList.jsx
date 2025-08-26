@@ -129,7 +129,7 @@ const ExhibitionsList = ({ showNotification, userRole }) => { // მივიღ
               <th>გამოფენის სახელი</th>
               <th>კომენტარი</th>
               <th>მენეჯერი</th>
-              <th>1 კვმ ღირებულება (€)</th>
+              <th>1 კვმ EUR</th>
               <th>შექმნილია</th>
               <th>განახლებულია</th>
               {isAuthorizedForManagement && <th>მოქმედებები</th>}

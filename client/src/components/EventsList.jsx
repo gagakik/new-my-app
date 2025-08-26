@@ -197,8 +197,7 @@ const EventsList = ({ showNotification, userRole }) => {
         const errorData = await response.json();
         showNotification(`წაშლა ვერ მოხერხდა: ${errorData.message}`, 'error');
       }
-    } catch (error) {
-      console.error('შეცდომა წაშლისას:', error);
+    } catch {
       showNotification('დაფიქსირდა შეცდომა სერვერთან კავშირისას.', 'error');
     }
   };
@@ -232,7 +231,7 @@ const EventsList = ({ showNotification, userRole }) => {
         const errorData = await response.json();
         showNotification(`არქივში გადატანა ვერ მოხერხდა: ${errorData.message}`, 'error');
       }
-    } catch (error) {
+    } catch {
       showNotification('დაფიქსირდა შეცდომა სერვერთან კავშირისას.', 'error');
     }
   };
@@ -257,7 +256,7 @@ const EventsList = ({ showNotification, userRole }) => {
         const errorData = await response.json();
         showNotification(`არქივიდან აღდგენა ვერ მოხერხდა: ${errorData.message}`, 'error');
       }
-    } catch (error) {
+    } catch {
       showNotification('დაფიქსირდა შეცდომა სერვერთან კავშირისას.', 'error');
     }
   };
@@ -276,7 +275,7 @@ const EventsList = ({ showNotification, userRole }) => {
       } else {
         showNotification('ივენთის დეტალების მიღება ვერ მოხერხდა', 'error');
       }
-    } catch (error) {
+    } catch {
       showNotification('შეცდომა ივენთის დეტალების ჩატვირთვისას', 'error');
     }
   };
@@ -291,7 +290,7 @@ const EventsList = ({ showNotification, userRole }) => {
     setShowEventCompletion(true);
   };
 
-  const handleCompletionSuccess = (report) => {
+  const handleCompletionSuccess = () => {
     showNotification('ივენთი წარმატებით დასრულდა!', 'success');
     fetchEvents(); // ივენთების სიის განახლება
   };

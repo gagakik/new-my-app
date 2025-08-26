@@ -1,33 +1,29 @@
-const { Pool } = require('pg');
-require('dotenv').config();
+const { Pool } = require("pg");
+require("dotenv").config();
 
 // Create PostgreSQL connection pool
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  max: 10,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
 });
 
-pool.on('connect', () => {
-  console.log('PostgreSQL ბაზასთან კავშირი დამყარდა');
+pool.on("connect", () => {
+  console.log("PostgreSQL ბაზასთან კავშირი დამყარდა");
 });
 
-pool.on('error', (err) => {
-  console.error('PostgreSQL კავშირის შეცდომა:', err);
+pool.on("error", (err) => {
+  console.error("PostgreSQL კავშირის შეცდომა:", err);
 });
 
 // Promise wrapper for database queries
 const query = async (text, params = []) => {
-  console.log('Executing PostgreSQL query:', text, 'with params:', params);
+  console.log("Executing PostgreSQL query:", text, "with params:", params);
 
   try {
     const result = await pool.query(text, params);
-    console.log('PostgreSQL query result:', result.rowCount, 'rows affected');
+    console.log("PostgreSQL query result:", result.rowCount, "rows affected");
     return result;
   } catch (error) {
-    console.error('PostgreSQL query error:', error);
+    console.error("PostgreSQL query error:", error);
     throw error;
   }
 };
@@ -35,7 +31,7 @@ const query = async (text, params = []) => {
 // Initialize tables with PostgreSQL syntax
 const createTables = async () => {
   try {
-    console.log('PostgreSQL ცხრილების შექმნის დაწყება...');
+    console.log("PostgreSQL ცხრილების შექმნის დაწყება...");
 
     // Users table
     await query(`
@@ -43,11 +39,11 @@ const createTables = async () => {
         id SERIAL PRIMARY KEY,
         username VARCHAR(255) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
-        role VARCHAR(50) DEFAULT 'user' CHECK (role IN ('admin', 'manager', 'sales', 'marketing', 'user')),
+        role VARCHAR(50) DEFAULT 'user' CHECK (role IN ('admin', 'manager', 'sales', 'marketing', 'user', 'operation', 'finance')),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    console.log('Users table created/verified successfully');
+    console.log("Users table created/verified successfully");
 
     // Companies table
     await query(`
@@ -142,33 +138,33 @@ const createTables = async () => {
     `);
 
     // Event participants table - original version
-    // await query(`
-    //   CREATE TABLE IF NOT EXISTS event_participants (
-    //     id SERIAL PRIMARY KEY,
-    //     event_id INTEGER NOT NULL,
-    //     company_id INTEGER NOT NULL,
-    //     registration_status VARCHAR(100) DEFAULT 'მონაწილეობის მოთხოვნა',
-    //     payment_status VARCHAR(50) DEFAULT 'მომლოდინე',
-    //     booth_number VARCHAR(50),
-    //     booth_size VARCHAR(50),
-    //     notes TEXT,
-    //     contact_person VARCHAR(255),
-    //     contact_position VARCHAR(255),
-    //     contact_email VARCHAR(255),
-    //     contact_phone VARCHAR(50),
-    //     payment_amount DECIMAL(10,2),
-    //     payment_due_date DATE,
-    //     payment_method VARCHAR(100),
-    //     invoice_number VARCHAR(100),
-    //     invoice_file VARCHAR(500),
-    //     contract_file VARCHAR(500),
-    //     handover_file VARCHAR(500),
-    //     registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    //     created_by_user_id INTEGER,
-    //     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    //     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    //   )
-    // `);
+     await query(`
+       CREATE TABLE IF NOT EXISTS event_participants (
+         id SERIAL PRIMARY KEY,
+         event_id INTEGER NOT NULL,
+         company_id INTEGER NOT NULL,
+         registration_status VARCHAR(100) DEFAULT 'მონაწილეობის მოთხოვნა',
+         payment_status VARCHAR(50) DEFAULT 'მომლოდინე',
+         booth_number VARCHAR(50),
+         booth_size VARCHAR(50),
+         notes TEXT,
+         contact_person VARCHAR(255),
+         contact_position VARCHAR(255),
+         contact_email VARCHAR(255),
+         contact_phone VARCHAR(50),
+         payment_amount DECIMAL(10,2),
+         payment_due_date DATE,
+         payment_method VARCHAR(100),
+         invoice_number VARCHAR(100),
+         invoice_file VARCHAR(500),
+         contract_file VARCHAR(500),
+         handover_file VARCHAR(500),
+         registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+         created_by_user_id INTEGER,
+         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+     `);
 
     // Equipment bookings table
     await query(`
@@ -231,6 +227,42 @@ const createTables = async () => {
       )
     `);
 
+    // Dynamic pricing rules
+    await query(`
+      CREATE TABLE IF NOT EXISTS pricing_rules (
+        id SERIAL PRIMARY KEY,
+        exhibition_id INTEGER REFERENCES exhibitions(id) ON DELETE CASCADE,
+        rule_name VARCHAR(255) NOT NULL,
+        rule_type VARCHAR(50) NOT NULL CHECK (rule_type IN ('early_bird', 'volume', 'seasonal', 'last_minute')),
+        discount_percentage DECIMAL(5,2) DEFAULT 0,
+        fixed_discount_amount DECIMAL(10,2) DEFAULT 0,
+        start_date TIMESTAMP,
+        end_date TIMESTAMP,
+        min_area_sqm DECIMAL(10,2),
+        max_area_sqm DECIMAL(10,2),
+        min_participants INTEGER,
+        is_active BOOLEAN DEFAULT true,
+        priority INTEGER DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_by_user_id INTEGER REFERENCES users(id)
+      )
+    `);
+
+    // Participant pricing details
+    await query(`
+      CREATE TABLE IF NOT EXISTS participant_pricing (
+        id SERIAL PRIMARY KEY,
+        participant_id INTEGER REFERENCES event_participants(id) ON DELETE CASCADE,
+        base_price DECIMAL(10,2) NOT NULL,
+        discount_amount DECIMAL(10,2) DEFAULT 0,
+        final_price DECIMAL(10,2) NOT NULL,
+        applied_discounts JSONB,
+        pricing_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        booth_size DECIMAL(10,2),
+        participant_count INTEGER DEFAULT 1
+      )
+    `);
+
     // Participant's package selection
     await query(`
       CREATE TABLE IF NOT EXISTS participant_package_selection (
@@ -256,10 +288,76 @@ const createTables = async () => {
       )
     `);
 
+    // Participant check-ins table
+    await query(`
+      CREATE TABLE IF NOT EXISTS participant_checkins (
+        id SERIAL PRIMARY KEY,
+        participant_id INTEGER REFERENCES event_participants(id) ON DELETE CASCADE,
+        event_id INTEGER REFERENCES annual_services(id) ON DELETE CASCADE,
+        checkin_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        checked_in_by INTEGER REFERENCES users(id),
+        notes TEXT,
+        UNIQUE(participant_id, event_id)
+      )
+    `);
 
-    console.log('ყველა PostgreSQL ცხრილა წარმატებით შეიქმნა');
+    // Stand inventory table
+    await query(`
+      CREATE TABLE IF NOT EXISTS stand_inventory (
+        id SERIAL PRIMARY KEY,
+        stand_id INTEGER NOT NULL,
+        event_id INTEGER REFERENCES annual_services(id) ON DELETE CASCADE,
+        item_name VARCHAR(255) NOT NULL,
+        item_category VARCHAR(100),
+        quantity INTEGER DEFAULT 1,
+        unit VARCHAR(50),
+        status VARCHAR(50) DEFAULT 'needed' CHECK (status IN ('needed', 'ordered', 'in_stock', 'used', 'returned')),
+        supplier VARCHAR(255),
+        cost DECIMAL(10,2),
+        notes TEXT,
+        created_by INTEGER REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Stand photos table
+    await query(`
+      CREATE TABLE IF NOT EXISTS stand_photos (
+        id SERIAL PRIMARY KEY,
+        stand_id INTEGER NOT NULL,
+        event_id INTEGER REFERENCES annual_services(id) ON DELETE CASCADE,
+        photo_type VARCHAR(50) NOT NULL CHECK (photo_type IN ('design', 'progress', 'final', 'materials')),
+        file_path VARCHAR(500) NOT NULL,
+        description TEXT,
+        uploaded_by INTEGER REFERENCES users(id),
+        upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Stand design plans table
+    await query(`
+      CREATE TABLE IF NOT EXISTS stand_designs (
+        id SERIAL PRIMARY KEY,
+        stand_id INTEGER NOT NULL,
+        event_id INTEGER REFERENCES annual_services(id) ON DELETE CASCADE,
+        design_name VARCHAR(255) NOT NULL,
+        design_file_path VARCHAR(500),
+        layout_description TEXT,
+        dimensions JSONB,
+        materials_list JSONB,
+        is_approved BOOLEAN DEFAULT false,
+        approved_by INTEGER REFERENCES users(id),
+        approved_at TIMESTAMP,
+        created_by INTEGER REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    console.log("ყველა PostgreSQL ცხრილა წარმატებით შეიქმნა");
   } catch (error) {
-    console.error('PostgreSQL ცხრილების შექმნის შეცდომა:', error);
+    console.error("PostgreSQL ცხრილების შექმნის შეცდომა:", error);
   }
 };
 
