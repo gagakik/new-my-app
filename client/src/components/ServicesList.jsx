@@ -3,7 +3,6 @@ import './ServicesList.css';
 import ServiceForm from './ServiceForm';
 import { useNavigate } from 'react-router-dom';
 
-
 const ServicesList = ({ showNotification, userRole }) => {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -219,11 +218,7 @@ const ServicesList = ({ showNotification, userRole }) => {
                         >
                         </button>
                         <button
-<<<<<<< HEAD
                           onClick={() => navigate(`/services/edit/${service.id}`)}
-=======
-                          onClick={() => handleEditClick(service)}
->>>>>>> 69839e7f531fc0d1d2a33dd88efd1bda7a08baab
                           className="edit"
                           title="რედაქტირება"
                         >

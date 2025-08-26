@@ -126,12 +126,6 @@
   align-items: end;
 }
 
-.actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 20px;
-}
-
 .clear-filters {
   padding: 8px 16px;
   background-color: #6c757d;
@@ -477,7 +471,6 @@
     padding: 8px 12px;
     font-size: 0.75rem;
   }
-
 
   .modal-content {
     width: 95%;

@@ -316,11 +316,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
 
       {editingExhibitions && (
         <div className="modal-overlay">
-          <div 
-            className="exhibition-edit-modal"
-            ref={(el) => el && el.focus()}
-            tabIndex="-1"
-          >
+          <div className="exhibition-edit-modal">
             <h3>გამოფენების რედაქტირება: {editingExhibitions.companyName}</h3>
             <div className="exhibitions-selection">
               {exhibitions.map(exhibition => {
@@ -362,6 +358,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
               <tr>
                 <th>კომპანიის სახელი</th>
                 <th>ქვეყანა</th>
+                <th>პროფილი</th>
                 <th>საიდ. კოდი</th>
                 <th>სტატუსი</th>
                 <th>გამოფენები</th>
@@ -375,6 +372,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
                 <tr key={company.id}>
                   <td className="company-name">{company.company_name}</td>
                   <td>{company.country}</td>
+                  <td className="company-profile">{company.company_profile}</td>
                   <td>{company.identification_code}</td>
                   <td>
                     <span className={`status-badge ${company.status?.toLowerCase()}`}>

@@ -1,645 +1,250 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import jsQR from 'jsqr';
 import './QRScanner.css';
 
-const QRScanner = ({ eventId, showNotification, onParticipantCheckedIn }) => {
+const QRScanner = ({ onClose, showNotification }) => {
+  const [scannedData, setScannedData] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
-  const [participants, setParticipants] = useState([]);
-  const [checkedInParticipants, setCheckedInParticipants] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedEventId, setSelectedEventId] = useState(eventId);
-  const [events, setEvents] = useState([]);
-  const [scanResult, setScanResult] = useState('');
-  const [manualCheckin, setManualCheckin] = useState(false);
-  const [qrCodes, setQrCodes] = useState({}); 
-  const [loading, setLoading] = useState(false);
+  const [hasCamera, setHasCamera] = useState(false);
   const videoRef = useRef(null);
-  const streamRef = useRef(null);
   const canvasRef = useRef(null);
+  const streamRef = useRef(null);
 
   useEffect(() => {
-    fetchEvents();
-    if (selectedEventId) {
-      fetchParticipants();
-      fetchCheckedInParticipants();
-    }
-  }, [selectedEventId]);
+    checkCameraAvailability();
+    return () => {
+      stopCamera();
+    };
+  }, []);
 
-  useEffect(() => {
-    if (participants.length > 0) {
-      loadQRCodes();
-    }
-  }, [participants]);
-
-  const fetchEvents = async () => {
+  const checkCameraAvailability = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/events', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const hasVideoInput = devices.some(device => device.kind === 'videoinput');
+      setHasCamera(hasVideoInput);
+    } catch (error) {
+      console.error('კამერის შემოწმების შეცდომა:', error);
+      setHasCamera(false);
+    }
+  };
 
-      if (response.ok) {
-        const data = await response.json();
-        setEvents(data);
-        if (!selectedEventId && data.length > 0) {
-          setSelectedEventId(data[0].id);
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: 'environment' // უკანა კამერის გამოყენება
         }
-      }
-    } catch (error) {
-      console.error('Error fetching events:', error);
-      showNotification('ივენთების ჩატვირთვის შეცდომა', 'error');
-    }
-  };
-
-  const fetchParticipants = async () => {
-    if (!selectedEventId) return;
-    
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/events/${selectedEventId}/participants`, {
-        headers: { 'Authorization': `Bearer ${token}` }
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        setParticipants(data);
-      } else {
-        showNotification('მონაწილეების ჩატვირთვის შეცდომა', 'error');
-      }
-    } catch (error) {
-      console.error('Error fetching participants:', error);
-      showNotification('მონაწილეების ჩატვირთვის შეცდომა', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchCheckedInParticipants = async () => {
-    if (!selectedEventId) return;
-
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/checkin/event/${selectedEventId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setCheckedInParticipants(data);
-      }
-    } catch (error) {
-      console.error('Error fetching check-ins:', error);
-      showNotification('Check-in მონაცემების ჩატვირთვის შეცდომა', 'error');
-    }
-  };
-
-  const loadQRCodes = async () => {
-    const codes = {};
-    for (const participant of participants) {
-      codes[participant.id] = generateQRCodeDataURL(participant.id);
-    }
-    setQrCodes(codes);
-  };
-
-  const startScanning = async () => {
-    try {
-      setLoading(true);
       
-      // Check if mediaDevices is supported
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Camera not supported by this browser');
-      }
-
-      // Try different camera configurations
-      const constraints = [
-        // Try rear camera first (mobile)
-        { 
-          video: { 
-            facingMode: 'environment',
-            width: { ideal: 1280, min: 640 },
-            height: { ideal: 720, min: 480 }
-          }
-        },
-        // Fall back to front camera
-        { 
-          video: { 
-            facingMode: 'user',
-            width: { ideal: 1280, min: 640 },
-            height: { ideal: 720, min: 480 }
-          }
-        },
-        // Fall back to any camera
-        { 
-          video: { 
-            width: { ideal: 1280, min: 640 },
-            height: { ideal: 720, min: 480 }
-          }
-        },
-        // Minimal requirements
-        { video: true }
-      ];
-
-      let stream = null;
-      let lastError = null;
-
-      // Try each constraint until one works
-      for (const constraint of constraints) {
-        try {
-          stream = await navigator.mediaDevices.getUserMedia(constraint);
-          console.log('Camera started with constraint:', constraint);
-          break;
-        } catch (err) {
-          console.warn('Failed with constraint:', constraint, err.message);
-          lastError = err;
-        }
-      }
-
-      if (!stream) {
-        throw lastError || new Error('No camera available');
-      }
-
+      streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        streamRef.current = stream;
+        videoRef.current.play();
         setIsScanning(true);
-        setScanResult('');
-        
-        // Wait for video to load
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current.play();
-          startQRDetection();
-        };
+        scanForQR();
       }
     } catch (error) {
-      console.error('Camera access error:', error);
-      let errorMessage = 'კამერის გაშვების შეცდომა.';
-      
-      if (error.name === 'NotFoundError') {
-        errorMessage = 'კამერა ვერ მოიძებნა. დარწმუნდით, რომ თქვენს მოწყობილობას აქვს კამერა.';
-      } else if (error.name === 'NotAllowedError') {
-        errorMessage = 'კამერის წვდომა აკრძალულია. გთხოვთ დართოთ კამერის წვდომა ბრაუზერის პარამეტრებში.';
-      } else if (error.name === 'NotReadableError') {
-        errorMessage = 'კამერა დაკავებულია სხვა აპლიკაციის მიერ.';
-      } else if (error.message === 'Camera not supported by this browser') {
-        errorMessage = 'თქვენი ბრაუზერი არ უჭერს მხარს კამერას. გამოიყენეთ თანამედროვე ბრაუზერი.';
-      }
-      
-      showNotification(errorMessage, 'error');
-      
-      // Show manual check-in as alternative
-      setManualCheckin(true);
-      showNotification('ალტერნატივად გამოიყენეთ ხელით Check-in ფუნქცია.', 'info');
-    } finally {
-      setLoading(false);
+      console.error('კამერის ჩართვის შეცდომა:', error);
+      showNotification('კამერაზე წვდომა შეუძლებელია', 'error');
     }
   };
 
-  const stopScanning = () => {
+  const stopCamera = () => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
     setIsScanning(false);
-    setScanResult('');
   };
 
-  const startQRDetection = () => {
-    if (!canvasRef.current || !videoRef.current) return;
+  const scanForQR = () => {
+    if (!isScanning || !videoRef.current || !canvasRef.current) return;
 
-    const canvas = canvasRef.current;
     const video = videoRef.current;
+    const canvas = canvasRef.current;
     const context = canvas.getContext('2d');
 
-    const detectQR = () => {
-      if (!isScanning || !video.videoWidth || !video.videoHeight) {
-        if (isScanning) {
-          requestAnimationFrame(detectQR);
-        }
-        return;
-      }
-
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
-      context.drawImage(video, 0, 0);
-
-      try {
-        // Simulate QR detection for demo
-        // In a real implementation, you would use a library like jsQR here
-        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-        
-        // For demo purposes, simulate finding a QR code every 3 seconds
-        const now = Date.now();
-        if (!window.lastQRScan || now - window.lastQRScan > 3000) {
-          simulateQRDetection();
-          window.lastQRScan = now;
-        }
-      } catch (error) {
-        console.error('QR detection error:', error);
-      }
-
-      if (isScanning) {
-        requestAnimationFrame(detectQR);
-      }
-    };
-
-    detectQR();
-  };
-
-  const simulateQRDetection = () => {
-    // Get participants that haven't checked in yet
-    const notCheckedIn = participants.filter(
-      participant => !checkedInParticipants.some(checked => checked.participant_id === participant.id)
-    );
-    
-    if (notCheckedIn.length > 0) {
-      const randomParticipant = notCheckedIn[Math.floor(Math.random() * notCheckedIn.length)];
-      const qrData = `QR-${randomParticipant.id}`;
-      setScanResult(qrData);
-      handleQRScanResult(randomParticipant.id);
-    }
-  };
-
-  const handleQRScanResult = async (participantId) => {
-    // Prevent duplicate scans
-    if (checkedInParticipants.some(checked => checked.participant_id === participantId)) {
-      showNotification('ეს მონაწილე უკვე რეგისტრირებულია', 'warning');
-      return;
-    }
-
-    await handleCheckin(participantId);
-    stopScanning(); // Stop scanning after successful check-in
-  };
-
-  const handleCheckin = async (participantId) => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/checkin', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          participant_id: participantId,
-          event_id: selectedEventId,
-          checkin_time: new Date().toISOString()
-        })
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      
+      // QR კოდის სკანირება jsQR ბიბლიოთეკით
+      const code = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: "dontInvert",
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        showNotification(data.message || 'მონაწილე წარმატებით რეგისტრირდა!', 'success');
+      if (code) {
+        console.log("QR კოდი ნაპოვნია:", code.data);
+        handleManualInput(code.data);
+        stopCamera();
+        return;
+      }
+    }
+
+    // განახლება ყოველ 100ms-ში
+    if (isScanning) {
+      requestAnimationFrame(scanForQR);
+    }
+  };
+
+  const handleManualInput = (inputData) => {
+    try {
+      // Clean the input data from any encoding issues
+      const cleanedInput = inputData.trim().replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
+      const qrData = JSON.parse(cleanedInput);
+      
+      if (qrData.type === 'event_invitation') {
+        // Convert status back to Georgian for display
+        const statusDisplayMap = {
+          'registered': 'რეგისტრირებული',
+          'approved': 'დადასტურებული', 
+          'pending': 'მოლოდინში',
+          'cancelled': 'გაუქმებული'
+        };
         
-        // Refresh data
-        await fetchCheckedInParticipants();
-        
-        if (onParticipantCheckedIn) {
-          onParticipantCheckedIn(data.participant);
+        if (qrData.registration_status && statusDisplayMap[qrData.registration_status]) {
+          qrData.registration_status_display = statusDisplayMap[qrData.registration_status];
         }
+        
+        setScannedData(qrData);
+        showNotification('QR კოდი წარმატებით წაიკითხა', 'success');
       } else {
-        const error = await response.json();
-        showNotification(error.message || 'Check-in შეცდომა', 'error');
+        showNotification('QR კოდის ფორმატი არასწორია', 'error');
       }
     } catch (error) {
-      console.error('Check-in error:', error);
-      showNotification('Check-in შეცდომა', 'error');
-    } finally {
-      setLoading(false);
+      console.error('QR parsing error:', error);
+      showNotification('QR კოდის ფორმატი არასწორია ან კოდირების პრობლემაა', 'error');
     }
   };
 
-  const handleManualCheckin = async (participantId) => {
-    if (window.confirm('დარწმუნებული ხართ რომ გსურთ ამ მონაწილის Check-in?')) {
-      await handleCheckin(participantId);
-    }
-  };
-
-  const generateQRCodeDataURL = (participantId) => {
-    // Enhanced QR code simulation using SVG with more realistic pattern
-    const qrContent = `QR-${participantId}`;
-    const size = 120;
-    const moduleSize = 4;
-    const modules = Math.floor(size / moduleSize);
-    
-    // Generate a pseudo-random pattern based on participant ID
-    const seed = participantId * 12345;
-    const random = (n) => (seed * n * 9301 + 49297) % 233280;
-    
-    let pattern = '';
-    for (let i = 0; i < modules; i++) {
-      for (let j = 0; j < modules; j++) {
-        const shouldFill = (
-          // Corner markers
-          (i < 7 && j < 7) || 
-          (i < 7 && j >= modules - 7) || 
-          (i >= modules - 7 && j < 7) ||
-          // Random pattern for middle
-          (i >= 7 && i < modules - 7 && j >= 7 && j < modules - 7 && random(i * j) % 3 === 0)
-        );
-        
-        if (shouldFill) {
-          pattern += `<rect x="${j * moduleSize}" y="${i * moduleSize}" width="${moduleSize}" height="${moduleSize}" fill="black"/>`;
-        }
-      }
-    }
-    
-    const svgString = `
-      <svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
-        <rect width="${size}" height="${size}" fill="white" stroke="#ccc" stroke-width="2"/>
-        ${pattern}
-        <!-- Corner markers -->
-        <rect x="0" y="0" width="28" height="28" fill="none" stroke="black" stroke-width="4"/>
-        <rect x="${size - 28}" y="0" width="28" height="28" fill="none" stroke="black" stroke-width="4"/>
-        <rect x="0" y="${size - 28}" width="28" height="28" fill="none" stroke="black" stroke-width="4"/>
-        <rect x="8" y="8" width="12" height="12" fill="black"/>
-        <rect x="${size - 20}" y="8" width="12" height="12" fill="black"/>
-        <rect x="8" y="${size - 20}" width="12" height="12" fill="black"/>
-        <text x="${size/2}" y="${size + 15}" text-anchor="middle" font-size="10" fill="black">${qrContent}</text>
-      </svg>
-    `;
-    
-    return `data:image/svg+xml,${encodeURIComponent(svgString)}`;
-  };
-
-  const handlePrintQRCodes = () => {
-    const notCheckedIn = participants.filter(
-      participant => !checkedInParticipants.some(checked => checked.participant_id === participant.id)
-    );
-
-    if (notCheckedIn.length === 0) {
-      showNotification('ყველა მონაწილე უკვე რეგისტრირებულია', 'info');
-      return;
-    }
-
-    const printWindow = window.open('', '_blank');
-    let content = `
-      <html>
-        <head>
-          <title>QR Codes - ${events.find(e => e.id === selectedEventId)?.service_name || 'Event'}</title>
-          <style>
-            body { 
-              font-family: Arial, sans-serif;
-              display: grid; 
-              grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); 
-              gap: 20px; 
-              padding: 20px;
-            }
-            .qr-item { 
-              text-align: center; 
-              border: 2px solid #ccc; 
-              padding: 15px; 
-              border-radius: 8px; 
-              break-inside: avoid;
-            }
-            .qr-item img { 
-              width: 120px; 
-              height: 120px; 
-              margin-bottom: 10px; 
-              border: 1px solid #ddd;
-            }
-            .company-name { 
-              font-weight: bold; 
-              margin-bottom: 5px; 
-              font-size: 14px;
-            }
-            .booth-info { 
-              color: #666; 
-              font-size: 12px; 
-            }
-            @media print {
-              body { margin: 0; }
-            }
-          </style>
-        </head>
-        <body>
-    `;
-
-    notCheckedIn.forEach(participant => {
-      const qrCodeUrl = qrCodes[participant.id];
-      if (qrCodeUrl) {
-        content += `
-          <div class="qr-item">
-            <div class="company-name">${participant.company_name || 'N/A'}</div>
-            <div class="booth-info">ბუთი: ${participant.booth_number || 'N/A'}</div>
-            <div class="booth-info">ზომა: ${participant.booth_size || 'N/A'}კვმ</div>
-            <img src="${qrCodeUrl}" alt="QR Code for ${participant.company_name}" />
-            <div style="font-size: 10px; margin-top: 5px;">ID: ${participant.id}</div>
-          </div>
-        `;
-      }
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('ka-GE', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
-
-    content += `
-        </body>
-      </html>
-    `;
-
-    printWindow.document.write(content);
-    printWindow.document.close();
-    printWindow.print();
   };
-
-  const filteredParticipants = participants.filter(participant =>
-    participant.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    participant.booth_number?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const notCheckedInParticipants = filteredParticipants.filter(
-    participant => !checkedInParticipants.some(checked => checked.participant_id === participant.id)
-  );
 
   return (
-    <div className="qr-scanner-container">
-      <div className="scanner-header">
-        <h2>📱 მობაილური Check-in სისტემა</h2>
-
-        <div className="event-selector">
-          <label htmlFor="event-select">ივენთი:</label>
-          <select 
-            id="event-select"
-            value={selectedEventId || ''} 
-            onChange={(e) => setSelectedEventId(e.target.value)}
-            disabled={loading}
-          >
-            <option value="">აირჩიეთ ივენთი</option>
-            {events.map(event => (
-              <option key={event.id} value={event.id}>
-                {event.service_name}
-              </option>
-            ))}
-          </select>
+    <div className="qr-scanner-modal">
+      <div className="modal-content">
+        <div className="modal-header">
+          <h3>QR კოდის სკანერი</h3>
+          <button className="close-modal" onClick={onClose}>✕</button>
         </div>
-      </div>
 
-      {selectedEventId && (
-        <div className="scanner-content">
-          <div className="scanner-stats">
-            <div className="stat-card total">
-              <h4>სულ მონაწილეები</h4>
-              <span className="stat-number">{participants.length}</span>
-            </div>
-            <div className="stat-card checked-in">
-              <h4>Check-in გავლილი</h4>
-              <span className="stat-number">{checkedInParticipants.length}</span>
-            </div>
-            <div className="stat-card pending">
-              <h4>მომლოდინე</h4>
-              <span className="stat-number">{participants.length - checkedInParticipants.length}</span>
-            </div>
-            <div className="stat-card percentage">
-              <h4>პროგრესი</h4>
-              <span className="stat-number">
-                {participants.length > 0 ? Math.round((checkedInParticipants.length / participants.length) * 100) : 0}%
-              </span>
-            </div>
-          </div>
-
-          <div className="scanner-actions">
-            {!isScanning ? (
-              <div className="camera-info">
-                <button 
-                  onClick={startScanning} 
-                  className="start-scanning-btn"
-                  disabled={!selectedEventId || loading || notCheckedInParticipants.length === 0}
-                >
-                  {loading ? '⏳ იტვირთება...' : '📷 QR სკანერის გაშვება'}
-                </button>
-                <small className="camera-note">
-                  💡 Replit-ში განვითარების რეჟიმში კამერა შეიძლება არ იმუშაოს. 
-                  გამოიყენეთ ხელით Check-in ან გატესტეთ ნამდვილ მოწყობილობაზე.
-                </small>
-              </div>
-            ) : (
-              <button 
-                onClick={stopScanning} 
-                className="stop-scanning-btn"
-              >
-                ⏹️ სკანირების შეწყვეტა
-              </button>
-            )}
-
-            <button 
-              onClick={() => setManualCheckin(!manualCheckin)}
-              className={`manual-checkin-btn ${manualCheckin ? 'active' : ''}`}
-              disabled={!selectedEventId || loading}
-            >
-              {manualCheckin ? '❌ ხელით Check-in დახურვა' : '✋ ხელით Check-in'}
-            </button>
-
-            <button 
-              onClick={handlePrintQRCodes}
-              className="print-qr-btn"
-              disabled={!selectedEventId || notCheckedInParticipants.length === 0 || loading}
-            >
-              🖨️ QR კოდების ბეჭდვა ({notCheckedInParticipants.length})
-            </button>
-          </div>
-
-          {isScanning && (
-            <div className="camera-container">
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className="camera-video"
-              />
-              <canvas ref={canvasRef} style={{ display: 'none' }} />
-              <div className="scanner-overlay">
-                <div className="scanner-frame"></div>
-                <p>QR კოდი მიაქციეთ ჩარჩოში</p>
-                {loading && <div className="scanner-loading">იტვირთება...</div>}
-              </div>
-            </div>
-          )}
-
-          {scanResult && (
-            <div className="scan-result">
-              <p>✅ QR კოდი წაიკითხა: {scanResult}</p>
-            </div>
-          )}
-
-          <div className="search-container">
-            <input
-              type="text"
-              placeholder="ძიება კომპანიის ან ბუთის ნომრით..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="search-input"
-            />
-          </div>
-
-          {manualCheckin && (
-            <div className="manual-checkin-section">
-              <h3>✋ ხელით Check-in ({notCheckedInParticipants.length} მომლოდინე)</h3>
-              
-              {loading ? (
-                <div className="loading-message">მონაცემები იტვირთება...</div>
-              ) : notCheckedInParticipants.length === 0 ? (
-                <div className="no-participants-message">
-                  {participants.length === 0 ? 
-                    'ამ ივენთზე მონაწილეები არ არის რეგისტრირებული' : 
-                    'ყველა მონაწილე უკვე რეგისტრირებულია!'
-                  }
+        <div className="modal-body">
+          {!scannedData ? (
+            <div className="scanner-section">
+              {hasCamera ? (
+                <div className="camera-section">
+                  <video
+                    ref={videoRef}
+                    className="camera-preview"
+                    autoPlay
+                    playsInline
+                    muted
+                  />
+                  <canvas
+                    ref={canvasRef}
+                    style={{ display: 'none' }}
+                  />
+                  
+                  <div className="camera-controls">
+                    {!isScanning ? (
+                      <button
+                        onClick={startCamera}
+                        className="start-scan-btn"
+                      >
+                        სკანირების დაწყება
+                      </button>
+                    ) : (
+                      <button
+                        onClick={stopCamera}
+                        className="stop-scan-btn"
+                      >
+                        სკანირების შეჩერება
+                      </button>
+                    )}
+                  </div>
                 </div>
               ) : (
-                <div className="participants-grid">
-                  {notCheckedInParticipants.map(participant => (
-                    <div key={participant.id} className="participant-card">
-                      <div className="participant-info">
-                        <strong>{participant.company_name}</strong>
-                        <span>ბუთი: {participant.booth_number || 'მითითებული არ არის'}</span>
-                        <span>ზომა: {participant.booth_size}კვმ</span>
-                        <span>სტატუსი: {participant.registration_status}</span>
-                      </div>
-                      <div className="participant-actions">
-                        <img 
-                          src={qrCodes[participant.id] || generateQRCodeDataURL(participant.id)} 
-                          alt="QR Code" 
-                          className="qr-preview"
-                        />
-                        <button
-                          onClick={() => handleManualCheckin(participant.id)}
-                          className="checkin-btn"
-                          disabled={loading}
-                        >
-                          {loading ? '⏳' : '✓ Check-in'}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                <div className="no-camera">
+                  <p>კამერა მიუწვდომელია</p>
                 </div>
               )}
-            </div>
-          )}
 
-          {checkedInParticipants.length > 0 && (
-            <div className="checked-in-section">
-              <h3>✅ Check-in გავლილი მონაწილეები ({checkedInParticipants.length})</h3>
-              <div className="checked-in-list">
-                {checkedInParticipants.map(checkedIn => {
-                  const participant = participants.find(p => p.id === checkedIn.participant_id);
-                  return (
-                    <div key={checkedIn.id} className="checked-in-item">
-                      <div className="participant-info">
-                        <strong>{participant?.company_name}</strong>
-                        <span>ბუთი: {participant?.booth_number}</span>
-                        <span>ზომა: {participant?.booth_size}კვმ</span>
-                      </div>
-                      <div className="checkin-time">
-                        {new Date(checkedIn.checkin_time).toLocaleString('ka-GE')}
-                      </div>
-                      <div className="checkin-status">✅</div>
-                    </div>
-                  );
-                })}
+              <div className="manual-input">
+                <h4>ან შეიყვანეთ QR კოდის მონაცემები ხელით:</h4>
+                <textarea
+                  placeholder="ჩასვით QR კოდის JSON მონაცემები აქ..."
+                  rows="4"
+                  onPaste={(e) => {
+                    setTimeout(() => {
+                      handleManualInput(e.target.value);
+                    }, 100);
+                  }}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="scanned-data">
+              <h4>QR კოდის ინფორმაცია</h4>
+              <div className="data-display">
+                <div className="data-item">
+                  <strong>ივენთი:</strong> {scannedData.event_name}
+                </div>
+                <div className="data-item">
+                  <strong>კომპანია:</strong> {scannedData.company_name}
+                </div>
+                {scannedData.booth_number && (
+                  <div className="data-item">
+                    <strong>სტენდი:</strong> #{scannedData.booth_number}
+                  </div>
+                )}
+                {scannedData.booth_size && (
+                  <div className="data-item">
+                    <strong>სტენდის ზომა:</strong> {scannedData.booth_size} მ²
+                  </div>
+                )}
+                {scannedData.start_date && (
+                  <div className="data-item">
+                    <strong>თარიღები:</strong> {formatDate(scannedData.start_date)} - {formatDate(scannedData.end_date)}
+                  </div>
+                )}
+                {scannedData.booth_location && (
+                  <div className="data-item">
+                    <strong>ადგილმდებარეობა:</strong> {scannedData.booth_location}
+                  </div>
+                )}
+                {(scannedData.registration_status || scannedData.registration_status_display) && (
+                  <div className="data-item">
+                    <strong>სტატუსი:</strong> {scannedData.registration_status_display || scannedData.registration_status}
+                  </div>
+                )}
+                {scannedData.custom_message && (
+                  <div className="data-item">
+                    <strong>შეტყობინება:</strong> {scannedData.custom_message}
+                  </div>
+                )}
+              </div>
+              
+              <div className="scan-actions">
+                <button
+                  onClick={() => setScannedData(null)}
+                  className="scan-again-btn"
+                >
+                  კიდევ სკანირება
+                </button>
               </div>
             </div>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 };

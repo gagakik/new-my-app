@@ -855,12 +855,7 @@
   padding: 1rem;
   background: #f8fafc;
   border-radius: 8px;
-  border-left: 4px solid #.company-detail-item {
-  background: #f8fafc;
-  padding: 0.75rem;
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
-  margin-bottom: 0.5rem;
+  border-left: 4px solid #4facfe;
 }
 
 .company-detail-item strong {
@@ -953,10 +948,6 @@
   color: #dc2626;
 }
 
-.equipment-quantity.low-stock {
-  color: #f59e0b;
-}
-
 .equipment-price {
   font-weight: 600;
   color: #059669;
@@ -1034,18 +1025,7 @@
 }
 
 .calculation-item.booth-cost {
-  color: #8b5cf6;
-  font-weight: 500;
-}
-
-.calculation-item.total-cost {
-  border-top: 2px solid #e5e7eb;
-  font-weight: 700;
-  color: #1f2937;
-  font-size: 1.1rem;
-  margin-top: 0.5rem;
-  padding-top: 0.75rem;
-}: #7c3aed;
+  color: #7c3aed;
   font-weight: 500;
 }
 
@@ -1389,11 +1369,5 @@
 
 .file-link:hover {
   background-color: #cce7ff;
-  text-decoration: none;
-}
-
-.file-link:active {
-  background-color: #99d6ff;
-}e7ff;
   text-decoration: none;
 }

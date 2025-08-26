@@ -79,21 +79,6 @@
   content: "✕";
 }
 
-<<<<<<< HEAD
-=======
-/* პაკეტების სექცია */
-.package-section {
-  margin-top: 2rem;
-  border-top: 1px solid #ddd;
-  padding-top: 1.5rem;
-}
-
-/* Form actions hover effects */
-.form-actions button {
-  transition: background-color 0.3s ease;
-}
-
->>>>>>> 69839e7f531fc0d1d2a33dd88efd1bda7a08baab
 .form-actions button:hover {
   background-color: #45a049;
 }
@@ -102,27 +87,9 @@
   background-color: #d32f2f;
 }
 
-<<<<<<< HEAD
 /* პაკეტების სექცია */
 .package-section {
   margin-top: 2rem;
   border-top: 1px solid #ddd;
   padding-top: 1.5rem;
-=======
-.exhibition-form button[type="submit"]:hover:not(:disabled) {
-  background: var(--primary-hover);
-}
-
-.price-preview {
-  margin-top: 2rem;
-  padding: 1.5rem;
-  background: var(--surface-primary);
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
-}
-
-.price-preview h4 {
-  margin: 0 0 1rem 0;
-  color: var(--text-primary);
->>>>>>> 69839e7f531fc0d1d2a33dd88efd1bda7a08baab
 }

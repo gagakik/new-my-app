@@ -1,17 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import UserStatistics from './components/UserStatistics';
-import AIAnalyticsDashboard from './components/AIAnalyticsDashboard';
 import Footer from './components/Footer';
 import AuthPage from './components/AuthPage';
 import MainContent from './components/MainContent';
 import Notification from './components/Notification';
-import BookingsList from './components/BookingsList';
-import EquipmentList from './components/EquipmentList';
-import StandManagement from './components/StandManagement';
-import SpacesList from './components/SpacesList';
-import ServicesList from './components/ServicesList';
-import ExhibitionsList from './components/ExhibitionsList';
-import EventsList from './components/EventsList';
 import './index.css';
 
 // Error Boundary Component
@@ -74,8 +65,6 @@ function App() {
   const [activeView, setActiveView] = useState('auth');
   const [notification, setNotification] = useState({ message: '', type: '' });
   const [isAuthReady, setIsAuthReady] = useState(false);
-  const [activeSection, setActiveSection] = useState('dashboard'); // Added state for sections
-  const [activeComponent, setActiveComponent] = useState('dashboard'); // State for active component in MainContent
 
   const handleLoginSuccess = (role, token, userId, username) => {
     setIsLoggedIn(true);
@@ -88,7 +77,7 @@ function App() {
     setActiveView('main'); 
     showNotification('შესვლა წარმატებით დასრულდა!', 'success');
   };
-
+  
   const handleLogout = () => {
     setIsLoggedIn(false);
     setUserRole(null);
@@ -100,20 +89,15 @@ function App() {
     localStorage.removeItem('userName');
     showNotification('თქვენ წარმატებით გამოხვედით სისტემიდან.', 'info');
   };
-
+  
   const handleViewChange = (view) => {
       setActiveView(view);
   };
-
-  // Added handler for section changes within MainContent
-  const handleSectionChange = (section) => {
-    setActiveSection(section);
-  };
-
+  
   const showNotification = (message, type) => {
     setNotification({ message, type });
   };
-
+  
   const clearNotification = () => {
     setNotification({ message: '', type: '' });
   };
@@ -123,7 +107,7 @@ function App() {
       const storedRole = localStorage.getItem('userRole');
       const storedToken = localStorage.getItem('token');
       const storedUserName = localStorage.getItem('userName');
-
+      
       if (storedRole && storedToken) {
         setIsLoggedIn(true);
         setUserRole(storedRole);
@@ -155,52 +139,25 @@ function App() {
       userRole={userRole} 
       userName={userName}
       onLogout={handleLogout}
-      onSectionChange={handleSectionChange} // Pass the handler down
-      activeSection={activeSection} // Pass the current active section
-      activeComponent={activeComponent} // Pass activeComponent
-      onComponentChange={setActiveComponent} // Pass the function to change activeComponent
-    >
-          {activeSection === 'user-statistics' && (
-            <UserStatistics showNotification={showNotification} />
-          )}
-          {activeSection === 'ai-analytics' && (
-            <AIAnalyticsDashboard showNotification={showNotification} />
-          )}
-          {activeSection === 'bookings' && (
-            <BookingsList 
-              showNotification={showNotification}
-              userRole={userRole}
-            />
-          )}
-          {/* Render components based on activeComponent */}
-          {activeComponent === 'companies' && <CompaniesList showNotification={showNotification} userRole={userRole} />}
-          {activeComponent === 'equipment' && <EquipmentList showNotification={showNotification} userRole={userRole} />}
-          {activeComponent === 'stand-management' && <StandManagement showNotification={showNotification} userRole={userRole} />}
-          {activeComponent === 'spaces' && <SpacesList showNotification={showNotification} userRole={userRole} />}
-          {activeComponent === 'services' && <ServicesList showNotification={showNotification} userRole={userRole} />}
-          {activeComponent === 'exhibitions' && <ExhibitionsList showNotification={showNotification} userRole={userRole} />}
-          {activeComponent === 'events' && <EventsList showNotification={showNotification} userRole={userRole} />}
-          {activeComponent === 'pricing' && <PricingList showNotification={showNotification} userRole={userRole} />}
-          {activeComponent === 'statistics' && <StatisticsList showNotification={showNotification} userRole={userRole} />}
-          {activeComponent === 'reports' && <ReportsList showNotification={showNotification} userRole={userRole} />}
-
-    </MainContent>;
+    />;
   };
 
   return (
-    <div className="App">
-      <main>
-        {renderContent()}
-      </main>
-      <Footer />
-      {notification.message && (
-        <Notification
-          message={notification.message}
-          type={notification.type}
-          onClose={clearNotification}
-        />
-      )}
-    </div>
+    <ErrorBoundary>
+      <div className="App">
+        <main>
+          {renderContent()}
+        </main>
+        <Footer />
+        {notification.message && (
+          <Notification
+            message={notification.message}
+            type={notification.type}
+            onClose={clearNotification}
+          />
+        )}
+      </div>
+    </ErrorBoundary>
   );
 }
 

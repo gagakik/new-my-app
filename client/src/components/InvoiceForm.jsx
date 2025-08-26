@@ -169,7 +169,7 @@ const InvoiceForm = ({ participant, onClose, showNotification, eventData }) => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-
+      
       const updateData = {
         company_id: participant.company_id,
         registration_status: participant.registration_status,
@@ -326,32 +326,28 @@ const InvoiceForm = ({ participant, onClose, showNotification, eventData }) => {
                         value={item.details}
                         onChange={(e) => handleItemChange(index, 'details', e.target.value)}
                         className="item-input"
-                        placeholder="დამატებითი დეტალები"
+                        placeholder="დეტალები"
                       />
                     </td>
                     <td>
                       <input
                         type="number"
-                        min="0"
-                        step="0.01"
+                        step="0.1"
                         value={item.quantity}
                         onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
                         className="item-input quantity-input"
-                        required
                       />
                     </td>
                     <td>
                       <input
                         type="number"
-                        min="0"
                         step="0.01"
                         value={item.unitPrice}
                         onChange={(e) => handleItemChange(index, 'unitPrice', e.target.value)}
                         className="item-input price-input"
-                        required
                       />
                     </td>
-                    <td className="total-cell">
+                    <td className="total-cell print-currency">
                       <span className="print-only">€{item.total.toFixed(2)}</span>
                       <span className="no-print">{formatCurrency(item.total)}</span>
                     </td>
@@ -368,16 +364,16 @@ const InvoiceForm = ({ participant, onClose, showNotification, eventData }) => {
                 ))}
               </tbody>
             </table>
-          </div>
-          
-          <div className="add-item-section no-print">
-            <button
-              type="button"
-              className="add-item-btn"
-              onClick={addNewItem}
-            >
-              + ახალი სერვისის დამატება
-            </button>
+
+            <div className="add-item-section no-print">
+              <button
+                type="button"
+                className="add-item-btn"
+                onClick={addNewItem}
+              >
+                + ახალი სერვისის დამატება
+              </button>
+            </div>
           </div>
 
           {/* Invoice Totals */}
@@ -413,17 +409,6 @@ const InvoiceForm = ({ participant, onClose, showNotification, eventData }) => {
             <p>ბანკი: JSC "TBC Bank"</p>
             <p>ანგარიშის ნომერი: GE12TB7373336020100002</p>
             <p>სწიფტ კოდი: TBCBGE22</p>
-          </div>
-
-          {/* Notes */}
-          <div className="invoice-notes">
-            <label>შენიშვნები</label>
-            <textarea
-              value={invoiceData.notes}
-              onChange={(e) => setInvoiceData(prev => ({...prev, notes: e.target.value}))}
-              placeholder="დამატებითი შენიშვნები..."
-              rows="3"
-            />
           </div>
         </div>
 
