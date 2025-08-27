@@ -138,6 +138,9 @@ const QRScanner = ({ onClose, showNotification }) => {
         </div>
 
         <div className="modal-body">
+          <button className="modal-close-body" onClick={onClose} title="დახურვა">
+            ✕
+          </button>
           {!scannedData ? (
             <div className="scanner-section">
               {hasCamera ? (

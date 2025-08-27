@@ -51,6 +51,40 @@
   padding: 2rem;
   overflow-y: auto;
   max-height: calc(80vh - 80px);
+  position: relative;
+}
+
+.modal-close-body {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  z-index: 1050;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid #e2e8f0;
+  font-size: 1.3rem;
+  cursor: pointer;
+  color: #2d3748;
+  padding: 8px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  font-weight: bold;
+}
+
+.modal-close-body:hover {
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+  border-color: #e53e3e;
+  transform: scale(1.1);
+}
+
+.modal-close-body:active {
+  transform: scale(0.95);
 }
 
 .camera-section {
