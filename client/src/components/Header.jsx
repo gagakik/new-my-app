@@ -162,7 +162,7 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
     <header className="header">
       <div className="logo">
         <span className="logo-icon">🏢</span>
-        <span className="logo-text">გამოფენების პორტალი</span>
+        <span className="logo-text">logo</span>
       </div>
 
       <nav className="nav">
@@ -231,46 +231,25 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
                   )}
                 </div>
               ))}
-
-              <button onClick={toggleDarkMode} className="theme-toggle-btn mobile-theme">
-                <span className="theme-icon">{isDarkMode ? '☀️' : '🌙'}</span>
-                <span className="theme-text">{isDarkMode ? 'ნათელი რეჟიმი' : 'მუქი რეჟიმი'}</span>
-              </button>
-
-              <button onClick={onLogout} className="logout-btn mobile-logout">
-                <span className="logout-icon">🚪</span>
-                <span className="logout-text">გასვლა</span>
-              </button>
             </div>
 
             <button onClick={toggleDarkMode} className="theme-toggle-btn desktop-only">
               <span className="theme-icon">{isDarkMode ? '☀️' : '🌙'}</span>
             </button>
 
-            <button 
-            className="notification-btn"
-            onClick={() => setShowNotifications(true)}
-            title="შეტყობინებები"
-          >
-            🔔
-            {unreadCount > 0 && (
-              <span className="notification-badge">{unreadCount}</span>
-            )}
-          </button>
-
-          <button
-            className="qr-scanner-btn"
-            onClick={() => setShowQRScanner(true)}
-            title="QR კოდის სკანერი"
-          >
-            📱
-          </button>
-
+            <button
+              className="qr-scanner-btn"
+              onClick={() => setShowQRScanner(true)}
+              title="QR კოდის სკანერი"
+            >
+              📱
+            </button>
 
             <button onClick={onLogout} className="logout-btn desktop-only">
               <span className="logout-icon">🚪</span>
               <span className="logout-text">გასვლა</span>
             </button>
+
           </>
         ) : (
           <span className="guest-info">სტუმარი</span>

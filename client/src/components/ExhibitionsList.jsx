@@ -126,10 +126,9 @@ const ExhibitionsList = ({ showNotification, userRole }) => { // მივიღ
         <table className="exhibitions-table">
           <thead>
             <tr>
-              <th>გამოფენის სახელი</th>
-              <th>კომენტარი</th>
+              <th>დასახელება</th>
               <th>მენეჯერი</th>
-              <th>1 კვმ ღირებულება (€)</th>
+              <th>1 კვმ EUR</th>
               <th>შექმნილია</th>
               <th>განახლებულია</th>
               {isAuthorizedForManagement && <th>მოქმედებები</th>}
@@ -139,7 +138,6 @@ const ExhibitionsList = ({ showNotification, userRole }) => { // მივიღ
             {exhibitions.map((exhibition) => (
               <tr key={exhibition.id}>
                 <td>{exhibition.exhibition_name}</td>
-                <td>{exhibition.comment}</td>
                 <td>{exhibition.manager}</td>
                 <td>{exhibition.price_per_sqm ? `€${parseFloat(exhibition.price_per_sqm).toFixed(2)}` : '-'}</td>
                 <td className="date-info">

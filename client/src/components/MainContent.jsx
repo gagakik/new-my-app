@@ -8,6 +8,7 @@ import EventsList from './EventsList';
 import Statistics from './Statistics';
 import EventReports from './EventReports';
 import UserProfile from './UserProfile';
+import Header from './Header';
 
 import './MainContent.css';
 
@@ -38,13 +39,16 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
   return (
     <div className="main-content">
       <div className="user-header">
-        <div className="user-info">
-          <span>მომხმარებელი: {userName}</span>
-          <span className="user-role">({userRole})</span>
+         <div> <Header
+        isLoggedIn={true}
+        userRole={userRole}
+        userName={userName}
+        activeView={activeSection}
+        onLogout={onLogout}
+        onViewChange={handleSectionChange}
+        showNotification={showNotification}
+      />
         </div>
-        <button className="logout-btn" onClick={onLogout}>
-          გამოსვლა
-        </button>
       </div>
       <div className="main-layout">
         <nav className={`main-nav ${isMenuOpen ? 'mobile-open' : ''}`}>
@@ -132,20 +136,6 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
               <div className="dashboard-header">
                 <h1>მთავარი დეშბორდი</h1>
                 <p>თქვენი ბიზნესის მთავარი მეტრიკები და ანალიტიკა ერთ ადგილას. აქ თვალს ადევნებთ ყველა მნიშვნელოვან ინფორმაციას.</p>
-                <div className="dashboard-stats-preview">
-                  <div className="preview-stat">
-                    <div className="preview-stat-label">აქტიური</div>
-                    <div className="preview-stat-value">🟢</div>
-                  </div>
-                  <div className="preview-stat">
-                    <div className="preview-stat-label">სტატუსი</div>
-                    <div className="preview-stat-value">✅</div>
-                  </div>
-                  <div className="preview-stat">
-                    <div className="preview-stat-label">ონლაინ</div>
-                    <div className="preview-stat-value">👥</div>
-                  </div>
-                </div>
               </div>
               <Statistics showNotification={showNotification} userRole={userRole} />
             </div>
@@ -169,12 +159,12 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
             <Statistics showNotification={showNotification} userRole={userRole} />
           )}
           {activeSection === 'users' && userRole === 'admin' && (
-            <UserManagement showNotification={showNotification} />
+            <UserManagement showNotification={showNotification} userRole={userRole} />
           )}
-           {activeSection === 'eventReports' && (
-            <EventReports 
-              showNotification={showNotification} 
-              userRole={userRole} 
+          {activeSection === 'eventReports' && userRole === 'admin' && (
+            <EventReports
+              showNotification={showNotification}
+              userRole={userRole}
             />
           )}
         </div>
