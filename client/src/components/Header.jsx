@@ -239,7 +239,7 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
 
             <button
               className="qr-scanner-btn"
-              onClick={() => setShowQRScanner(true)}
+              onClick={() => setShowQRScanner(true) || setIsMobileMenuOpen(false)}
               title="QR კოდის სკანერი"
             >
               📱

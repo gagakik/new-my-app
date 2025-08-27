@@ -93,12 +93,6 @@ const Statistics = ({ showNotification, userRole }) => {
           <div className="stat-number">{stats.exhibitions}</div>
           <p>ორგანიზებული გამოფენები</p>
         </div>
-        <div className="stat-card users">
-          <div className="stat-icon">👥</div>
-          <h3>მომხმარებლები</h3>
-          <div className="stat-number">{stats.users}</div>
-          <p>რეგისტრირებული მომხმარებლები</p>
-        </div>
       </div>
     </div>
   );
