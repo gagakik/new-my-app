@@ -93,6 +93,7 @@ const EquipmentForm = ({ equipmentToEdit, onEquipmentUpdated, showNotification, 
               onEquipmentUpdated();
             }}
           >
+            ✕
           </button>
         </div>
         <div className="modal-body">
@@ -151,11 +152,12 @@ const EquipmentForm = ({ equipmentToEdit, onEquipmentUpdated, showNotification, 
               <button
                 type="button"
                 className="cancel-btn"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onCancel();
-                }}
+                            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onEquipmentUpdated();
+            }}
+                
               >
                 გაუქმება
               </button>

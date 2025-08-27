@@ -205,6 +205,39 @@
   border-left-color: #28a745;
 }
 
+.actions {
+  margin-top: 10px;
+  display: flex;
+padding: 5px;
+}
+
+.event-stats {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 5px;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-around;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 60px;
+  width: 160px;
+}
+
+.stat-item  strong {
+  font-weight: 600;
+  color: #2d3748;
+  font-size: 0.85rem;
+  margin: 5px;
+  display: flex;
+  flex-direction: row;
+}
+
 .equipment-actions {
   flex-shrink: 0;
   display: flex;

@@ -184,6 +184,7 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification, onCanc
               onCompanyUpdated();
             }}
           >
+            ✕
           </button>
         </div>
         <div className="modal-body">
@@ -350,11 +351,11 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification, onCanc
               <button
                 type="button"
                 className="cancel-btn"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onCancel();
-                }}
+                           onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onCompanyUpdated();
+            }}
               >
                 გაუქმება
               </button>

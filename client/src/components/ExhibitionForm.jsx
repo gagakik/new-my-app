@@ -82,6 +82,7 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
               onExhibitionUpdated();
             }}
           >
+            ✕
           </button>
         </div>
         <div className="modal-body">
