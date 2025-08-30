@@ -18,6 +18,21 @@
   to { opacity: 1; }
 }
 
+.modal-header {
+  padding: 1rem;
+  background: #4facfe;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 12px 12px 0 0;
+  border-left: 4px solid #4facfe;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  z-index: 100;
+  position: relative;
+}
+
 .event-participants-modal .modal-content {
   background: white;
   border-radius: 12px;
@@ -826,7 +841,83 @@
   justify-content: center;
   align-items: center;
   z-index: 1100;
+  
 }
+
+.company-modal-content {
+  background-color: #fff;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  border: 1px solid #e0e6ed;
+}
+
+.company-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 10px;
+  background-color: #f3f4f6;
+  padding: 1rem;
+  border-radius: 12px;
+  border-bottom: 1px solid #e0e6ed;
+}
+
+.company-info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.info-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-gap: 1rem;
+}
+
+.comment-section {
+  padding: 1rem;
+  border-top: 1px solid #e0e6ed;
+}
+
+.comment-text {
+  font-size: 0.95rem;
+  color: #4b5563;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  border: 1px solid #0066cc;
+  padding: 1rem;
+  border-radius: 8px;
+  background: #f0f9ff;
+  color: #0369a1;
+  font-weight: 600;
+  margin-top: 1rem;
+}
+
+
+.contact-persons-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  border-top: 1px solid #e0e6ed;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border-left: 4px solid #4facfe;
+}
+
 
 .company-details-modal .modal-content {
   background: white;
@@ -837,6 +928,7 @@
   overflow-y: auto;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
   border: 1px solid #e0e6ed;
+  
 }
 
 .company-details-modal .modal-header {
@@ -844,6 +936,7 @@
   color: white;
   padding: 1.5rem;
   border-radius: 12px 12px 0 0;
+  position: relative;
 }
 
 .company-details-modal .modal-body {

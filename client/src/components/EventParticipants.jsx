@@ -884,6 +884,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
               onClose();
             }}
           >
+            ✕
           </button>
         </div>
 
@@ -1036,7 +1037,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                       <option value="">აირჩიეთ პაკეტი</option>
                       {availablePackages.map(pkg => (
                         <option key={pkg.id} value={pkg.id}>
-                          {pkg.package_name} - {pkg.fixed_area_sqm}კვმ - €{pkg.fixed_price}
+                          {pkg.package_name} - {pkg.fixed_area_sqm}კვმ - EUR{pkg.fixed_price}
                         </option>
                       ))}
                     </select>
@@ -1046,7 +1047,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                         <h4>პაკეტის დეტალები:</h4>
                         <p><strong>სახელი:</strong> {selectedPackage.package_name}</p>
                         <p><strong>ფართობი:</strong> {selectedPackage.fixed_area_sqm} კვმ</p>
-                        <p><strong>ბაზური ღირებულება:</strong> €{selectedPackage.fixed_price}</p>
+                        <p><strong>ბაზური ღირებულება:</strong> EUR{selectedPackage.fixed_price}</p>
                         {selectedPackage.description && (
                           <p><strong>აღწერა:</strong> {selectedPackage.description}</p>
                         )}
@@ -1073,7 +1074,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                     <label>სტენდის ზომა (კვმ)</label>
                     <input
                       type="number"
-                      step="0.01"
+                      step="0"
                       value={formData.booth_size}
                       onChange={(e) => setFormData(prev => ({ ...prev, booth_size: e.target.value }))}
                       disabled={registrationType === 'package'}
@@ -1123,7 +1124,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
 
                 <div className="form-row">
                   <div className="form-group">
-                    <label>გადასახდელი თანხა (€)</label>
+                    <label>გადასახდელი თანხა EUR</label>
                     <input
                       type="number"
                       step="0.01"
@@ -1134,20 +1135,20 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                     <div className="payment-breakdown">
                       {registrationType === 'package' && selectedPackage ? (
                         <>
-                          <small>პაკეტი: €{selectedPackage.fixed_price}</small>
-                          <small>აღჭურვილობა: €{selectedEquipment.reduce((sum, item) => {
+                          <small>პაკეტი: EUR:{selectedPackage.fixed_price}</small>
+                          <small>აღჭურვილობა: EUR:{selectedEquipment.reduce((sum, item) => {
                             return sum + ((parseInt(item.quantity) || 0) * (parseFloat(item.unit_price) || 0));
                           }, 0).toFixed(2)}</small>
                         </>
                       ) : (
                         <>
                           {formData.booth_size && exhibitionData?.price_per_sqm && (
-                            <small>სტენდი: €{(parseFloat(formData.booth_size || 0) * parseFloat(exhibitionData.price_per_sqm || 0)).toFixed(2)}</small>
+                            <small>სტენდი: EUR{(parseFloat(formData.booth_size || 0) * parseFloat(exhibitionData.price_per_sqm || 0)).toFixed(2)}</small>
                           )}
-                          <small>აღჭურვილობა: €{equipmentTotal.toFixed(2)}</small>
+                          <small>აღჭურვილობა: EUR: {equipmentTotal.toFixed(2)}</small>
                         </>
                       )}
-                      <small><strong>სულ: €{formData.payment_amount}</strong></small>
+                      <small><strong> <br/>სულ: EUR: {formData.payment_amount}</strong></small>
                     </div>
                   </div>
                   <div className="form-group">
@@ -1246,10 +1247,10 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                                 if (packageEquipment) {
                                   displayText = `${equipment.code_name} (პაკეტში: ${packageEquipment.quantity} უფასო, სულ ხელმისაწვდომი: ${availableQty}, ფასი: €${equipment.price || 0})`;
                                 } else {
-                                  displayText = `${equipment.code_name} (ხელმისაწვდომი: ${availableQty}, ფასი: €${equipment.price || 0})`;
+                                  displayText = `${equipment.code_name} (ხელმისაწვდომი: ${availableQty}, ფასი: EUR${equipment.price || 0})`;
                                 }
                               } else {
-                                displayText = `${equipment.code_name} (ხელმისაწვდომი: ${availableQty}, ფასი: €${equipment.price || 0})`;
+                                displayText = `${equipment.code_name} (ხელმისაწვდომი: ${availableQty}, ფასი: EUR${equipment.price || 0})`;
                               }
 
                               return (
@@ -1305,7 +1306,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                         })()}
                       </div>
                       <div className="form-group">
-                        <label>ერთეულის ფასი (€)</label>
+                        <label>ერთეულის ფასი EUR</label>
                         <input
                           type="number"
                           step="0.01"
@@ -1316,7 +1317,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                         />
                       </div>
                       <div className="form-group">
-                        <label>ჯამი (€)</label>
+                        <label>ჯამი EUR</label>
                         <input
                           type="number"
                           step="0.01"
@@ -1578,33 +1579,33 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                 <h4>ძირითადი ინფორმაცია</h4>
                 <div className="info-grid">
                   <div className="info-item">
-                    <strong>კომპანიის დასახელება</strong>
+                    <strong>კომპანიის დასახელება: </strong>
                     <span>{selectedCompanyForDetails.company_name}</span>
                   </div>
                   <div className="info-item">
-                    <strong>საიდენტიფიკაციო კოდი</strong>
+                    <strong>საიდენტიფიკაციო კოდი: </strong>
                     <span>{selectedCompanyForDetails.identification_code}</span>
                   </div>
                   <div className="info-item">
-                    <strong>ქვეყანა</strong>
+                    <strong>ქვეყანა: </strong>
                     <span>{selectedCompanyForDetails.country}</span>
                   </div>
                   <div className="info-item">
-                    <strong>სტატუსი</strong>
+                    <strong>სტატუსი: </strong>
                     <span className={`status-indicator ${selectedCompanyForDetails.status === 'აქტიური' ? 'active' : 'archived'}`}>
                       {selectedCompanyForDetails.status || 'აქტიური'}
                     </span>
                   </div>
                   <div className="info-item full-width">
-                    <strong>კომპანიის პროფილი</strong>
+                    <strong>კომპანიის პროფილი: </strong>
                     <span>{selectedCompanyForDetails.company_profile || 'არ არის მითითებული'}</span>
                   </div>
                   <div className="info-item full-width">
-                    <strong>იურიდიული მისამართი</strong>
+                    <strong>იურიდიული მისამართი: </strong>
                     <span>{selectedCompanyForDetails.legal_address || 'არ არის მითითებული'}</span>
                   </div>
                   <div className="info-item">
-                    <strong>ვებგვერდი</strong>
+                    <strong>ვებგვერდი: </strong>
                     {selectedCompanyForDetails.website ? (
                       <a href={`http://${selectedCompanyForDetails.website}`} target="_blank" rel="noopener noreferrer">
                         {selectedCompanyForDetails.website}
