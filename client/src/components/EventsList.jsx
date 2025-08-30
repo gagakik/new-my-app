@@ -332,8 +332,8 @@ const EventsList = ({ showNotification, userRole }) => {
             {showArchivedOnly ? 'აქტიური ივენთები' : 'არქივი'}
           </button>
           {isAuthorizedForManagement && !showArchivedOnly && (
-            <button className="add-new" onClick={() => setEditingId(0)}>
-              ახალი ივენთის დამატება
+            <button className="add-new new-event" onClick={() => setEditingId(0)}>
+              ივენთის დამატება
             </button>
           )}
         </div>

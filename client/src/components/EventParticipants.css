@@ -18,6 +18,18 @@
   to { opacity: 1; }
 }
 
+.header-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: flex-end;
+  justify-items: center;
+  align-items: center;
+  padding: 1rem;
+}
+
+
+
 .modal-header {
   padding: 1rem;
   background: #4facfe;

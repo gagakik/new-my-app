@@ -61,7 +61,7 @@
   font-style: italic;
 }
 
-.add-new {
+.new-event {
   padding: 8px 16px;
   background-color: #28a745;
   color: #fff;
@@ -71,10 +71,15 @@
   font-size: 0.9rem;
   transition: background-color 0.3s;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
 }
 
-.add-new:hover {
-  background-color: #0056b3;
+.new-event:hover {
+  background-color: #218838;
 }
 
 .events-filters {
@@ -417,6 +422,14 @@
 .stat-item {
   font-size: 0.9rem;
   color: #495057;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  flex-direction: row;
 }
 
 .stat-item strong {
