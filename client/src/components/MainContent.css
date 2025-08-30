@@ -52,93 +52,37 @@
   background-color: #c82333;
 }
 
-.main-layout {
-  display: flex;
+.content-area {
   flex: 1;
-}
-
-.main-nav {
-  width: 250px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  border-right: 1px solid var(--border-color);
-  padding: 1rem;
-  height: calc(100vh - 140px);
+  padding: 2rem;
   overflow-y: auto;
-  position: sticky;
-  top: 140px;
+  background: var(--surface-primary);
 }
 
-[data-theme="dark"] .main-nav {
-  background: rgba(45, 55, 72, 0.95);
-}
-
-.mobile-menu-toggle {
-  display: none;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  background: rgba(0, 123, 255, 0.1);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 1rem;
-  margin: 1rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  gap: 0.5rem;
-}
-
-.mobile-menu-toggle:hover {
-  background: rgba(0, 123, 255, 0.2);
-  transform: translateY(-2px);
-}
-
-.hamburger {
-  width: 25px;
-  height: 3px;
-  background: var(--text-primary);
-  border-radius: 2px;
-  transition: all 0.3s ease;
-  transform-origin: center;
-}
-
-.menu-text {
-  color: var(--text-primary);
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-
-.nav-items {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.main-nav button:not(.mobile-menu-toggle) {
+.content-area.full-width {
+  max-width: 100%;
   width: 100%;
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-secondary);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 0.8rem 1.2rem;
-  text-align: left;
-  font-size: 0.9rem;
-  font-weight: 500;
-  border-radius: 10px;
-  margin-bottom: 0.4rem;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  backdrop-filter: blur(10px);
 }
 
-.main-nav button:not(.mobile-menu-toggle):hover,
-.main-nav button:not(.mobile-menu-toggle).active {
-  background: rgba(0, 123, 255, 0.1);
-  color: #007bff;
-  transform: translateX(5px);
+/* Dashboard specific styles */
+.dashboard {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.dashboard-header {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.dashboard-header h1 {
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.dashboard-header p {
+  color: var(--text-muted);
+  font-size: 1.1rem;
 }
 
 .main-nav button:not(.mobile-menu-toggle) i {

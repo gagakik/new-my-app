@@ -75,6 +75,15 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
   const getRoleBasedMenus = () => {
     const menus = [];
 
+    // Dashboard (for all users)
+    menus.push({
+      key: 'dashboard',
+      label: 'Dashboard',
+      icon: '📊',
+      single: true,
+      action: () => handleViewChange('dashboard')
+    });
+
     // Sales role
     if (userRole === 'sales' || userRole === 'admin') {
       menus.push({
@@ -82,9 +91,12 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
         label: 'Sales',
         icon: '💼',
         items: [
+          { key: 'exhibitions', label: 'გამოფენები', icon: '🎪' },
           { key: 'companies', label: 'კომპანიები', icon: '🏬' },
           { key: 'spaces', label: 'სივრცეები', icon: '🏠' },
-          { key: 'events', label: 'ივენთები', icon: '🎪' }
+          { key: 'events', label: 'ივენთები', icon: '🎪' },
+          { key: 'statistics', label: 'სტატისტიკა', icon: '📈' },
+          { key: 'eventReports', label: 'Event Reports', icon: '📋' }
         ]
       });
     }
@@ -95,63 +107,40 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
         key: 'operation',
         label: 'Operation',
         icon: '⚙️',
-        single: true,
-        action: () => handleViewChange('equipment')
-      });
-    }
-
-    // Finance role (placeholder)
-    if (userRole === 'finance' || userRole === 'admin') {
-      menus.push({
-        key: 'finance',
-        label: 'Finance',
-        icon: '💰',
         items: [
-          { key: 'finance-placeholder', label: 'მოსაფიქრებელია', icon: '📊' }
+          { key: 'equipment', label: 'აღჭურვილობა', icon: '🔧' }
         ]
       });
     }
 
-    // Marketing role (placeholder)
-    if (userRole === 'marketing' || userRole === 'admin') {
-      menus.push({
-        key: 'marketing',
-        label: 'Marketing',
-        icon: '📈',
-        items: [
-          { key: 'marketing-placeholder', label: 'მოსაფიქრებელია', icon: '📊' }
-        ]
-      });
-    }
-
-    // Manager role
-    if (userRole === 'manager' || userRole === 'admin') {
-      menus.push({
-        key: 'manager',
-        label: 'Manager',
-        icon: '👔',
-        single: true,
-        action: () => handleViewChange('exhibitions')
-      });
-    }
-
-    // Profile (for all users)
+    // Finance menu (for all users)
     menus.push({
-      key: 'profile',
-      label: 'Profile',
-      icon: '👤',
+      key: 'finance',
+      label: 'Finance',
+      icon: '💰',
       single: true,
-      action: () => handleViewChange('profile')
+      action: () => handleViewChange('finance')
     });
 
-    // Admin (admin only)
+    // Marketing menu (for all users)
+    menus.push({
+      key: 'marketing',
+      label: 'Marketing',
+      icon: '📢',
+      single: true,
+      action: () => handleViewChange('marketing')
+    });
+
+    // Admin only sections
     if (userRole === 'admin') {
       menus.push({
         key: 'admin',
         label: 'Admin',
         icon: '⚡',
-        single: true,
-        action: () => handleViewChange('users')
+        items: [
+          { key: 'users', label: 'მომხმარებლები', icon: '👤' },
+         
+        ]
       });
     }
 
@@ -212,20 +201,26 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
                         <span className="dropdown-arrow">▼</span>
                       </button>
                       <div className="dropdown-content">
-                        {menu.items.map((item) => (
-                          <button
-                            key={item.key}
-                            onClick={() => {
-                              handleViewChange(item.key);
-                              setDropdownOpen({});
-                              setIsMobileMenuOpen(false);
-                            }}
-                            className={`dropdown-item ${activeView === item.key ? 'active' : ''}`}
-                          >
-                            <span className="item-icon">{item.icon}</span>
-                            <span className="item-label">{item.label}</span>
-                          </button>
-                        ))}
+                        {menu.items.length > 0 ? (
+                          menu.items.map((item) => (
+                            <button
+                              key={item.key}
+                              onClick={() => {
+                                handleViewChange(item.key);
+                                setDropdownOpen({});
+                                setIsMobileMenuOpen(false);
+                              }}
+                              className={`dropdown-item ${activeView === item.key ? 'active' : ''}`}
+                            >
+                              <span className="item-icon">{item.icon}</span>
+                              <span className="item-label">{item.label}</span>
+                            </button>
+                          ))
+                        ) : (
+                          <div className="dropdown-item empty">
+                            <span className="item-label">მალე დაემატება...</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
