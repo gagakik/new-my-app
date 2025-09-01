@@ -207,7 +207,7 @@ const PackageManager = ({ exhibitionId, showNotification }) => {
                   <label>ფართობი (კვმ)</label>
                   <input
                     type="number"
-                    step="0.01"
+                    step="0"
                     value={formData.fixed_area_sqm}
                     onChange={(e) => setFormData(prev => ({ ...prev, fixed_area_sqm: e.target.value }))}
                     required

@@ -1654,9 +1654,10 @@ const importRoutes = require('./routes/import');
 const statisticsRoutes = require('./routes/statistics');
 const packagesRoutes = require('./routes/packages');
 const reportsRoutes = require('./routes/reports');
+
 app.use('/api/companies', companiesRoutes);
 app.use('/api/equipment', equipmentRoutes);
 app.use('/api/import', importRoutes);
 app.use('/api/statistics', statisticsRoutes);
-app.use('/api/packages', packagesRoutes);
+app.use('/api/packages', authenticateToken, packagesRoutes);
 app.use('/api/reports', reportsRoutes);

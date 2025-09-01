@@ -22,6 +22,7 @@ const EventsList = ({ showNotification, userRole }) => {
   const [selectedMonth, setSelectedMonth] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [showArchivedOnly, setShowArchivedOnly] = useState(false);
+  const [sortDirection, setSortDirection] = useState('desc'); // 'asc' ან 'desc'
 
   const isAuthorizedForManagement =
     userRole === 'admin' ||
@@ -96,6 +97,19 @@ const EventsList = ({ showNotification, userRole }) => {
     fetchEvents();
   }, [fetchEvents]);
 
+  // ცალკე useEffect სორტირებისთვის - როცა events იტვირთება ან sortDirection იცვლება
+  useEffect(() => {
+    if (events.length > 0) {
+      let sorted = [...events];
+      if (sortDirection === 'desc') {
+        sorted.sort((a, b) => new Date(b.start_date) - new Date(a.start_date));
+      } else {
+        sorted.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+      }
+      setEvents(sorted);
+    }
+  }, [sortDirection]);
+
   // ფილტრაციის ლოგიკა
   useEffect(() => {
     let filtered = [...events];
@@ -139,8 +153,15 @@ const EventsList = ({ showNotification, userRole }) => {
       });
     }
 
+    // სორტირება დაწყების თარიღის მიხედვით
+    if (sortDirection === 'desc') {
+      filtered.sort((a, b) => new Date(b.start_date) - new Date(a.start_date)); // ყველაზე ახალი პირველი
+    } else {
+      filtered.sort((a, b) => new Date(a.start_date) - new Date(b.start_date)); // ყველაზე ძველი პირველი
+    }
+
     setFilteredEvents(filtered);
-  }, [events, searchTerm, selectedYear, selectedMonth, statusFilter, showArchivedOnly]);
+  }, [events, searchTerm, selectedYear, selectedMonth, statusFilter, showArchivedOnly, sortDirection]);
 
   // წლების სია
   const getAvailableYears = () => {
@@ -320,6 +341,11 @@ const EventsList = ({ showNotification, userRole }) => {
     return { text: 'მიმდინარე', class: 'active' };
   };
 
+  const toggleSortDirection = () => {
+    setSortDirection(prevDirection => (prevDirection === 'desc' ? 'asc' : 'desc'));
+  };
+
+
   return (
     <div className="events-container">
       <div className="header-section">
@@ -407,6 +433,9 @@ const EventsList = ({ showNotification, userRole }) => {
           <div className="filter-actions">
             <button className="clear-filters" onClick={clearFilters}>
               ფილტრების გასუფთავება
+            </button>
+            <button className="sort-toggle" onClick={toggleSortDirection}>
+              {sortDirection === 'desc' ? 'ახალი ძველი' : 'ძველი ახალი'}
             </button>
           </div>
         </div>

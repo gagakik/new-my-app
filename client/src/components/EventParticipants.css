@@ -549,6 +549,119 @@
   font-size: 0.9rem;
 }
 
+/* Multiple Package Selection Styles */
+.packages-selection {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1rem 0;
+  border: 1px solid #e2e8f0;
+}
+
+.packages-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.5rem;
+}
+
+.packages-header h4 {
+  margin: 0;
+  color: #334155;
+}
+
+.add-package-btn {
+  background: #059669;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: background-color 0.3s;
+}
+
+.add-package-btn:hover {
+  background: #047857;
+}
+
+.package-selection-row {
+  background: white;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.remove-package-btn {
+  background: #dc2626;
+  color: white;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: bold;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s;
+}
+
+.remove-package-btn:hover {
+  background: #b91c1c;
+}
+
+.packages-summary {
+  background: #dbeafe;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-top: 1rem;
+  border: 1px solid #bfdbfe;
+}
+
+.packages-summary h5 {
+  margin: 0 0 0.5rem 0;
+  color: #1e40af;
+}
+
+.packages-summary p {
+  margin: 0.25rem 0;
+  color: #1e40af;
+  font-weight: 500;
+}
+
+.package-equipment-group {
+  margin-bottom: 0.75rem;
+  padding: 0.5rem;
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.package-equipment-group h5 {
+  margin: 0 0 0.5rem 0;
+  color: #475569;
+  font-size: 0.85rem;
+}
+
+.base-equipment-list {
+  margin: 0;
+  padding-left: 1rem;
+}
+
+.base-equipment-list li {
+  margin: 0.25rem 0;
+  font-size: 0.85rem;
+  color: #64748b;
+}em;
+}
+
 .package-equipment-preview ul {
   margin: 0;
   padding-left: 1.25rem;
