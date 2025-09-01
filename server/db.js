@@ -141,35 +141,6 @@ const createTables = async () => {
       )
     `);
 
-    // Event participants table - original version
-    // await query(`
-    //   CREATE TABLE IF NOT EXISTS event_participants (
-    //     id SERIAL PRIMARY KEY,
-    //     event_id INTEGER NOT NULL,
-    //     company_id INTEGER NOT NULL,
-    //     registration_status VARCHAR(100) DEFAULT 'მონაწილეობის მოთხოვნა',
-    //     payment_status VARCHAR(50) DEFAULT 'მომლოდინე',
-    //     booth_number VARCHAR(50),
-    //     booth_size VARCHAR(50),
-    //     notes TEXT,
-    //     contact_person VARCHAR(255),
-    //     contact_position VARCHAR(255),
-    //     contact_email VARCHAR(255),
-    //     contact_phone VARCHAR(50),
-    //     payment_amount DECIMAL(10,2),
-    //     payment_due_date DATE,
-    //     payment_method VARCHAR(100),
-    //     invoice_number VARCHAR(100),
-    //     invoice_file VARCHAR(500),
-    //     contract_file VARCHAR(500),
-    //     handover_file VARCHAR(500),
-    //     registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    //     created_by_user_id INTEGER,
-    //     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    //     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    //   )
-    // `);
-
     // Equipment bookings table
     await query(`
       CREATE TABLE IF NOT EXISTS equipment_bookings (
@@ -203,22 +174,66 @@ const createTables = async () => {
       )
     `);
 
-    // Exhibitions packages
+    // Exhibitions table first (required for exhibition_packages foreign key)
+    await query(`
+      CREATE TABLE IF NOT EXISTS exhibitions (
+        id SERIAL PRIMARY KEY,
+        exhibition_name VARCHAR(255) NOT NULL,
+        comment TEXT,
+        manager VARCHAR(255),
+        price_per_sqm DECIMAL(10,2),
+        created_by_user_id INTEGER REFERENCES users(id),
+        updated_by_user_id INTEGER REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Exhibition packages
     await query(`
       CREATE TABLE IF NOT EXISTS exhibition_packages (
         id SERIAL PRIMARY KEY,
-        exhibition_id INTEGER REFERENCES exhibitions(id) ON DELETE CASCADE,
+        exhibition_id INTEGER REFERENCES exhibitions(id),
         package_name VARCHAR(255) NOT NULL,
         description TEXT,
-        fixed_area_sqm DECIMAL(10,2) NOT NULL,
-        fixed_price DECIMAL(10,2) NOT NULL,
+        fixed_area_sqm DECIMAL(8,2),
+        fixed_price DECIMAL(10,2),
         is_active BOOLEAN DEFAULT true,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         created_by_user_id INTEGER REFERENCES users(id),
+        updated_by_user_id INTEGER REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_by_user_id INTEGER REFERENCES users(id)
+        is_bundle BOOLEAN DEFAULT false,
+        bundle_discount_percent DECIMAL(5,2) DEFAULT 0,
+        early_bird_price DECIMAL(10,2),
+        early_bird_end_date DATE,
+        last_minute_price DECIMAL(10,2),
+        last_minute_start_date DATE
       )
     `);
+
+    // Add missing columns one by one
+    const columnsToAdd = [
+      { name: 'is_bundle', type: 'BOOLEAN DEFAULT false' },
+      { name: 'bundle_discount_percent', type: 'DECIMAL(5,2) DEFAULT 0' },
+      { name: 'early_bird_price', type: 'DECIMAL(10,2)' },
+      { name: 'early_bird_end_date', type: 'DATE' },
+      { name: 'last_minute_price', type: 'DECIMAL(10,2)' },
+      { name: 'last_minute_start_date', type: 'DATE' }
+    ];
+
+    for (const column of columnsToAdd) {
+      try {
+        await query(`ALTER TABLE exhibition_packages ADD COLUMN IF NOT EXISTS ${column.name} ${column.type}`);
+        console.log(`Column ${column.name} added/verified successfully`);
+      } catch (alterError) {
+        if (alterError.code === '42701') {
+          console.log(`Column ${column.name} already exists`);
+        } else {
+          console.error(`Error adding column ${column.name}:`, alterError.message);
+        }
+      }
+    }
 
     // Equipment included in the package
     await query(`
@@ -253,6 +268,59 @@ const createTables = async () => {
         quantity INTEGER NOT NULL,
         is_from_package BOOLEAN DEFAULT false,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Annual services table (events)
+    await query(`
+      CREATE TABLE IF NOT EXISTS annual_services (
+        id SERIAL PRIMARY KEY,
+        service_name VARCHAR(255) NOT NULL,
+        exhibition_id INTEGER REFERENCES exhibitions(id),
+        start_date DATE,
+        end_date DATE,
+        created_by_user_id INTEGER REFERENCES users(id),
+        updated_by_user_id INTEGER REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Event participants table
+    await query(`
+      CREATE TABLE IF NOT EXISTS event_participants (
+        id SERIAL PRIMARY KEY,
+        event_id INTEGER REFERENCES annual_services(id),
+        company_id INTEGER REFERENCES companies(id),
+        participant_name VARCHAR(255),
+        booth_number VARCHAR(50),
+        registration_status VARCHAR(50) DEFAULT 'მონაწილეობის მოთხოვნა',
+        registration_type VARCHAR(20) DEFAULT 'individual' CHECK (registration_type IN ('individual', 'package')),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Package Bundles table
+    await query(`
+      CREATE TABLE IF NOT EXISTS package_bundles (
+        id SERIAL PRIMARY KEY,
+        exhibition_id INTEGER REFERENCES exhibitions(id),
+        bundle_name VARCHAR(255) NOT NULL,
+        description TEXT,
+        discount_percent DECIMAL(5,2) DEFAULT 0,
+        is_active BOOLEAN DEFAULT true,
+        created_by_user_id INTEGER REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Bundle packages junction table
+    await query(`
+      CREATE TABLE IF NOT EXISTS bundle_packages (
+        id SERIAL PRIMARY KEY,
+        bundle_id INTEGER REFERENCES package_bundles(id) ON DELETE CASCADE,
+        package_id INTEGER REFERENCES exhibition_packages(id) ON DELETE CASCADE,
+        UNIQUE(bundle_id, package_id)
       )
     `);
 

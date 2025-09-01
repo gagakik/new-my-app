@@ -194,3 +194,144 @@ router.delete('/:id', async (req, res) => {
 });
 
 module.exports = router;
+
+
+
+// POST /api/equipment/:id/maintenance - მოვლის გეგმის დამატება
+router.post('/:id/maintenance', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { maintenance_type, scheduled_date, description, estimated_cost } = req.body;
+    const userId = req.user.id;
+
+    const result = await db.query(
+      `INSERT INTO equipment_maintenance 
+       (equipment_id, maintenance_type, scheduled_date, description, estimated_cost, created_by_user_id) 
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [id, maintenance_type, scheduled_date, description, estimated_cost, userId]
+    );
+
+    res.status(201).json({
+      message: 'მოვლის გეგმა წარმატებით დაემატა!',
+      maintenance: result.rows[0]
+    });
+  } catch (error) {
+    console.error('მოვლის გეგმის დამატების შეცდომა:', error);
+    res.status(500).json({ message: 'მოვლის გეგმის დამატება ვერ მოხერხდა' });
+  }
+});
+
+// GET /api/equipment/:id/maintenance - აღჭურვილობის მოვლის ისტორია
+router.get('/:id/maintenance', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await db.query(`
+      SELECT 
+        em.*,
+        u.username as created_by
+      FROM equipment_maintenance em
+      LEFT JOIN users u ON em.created_by_user_id = u.id
+      WHERE em.equipment_id = $1
+      ORDER BY em.scheduled_date DESC
+    `, [id]);
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error('მოვლის ისტორიის მიღების შეცდომა:', error);
+    res.status(500).json({ message: 'მოვლის ისტორია ვერ მოიძებნა' });
+  }
+});
+
+// PUT /api/equipment/:id/maintenance/:maintenanceId - მოვლის სტატუსის განახლება
+router.put('/:id/maintenance/:maintenanceId', async (req, res) => {
+  try {
+    const { maintenanceId } = req.params;
+    const { status, actual_cost, completion_date, notes } = req.body;
+    const userId = req.user.id;
+
+    const result = await db.query(
+      `UPDATE equipment_maintenance 
+       SET status = $1, actual_cost = $2, completion_date = $3, notes = $4, updated_by_user_id = $5
+       WHERE id = $6 RETURNING *`,
+      [status, actual_cost, completion_date, notes, userId, maintenanceId]
+    );
+
+    res.json({
+      message: 'მოვლის სტატუსი განახლდა!',
+      maintenance: result.rows[0]
+    });
+  } catch (error) {
+    console.error('მოვლის განახლების შეცდომა:', error);
+    res.status(500).json({ message: 'მოვლის განახლება ვერ მოხერხდა' });
+  }
+});
+
+// GET /api/equipment/realtime-availability/:eventId - რეალურ დროში ხელმისაწვდომობა
+router.get('/realtime-availability/:eventId', async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    
+    const result = await db.query(`
+      SELECT 
+        e.*,
+        COALESCE(bookings.booked_quantity, 0) as booked_quantity,
+        COALESCE(maintenance.under_maintenance, 0) as under_maintenance,
+        (e.quantity - COALESCE(bookings.booked_quantity, 0) - COALESCE(maintenance.under_maintenance, 0)) as available_quantity
+      FROM equipment e
+      LEFT JOIN (
+        SELECT 
+          equipment_id, 
+          SUM(quantity) as booked_quantity
+        FROM participant_selected_equipment pse
+        JOIN event_participants ep ON pse.participant_id = ep.id
+        WHERE ep.event_id = $1
+        GROUP BY equipment_id
+      ) bookings ON e.id = bookings.equipment_id
+      LEFT JOIN (
+        SELECT 
+          equipment_id,
+          COUNT(*) as under_maintenance
+        FROM equipment_maintenance
+        WHERE status IN ('planned', 'in_progress')
+        GROUP BY equipment_id
+      ) maintenance ON e.id = maintenance.equipment_id
+      ORDER BY e.code_name
+    `, [eventId]);
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error('რეალურ დროში ხელმისაწვდომობის შეცდომა:', error);
+    res.status(500).json({ message: 'ხელმისაწვდომობის მიღება ვერ მოხერხდა' });
+  }
+});
+
+// POST /api/equipment/:id/damage-report - დაზიანების რეპორტი
+router.post('/:id/damage-report', upload.array('damage_photos', 10), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { damage_description, severity, reported_by, incident_date } = req.body;
+    const userId = req.user.id;
+    
+    let photoUrls = [];
+    if (req.files && req.files.length > 0) {
+      photoUrls = req.files.map(file => `/uploads/${file.filename}`);
+    }
+
+    const result = await db.query(
+      `INSERT INTO equipment_damage_reports 
+       (equipment_id, damage_description, severity, reported_by, incident_date, photo_urls, created_by_user_id) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [id, damage_description, severity, reported_by, incident_date, JSON.stringify(photoUrls), userId]
+    );
+
+    res.status(201).json({
+      message: 'დაზიანების რეპორტი წარმატებით შეიქმნა!',
+      report: result.rows[0]
+    });
+  } catch (error) {
+    console.error('დაზიანების რეპორტის შეცდომა:', error);
+    res.status(500).json({ message: 'დაზიანების რეპორტი ვერ შეიქმნა' });
+  }
+});
+
