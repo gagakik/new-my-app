@@ -114,17 +114,6 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
                 required
               />
             </div>
-            <div className="form-group">
-              <label>1 კვმ ღირებულება (ევროში)</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={pricePerSqm}
-                onChange={(e) => setPricePerSqm(e.target.value)}
-                placeholder="მაგ: 150.00"
-              />
-            </div>
             <div className="form-actions">
               <button type="submit">
                 {isEditing ? 'განახლება' : 'დამატება'}

@@ -12,6 +12,9 @@
 
 
 
+
+
+
 /* Tablet responsive design */
 @media (max-width: 1024px) {
   .exhibitions-container {
@@ -197,7 +200,24 @@
   border-radius: 8px;
   overflow: hidden; /* აუცილებელია border-radius-ისთვის */
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  color: #495057;
+  table-layout: fixed;
+  word-wrap: break-word;
 }
+
+
+.exhibitions-table tbody tr {
+  border-bottom: 1px solid #dee2e6;
+}
+
+.exhibitions-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.exhibitions-table
 
 .date-info {
   padding: 4px 0;
@@ -234,6 +254,13 @@
 
 .exhibitions-table tbody tr:nth-child(even) {
   background-color: #f2f2f2;
+  width: 100%;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #dee2e6;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .exhibitions-table tbody tr:hover {

@@ -50,6 +50,35 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification, onCanc
     }
   }, [companyToEdit, isEditing, exhibitions]);
 
+  // მოდალის ავტომატური scroll და ცენტრირება
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const modalOverlay = document.querySelector('.modal-overlay');
+      const modalContent = document.querySelector('.modal-content');
+      
+      if (modalOverlay && modalContent) {
+        // ეკრანის ცენტრში გადატანა
+        modalOverlay.scrollTo({
+          top: 0,
+          left: 0,
+          behavior: 'smooth'
+        });
+        
+        // მოდალზე ფოკუსირება
+        modalContent.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center',
+          inline: 'center'
+        });
+        
+        // წინა პლანზე გამოტანა
+        modalContent.focus();
+      }
+    }, 150);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     if (isEditing && companyToEdit) {
       setCompanyName(companyToEdit.company_name || '');
@@ -345,20 +374,22 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification, onCanc
                 </button>
               </div>
 
-              <button type="submit" className="submit-btn">
-                {isEditing ? 'განახლება' : 'დამატება'}
-              </button>
-              <button
-                type="button"
-                className="cancel-btn"
-                           onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onCompanyUpdated();
-            }}
-              >
-                გაუქმება
-              </button>
+              <div className="form-actions">
+                <button type="submit" className="submit-btn">
+                  {isEditing ? 'განახლება' : 'დამატება'}
+                </button>
+                <button
+                  type="button"
+                  className="cancel-btn"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onCompanyUpdated();
+                  }}
+                >
+                  გაუქმება
+                </button>
+              </div>
             </form>
           </div>
         </div>

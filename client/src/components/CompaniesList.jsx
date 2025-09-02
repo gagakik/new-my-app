@@ -369,7 +369,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
             <tbody>
               {companies.map(company => (
                 <tr key={company.id}>
-                  <td className="company-name">{company.company_name}</td>
+                  <td className="company-name" onClick={() => handleViewDetails(company)} style={{cursor: 'pointer'}}>{company.company_name}</td>
                   <td>{company.country}</td>
                   <td>{company.identification_code}</td>
                   <td>
@@ -436,12 +436,6 @@ const CompaniesList = ({ showNotification, userRole }) => {
                   <td>
                     <div className="actions">
                       <button
-                        className="view-details"
-                        onClick={() => handleViewDetails(company)}
-                        title="დეტალების ნახვა"
-                      >
-                      </button>
-                      <button
                         className="edit"
                         onClick={() => handleEditClick(company)}
                         title="რედაქტირება"
@@ -464,19 +458,13 @@ const CompaniesList = ({ showNotification, userRole }) => {
           <div className="mobile-cards mobile-only">
             {companies.map(company => (
               <div key={company.id} className="company-card">
-                <h3>{company.company_name}</h3>
+                <h3 onClick={() => handleViewDetails(company)} style={{cursor: 'pointer'}}>{company.company_name}</h3>
                 <div className="company-info">
                   <span><strong>ქვეყანა:</strong> {company.country}</span>
                   <span><strong>პროფილი:</strong> {company.company_profile}</span>
                   <span><strong>სტატუსი:</strong> {company.status}</span>
                 </div>
                 <div className="company-actions">
-                  <button
-                    onClick={() => handleViewDetails(company)}
-                    className="view-details"
-                    title="დეტალების ნახვა"
-                  >
-                  </button>
                   <button
                     onClick={() => handleEditClick(company)}
                     className="edit"

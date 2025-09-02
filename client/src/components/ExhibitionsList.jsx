@@ -128,8 +128,6 @@ const ExhibitionsList = ({ showNotification, userRole }) => { // მივიღ
             <tr>
               <th>დასახელება</th>
               <th>მენეჯერი</th>
-              <th>1 კვმ EUR</th>
-              <th>შექმნილია</th>
               <th>განახლებულია</th>
               {isAuthorizedForManagement && <th>მოქმედებები</th>}
             </tr>
@@ -139,25 +137,6 @@ const ExhibitionsList = ({ showNotification, userRole }) => { // მივიღ
               <tr key={exhibition.id}>
                 <td>{exhibition.exhibition_name}</td>
                 <td>{exhibition.manager}</td>
-                <td>{exhibition.price_per_sqm ? `€${parseFloat(exhibition.price_per_sqm).toFixed(2)}` : '-'}</td>
-                <td className="date-info">
-                  {exhibition.created_by && (
-                    <div>
-                      <div className="user">{exhibition.created_by}</div>
-                      {exhibition.created_at && (
-                        <div className="date">
-                          {new Date(exhibition.created_at).toLocaleDateString('ka-GE', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </td>
                 <td className="date-info">
                   {exhibition.updated_by && exhibition.updated_at && (
                     <div>
@@ -167,8 +146,6 @@ const ExhibitionsList = ({ showNotification, userRole }) => { // მივიღ
                           year: 'numeric',
                           month: 'short',
                           day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
                         })}
                       </div>
                     </div>

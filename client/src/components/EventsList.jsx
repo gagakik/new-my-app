@@ -253,7 +253,7 @@ const EventsList = ({ showNotification, userRole }) => {
         const errorData = await response.json();
         showNotification(`არქივში გადატანა ვერ მოხერხდა: ${errorData.message}`, 'error');
       }
-    } catch (error) {
+    } catch (er) {
       showNotification('დაფიქსირდა შეცდომა სერვერთან კავშირისას.', 'error');
     }
   };
@@ -489,12 +489,6 @@ const EventsList = ({ showNotification, userRole }) => {
                 </div>
 
                 <div className="actions">
-                  <button
-                    className="view"
-                    onClick={() => viewEventDetails(event)}
-                    title="დეტალების ნახვა"
-                  >
-                  </button>
                   <button
                     className="participants"
                     onClick={() => handleShowParticipants(event)}
