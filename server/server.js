@@ -931,8 +931,8 @@ app.put('/api/events/:eventId/participants/:participantId',
             contact_person = $7, contact_position = $8, contact_email = $9, contact_phone = $10,
             payment_amount = $11, payment_due_date = $12, payment_method = $13,
             invoice_number = $14, invoice_file = $15, contract_file = $16,
-            handover_file = $17, updated_at = CURRENT_TIMESTAMP
-        WHERE id = $18 AND event_id = $19 
+            handover_file = $17, booth_category = $18, booth_type = $19, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $20 AND event_id = $21 
         RETURNING *
       `, [
         company_id || current.company_id, 
@@ -952,6 +952,8 @@ app.put('/api/events/:eventId/participants/:participantId',
         finalInvoicePath,
         finalContractPath,
         finalHandoverPath,
+        req.body.booth_category || current.booth_category,
+        req.body.booth_type || current.booth_type,
         participantId, eventId
       ]);
 
@@ -1039,12 +1041,16 @@ app.get('/api/participants/:participantId/equipment-bookings', authenticateToken
         eb.*,
         e.code_name as equipment_name,
         e.code_name,
-        (eb.quantity * eb.unit_price) as total_price
+        e.price as current_equipment_price,
+        COALESCE(eb.unit_price, e.price) as unit_price,
+        (eb.quantity * COALESCE(eb.unit_price, e.price)) as total_price
       FROM equipment_bookings eb
       JOIN equipment e ON eb.equipment_id = e.id
       WHERE eb.participant_id = $1
+      ORDER BY eb.id ASC
     `, [participantId]);
 
+    console.log(`Equipment bookings for participant ${participantId}:`, result.rows);
     res.json(result.rows);
   } catch (error) {
     console.error('აღჭურვილობის ჯავშნების მიღების შეცდომა:', error);

@@ -6,24 +6,17 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
   const [exhibitionName, setExhibitionName] = useState('');
   const [comment, setComment] = useState('');
   const [manager, setManager] = useState('');
-  const [pricePerSqm, setPricePerSqm] = useState('');
-
   const isEditing = exhibitionToEdit && exhibitionToEdit.id;
 
   useEffect(() => {
     if (isEditing) {
-      console.log('რედაქტირების მონაცემები:', exhibitionToEdit);
-      console.log('price_per_sqm ღირებულება:', exhibitionToEdit.price_per_sqm, 'ტიპი:', typeof exhibitionToEdit.price_per_sqm);
-
       setExhibitionName(exhibitionToEdit.exhibition_name || '');
       setComment(exhibitionToEdit.comment || '');
       setManager(exhibitionToEdit.manager || '');
-      setPricePerSqm(exhibitionToEdit.price_per_sqm ? exhibitionToEdit.price_per_sqm.toString() : '');
     } else {
       setExhibitionName('');
       setComment('');
       setManager('');
-      setPricePerSqm('');
     }
   }, [exhibitionToEdit, isEditing]);
 
@@ -33,11 +26,8 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
     const exhibitionData = {
       exhibition_name: exhibitionName,
       comment,
-      manager,
-      price_per_sqm: pricePerSqm ? parseFloat(pricePerSqm) : null
+      manager
     };
-
-    console.log('გაგზავნილი მონაცემები:', exhibitionData);
 
     const method = isEditing ? 'PUT' : 'POST';
     const url = isEditing

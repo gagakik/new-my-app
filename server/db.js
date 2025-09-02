@@ -160,6 +160,8 @@ const createTables = async () => {
         company_id INTEGER REFERENCES companies(id) ON DELETE CASCADE,
         booth_size DECIMAL(10,2),
         booth_number VARCHAR(50),
+        booth_category VARCHAR(50) DEFAULT 'ოქტანორმის სტენდები' CHECK (booth_category IN ('ოქტანორმის სტენდები', 'ინდივიდუალური სტენდები', 'ტენტი', 'მარკიზიანი დახლი')),
+        booth_type VARCHAR(50) DEFAULT 'რიგითი' CHECK (booth_type IN ('რიგითი', 'კუთხის', 'ნახევარ კუნძული', 'კუნძული')),
         payment_amount DECIMAL(10,2),
         payment_status VARCHAR(20) DEFAULT 'pending' CHECK (payment_status IN ('pending', 'paid', 'overdue')),
         registration_status VARCHAR(20) DEFAULT 'registered' CHECK (registration_status IN ('registered', 'confirmed', 'cancelled', 'pending')),
@@ -170,9 +172,75 @@ const createTables = async () => {
         contract_file_path VARCHAR(500),
         handover_file_path VARCHAR(500),
         package_id INTEGER REFERENCES exhibition_packages(id),
-        registration_type VARCHAR(20) DEFAULT 'individual' CHECK (registration_type IN ('individual', 'package'))
+        registration_type VARCHAR(20) DEFAULT 'individual' CHECK (registration_type IN ('individual', 'package')),
+        contact_person VARCHAR(255),
+        contact_position VARCHAR(255),
+        contact_email VARCHAR(255),
+        contact_phone VARCHAR(50),
+        payment_due_date DATE,
+        payment_method VARCHAR(50),
+        invoice_number VARCHAR(100),
+        invoice_file VARCHAR(500),
+        contract_file VARCHAR(500),
+        handover_file VARCHAR(500)
       )
     `);
+
+    // Add missing columns to existing event_participants table if they don't exist
+    const participantColumnsToAdd = [
+      { name: 'booth_category', type: 'VARCHAR(50) DEFAULT \'ოქტანორმის სტენდები\'' },
+      { name: 'booth_type', type: 'VARCHAR(50) DEFAULT \'რიგითი\'' },
+      { name: 'contact_person', type: 'VARCHAR(255)' },
+      { name: 'contact_position', type: 'VARCHAR(255)' },
+      { name: 'contact_email', type: 'VARCHAR(255)' },
+      { name: 'contact_phone', type: 'VARCHAR(50)' },
+      { name: 'payment_due_date', type: 'DATE' },
+      { name: 'payment_method', type: 'VARCHAR(50)' },
+      { name: 'invoice_number', type: 'VARCHAR(100)' },
+      { name: 'invoice_file', type: 'VARCHAR(500)' },
+      { name: 'contract_file', type: 'VARCHAR(500)' },
+      { name: 'handover_file', type: 'VARCHAR(500)' }
+    ];
+
+    for (const column of participantColumnsToAdd) {
+      try {
+        await query(`ALTER TABLE event_participants ADD COLUMN IF NOT EXISTS ${column.name} ${column.type}`);
+        console.log(`Event participants column ${column.name} added/verified successfully`);
+      } catch (alterError) {
+        if (alterError.code === '42701') {
+          console.log(`Event participants column ${column.name} already exists`);
+        } else {
+          console.error(`Error adding event participants column ${column.name}:`, alterError.message);
+        }
+      }
+    }
+
+    // Add constraints for booth_category and booth_type
+    try {
+      await query(`
+        ALTER TABLE event_participants 
+        ADD CONSTRAINT IF NOT EXISTS check_booth_category 
+        CHECK (booth_category IN ('ოქტანორმის სტენდები', 'ინდივიდუალური სტენდები', 'ტენტი', 'მარკიზიანი დახლი'))
+      `);
+      console.log('booth_category constraint added/verified successfully');
+    } catch (constraintError) {
+      if (constraintError.code !== '42710') {
+        console.error('Error adding booth_category constraint:', constraintError.message);
+      }
+    }
+
+    try {
+      await query(`
+        ALTER TABLE event_participants 
+        ADD CONSTRAINT IF NOT EXISTS check_booth_type 
+        CHECK (booth_type IN ('რიგითი', 'კუთხის', 'ნახევარ კუნძული', 'კუნძული'))
+      `);
+      console.log('booth_type constraint added/verified successfully');
+    } catch (constraintError) {
+      if (constraintError.code !== '42710') {
+        console.error('Error adding booth_type constraint:', constraintError.message);
+      }
+    }
 
     // Exhibitions table first (required for exhibition_packages foreign key)
     await query(`
@@ -181,7 +249,6 @@ const createTables = async () => {
         exhibition_name VARCHAR(255) NOT NULL,
         comment TEXT,
         manager VARCHAR(255),
-        price_per_sqm DECIMAL(10,2),
         created_by_user_id INTEGER REFERENCES users(id),
         updated_by_user_id INTEGER REFERENCES users(id),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -331,7 +398,102 @@ const createTables = async () => {
   }
 };
 
-// Initialize database
-createTables();
+// Function to add missing columns to event_participants table
+const addMissingColumns = async () => {
+  try {
+    console.log('შემოწმდება და დაემატება ყველა საჭირო სვეტი...');
 
-module.exports = { query, pool };
+    // Check if columns exist first
+    const checkColumns = await query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'event_participants' 
+      AND column_name IN ('booth_category', 'booth_type', 'contact_person', 'contact_position', 'contact_email', 'contact_phone', 'payment_due_date', 'payment_method', 'invoice_number', 'invoice_file', 'contract_file', 'handover_file')
+    `);
+    
+    const existingColumns = checkColumns.rows.map(row => row.column_name);
+    console.log('არსებული სვეტები:', existingColumns);
+
+    // Add booth_category if not exists
+    if (!existingColumns.includes('booth_category')) {
+      await query(`
+        ALTER TABLE event_participants 
+        ADD COLUMN booth_category VARCHAR(50) DEFAULT 'ოქტანორმის სტენდები'
+      `);
+      console.log('booth_category სვეტი დაემატა');
+    } else {
+      console.log('booth_category სვეტი უკვე არსებობს');
+    }
+
+    // Add booth_type if not exists
+    if (!existingColumns.includes('booth_type')) {
+      await query(`
+        ALTER TABLE event_participants 
+        ADD COLUMN booth_type VARCHAR(50) DEFAULT 'რიგითი'
+      `);
+      console.log('booth_type სვეტი დაემატა');
+    } else {
+      console.log('booth_type სვეტი უკვე არსებობს');
+    }
+
+    // Add other missing contact fields
+    const columnsToAdd = [
+      { name: 'contact_person', type: 'VARCHAR(255)' },
+      { name: 'contact_position', type: 'VARCHAR(255)' },
+      { name: 'contact_email', type: 'VARCHAR(255)' },
+      { name: 'contact_phone', type: 'VARCHAR(50)' },
+      { name: 'payment_due_date', type: 'DATE' },
+      { name: 'payment_method', type: 'VARCHAR(50)' },
+      { name: 'invoice_number', type: 'VARCHAR(100)' },
+      { name: 'invoice_file', type: 'VARCHAR(500)' },
+      { name: 'contract_file', type: 'VARCHAR(500)' },
+      { name: 'handover_file', type: 'VARCHAR(500)' }
+    ];
+
+    for (const col of columnsToAdd) {
+      if (!existingColumns.includes(col.name)) {
+        await query(`ALTER TABLE event_participants ADD COLUMN ${col.name} ${col.type}`);
+        console.log(`${col.name} სვეტი დაემატა`);
+      } else {
+        console.log(`${col.name} სვეტი უკვე არსებობს`);
+      }
+    }
+
+    // Add constraints
+    try {
+      await query(`
+        ALTER TABLE event_participants 
+        ADD CONSTRAINT IF NOT EXISTS check_booth_category 
+        CHECK (booth_category IN ('ოქტანორმის სტენდები', 'ინდივიდუალური სტენდები', 'ტენტი', 'მარკიზიანი დახლი'))
+      `);
+      console.log('booth_category შეზღუდვა დაემატა');
+    } catch (e) {
+      console.log('booth_category შეზღუდვა უკვე არსებობს');
+    }
+
+    try {
+      await query(`
+        ALTER TABLE event_participants 
+        ADD CONSTRAINT IF NOT EXISTS check_booth_type 
+        CHECK (booth_type IN ('რიგითი', 'კუთხის', 'ნახევარ კუნძული', 'კუნძული'))
+      `);
+      console.log('booth_type შეზღუდვა დაემატა');
+    } catch (e) {
+      console.log('booth_type შეზღუდვა უკვე არსებობს');
+    }
+
+    console.log('ყველა საჭირო სვეტი წარმატებით შემოწმდა და დაემატა!');
+  } catch (error) {
+    console.error('სვეტების დამატების შეცდომა:', error);
+  }
+};
+
+// Initialize database and add missing columns
+const initializeDatabase = async () => {
+  await createTables();
+  await addMissingColumns();
+};
+
+initializeDatabase();
+
+module.exports = { query, pool, addMissingColumns };
