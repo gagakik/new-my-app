@@ -1604,6 +1604,77 @@ app.put('/api/annual-services/:id/restore', authenticateToken, authorizeRoles('a
   }
 });
 
+// Delete annual service - only admin can delete
+app.delete('/api/annual-services/:id', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    console.log(`Attempting to delete annual service with ID: ${id}`);
+
+    // Check if the service exists first
+    const serviceCheck = await db.query('SELECT * FROM annual_services WHERE id = $1', [id]);
+    if (serviceCheck.rows.length === 0) {
+      return res.status(404).json({ message: 'სერვისი ვერ მოიძებნა' });
+    }
+
+    // Delete in correct order to handle foreign key constraints
+    try {
+      // 1. Delete participant selected equipment first
+      await db.query(`
+        DELETE FROM participant_selected_equipment 
+        WHERE participant_id IN (SELECT id FROM event_participants WHERE event_id = $1)
+      `, [id]);
+      console.log('Deleted participant selected equipment');
+
+      // 2. Delete equipment bookings
+      await db.query(`
+        DELETE FROM equipment_bookings 
+        WHERE participant_id IN (SELECT id FROM event_participants WHERE event_id = $1)
+      `, [id]);
+      console.log('Deleted equipment bookings');
+
+      // 3. Delete event completion records
+      await db.query('DELETE FROM event_completion WHERE event_id = $1', [id]);
+      console.log('Deleted event completion records');
+
+      // 4. Delete event participants
+      await db.query('DELETE FROM event_participants WHERE event_id = $1', [id]);
+      console.log('Deleted event participants');
+
+      // 5. Delete service spaces
+      await db.query('DELETE FROM service_spaces WHERE service_id = $1', [id]);
+      console.log('Deleted service spaces');
+
+      // 6. Finally delete the annual service
+      const result = await db.query('DELETE FROM annual_services WHERE id = $1 RETURNING *', [id]);
+      console.log('Deleted annual service:', result.rows[0]);
+
+      res.json({ message: 'სერვისი წარმატებით წაიშალა' });
+    } catch (deleteError) {
+      console.error('Detailed deletion error:', deleteError);
+      console.error('Error code:', deleteError.code);
+      console.error('Error detail:', deleteError.detail);
+      
+      // More specific error handling
+      if (deleteError.code === '23503') {
+        return res.status(400).json({ 
+          message: 'სერვისის წაშლა შეუძლებელია, რადგან მასთან დაკავშირებული მონაცემები არსებობს' 
+        });
+      }
+      
+      throw deleteError;
+    }
+  } catch (error) {
+    console.error('Annual service deletion error:', error);
+    console.error('Error details:', error.message);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      message: 'სერვისის წაშლა ვერ მოხერხდა',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
 // Start server
 const HOST = process.env.HOST || '0.0.0.0';
 app.listen(PORT, HOST, () => {

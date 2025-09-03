@@ -29,6 +29,8 @@ const EventsList = ({ showNotification, userRole }) => {
     userRole === 'sales' ||
     userRole === 'marketing';
 
+  const isAuthorizedForDeletion = userRole === 'admin';
+
   const fetchEvents = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
@@ -163,6 +165,16 @@ const EventsList = ({ showNotification, userRole }) => {
     setFilteredEvents(filtered);
   }, [events, searchTerm, selectedYear, selectedMonth, statusFilter, showArchivedOnly, sortDirection]);
 
+  // ცალკე useEffect, რომელიც გაასუფთავებს filter-ებს, როდესაც showArchivedOnly იცვლება
+  useEffect(() => {
+    // თუ გადავედით არქივიდან აქტიურზე, გავასუფთავოთ ფილტრები, რადგან ზოგიერთი ფილტრი შეიძლება არქივებულებზე არ იყოს რელევანტური
+    if (!showArchivedOnly) {
+      // შეგვიძლია აქ დავამატოთ კონკრეტული ფილტრების გასუფთავება, თუ საჭიროა, მაგალითად, statusFilter
+      // setStatusFilter('');
+    }
+  }, [showArchivedOnly]);
+
+
   // წლების სია
   const getAvailableYears = () => {
     const years = events.map(event => new Date(event.start_date).getFullYear());
@@ -190,11 +202,11 @@ const EventsList = ({ showNotification, userRole }) => {
     setSelectedYear('');
     setSelectedMonth('');
     setStatusFilter('');
-    setShowArchivedOnly(false);
+    // setShowArchivedOnly(false); // არქივის ტოგლის გათიშვა არ გვინდა ფილტრების გასუფთავებისას
   };
 
   const handleDelete = async (id) => {
-    const isConfirmed = window.confirm('ნამდვილად გსურთ ამ ივენთის წაშლა?');
+    const isConfirmed = window.confirm('ნამდვილად გსურთ ამ ივენთის წაშლა? ეს მოიცავს ყველა დაკავშირებულ მონაწილეს და მონაცემს.');
     if (!isConfirmed) return;
 
     try {
@@ -204,19 +216,45 @@ const EventsList = ({ showNotification, userRole }) => {
         return;
       }
 
-      const response = await fetch(`/api/annual-services/${id}`, {
+      console.log(`Attempting to delete event with ID: ${id}`);
+
+      const response = await fetch(`/api/events/${id}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
       });
 
+      console.log('Delete response status:', response.status);
+
       if (response.ok) {
+        const result = await response.json();
         showNotification('ივენთი წარმატებით წაიშალა!', 'success');
-        setEvents(events.filter((event) => event.id !== id));
+        setEvents(prevEvents => prevEvents.filter((event) => event.id !== id));
+        fetchEvents(); // Refresh the list to ensure consistency
       } else {
-        const errorData = await response.json();
-        showNotification(`წაშლა ვერ მოხერხდა: ${errorData.message}`, 'error');
+        const contentType = response.headers.get("content-type");
+
+        let errorMessage = 'წაშლა ვერ მოხერხდა';
+
+        if (contentType && contentType.includes("application/json")) {
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorMessage;
+          } catch (jsonError) {
+            console.error('Error parsing JSON error response:', jsonError);
+            errorMessage = `სერვერის შეცდომა (${response.status})`;
+          }
+        } else {
+          // If response is not JSON (like HTML error page)
+          const errorText = await response.text();
+          console.error('Non-JSON error response:', errorText);
+          errorMessage = `სერვერის შეცდომა (${response.status})`;
+        }
+
+        console.error('Delete failed:', { status: response.status, message: errorMessage });
+        showNotification(errorMessage, 'error');
       }
     } catch (error) {
       console.error('შეცდომა წაშლისას:', error);
@@ -526,11 +564,13 @@ const EventsList = ({ showNotification, userRole }) => {
                           title="არქივიდან აღდგენა">
                         </button>
                       )}
-                      <button
-                        className="delete"
-                        onClick={() => handleDelete(event.id)}
-                        title="წაშლა">
-                      </button>
+                      {isAuthorizedForDeletion && (
+                        <button
+                          className="delete"
+                          onClick={() => handleDelete(event.id)}
+                          title="წაშლა">
+                        </button>
+                      )}
                     </>
                   )}
                 </div>
