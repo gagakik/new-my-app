@@ -4,18 +4,15 @@ import PackageManager from './PackageManager';
 
 const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotification, onCancel }) => {
   const [exhibitionName, setExhibitionName] = useState('');
-  const [comment, setComment] = useState('');
   const [manager, setManager] = useState('');
   const isEditing = exhibitionToEdit && exhibitionToEdit.id;
 
   useEffect(() => {
     if (isEditing) {
       setExhibitionName(exhibitionToEdit.exhibition_name || '');
-      setComment(exhibitionToEdit.comment || '');
       setManager(exhibitionToEdit.manager || '');
     } else {
       setExhibitionName('');
-      setComment('');
       setManager('');
     }
   }, [exhibitionToEdit, isEditing]);
@@ -25,7 +22,6 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
 
     const exhibitionData = {
       exhibition_name: exhibitionName,
-      comment,
       manager
     };
 
@@ -86,15 +82,7 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
                 required
               />
             </div>
-            <div className="form-group">
-              <label>მოკლე განმარტება</label>
-              <input
-                type="text"
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                required
-              />
-            </div>
+            
             <div className="form-group">
               <label>გამოფენის მენეჯერი</label>
               <input

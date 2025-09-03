@@ -104,7 +104,6 @@ const createTables = async () => {
       CREATE TABLE IF NOT EXISTS exhibitions (
         id SERIAL PRIMARY KEY,
         exhibition_name VARCHAR(255) NOT NULL,
-        comment TEXT,
         manager VARCHAR(255),
         price_per_sqm DECIMAL(10,2) DEFAULT 0,
         created_by_user_id INTEGER,
@@ -288,7 +287,6 @@ const createTables = async () => {
       CREATE TABLE IF NOT EXISTS exhibitions (
         id SERIAL PRIMARY KEY,
         exhibition_name VARCHAR(255) NOT NULL,
-        comment TEXT,
         manager VARCHAR(255),
         created_by_user_id INTEGER REFERENCES users(id),
         updated_by_user_id INTEGER REFERENCES users(id),

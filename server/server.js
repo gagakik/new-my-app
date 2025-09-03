@@ -488,13 +488,13 @@ app.get('/api/exhibitions/:id', authenticateToken, async (req, res) => {
   }
 });
 
-app.post('/api/exhibitions', authenticateToken, authorizeRoles('admin', 'sales', 'marketing'), async (req, res) => {
+app.post('/api/exhibitions', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res) => {
   try {
-    const { exhibition_name, comment, manager, price_per_sqm = 0 } = req.body;
+    const { exhibition_name, manager, price_per_sqm = 0 } = req.body;
 
     const result = await db.query(
-      'INSERT INTO exhibitions (exhibition_name, comment, manager, price_per_sqm, created_by_user_id) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [exhibition_name, comment, manager, parseFloat(price_per_sqm) || 0, req.user.id]
+      'INSERT INTO exhibitions (exhibition_name, manager, price_per_sqm, created_by_user_id) VALUES ($1, $2, $3, $4) RETURNING *',
+      [exhibition_name, manager, parseFloat(price_per_sqm) || 0, req.user.id]
     );
 
     res.status(201).json({
@@ -507,14 +507,14 @@ app.post('/api/exhibitions', authenticateToken, authorizeRoles('admin', 'sales',
   }
 });
 
-app.put('/api/exhibitions/:id', authenticateToken, authorizeRoles('admin', 'sales', 'marketing'), async (req, res) => {
+app.put('/api/exhibitions/:id', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res) => {
   try {
     const { id } = req.params;
-    const { exhibition_name, comment, manager, price_per_sqm } = req.body;
+    const { exhibition_name, manager, price_per_sqm } = req.body;
 
     const result = await db.query(
-      'UPDATE exhibitions SET exhibition_name = $1, comment = $2, manager = $3, price_per_sqm = $4, updated_at = CURRENT_TIMESTAMP, updated_by_user_id = $5 WHERE id = $6 RETURNING *',
-      [exhibition_name, comment, manager, parseFloat(price_per_sqm) || 0, req.user.id, id]
+      'UPDATE exhibitions SET exhibition_name = $1, manager = $2, price_per_sqm = $3, updated_by_user_id = $4, updated_at = CURRENT_TIMESTAMP WHERE id = $5 RETURNING *',
+      [exhibition_name, manager, parseFloat(price_per_sqm) || 0, req.user.id, id]
     );
 
     if (result.rows.length === 0) {
@@ -922,6 +922,25 @@ app.put('/api/events/:eventId/participants/:participantId',
       const finalInvoicePath = invoice_file_path || current.invoice_file || current.invoice_file_path;
       const finalContractPath = contract_file_path || current.contract_file || current.contract_file_path;
       const finalHandoverPath = handover_file_path || current.handover_file || current.handover_file_path;
+
+      // Add missing contact fields to database first if they don't exist
+      try {
+        await db.query(`
+          ALTER TABLE event_participants 
+          ADD COLUMN IF NOT EXISTS contact_person VARCHAR(255),
+          ADD COLUMN IF NOT EXISTS contact_position VARCHAR(255),
+          ADD COLUMN IF NOT EXISTS contact_email VARCHAR(255),
+          ADD COLUMN IF NOT EXISTS contact_phone VARCHAR(50),
+          ADD COLUMN IF NOT EXISTS payment_due_date DATE,
+          ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50),
+          ADD COLUMN IF NOT EXISTS invoice_number VARCHAR(100),
+          ADD COLUMN IF NOT EXISTS invoice_file VARCHAR(500),
+          ADD COLUMN IF NOT EXISTS contract_file VARCHAR(500),
+          ADD COLUMN IF NOT EXISTS handover_file VARCHAR(500)
+        `);
+      } catch (alterError) {
+        console.log('Columns might already exist:', alterError.message);
+      }
 
       // Update participant with all required fields
       const result = await db.query(`
