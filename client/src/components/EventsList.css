@@ -671,61 +671,45 @@
 
 /* Small mobile devices */
 @media (max-width: 480px) {
-  .events-container {
-    margin: 0.25rem;
-    padding: 0.6rem;
-  }
-
-  .events-container h2 {
-    font-size: 1.3rem;
+  .events-grid {
+    grid-template-columns: 1fr;
   }
 
   .event-card {
-    padding: 10px;
+    padding: 1rem;
   }
 
-  .event-name {
+  .event-header h3 {
     font-size: 1rem;
   }
 
-  .event-details p {
-    font-size: 0.85rem;
-    margin: 4px 0;
+  .actions {
+    gap: 0.3rem;
   }
 
-  .event-actions {
-    flex-wrap: wrap;
-    gap: 4px;
-  }
-
-  .event-actions button {
-    padding: 6px 8px;
-    font-size: 0.7rem;
-    min-width: 65px;
-  }
-
-  .status-badge {
-    font-size: 0.65rem;
-    padding: 3px 6px;
-  }
-
-  .modal-header h3 {
-    font-size: 1.1rem;
-  }
-
-  .modal-body {
-    padding: 12px;
-  }
-
-  .modal-body p,
-  .modal-body li {
+  .actions button {
+    min-width: 32px;
+    height: 32px;
     font-size: 0.8rem;
   }
 
-  .close-modal {
-    font-size: 1.3rem;
-    width: 25px;
-    height: 25px;
+  .file-buttons-group {
+    gap: 0.15rem;
+  }
+
+  .file-preview {
+    min-width: 180px;
+    max-width: 250px;
+    font-size: 0.8rem;
+    padding: 8px;
+  }
+
+  .file-item-preview {
+    font-size: 0.75rem;
+  }
+
+  .preview-header {
+    font-size: 0.7rem;
   }
 }
 
@@ -738,4 +722,100 @@
   .modal-content {
     max-height: 98vh;
   }
+}
+
+/* Update for .actions styles to include file button styles */
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.actions button {
+  padding: 0.5rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  min-width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.actions .files-manager {
+  background: linear-gradient(135deg, #805ad5 0%, #6b46c1 100%);
+  color: white;
+  font-size: 0.9rem;
+  position: relative;
+}
+
+.actions .files-manager:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(128, 90, 213, 0.4);
+}
+
+.actions .files-manager:hover .files-preview {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(-5px);
+}
+
+.files-preview {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  border: 2px solid #805ad5;
+  border-radius: 8px;
+  padding: 12px;
+  min-width: 280px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.files-preview .preview-section {
+  margin-bottom: 8px;
+}
+
+.files-preview .preview-section:last-child {
+  margin-bottom: 0;
+}
+
+.preview-header {
+  font-weight: 600;
+  color: #4a5568;
+  margin-bottom: 4px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.file-item-preview {
+  color: #2d3748;
+  margin-bottom: 2px;
+  padding-left: 8px;
+  font-size: 0.7rem;
+}
+
+.click-hint {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e2e8f0;
+  text-align: center;
+  font-size: 0.65rem;
+  color: #805ad5;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import EventForm from './EventForm';
 import EventParticipants from './EventParticipants';
 import EventCompletion from './EventCompletion';
+import EventFileManager from './EventFileManager';
 import './EventsList.css';
 
 const EventsList = ({ showNotification, userRole }) => {
@@ -15,6 +16,8 @@ const EventsList = ({ showNotification, userRole }) => {
   const [showParticipants, setShowParticipants] = useState(false);
   const [showEventCompletion, setShowEventCompletion] = useState(false);
   const [selectedEventForCompletion, setSelectedEventForCompletion] = useState(null);
+  const [showFileManager, setShowFileManager] = useState(false);
+  const [selectedEventForFiles, setSelectedEventForFiles] = useState(null);
 
   // ფილტრებისა და ძიების სტეიტები
   const [searchTerm, setSearchTerm] = useState('');
@@ -345,6 +348,11 @@ const EventsList = ({ showNotification, userRole }) => {
     setShowParticipants(true);
   };
 
+  const handleShowFiles = (event) => {
+    setSelectedEventForFiles(event);
+    setShowFileManager(true);
+  };
+
   const handleCompleteEvent = (event) => {
     setSelectedEventForCompletion(event);
     setShowEventCompletion(true);
@@ -543,6 +551,57 @@ const EventsList = ({ showNotification, userRole }) => {
                     onClick={() => handleShowParticipants(event)}
                     title="მონაწილეები"
                   >
+                    👥
+                  </button>
+                  <button
+                    className="files-manager"
+                    onClick={() => handleShowFiles(event)}
+                    title="ფაილების მართვა - ატვირთვა, ნახვა, წაშლა"
+                  >
+                    📁
+                    <div className="files-preview">
+                      <div className="preview-section">
+                        <div className="preview-header">📋 გეგმა:</div>
+                        <div className="file-item-preview">
+                          <span>{event.plan_file_path ? '✅ გეგმა.pdf' : '❌ არ არის'}</span>
+                        </div>
+                      </div>
+                      <div className="preview-section">
+                          <div className="preview-header">მიმაგრებული ფაილები:</div>
+                          {(() => {
+                            const allFiles = [
+                              ...(event.invoice_files || []).map(f => ({...f, type: 'ინვოისი'})),
+                              ...(event.expense_files || []).map(f => ({...f, type: 'ხარჯი'}))
+                            ];
+
+                            if (allFiles.length > 0) {
+                              return (
+                                <>
+                                  {allFiles.slice(0, 3).map((file, index) => (
+                                    <div key={index} className="file-item-preview">
+                                      <span>📄 {file.name} ({file.type})</span>
+                                    </div>
+                                  ))}
+                                  {allFiles.length > 3 && (
+                                    <div className="file-item-preview">
+                                      <span>... და კიდევ {allFiles.length - 3} ფაილი</span>
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            } else {
+                              return (
+                                <div className="file-item-preview">
+                                  <span>❌ მიმაგრებული ფაილები არ არის</span>
+                                </div>
+                              );
+                            }
+                          })()}
+                        </div>
+                      <div className="click-hint">
+                        <span>დააჭირეთ ფაილების მართვისთვის</span>
+                      </div>
+                    </div>
                   </button>
                   {isAuthorizedForManagement && (
                     <>
@@ -662,6 +721,18 @@ const EventsList = ({ showNotification, userRole }) => {
             setSelectedEventForCompletion(null);
           }}
           onSuccess={handleCompletionSuccess}
+        />
+      )}
+
+      {showFileManager && selectedEventForFiles && (
+        <EventFileManager
+          event={selectedEventForFiles}
+          onClose={() => {
+            setShowFileManager(false);
+            setSelectedEventForFiles(null);
+          }}
+          showNotification={showNotification}
+          userRole={userRole}
         />
       )}
     </div>

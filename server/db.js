@@ -131,7 +131,12 @@ const createTables = async () => {
         created_by_user_id INTEGER,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        archived_at TIMESTAMP
+        archived_at TIMESTAMP,
+        plan_file_path VARCHAR(500),
+        invoice_files JSONB DEFAULT '[]',
+        expense_files JSONB DEFAULT '[]',
+        plan_updated_at TIMESTAMP,
+        files_updated_at TIMESTAMP
       )
     `);
 
@@ -563,6 +568,21 @@ const addMissingColumns = async () => {
       console.log("start_time და end_time სვეტები დაემატა annual_services ცხრილში");
     } catch (timeColumnsError) {
       console.log("საათის სვეტების დამატების შეცდომა:", timeColumnsError.message);
+    }
+
+    // Add file management columns to annual_services table
+    try {
+      await query(`
+        ALTER TABLE annual_services 
+        ADD COLUMN IF NOT EXISTS plan_file_path VARCHAR(500),
+        ADD COLUMN IF NOT EXISTS invoice_files JSONB DEFAULT '[]',
+        ADD COLUMN IF NOT EXISTS expense_files JSONB DEFAULT '[]',
+        ADD COLUMN IF NOT EXISTS plan_updated_at TIMESTAMP,
+        ADD COLUMN IF NOT EXISTS files_updated_at TIMESTAMP
+      `);
+      console.log("ფაილების მართვის სვეტები დაემატა annual_services ცხრილში");
+    } catch (fileColumnsError) {
+      console.log("ფაილების სვეტების დამატების შეცდომა:", fileColumnsError.message);
     }
 
     console.log("ყველა საჭირო სვეტი წარმატებით შემოწმდა და დაემატა!");

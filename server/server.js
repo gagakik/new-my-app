@@ -15,17 +15,49 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Static files
+// Token verification middleware
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ message: 'Access token არ არის მოწოდებული' });
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret', (err, user) => {
+    if (err) {
+      return res.status(403).json({ message: 'არასწორი token' });
+    }
+    req.user = user;
+    next();
+  });
+};
+
+// Authorization middleware
+const authorizeRoles = (...roles) => {
+  return (req, res, next) => {
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({ message: 'არ გაქვთ ამ მოქმედების ნებართვა' });
+    }
+    next();
+  };
+};
+
+// Static file serving for uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Serve client build files in production
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../client/dist')));
 
-  app.get('*', (req, res) => {
+  // Handle client-side routing - catch all non-API routes
+  app.get('/*', (req, res) => {
     if (!req.path.startsWith('/api/')) {
       res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
+    } else {
+      res.status(404).json({ message: 'API endpoint not found' });
     }
   });
 }
@@ -76,33 +108,30 @@ const participantStorage = multer.diskStorage({
 
 const participantUpload = multer({ storage: participantStorage });
 
-// Token verification middleware
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+// File download endpoint with proper headers
+app.get('/api/download/:folder/:filename', authenticateToken, (req, res) => {
+  const { folder, filename } = req.params;
+  const filePath = path.join(folder, filename);
+  const fullPath = path.join(__dirname, 'uploads', filePath);
 
-  if (!token) {
-    return res.status(401).json({ message: 'Access token არ არის მოწოდებული' });
+  if (!fs.existsSync(fullPath)) {
+    return res.status(404).json({ message: 'ფაილი ვერ მოიძებნა' });
   }
 
-  jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret', (err, user) => {
-    if (err) {
-      return res.status(403).json({ message: 'არასწორი token' });
-    }
-    req.user = user;
-    next();
-  });
-};
+  const fileName = path.basename(fullPath);
+  const ext = path.extname(fileName).toLowerCase();
 
-// Authorization middleware
-const authorizeRoles = (...roles) => {
-  return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ message: 'არ გაქვთ ამ მოქმედების ნებართვა' });
-    }
-    next();
-  };
-};
+  // Set proper content type
+  let contentType = 'application/octet-stream';
+  if (ext === '.pdf') contentType = 'application/pdf';
+  else if (ext === '.xlsx' || ext === '.xls') contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  else if (ext === '.doc') contentType = 'application/msword';
+  else if (ext === '.docx') contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+  res.setHeader('Content-Type', contentType);
+  res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}"`);
+  res.sendFile(fullPath);
+});
 
 // Auth routes - Fixed endpoints to match frontend
 app.post('/api/register', async (req, res) => {
@@ -929,7 +958,7 @@ app.put('/api/events/:eventId/participants/:participantId',
       const finalContractPath = contract_file_path || current.contract_file || current.contract_file_path;
       const finalHandoverPath = handover_file_path || current.handover_file || current.handover_file_path;
 
-      // Add missing contact fields to database first if they don't exist
+      // Add columns to database if they don't exist
       try {
         await db.query(`
           ALTER TABLE event_participants 
@@ -1664,14 +1693,14 @@ app.delete('/api/annual-services/:id', authenticateToken, authorizeRoles('admin'
       console.error('Detailed deletion error:', deleteError);
       console.error('Error code:', deleteError.code);
       console.error('Error detail:', deleteError.detail);
-      
+
       // More specific error handling
       if (deleteError.code === '23503') {
         return res.status(400).json({ 
           message: 'სერვისის წაშლა შეუძლებელია, რადგან მასთან დაკავშირებული მონაცემები არსებობს' 
         });
       }
-      
+
       throw deleteError;
     }
   } catch (error) {
@@ -1680,6 +1709,314 @@ app.delete('/api/annual-services/:id', authenticateToken, authorizeRoles('admin'
     console.error('Error stack:', error.stack);
     res.status(500).json({ 
       message: 'სერვისის წაშლა ვერ მოხერხდა',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Event file management endpoints
+app.post('/api/events/:id/upload-plan', authenticateToken, authorizeRoles('admin', 'manager', 'sales', 'marketing'), upload.single('plan_file'), async (req, res) => {
+  const { eventId } = req.params;
+
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'ფაილი არ არის ატვირთული' });
+    }
+
+    const filePath = req.file.path.replace(/\\/g, '/');
+    const relativePath = filePath.replace(path.join(__dirname, 'uploads').replace(/\\/g, '/'), '');
+
+    // Get username for plan_uploaded_by field
+    const userResult = await db.query('SELECT username FROM users WHERE id = $1', [req.user.id]);
+    const username = userResult.rows[0]?.username || 'Unknown';
+
+    await db.query(
+      'UPDATE annual_services SET plan_file_path = $1, plan_uploaded_by = $2, plan_updated_at = CURRENT_TIMESTAMP WHERE id = $3',
+      [relativePath, username, eventId]
+    );
+
+    res.json({ 
+      message: 'გეგმის ფაილი წარმატებით ატვირთულია',
+      filePath: relativePath
+    });
+  } catch (error) {
+    console.error('Plan file upload error:', error);
+    res.status(500).json({ message: 'ფაილის ატვირთვისას მოხდა შეცდომა' });
+  }
+});
+
+app.post('/api/events/:id/upload-invoice', authenticateToken, upload.single('invoice_file'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const fileName = req.body.file_name || req.file.originalname;
+
+    if (!req.file) {
+      return res.status(400).json({ message: 'ფაილი არ არის ატვირთული' });
+    }
+
+    const filePath = req.file.path.replace(/\\/g, '/');
+    const relativePath = filePath.replace(path.join(__dirname, 'uploads').replace(/\\/g, '/'), '');
+
+    // Get username for uploaded_by field
+    const userResult = await db.query('SELECT username FROM users WHERE id = $1', [req.user.id]);
+    const username = userResult.rows[0]?.username || 'Unknown';
+
+    // Get current invoice files
+    const currentEvent = await db.query('SELECT invoice_files FROM annual_services WHERE id = $1', [id]);
+    let invoiceFiles = currentEvent.rows[0]?.invoice_files || [];
+
+    // Find and delete existing file with same name if it exists
+    const existingFileIndex = invoiceFiles.findIndex(f => f.name === fileName);
+    if (existingFileIndex !== -1) {
+      const oldFile = invoiceFiles[existingFileIndex];
+      if (oldFile.path && oldFile.path.startsWith('/uploads/')) {
+        const oldFilePath = path.join(__dirname, oldFile.path);
+        if (fs.existsSync(oldFilePath)) {
+          fs.unlinkSync(oldFilePath);
+        }
+      }
+      invoiceFiles.splice(existingFileIndex, 1);
+    }
+
+    const newFile = {
+      name: fileName,
+      path: relativePath,
+      uploaded_at: new Date().toISOString(),
+      size: req.file.size,
+      uploaded_by: username
+    };
+
+    invoiceFiles.push(newFile);
+
+    await db.query(
+      'UPDATE annual_services SET invoice_files = $1, files_updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      [JSON.stringify(invoiceFiles), id]
+    );
+
+    res.json({
+      message: 'ინვოისის ფაილი წარმატებით ატვირთულია',
+      file: newFile
+    });
+  } catch (error) {
+    console.error('ინვოისის ფაილის ატვირთვის შეცდომა:', error);
+    res.status(500).json({ message: 'ფაილის ატვირთვა ვერ მოხერხდა' });
+  }
+});
+
+app.post('/api/events/:id/upload-expense', authenticateToken, authorizeRoles('admin', 'manager', 'sales', 'marketing'), upload.single('expense_file'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const fileName = req.body.file_name || req.file.originalname;
+
+    if (!req.file) {
+      return res.status(400).json({ message: 'ფაილი არ არის ატვირთული' });
+    }
+
+    const filePath = req.file.path.replace(/\\/g, '/');
+    const relativePath = filePath.replace(path.join(__dirname, 'uploads').replace(/\\/g, '/'), '');
+
+    // Get username for uploaded_by field
+    const userResult = await db.query('SELECT username FROM users WHERE id = $1', [req.user.id]);
+    const username = userResult.rows[0]?.username || 'Unknown';
+
+    // Get current expense files
+    const currentEvent = await db.query('SELECT expense_files FROM annual_services WHERE id = $1', [id]);
+    let expenseFiles = currentEvent.rows[0]?.expense_files || [];
+
+    // Find and delete existing file with same name if it exists
+    const existingFileIndex = expenseFiles.findIndex(f => f.name === fileName);
+    if (existingFileIndex !== -1) {
+      const oldFile = expenseFiles[existingFileIndex];
+      if (oldFile.path && oldFile.path.startsWith('/uploads/')) {
+        const oldFilePath = path.join(__dirname, oldFile.path);
+        if (fs.existsSync(oldFilePath)) {
+          fs.unlinkSync(oldFilePath);
+        }
+      }
+      expenseFiles.splice(existingFileIndex, 1);
+    }
+
+    const newFile = {
+      name: fileName,
+      path: relativePath,
+      uploaded_at: new Date().toISOString(),
+      size: req.file.size,
+      uploaded_by: username
+    };
+
+    expenseFiles.push(newFile);
+
+    await db.query(
+      'UPDATE annual_services SET expense_files = $1, files_updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      [JSON.stringify(expenseFiles), id]
+    );
+
+    res.json({
+      message: 'ხარჯების ფაილი წარმატებით ატვირთულია',
+      file: newFile
+    });
+  } catch (error) {
+    console.error('ხარჯების ფაილის ატვირთვის შეცდომა:', error);
+    res.status(500).json({ message: 'ფაილის ატვირთვა ვერ მოხერხდა' });
+  }
+});
+
+app.delete('/api/events/:id/delete-invoice/:fileName', authenticateToken, authorizeRoles('admin', 'manager', 'sales', 'marketing'), async (req, res) => {
+  try {
+    const { id, fileName } = req.params;
+
+    const currentEvent = await db.query('SELECT invoice_files FROM annual_services WHERE id = $1', [id]);
+    if (currentEvent.rows.length === 0) {
+      return res.status(404).json({ message: 'ივენთი ვერ მოიძებნა' });
+    }
+
+    let invoiceFiles = currentEvent.rows[0]?.invoice_files || [];
+    const fileIndex = invoiceFiles.findIndex(f => f.name === fileName);
+
+    if (fileIndex === -1) {
+      return res.status(404).json({ message: 'ფაილი ვერ მოიძებნა' });
+    }
+
+    const fileToDelete = invoiceFiles[fileIndex];
+
+    // Delete physical file
+    if (fileToDelete.path && fileToDelete.path.startsWith('/uploads/')) {
+      const filePath = path.join(__dirname, fileToDelete.path);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+
+    // Remove from array
+    invoiceFiles.splice(fileIndex, 1);
+
+    await db.query(
+      'UPDATE annual_services SET invoice_files = $1, files_updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      [JSON.stringify(invoiceFiles), id]
+    );
+
+    res.json({ message: 'ინვოისის ფაილი წარმატებით წაიშალა' });
+  } catch (error) {
+    console.error('ინვოისის ფაილის წაშლის შეცდომა:', error);
+    res.status(500).json({ message: 'ფაილის წაშლა ვერ მოხერხდა' });
+  }
+});
+
+app.delete('/api/events/:id/delete-expense/:fileName', authenticateToken, authorizeRoles('admin', 'manager', 'sales', 'marketing'), async (req, res) => {
+  try {
+    const { id, fileName } = req.params;
+
+    const currentEvent = await db.query('SELECT expense_files FROM annual_services WHERE id = $1', [id]);
+    if (currentEvent.rows.length === 0) {
+      return res.status(404).json({ message: 'ივენთი ვერ მოიძებნა' });
+    }
+
+    let expenseFiles = currentEvent.rows[0]?.expense_files || [];
+    const fileIndex = expenseFiles.findIndex(f => f.name === fileName);
+
+    if (fileIndex === -1) {
+      return res.status(404).json({ message: 'ფაილი ვერ მოიძებნა' });
+    }
+
+    const fileToDelete = expenseFiles[fileIndex];
+
+    // Delete physical file
+    if (fileToDelete.path && fileToDelete.path.startsWith('/uploads/')) {
+      const filePath = path.join(__dirname, fileToDelete.path);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+
+    // Remove from array
+    expenseFiles.splice(fileIndex, 1);
+
+    await db.query(
+      'UPDATE annual_services SET expense_files = $1, files_updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      [JSON.stringify(expenseFiles), id]
+    );
+
+    res.json({ message: 'ხარჯების ფაილი წარმატებით წაიშალა' });
+  } catch (error) {
+    console.error('ხარჯების ფაილის წაშლის შეცდომა:', error);
+    res.status(500).json({ message: 'ფაილის წაშლა ვერ მოხერხდა' });
+  }
+});
+
+app.delete('/api/events/:id/delete-plan', authenticateToken, authorizeRoles('admin', 'manager', 'sales', 'marketing'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log('Delete plan request for event:', id);
+
+    // First check if database has plan_uploaded_by column
+    let currentEvent;
+    try {
+      currentEvent = await db.query('SELECT plan_file_path, plan_uploaded_by FROM annual_services WHERE id = $1', [id]);
+    } catch (columnError) {
+      console.log('plan_uploaded_by column may not exist, trying without it');
+      currentEvent = await db.query('SELECT plan_file_path FROM annual_services WHERE id = $1', [id]);
+    }
+
+    if (currentEvent.rows.length === 0) {
+      console.log('Event not found:', id);
+      return res.status(404).json({ message: 'ივენთი ვერ მოიძებნა' });
+    }
+
+    const planFilePath = currentEvent.rows[0].plan_file_path;
+    console.log('Plan file path:', planFilePath);
+
+    if (!planFilePath) {
+      console.log('No plan file found for event:', id);
+      return res.status(404).json({ message: 'გეგმის ფაილი ვერ მოიძებნა' });
+    }
+
+    // Delete physical file
+    try {
+      let filePathToDelete;
+      
+      if (planFilePath.startsWith('/uploads/')) {
+        filePathToDelete = path.join(__dirname, planFilePath);
+      } else if (planFilePath.startsWith('uploads/')) {
+        filePathToDelete = path.join(__dirname, planFilePath);
+      } else {
+        filePathToDelete = path.join(__dirname, 'uploads', planFilePath);
+      }
+
+      console.log('Attempting to delete file at:', filePathToDelete);
+      
+      if (fs.existsSync(filePathToDelete)) {
+        fs.unlinkSync(filePathToDelete);
+        console.log('Physical file deleted successfully');
+      } else {
+        console.log('Physical file not found at path:', filePathToDelete);
+      }
+    } catch (fileError) {
+      console.error('Error deleting physical file:', fileError);
+      // Continue with database update even if file deletion fails
+    }
+
+    // Update database to remove plan file reference
+    try {
+      await db.query(
+        'UPDATE annual_services SET plan_file_path = NULL, plan_updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+        [id]
+      );
+    } catch (updateError) {
+      console.log('plan_updated_at column may not exist, trying simpler update');
+      await db.query(
+        'UPDATE annual_services SET plan_file_path = NULL WHERE id = $1',
+        [id]
+      );
+    }
+
+    console.log('Plan file record deleted from database');
+    res.json({ message: 'გეგმის ფაილი წარმატებით წაიშალა' });
+  } catch (error) {
+    console.error('გეგმის ფაილის წაშლის შეცდომა:', error);
+    console.error('Error details:', error.message);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      message: 'ფაილის წაშლა ვერ მოხერხდა',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
