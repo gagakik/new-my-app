@@ -122,6 +122,8 @@ const createTables = async () => {
         year_selection INTEGER,
         start_date DATE,
         end_date DATE,
+        start_time TIME,
+        end_time TIME,
         service_type VARCHAR(50) DEFAULT 'ივენთი',
         is_active BOOLEAN DEFAULT TRUE,
         is_archived BOOLEAN DEFAULT FALSE,
@@ -549,6 +551,18 @@ const addMissingColumns = async () => {
       }
     } catch (e) {
       console.log("booth_type შეზღუდვა შეცდომა:", e.message);
+    }
+
+    // Add time columns to annual_services table
+    try {
+      await query(`
+        ALTER TABLE annual_services 
+        ADD COLUMN IF NOT EXISTS start_time TIME,
+        ADD COLUMN IF NOT EXISTS end_time TIME
+      `);
+      console.log("start_time და end_time სვეტები დაემატა annual_services ცხრილში");
+    } catch (timeColumnsError) {
+      console.log("საათის სვეტების დამატების შეცდომა:", timeColumnsError.message);
     }
 
     console.log("ყველა საჭირო სვეტი წარმატებით შემოწმდა და დაემატა!");

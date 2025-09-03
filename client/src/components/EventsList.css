@@ -220,22 +220,33 @@
   text-decoration: underline;
 }
 
-.event-details p {
+.event-details {
   margin: 8px 0;
   color: #555;
 }
 
+.event-dates {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.5rem;
+  margin-bottom: 10px;
+  background-color: #f8f9fa;
+  padding: 10px;
+  border-radius: 6px;
+  border-left: 3px solid #007bff;
+}
+
 .date-label {
   color: #495057;
-  margin-right: 5px;
   font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .date-value {
   font-weight: bold;
   color: #242525;
   font-size: 0.9rem;
-  margin-right: 5px;
 }
 
 .event-details strong {

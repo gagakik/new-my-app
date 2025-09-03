@@ -7,6 +7,8 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
   const [yearSelection, setYearSelection] = useState(new Date().getFullYear());
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [serviceType, setServiceType] = useState('ივენთი');
   const [selectedSpaces, setSelectedSpaces] = useState([]);
   const [availableSpaces, setAvailableSpaces] = useState([]);
@@ -105,6 +107,8 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
         setYearSelection(eventToEdit.year_selection || new Date().getFullYear());
         setStartDate(eventToEdit.start_date ? eventToEdit.start_date.slice(0, 10) : '');
         setEndDate(eventToEdit.end_date ? eventToEdit.end_date.slice(0, 10) : '');
+        setStartTime(eventToEdit.start_time || '');
+        setEndTime(eventToEdit.end_time || '');
         setServiceType(eventToEdit.service_type || 'ივენთი');
 
         // გამოფენის ID-ის სწორად დაყენება
@@ -164,6 +168,8 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
       setYearSelection(new Date().getFullYear());
       setStartDate('');
       setEndDate('');
+      setStartTime('');
+      setEndTime('');
       setServiceType('ივენთი');
       setSelectedSpaces([]);
       setSelectedExhibitions([]);
@@ -233,6 +239,8 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
         year_selection: parseInt(yearSelection),
         start_date: startDate,
         end_date: endDate,
+        start_time: startTime || null,
+        end_time: endTime || null,
         service_type: serviceType,
         is_active: true,
         selected_spaces: selectedSpaces,
@@ -353,6 +361,24 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
             required
+          />
+        </div>
+
+        <div className="form-group">
+          <label>დაწყების საათი</label>
+          <input
+            type="time"
+            value={startTime}
+            onChange={(e) => setStartTime(e.target.value)}
+          />
+        </div>
+
+        <div className="form-group">
+          <label>დასრულების საათი</label>
+          <input
+            type="time"
+            value={endTime}
+            onChange={(e) => setEndTime(e.target.value)}
           />
         </div>
 

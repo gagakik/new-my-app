@@ -113,6 +113,12 @@
   box-sizing: border-box;
 }
 
+.form-group input[type="time"] {
+  padding: 10px;
+  font-size: 0.9rem;
+  color: #495057;
+}
+
 .form-group textarea {
   resize: vertical;
 }

@@ -367,6 +367,17 @@ const EventsList = ({ showNotification, userRole }) => {
     return new Date(dateString).toLocaleDateString('ka-GE');
   };
 
+  const formatTime = (timeString) => {
+    if (!timeString) return '';
+    return timeString.slice(0, 5); // Format HH:MM
+  };
+
+  const formatDateTime = (date, time) => {
+    const formattedDate = formatDate(date);
+    const formattedTime = formatTime(time);
+    return formattedTime ? `${formattedDate} ${formattedTime}` : formattedDate;
+  };
+
   const getStatusBadge = (event) => {
     const now = new Date();
     const startDate = new Date(event.start_date);
@@ -512,9 +523,9 @@ const EventsList = ({ showNotification, userRole }) => {
                 <div className="event-details">
                   <div className="event-dates">
                     <span className="date-label">დაწყება:</span>
-                    <span className="date-value">{formatDate(event.start_date)}</span>
+                    <span className="date-value">{formatDateTime(event.start_date, event.start_time)}</span>
                     <span className="date-label">დასრულება:</span>
-                    <span className="date-value">{formatDate(event.end_date)}</span>
+                    <span className="date-value">{formatDateTime(event.end_date, event.end_time)}</span>
                   </div>
                   <div className="event-stats">
                     <span className="stat-item">
@@ -596,7 +607,7 @@ const EventsList = ({ showNotification, userRole }) => {
               <p><strong>აღწერა:</strong> {selectedEvent.description}</p>
               <p><strong>წელი:</strong> {selectedEvent.year_selection}</p>
               <p><strong>ტიპი:</strong> {selectedEvent.service_type}</p>
-              <p><strong>თარიღები:</strong> {formatDate(selectedEvent.start_date)} - {formatDate(selectedEvent.end_date)}</p>
+              <p><strong>თარიღები:</strong> {formatDateTime(selectedEvent.start_date, selectedEvent.start_time)} - {formatDateTime(selectedEvent.end_date, selectedEvent.end_time)}</p>
 
               {selectedEvent.spaces && selectedEvent.spaces.length > 0 && (
                 <div>

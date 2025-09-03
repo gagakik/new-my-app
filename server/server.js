@@ -626,6 +626,8 @@ app.post('/api/events', authenticateToken, authorizeRoles('admin', 'manager'), a
       description, 
       start_date, 
       end_date, 
+      start_time,
+      end_time,
       service_type = 'ივენთი',
       year_selection
     } = req.body;
@@ -633,14 +635,16 @@ app.post('/api/events', authenticateToken, authorizeRoles('admin', 'manager'), a
     const result = await db.query(
       `INSERT INTO annual_services (
         exhibition_id, service_name, description, start_date, end_date, 
-        service_type, year_selection, created_by_user_id
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+        start_time, end_time, service_type, year_selection, created_by_user_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
       [
         exhibition_id, 
         service_name, 
         description, 
         start_date, 
         end_date, 
+        start_time,
+        end_time,
         service_type,
         year_selection || new Date().getFullYear(),
         req.user.id
@@ -663,6 +667,8 @@ app.put('/api/events/:id', authenticateToken, authorizeRoles('admin', 'manager')
       description, 
       start_date, 
       end_date, 
+      start_time,
+      end_time,
       service_type,
       year_selection
     } = req.body;
@@ -670,10 +676,10 @@ app.put('/api/events/:id', authenticateToken, authorizeRoles('admin', 'manager')
     const result = await db.query(
       `UPDATE annual_services SET 
         exhibition_id = $1, service_name = $2, description = $3, 
-        start_date = $4, end_date = $5, service_type = $6, 
-        year_selection = $7, updated_at = CURRENT_TIMESTAMP 
-      WHERE id = $8 RETURNING *`,
-      [exhibition_id, service_name, description, start_date, end_date, service_type, year_selection, id]
+        start_date = $4, end_date = $5, start_time = $6, end_time = $7,
+        service_type = $8, year_selection = $9, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = $10 RETURNING *`,
+      [exhibition_id, service_name, description, start_date, end_date, start_time, end_time, service_type, year_selection, id]
     );
 
     if (result.rows.length === 0) {
@@ -1405,6 +1411,8 @@ app.post('/api/annual-services', authenticateToken, authorizeRoles('admin', 'man
       year_selection, 
       start_date, 
       end_date, 
+      start_time,
+      end_time,
       service_type = 'გამოფენა',
       is_active = true,
       exhibition_id,
@@ -1420,11 +1428,11 @@ app.post('/api/annual-services', authenticateToken, authorizeRoles('admin', 'man
     const result = await db.query(
       `INSERT INTO annual_services (
         service_name, description, year_selection, start_date, end_date, 
-        service_type, is_active, exhibition_id, created_by_user_id
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+        start_time, end_time, service_type, is_active, exhibition_id, created_by_user_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
       [
         service_name, description, year_selection, start_date, end_date,
-        service_type, is_active, exhibition_id, req.user.id
+        start_time, end_time, service_type, is_active, exhibition_id, req.user.id
       ]
     );
 
@@ -1499,6 +1507,8 @@ app.put('/api/annual-services/:id', authenticateToken, authorizeRoles('admin', '
       year_selection, 
       start_date, 
       end_date, 
+      start_time,
+      end_time,
       service_type,
       is_active,
       exhibition_id,
@@ -1513,12 +1523,12 @@ app.put('/api/annual-services/:id', authenticateToken, authorizeRoles('admin', '
     const result = await db.query(
       `UPDATE annual_services SET 
         service_name = $1, description = $2, year_selection = $3, 
-        start_date = $4, end_date = $5, service_type = $6, 
-        is_active = $7, exhibition_id = $8, updated_at = CURRENT_TIMESTAMP 
-      WHERE id = $9 RETURNING *`,
+        start_date = $4, end_date = $5, start_time = $6, end_time = $7,
+        service_type = $8, is_active = $9, exhibition_id = $10, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = $11 RETURNING *`,
       [
         service_name, description, year_selection, start_date, end_date,
-        service_type, is_active, exhibition_id, id
+        start_time, end_time, service_type, is_active, exhibition_id, id
       ]
     );
 
