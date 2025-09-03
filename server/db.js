@@ -1,33 +1,36 @@
-const { Pool } = require('pg');
-require('dotenv').config();
+const { Pool } = require("pg");
+require("dotenv").config();
 
 // Create PostgreSQL connection pool
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl:
+    process.env.NODE_ENV === "production"
+      ? { rejectUnauthorized: false }
+      : false,
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
 });
 
-pool.on('connect', () => {
-  console.log('PostgreSQL ბაზასთან კავშირი დამყარდა');
+pool.on("connect", () => {
+  console.log("PostgreSQL ბაზასთან კავშირი დამყარდა");
 });
 
-pool.on('error', (err) => {
-  console.error('PostgreSQL კავშირის შეცდომა:', err);
+pool.on("error", (err) => {
+  console.error("PostgreSQL კავშირის შეცდომა:", err);
 });
 
 // Promise wrapper for database queries
 const query = async (text, params = []) => {
-  console.log('Executing PostgreSQL query:', text, 'with params:', params);
+  console.log("Executing PostgreSQL query:", text, "with params:", params);
 
   try {
     const result = await pool.query(text, params);
-    console.log('PostgreSQL query result:', result.rowCount, 'rows affected');
+    console.log("PostgreSQL query result:", result.rowCount, "rows affected");
     return result;
   } catch (error) {
-    console.error('PostgreSQL query error:', error);
+    console.error("PostgreSQL query error:", error);
     throw error;
   }
 };
@@ -35,7 +38,7 @@ const query = async (text, params = []) => {
 // Initialize tables with PostgreSQL syntax
 const createTables = async () => {
   try {
-    console.log('PostgreSQL ცხრილების შექმნის დაწყება...');
+    console.log("PostgreSQL ცხრილების შექმნის დაწყება...");
 
     // Users table
     await query(`
@@ -43,11 +46,11 @@ const createTables = async () => {
         id SERIAL PRIMARY KEY,
         username VARCHAR(255) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
-        role VARCHAR(50) DEFAULT 'user' CHECK (role IN ('admin', 'manager', 'sales', 'marketing', 'user')),
+        role VARCHAR(50) DEFAULT 'user' CHECK (role IN ('admin', 'manager', 'sales', 'marketing', 'user', 'operation', 'finance')),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    console.log('Users table created/verified successfully');
+    console.log("Users table created/verified successfully");
 
     // Companies table
     await query(`
@@ -188,58 +191,96 @@ const createTables = async () => {
 
     // Add missing columns to existing event_participants table if they don't exist
     const participantColumnsToAdd = [
-      { name: 'booth_category', type: 'VARCHAR(50) DEFAULT \'ოქტანორმის სტენდები\'' },
-      { name: 'booth_type', type: 'VARCHAR(50) DEFAULT \'რიგითი\'' },
-      { name: 'contact_person', type: 'VARCHAR(255)' },
-      { name: 'contact_position', type: 'VARCHAR(255)' },
-      { name: 'contact_email', type: 'VARCHAR(255)' },
-      { name: 'contact_phone', type: 'VARCHAR(50)' },
-      { name: 'payment_due_date', type: 'DATE' },
-      { name: 'payment_method', type: 'VARCHAR(50)' },
-      { name: 'invoice_number', type: 'VARCHAR(100)' },
-      { name: 'invoice_file', type: 'VARCHAR(500)' },
-      { name: 'contract_file', type: 'VARCHAR(500)' },
-      { name: 'handover_file', type: 'VARCHAR(500)' }
+      {
+        name: "booth_category",
+        type: "VARCHAR(50) DEFAULT 'ოქტანორმის სტენდები'",
+      },
+      { name: "booth_type", type: "VARCHAR(50) DEFAULT 'რიგითი'" },
+      { name: "contact_person", type: "VARCHAR(255)" },
+      { name: "contact_position", type: "VARCHAR(255)" },
+      { name: "contact_email", type: "VARCHAR(255)" },
+      { name: "contact_phone", type: "VARCHAR(50)" },
+      { name: "payment_due_date", type: "DATE" },
+      { name: "payment_method", type: "VARCHAR(50)" },
+      { name: "invoice_number", type: "VARCHAR(100)" },
+      { name: "invoice_file", type: "VARCHAR(500)" },
+      { name: "contract_file", type: "VARCHAR(500)" },
+      { name: "handover_file", type: "VARCHAR(500)" },
     ];
 
     for (const column of participantColumnsToAdd) {
       try {
-        await query(`ALTER TABLE event_participants ADD COLUMN IF NOT EXISTS ${column.name} ${column.type}`);
-        console.log(`Event participants column ${column.name} added/verified successfully`);
+        await query(
+          `ALTER TABLE event_participants ADD COLUMN IF NOT EXISTS ${column.name} ${column.type}`,
+        );
+        console.log(
+          `Event participants column ${column.name} added/verified successfully`,
+        );
       } catch (alterError) {
-        if (alterError.code === '42701') {
-          console.log(`Event participants column ${column.name} already exists`);
+        if (alterError.code === "42701") {
+          console.log(
+            `Event participants column ${column.name} already exists`,
+          );
         } else {
-          console.error(`Error adding event participants column ${column.name}:`, alterError.message);
+          console.error(
+            `Error adding event participants column ${column.name}:`,
+            alterError.message,
+          );
         }
       }
     }
 
     // Add constraints for booth_category and booth_type
     try {
-      await query(`
-        ALTER TABLE event_participants 
-        ADD CONSTRAINT IF NOT EXISTS check_booth_category 
-        CHECK (booth_category IN ('ოქტანორმის სტენდები', 'ინდივიდუალური სტენდები', 'ტენტი', 'მარკიზიანი დახლი'))
+      // Check if constraint already exists
+      const checkConstraint1 = await query(`
+        SELECT constraint_name 
+        FROM information_schema.table_constraints 
+        WHERE table_name = 'event_participants' 
+        AND constraint_name = 'check_booth_category'
       `);
-      console.log('booth_category constraint added/verified successfully');
-    } catch (constraintError) {
-      if (constraintError.code !== '42710') {
-        console.error('Error adding booth_category constraint:', constraintError.message);
+
+      if (checkConstraint1.rows.length === 0) {
+        await query(`
+          ALTER TABLE event_participants 
+          ADD CONSTRAINT check_booth_category 
+          CHECK (booth_category IN ('ოქტანორმის სტენდები', 'ინდივიდუალური სტენდები', 'ტენტი', 'მარკიზიანი დახლი'))
+        `);
+        console.log("booth_category შეზღუდვა დაემატა");
+      } else {
+        console.log("booth_category შეზღუდვა უკვე არსებობს");
       }
+    } catch (constraintError) {
+      console.log(
+        "booth_category შეზღუდვა უკვე არსებობს ან შეცდომა:",
+        constraintError.message,
+      );
     }
 
     try {
-      await query(`
-        ALTER TABLE event_participants 
-        ADD CONSTRAINT IF NOT EXISTS check_booth_type 
-        CHECK (booth_type IN ('რიგითი', 'კუთხის', 'ნახევარ კუნძული', 'კუნძული'))
+      // Check if constraint already exists
+      const checkConstraint2 = await query(`
+        SELECT constraint_name 
+        FROM information_schema.table_constraints 
+        WHERE table_name = 'event_participants' 
+        AND constraint_name = 'check_booth_type'
       `);
-      console.log('booth_type constraint added/verified successfully');
-    } catch (constraintError) {
-      if (constraintError.code !== '42710') {
-        console.error('Error adding booth_type constraint:', constraintError.message);
+
+      if (checkConstraint2.rows.length === 0) {
+        await query(`
+          ALTER TABLE event_participants 
+          ADD CONSTRAINT check_booth_type 
+          CHECK (booth_type IN ('რიგითი', 'კუთხის', 'ნახევარ კუნძული', 'კუნძული'))
+        `);
+        console.log("booth_type შეზღუდვა დაემატა");
+      } else {
+        console.log("booth_type შეზღუდვა უკვე არსებობს");
       }
+    } catch (constraintError) {
+      console.log(
+        "booth_type შეზღუდვა უკვე არსებობს ან შეცდომა:",
+        constraintError.message,
+      );
     }
 
     // Exhibitions table first (required for exhibition_packages foreign key)
@@ -281,23 +322,28 @@ const createTables = async () => {
 
     // Add missing columns one by one
     const columnsToAdd = [
-      { name: 'is_bundle', type: 'BOOLEAN DEFAULT false' },
-      { name: 'bundle_discount_percent', type: 'DECIMAL(5,2) DEFAULT 0' },
-      { name: 'early_bird_price', type: 'DECIMAL(10,2)' },
-      { name: 'early_bird_end_date', type: 'DATE' },
-      { name: 'last_minute_price', type: 'DECIMAL(10,2)' },
-      { name: 'last_minute_start_date', type: 'DATE' }
+      { name: "is_bundle", type: "BOOLEAN DEFAULT false" },
+      { name: "bundle_discount_percent", type: "DECIMAL(5,2) DEFAULT 0" },
+      { name: "early_bird_price", type: "DECIMAL(10,2)" },
+      { name: "early_bird_end_date", type: "DATE" },
+      { name: "last_minute_price", type: "DECIMAL(10,2)" },
+      { name: "last_minute_start_date", type: "DATE" },
     ];
 
     for (const column of columnsToAdd) {
       try {
-        await query(`ALTER TABLE exhibition_packages ADD COLUMN IF NOT EXISTS ${column.name} ${column.type}`);
+        await query(
+          `ALTER TABLE exhibition_packages ADD COLUMN IF NOT EXISTS ${column.name} ${column.type}`,
+        );
         console.log(`Column ${column.name} added/verified successfully`);
       } catch (alterError) {
-        if (alterError.code === '42701') {
+        if (alterError.code === "42701") {
           console.log(`Column ${column.name} already exists`);
         } else {
-          console.error(`Error adding column ${column.name}:`, alterError.message);
+          console.error(
+            `Error adding column ${column.name}:`,
+            alterError.message,
+          );
         }
       }
     }
@@ -391,17 +437,16 @@ const createTables = async () => {
       )
     `);
 
-
-    console.log('ყველა PostgreSQL ცხრილა წარმატებით შეიქმნა');
+    console.log("ყველა PostgreSQL ცხრილა წარმატებით შეიქმნა");
   } catch (error) {
-    console.error('PostgreSQL ცხრილების შექმნის შეცდომა:', error);
+    console.error("PostgreSQL ცხრილების შექმნის შეცდომა:", error);
   }
 };
 
 // Function to add missing columns to event_participants table
 const addMissingColumns = async () => {
   try {
-    console.log('შემოწმდება და დაემატება ყველა საჭირო სვეტი...');
+    console.log("შემოწმდება და დაემატება ყველა საჭირო სვეტი...");
 
     // Check if columns exist first
     const checkColumns = await query(`
@@ -410,81 +455,107 @@ const addMissingColumns = async () => {
       WHERE table_name = 'event_participants' 
       AND column_name IN ('booth_category', 'booth_type', 'contact_person', 'contact_position', 'contact_email', 'contact_phone', 'payment_due_date', 'payment_method', 'invoice_number', 'invoice_file', 'contract_file', 'handover_file')
     `);
-    
-    const existingColumns = checkColumns.rows.map(row => row.column_name);
-    console.log('არსებული სვეტები:', existingColumns);
+
+    const existingColumns = checkColumns.rows.map((row) => row.column_name);
+    console.log("არსებული სვეტები:", existingColumns);
 
     // Add booth_category if not exists
-    if (!existingColumns.includes('booth_category')) {
+    if (!existingColumns.includes("booth_category")) {
       await query(`
         ALTER TABLE event_participants 
         ADD COLUMN booth_category VARCHAR(50) DEFAULT 'ოქტანორმის სტენდები'
       `);
-      console.log('booth_category სვეტი დაემატა');
+      console.log("booth_category სვეტი დაემატა");
     } else {
-      console.log('booth_category სვეტი უკვე არსებობს');
+      console.log("booth_category სვეტი უკვე არსებობს");
     }
 
     // Add booth_type if not exists
-    if (!existingColumns.includes('booth_type')) {
+    if (!existingColumns.includes("booth_type")) {
       await query(`
         ALTER TABLE event_participants 
         ADD COLUMN booth_type VARCHAR(50) DEFAULT 'რიგითი'
       `);
-      console.log('booth_type სვეტი დაემატა');
+      console.log("booth_type სვეტი დაემატა");
     } else {
-      console.log('booth_type სვეტი უკვე არსებობს');
+      console.log("booth_type სვეტი უკვე არსებობს");
     }
 
     // Add other missing contact fields
     const columnsToAdd = [
-      { name: 'contact_person', type: 'VARCHAR(255)' },
-      { name: 'contact_position', type: 'VARCHAR(255)' },
-      { name: 'contact_email', type: 'VARCHAR(255)' },
-      { name: 'contact_phone', type: 'VARCHAR(50)' },
-      { name: 'payment_due_date', type: 'DATE' },
-      { name: 'payment_method', type: 'VARCHAR(50)' },
-      { name: 'invoice_number', type: 'VARCHAR(100)' },
-      { name: 'invoice_file', type: 'VARCHAR(500)' },
-      { name: 'contract_file', type: 'VARCHAR(500)' },
-      { name: 'handover_file', type: 'VARCHAR(500)' }
+      { name: "contact_person", type: "VARCHAR(255)" },
+      { name: "contact_position", type: "VARCHAR(255)" },
+      { name: "contact_email", type: "VARCHAR(255)" },
+      { name: "contact_phone", type: "VARCHAR(50)" },
+      { name: "payment_due_date", type: "DATE" },
+      { name: "payment_method", type: "VARCHAR(50)" },
+      { name: "invoice_number", type: "VARCHAR(100)" },
+      { name: "invoice_file", type: "VARCHAR(500)" },
+      { name: "contract_file", type: "VARCHAR(500)" },
+      { name: "handover_file", type: "VARCHAR(500)" },
     ];
 
     for (const col of columnsToAdd) {
       if (!existingColumns.includes(col.name)) {
-        await query(`ALTER TABLE event_participants ADD COLUMN ${col.name} ${col.type}`);
+        await query(
+          `ALTER TABLE event_participants ADD COLUMN ${col.name} ${col.type}`,
+        );
         console.log(`${col.name} სვეტი დაემატა`);
       } else {
         console.log(`${col.name} სვეტი უკვე არსებობს`);
       }
     }
 
-    // Add constraints
+    // Add constraints with proper checking
     try {
-      await query(`
-        ALTER TABLE event_participants 
-        ADD CONSTRAINT IF NOT EXISTS check_booth_category 
-        CHECK (booth_category IN ('ოქტანორმის სტენდები', 'ინდივიდუალური სტენდები', 'ტენტი', 'მარკიზიანი დახლი'))
+      // Check if booth_category constraint exists
+      const checkConstraint1 = await query(`
+        SELECT constraint_name 
+        FROM information_schema.table_constraints 
+        WHERE table_name = 'event_participants' 
+        AND constraint_name = 'check_booth_category'
       `);
-      console.log('booth_category შეზღუდვა დაემატა');
+
+      if (checkConstraint1.rows.length === 0) {
+        await query(`
+          ALTER TABLE event_participants 
+          ADD CONSTRAINT check_booth_category 
+          CHECK (booth_category IN ('ოქტანორმის სტენდები', 'ინდივიდუალური სტენდები', 'ტენტი', 'მარკიზიანი დახლი'))
+        `);
+        console.log("booth_category შეზღუდვა დაემატა");
+      } else {
+        console.log("booth_category შეზღუდვა უკვე არსებობს");
+      }
     } catch (e) {
-      console.log('booth_category შეზღუდვა უკვე არსებობს');
+      console.log("booth_category შეზღუდვა შეცდომა:", e.message);
     }
 
     try {
-      await query(`
-        ALTER TABLE event_participants 
-        ADD CONSTRAINT IF NOT EXISTS check_booth_type 
-        CHECK (booth_type IN ('რიგითი', 'კუთხის', 'ნახევარ კუნძული', 'კუნძული'))
+      // Check if booth_type constraint exists
+      const checkConstraint2 = await query(`
+        SELECT constraint_name 
+        FROM information_schema.table_constraints 
+        WHERE table_name = 'event_participants' 
+        AND constraint_name = 'check_booth_type'
       `);
-      console.log('booth_type შეზღუდვა დაემატა');
+
+      if (checkConstraint2.rows.length === 0) {
+        await query(`
+          ALTER TABLE event_participants 
+          ADD CONSTRAINT check_booth_type 
+          CHECK (booth_type IN ('რიგითი', 'კუთხის', 'ნახევარ კუნძული', 'კუნძული'))
+        `);
+        console.log("booth_type შეზღუდვა დაემატა");
+      } else {
+        console.log("booth_type შეზღუდვა უკვე არსებობს");
+      }
     } catch (e) {
-      console.log('booth_type შეზღუდვა უკვე არსებობს');
+      console.log("booth_type შეზღუდვა შეცდომა:", e.message);
     }
 
-    console.log('ყველა საჭირო სვეტი წარმატებით შემოწმდა და დაემატა!');
+    console.log("ყველა საჭირო სვეტი წარმატებით შემოწმდა და დაემატა!");
   } catch (error) {
-    console.error('სვეტების დამატების შეცდომა:', error);
+    console.error("სვეტების დამატების შეცდომა:", error);
   }
 };
 
