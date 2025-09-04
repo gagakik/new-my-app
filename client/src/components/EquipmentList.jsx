@@ -1,29 +1,47 @@
-import React, { useState, useEffect, useCallback } from 'react'; // დავამატეთ useCallback
-import './EquipmentList.css';
+
+import React, { useState, useEffect } from 'react';
+import {
+  Container,
+  Typography,
+  Box,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Button,
+  TextField,
+  IconButton,
+  Alert,
+  Tooltip,
+  CircularProgress,
+  Chip,
+  Avatar
+} from '@mui/material';
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Construction as ConstructionIcon,
+  Inventory as InventoryIcon,
+  AttachMoney as MoneyIcon,
+  Search as SearchIcon
+} from '@mui/icons-material';
 import EquipmentForm from './EquipmentForm';
 
-const EquipmentList = ({ showNotification, userRole }) => {
+const EquipmentList = ({ showNotification }) => {
   const [equipment, setEquipment] = useState([]);
+  const [filteredEquipment, setFilteredEquipment] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const isAuthorizedForManagement =
-    userRole === 'admin' ||
-    userRole === 'operation';
-
-  // fetchEquipment ფუნქცია მოთავსებულია useCallback-ში
-  const fetchEquipment = useCallback(async () => {
+  const fetchEquipment = async () => {
     try {
       const token = localStorage.getItem('token');
-      console.log('ტოკენი:', token ? 'არსებობს' : 'არ არსებობს');
-
-      if (!token) {
-        showNotification('ავტორიზაცია საჭიროა', 'error');
-        return;
-      }
-
       const response = await fetch('/api/equipment', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -31,38 +49,31 @@ const EquipmentList = ({ showNotification, userRole }) => {
         }
       });
 
-      console.log('Response status:', response.status);
-
       if (response.ok) {
         const data = await response.json();
         setEquipment(data);
-      } else if (response.status === 403) {
-        showNotification('წვდომა აკრძალულია. გთხოვთ, ხელახლა შეხვიდეთ სისტემაში.', 'error');
-        // გაასუფთავეთ ტოკენი და გადამისამართეთ login-ზე
-        localStorage.removeItem('token');
-        window.location.reload();
       } else {
-        const errorText = await response.text();
-        console.error('აღჭურვილობის ჩატვირთვის შეცდომა:', response.status, errorText);
-        showNotification('აღჭურვილობის ჩატვირთვა ვერ მოხერხდა.', 'error');
+        throw new Error('აღჭურვილობის ჩატვირთვა ვერ მოხერხდა');
       }
-    } catch (error) {
-      console.error('შეცდომა აღჭურვილობის მიღებისას:', error);
-      showNotification('სერვისი დროებით მიუწვდომელია', 'error');
+    } catch (err) {
+      setError(err.message);
+      showNotification(`შეცდომა: ${err.message}`, 'error');
     } finally {
       setLoading(false);
     }
-  }, [showNotification]); // showNotification არის დამოკიდებულება
+  };
 
   useEffect(() => {
     fetchEquipment();
-  }, [fetchEquipment]); // fetchEquipment დაემატა დამოკიდებულებებში
+  }, []);
 
-  // ფილტრაცია ძიების ტერმინის მიხედვით
-  const filteredEquipment = equipment.filter(item =>
-    item.code_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.description?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  useEffect(() => {
+    const filtered = equipment.filter(item =>
+      item.code_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.description?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFilteredEquipment(filtered);
+  }, [equipment, searchTerm]);
 
   const handleDelete = async (id) => {
     const isConfirmed = window.confirm('ნამდვილად გსურთ ამ აღჭურვილობის წაშლა?');
@@ -70,32 +81,24 @@ const EquipmentList = ({ showNotification, userRole }) => {
 
     try {
       const token = localStorage.getItem('token');
-      if (!token) { // შემოწმება, თუ ტოკენი არ არსებობს
-        showNotification('ავტორიზაციის ტოკენი არ მოიძებნა. გთხოვთ, შეხვიდეთ სისტემაში.', 'error');
-        return;
-      }
       const response = await fetch(`/api/equipment/${id}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
       });
 
       if (response.ok) {
         showNotification('აღჭურვილობა წარმატებით წაიშალა!', 'success');
-        setEquipment(equipment.filter((item) => item.id !== id));
+        fetchEquipment();
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'წაშლა ვერ მოხერხდა.');
+        showNotification(`წაშლა ვერ მოხერხდა: ${errorData.message}`, 'error');
       }
     } catch (error) {
-      console.error('შეცდომა წაშლისას:', error);
-      showNotification(`დაფიქსირდა შეცდომა წაშლისას: ${error.message}`, 'error');
+      showNotification('შეცდომა სერვერთან კავშირისას', 'error');
     }
-  };
-
-  const handleEditClick = (item) => {
-    setEditingId(item.id);
   };
 
   const handleEquipmentUpdated = () => {
@@ -103,170 +106,187 @@ const EquipmentList = ({ showNotification, userRole }) => {
     fetchEquipment();
   };
 
-  const getImageUrl = (imageUrl) => {
-    if (!imageUrl) return null;
-
-    console.log('Processing image URL:', imageUrl);
-
-    // თუ URL უკვე სრული მისამართია (http-ით იწყება), ისე დავტოვოთ
-    if (imageUrl.startsWith('http')) {
-      return imageUrl;
-    }
-
-    // თუ URL არ იწყება /-ით, დავუმატოთ
-    if (!imageUrl.startsWith('/')) {
-      imageUrl = '/' + imageUrl;
-    }
-
-    // პროდუქშენ გარემოში სრული URL-ის ფორმირება
-    const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('replit');
-    if (isProduction) {
-      return `http://209.38.237.197${imageUrl}`;
-    }
-
-    console.log('Final image URL:', imageUrl);
-    return imageUrl;
+  const getStatusColor = (quantity) => {
+    if (quantity === 0) return 'error';
+    if (quantity < 5) return 'warning';
+    return 'success';
   };
 
+  const getStatusText = (quantity) => {
+    if (quantity === 0) return 'არ არის';
+    if (quantity < 5) return 'მცირე';
+    return 'საკმარისი';
+  };
 
   if (loading) {
     return (
-      <div className="equipment-container">
-        <div className="loading">იტვირთება...</div>
-      </div>
+      <Container maxWidth="lg" sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
+        <CircularProgress />
+      </Container>
     );
   }
 
   if (error) {
     return (
-      <div className="equipment-container">
-        <div className="error">შეცდომა: {error}</div>
-      </div>
+      <Container maxWidth="lg" sx={{ mt: 4 }}>
+        <Alert severity="error">შეცდომა: {error}</Alert>
+      </Container>
     );
   }
 
   return (
-    <div className="equipment-container">
-      <h2>აღჭურვილობის სია</h2>
+    <Container maxWidth="lg" sx={{ mt: 2, mb: 4 }}>
+      {/* Header */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" component="h1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <ConstructionIcon fontSize="large" />
+          აღჭურვილობა
+        </Typography>
+        
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => setEditingId(0)}
+          size="large"
+        >
+          აღჭურვილობის დამატება
+        </Button>
+      </Box>
 
-      {/* ძიების ველი */}
-      <div className="search-container">
-        <input
-          type="text"
-          placeholder="ძებნა კოდური სახელით ან აღწერით..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="search-input"
-        />
-      </div>
-
-      {isAuthorizedForManagement && (
-        <button className="add-new" onClick={() => setEditingId(0)}>
-          ახალი აღჭურვილობის დამატება
-        </button>
-      )}
-
-      {editingId !== null && isAuthorizedForManagement && (
+      {/* Equipment Form Modal */}
+      {editingId !== null && (
         <EquipmentForm
-          equipmentToEdit={equipment.find(item => item.id === editingId)}
+          equipmentToEdit={equipment.find(e => e.id === editingId)}
           onEquipmentUpdated={handleEquipmentUpdated}
           showNotification={showNotification}
-          userRole={userRole}
         />
       )}
 
+      {/* Search */}
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <TextField
+          fullWidth
+          label="ძიება"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="ძიება კოდით ან აღწერით..."
+          InputProps={{
+            startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
+          }}
+        />
+      </Paper>
+
+      {/* Equipment Table */}
       {filteredEquipment.length === 0 ? (
-        <p className="no-equipment">
-          {searchTerm ? 'ძიების კრიტერიუმებით აღჭურვილობა არ მოიძებნა.' : 'აღჭურვილობა არ მოიძებნა.'}
-        </p>
+        <Paper sx={{ p: 4, textAlign: 'center' }}>
+          <Typography variant="h6" color="text.secondary">
+            {equipment.length === 0 ? 'აღჭურვილობა არ მოიძებნა.' : 'ძიების შედეგად აღჭურვილობა ვერ მოიძებნა.'}
+          </Typography>
+        </Paper>
       ) : (
-        <div className="equipment-grid">
-          {filteredEquipment.map((item) => (
-            <div key={item.id} className="equipment-card">
-              {item.image_url && (
-                <div className="equipment-image-container">
-                  <img
-                    src={getImageUrl(item.image_url)}
-                    alt={item.code_name}
-                    className="equipment-image"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      console.log('სურათის ჩატვირთვის შეცდომა:', item.image_url);
-                    }}
-                    loading="lazy"
-                  />
-                </div>
-              )}
-
-              <div className="equipment-details">
-                <h3>{item.code_name}</h3>
-
-                <div className="equipment-info">
-                  <p><strong>რაოდენობა:</strong> {item.quantity}</p>
-                  <p><strong>ფასი:</strong> ${item.price}</p>
-                  {item.description && (
-                    <div className="equipment-description">
-                      <strong>აღწერა:</strong> {item.description}
-                    </div>
-                  )}
-                </div>
-
-                <div className="equipment-meta">
-                  {item.created_by && (
-                    <div className="date-info">
-                      <div className="user">{item.created_by}</div>
-                      {item.created_at && (
-                        <div className="date">
-                          {new Date(item.created_at).toLocaleDateString('ka-GE', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {item.updated_by && item.updated_at && (
-                    <div className="date-info update-info">
-                      <div className="user">{item.updated_by}</div>
-                      <div className="date">
-                        {new Date(item.updated_at).toLocaleDateString('ka-GE', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {isAuthorizedForManagement && (
-                <div className="actions">
-                  <button
-                    className="edit"
-                    onClick={() => handleEditClick(item)}
-                    title="რედაქტირება"
-                  >
-                  </button>
-                  <button
-                    className="delete"
-                    onClick={() => handleDelete(item.id)}
-                    title="წაშლა"
-                  >
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+        <TableContainer component={Paper}>
+          <Table sx={{ minWidth: 650 }}>
+            <TableHead>
+              <TableRow>
+                <TableCell>სურათი</TableCell>
+                <TableCell>კოდი</TableCell>
+                <TableCell>აღწერა</TableCell>
+                <TableCell>რაოდენობა</TableCell>
+                <TableCell>ფასი (₾)</TableCell>
+                <TableCell>შექმნის თარიღი</TableCell>
+                <TableCell align="center">მოქმედებები</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredEquipment.map((item) => (
+                <TableRow key={item.id} hover>
+                  <TableCell>
+                    <Avatar
+                      src={item.image_url}
+                      alt={item.code_name}
+                      sx={{ width: 50, height: 50 }}
+                      variant="rounded"
+                    >
+                      <ConstructionIcon />
+                    </Avatar>
+                  </TableCell>
+                  <TableCell component="th" scope="row">
+                    <Typography variant="subtitle1" fontWeight="medium">
+                      {item.code_name}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ maxWidth: 300 }}>
+                      {item.description 
+                        ? (item.description.length > 80 
+                          ? `${item.description.substring(0, 80)}...` 
+                          : item.description)
+                        : '-'
+                      }
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <InventoryIcon fontSize="small" sx={{ color: 'primary.main' }} />
+                      <Typography variant="body2" fontWeight="medium">
+                        {item.quantity}
+                      </Typography>
+                      <Chip
+                        label={getStatusText(item.quantity)}
+                        color={getStatusColor(item.quantity)}
+                        size="small"
+                      />
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <MoneyIcon fontSize="small" sx={{ mr: 1, color: 'success.main' }} />
+                      <Typography variant="body2">
+                        {item.price || 0}
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" color="text.secondary">
+                      {new Date(item.created_at).toLocaleDateString('ka-GE')}
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="center">
+                    <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                      <Tooltip title="რედაქტირება">
+                        <IconButton
+                          color="primary"
+                          onClick={() => setEditingId(item.id)}
+                          size="small"
+                        >
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
+                      
+                      <Tooltip title="წაშლა">
+                        <IconButton
+                          color="error"
+                          onClick={() => handleDelete(item.id)}
+                          size="small"
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
-    </div>
+      
+      <Box sx={{ mt: 3 }}>
+        <Typography variant="body2" color="text.secondary" align="center">
+          სულ: {filteredEquipment.length} აღჭურვილობა
+        </Typography>
+      </Box>
+    </Container>
   );
 };
 

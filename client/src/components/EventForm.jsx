@@ -1,463 +1,207 @@
+
 import React, { useState, useEffect } from 'react';
-import './EventForm.css';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Button,
+  Box,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  IconButton,
+  Typography,
+  Alert
+} from '@mui/material';
+import { Close as CloseIcon } from '@mui/icons-material';
+import { DatePicker, TimePicker } from '@mui/x-date-pickers';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
-const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
-  const [serviceName, setServiceName] = useState('');
-  const [description, setDescription] = useState('');
-  const [yearSelection, setYearSelection] = useState(new Date().getFullYear());
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
-  const [serviceType, setServiceType] = useState('ივენთი');
-  const [selectedSpaces, setSelectedSpaces] = useState([]);
-  const [availableSpaces, setAvailableSpaces] = useState([]);
-  const [selectedExhibitions, setSelectedExhibitions] = useState([]);
-  const [availableExhibitions, setAvailableExhibitions] = useState([]);
-  const [selectedExhibitionId, setSelectedExhibitionId] = useState('');
-  const [availableCompanies, setAvailableCompanies] = useState([]);
-  const [selectedCompanies, setSelectedCompanies] = useState([]);
-  const isEditing = !!eventToEdit;
+const EventForm = ({ isOpen, onClose, onSubmit, editingEvent, exhibitions = [] }) => {
+  const [formData, setFormData] = useState({
+    service_name: '',
+    exhibition_id: '',
+    start_date: null,
+    end_date: null,
+    start_time: null,
+    end_time: null
+  });
+  const [error, setError] = useState('');
 
-  // Fetch available spaces and exhibitions
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const headers = token ? { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        } : {};
-
-        // Fetch spaces
-        const spacesResponse = await fetch('/api/spaces', { headers });
-        if (spacesResponse.ok) {
-          const spaces = await spacesResponse.json();
-          setAvailableSpaces(spaces);
-        } else {
-          console.error('სივრცეების მიღება ვერ მოხერხდა:', spacesResponse.status);
-        }
-
-        // Fetch exhibitions
-        const exhibitionsResponse = await fetch('/api/exhibitions', { headers });
-        if (exhibitionsResponse.ok) {
-          const exhibitions = await exhibitionsResponse.json();
-          setAvailableExhibitions(exhibitions);
-        } else {
-          console.error('გამოფენების მიღება ვერ მოხერხდა:', exhibitionsResponse.status);
-        }
-      } catch (error) {
-        console.error('შეცდომა მონაცემების მიღებისას:', error);
-      }
-    };
-    fetchData();
-  }, []);
-
-  // Fetch companies when exhibition is selected
-  const fetchCompaniesByExhibition = async (exhibitionId, preserveSelection = false, isEditMode = false) => {
-    if (!exhibitionId) {
-      setAvailableCompanies([]);
-      if (!preserveSelection) {
-        setSelectedCompanies([]);
-      }
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem('token');
-      const headers = { 
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      };
-
-      const response = await fetch(`/api/companies`, { headers });
-      if (response.ok) {
-        const companies = await response.json();
-        console.log('ყველა კომპანია:', companies.length);
-
-        const filteredCompanies = companies.filter(company => {
-          console.log(`კომპანია ${company.company_name}:`, company.selected_exhibitions);
-          return company.selected_exhibitions && 
-                 Array.isArray(company.selected_exhibitions) && 
-                 company.selected_exhibitions.includes(parseInt(exhibitionId));
-        });
-
-        console.log(`გამოფენა ${exhibitionId}-ის კომპანიები:`, filteredCompanies.length);
-        setAvailableCompanies(filteredCompanies);
-
-        // ავტო-არჩევა მხოლოდ ახალი ივენთისთვის
-        if (!preserveSelection && !isEditMode) {
-          const autoSelectedCompanies = filteredCompanies.map(company => company.id);
-          setSelectedCompanies(autoSelectedCompanies);
-        }
-      }
-    } catch (error) {
-      console.error('შეცდომა კომპანიების მიღებისას:', error);
-    }
-  };
-
-  // რედაქტირების მონაცემების დაყენება
-  useEffect(() => {
-    const loadEditingData = async () => {
-      if (isEditing && eventToEdit) {
-        console.log('რედაქტირების მონაცემები:', eventToEdit);
-
-        setServiceName(eventToEdit.service_name || '');
-        setDescription(eventToEdit.description || '');
-        setYearSelection(eventToEdit.year_selection || new Date().getFullYear());
-        setStartDate(eventToEdit.start_date ? eventToEdit.start_date.slice(0, 10) : '');
-        setEndDate(eventToEdit.end_date ? eventToEdit.end_date.slice(0, 10) : '');
-        setStartTime(eventToEdit.start_time || '');
-        setEndTime(eventToEdit.end_time || '');
-        setServiceType(eventToEdit.service_type || 'ივენთი');
-
-        // გამოფენის ID-ის სწორად დაყენება
-        const exhibitionId = eventToEdit.exhibition_id ? eventToEdit.exhibition_id.toString() : '';
-        setSelectedExhibitionId(exhibitionId);
-        console.log('დაყენებული გამოფენის ID:', exhibitionId);
-
-        // სივრცეების მოძებნა და დაყენება
-        try {
-          const token = localStorage.getItem('token');
-          const spacesResponse = await fetch(`/api/annual-services/${eventToEdit.id}/details`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-
-          if (spacesResponse.ok) {
-            const serviceDetails = await spacesResponse.json();
-            const spaceIds = serviceDetails.spaces ? serviceDetails.spaces.map(s => s.id) : [];
-            setSelectedSpaces(spaceIds);
-            console.log('ჩატვირთული სივრცეები:', spaceIds);
-          } else {
-            // თუ დეტალები ვერ მოვიღეთ, ცდილობა მარტივი მეთოდით
-            const spacesArray = Array.isArray(eventToEdit.selected_spaces) 
-              ? eventToEdit.selected_spaces 
-              : eventToEdit.selected_spaces ? JSON.parse(eventToEdit.selected_spaces) : [];
-            setSelectedSpaces(spacesArray);
-          }
-        } catch (error) {
-          console.error('სივრცეების ჩატვირთვის შეცდომა:', error);
-          setSelectedSpaces([]);
-        }
-
-        // გამოფენების დაყენება
-        const exhibitionsArray = exhibitionId ? [parseInt(exhibitionId)] : [];
-        setSelectedExhibitions(exhibitionsArray);
-
-        // კომპანიების ჩატვირთვა თუ გამოფენა არჩეულია
-        if (exhibitionId && availableExhibitions.length > 0) {
-          console.log('კომპანიების ჩატვირთვა რედაქტირებისას, გამოფენის ID:', exhibitionId);
-          await fetchCompaniesByExhibition(exhibitionId, true, true);
-        }
-
-        setSelectedCompanies(eventToEdit.selected_companies || []);
-      }
-    };
-
-    if (availableExhibitions.length > 0) {
-      loadEditingData();
-    }
-  }, [eventToEdit, isEditing, availableExhibitions]);
-
-  // ცალკე useEffect-ი ცარიელი ფორმისთვის
-  useEffect(() => {
-    if (!isEditing) {
-      // ცარიელი ფორმისთვის
-      setServiceName('');
-      setDescription('');
-      setYearSelection(new Date().getFullYear());
-      setStartDate('');
-      setEndDate('');
-      setStartTime('');
-      setEndTime('');
-      setServiceType('ივენთი');
-      setSelectedSpaces([]);
-      setSelectedExhibitions([]);
-      setSelectedExhibitionId('');
-      setSelectedCompanies([]);
-      setAvailableCompanies([]);
-    }
-  }, [isEditing]);
-
-  const handleSpaceToggle = (spaceId) => {
-    setSelectedSpaces(prev => 
-      prev.includes(spaceId) 
-        ? prev.filter(id => id !== spaceId)
-        : [...prev, spaceId]
-    );
-  };
-
-  const handleExhibitionSelect = (exhibitionId) => {
-    console.log('გამოფენის არჩევა:', exhibitionId, 'რედაქტირების რეჟიმი:', isEditing);
-    setSelectedExhibitionId(exhibitionId);
-    setSelectedExhibitions(exhibitionId ? [parseInt(exhibitionId)] : []);
-
-    // კომპანიების ჩატვირთვა
-    if (exhibitionId) {
-      // რედაქტირების დროს არ ვაფსებთ არჩეულ კომპანიებს
-      fetchCompaniesByExhibition(exhibitionId, isEditing, isEditing);
+    if (editingEvent) {
+      setFormData({
+        service_name: editingEvent.service_name || '',
+        exhibition_id: editingEvent.exhibition_id || '',
+        start_date: editingEvent.start_date ? new Date(editingEvent.start_date) : null,
+        end_date: editingEvent.end_date ? new Date(editingEvent.end_date) : null,
+        start_time: editingEvent.start_time ? new Date(`1970-01-01T${editingEvent.start_time}`) : null,
+        end_time: editingEvent.end_time ? new Date(`1970-01-01T${editingEvent.end_time}`) : null
+      });
     } else {
-      setAvailableCompanies([]);
-      if (!isEditing) {
-        setSelectedCompanies([]);
-      }
+      setFormData({
+        service_name: '',
+        exhibition_id: '',
+        start_date: null,
+        end_date: null,
+        start_time: null,
+        end_time: null
+      });
     }
-  };
+    setError('');
+  }, [editingEvent, isOpen]);
 
-  const handleCompanyToggle = (companyId) => {
-    setSelectedCompanies(prev => 
-      prev.includes(companyId) 
-        ? prev.filter(id => id !== companyId)
-        : [...prev, companyId]
-    );
-  };
-
-
-
-
-
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (new Date(endDate) <= new Date(startDate)) {
-      showNotification('დასრულების თარიღი უნდა იყოს დაწყების თარიღის შემდეგ', 'error');
+    if (!formData.service_name || !formData.start_date || !formData.end_date) {
+      setError('გთხოვთ შეავსოთ ყველა საჭირო ველი');
       return;
     }
 
-    const method = isEditing ? 'PUT' : 'POST';
-    const url = isEditing
-      ? `/api/annual-services/${eventToEdit.id}`
-      : '/api/annual-services';
-
-    try {
-      const token = localStorage.getItem('token');
-
-      // Prepare data with proper formatting
-      const requestData = {
-        service_name: serviceName,
-        description,
-        year_selection: parseInt(yearSelection),
-        start_date: startDate,
-        end_date: endDate,
-        start_time: startTime || null,
-        end_time: endTime || null,
-        service_type: serviceType,
-        is_active: true,
-        selected_spaces: selectedSpaces,
-        space_ids: selectedSpaces, // Add this for backend compatibility
-        selected_exhibitions: selectedExhibitions,
-        exhibition_id: selectedExhibitionId ? parseInt(selectedExhibitionId) : null,
-        selected_companies: availableCompanies.map(company => company.id) // ყველა ხელმისაწვდომი კომპანია
-      };
-
-      console.log('Sending event data:', requestData);
-      console.log('Selected spaces:', selectedSpaces);
-      console.log('Available companies to register:', availableCompanies.length);
-
-      const response = await fetch(url, {
-        method,
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(requestData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'ოპერაცია ვერ შესრულდა');
-      }
-
-      const data = await response.json();
-      showNotification(data.message, 'success');
-
-      // თუ კომპანიები ავტომატურად რეგისტრირდნენ
-      if (!isEditing && data.registeredCompanies > 0) {
-        showNotification(`${data.registeredCompanies} კომპანია ავტომატურად დარეგისტრირდა მომლოდინე სტატუსით`, 'info');
-      }
-
-      onEventUpdated(); // ფორმის გასუფთავება და სიის განახლება
-    } catch (error) {
-      console.error('Event submission error:', error);
-      showNotification(`შეცდომა: ${error.message}`, 'error');
+    if (formData.start_date > formData.end_date) {
+      setError('დასაწყისის თარიღი არ უნდა იყოს დასასრულის თარიღზე მეტი');
+      return;
     }
+
+    onSubmit(formData);
   };
 
-  const generateYearOptions = () => {
-    const currentYear = new Date().getFullYear();
-    const years = [];
-    for (let i = currentYear - 5; i <= currentYear + 10; i++) {
-      years.push(i);
-    }
-    return years;
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handleDateChange = (newValue, field) => {
+    setFormData(prev => ({ ...prev, [field]: newValue }));
+  };
+
+  const handleTimeChange = (newValue, field) => {
+    setFormData(prev => ({ ...prev, [field]: newValue }));
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
-        <div className="modal-header">
-          <h3>{isEditing ? 'ივენთის რედაქტირება' : 'ახალი ივენთის დამატება'}</h3>
-          <button 
-            type="button"
-            className="modal-close" 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onEventUpdated();
-            }}
+    <LocalizationProvider dateAdapter={AdapterDateFns}>
+      <Dialog open={isOpen} onClose={onClose} maxWidth="md" fullWidth>
+        <DialogTitle sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white'
+        }}>
+          <Typography variant="h6">
+            {editingEvent ? 'ივენთის რედაქტირება' : 'ახალი ივენთის დამატება'}
+          </Typography>
+          <IconButton
+            edge="end"
+            onClick={onClose}
+            sx={{ color: 'white' }}
           >
-            ✕
-          </button>
-        </div>
-        <div className="modal-body">
-          <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label>ივენთის სახელი</label>
-          <input 
-            type="text"
-            value={serviceName}
-            onChange={(e) => setServiceName(e.target.value)}
-            required
-          />
-        </div>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
 
-        <div className="form-group">
-          <label>აღწერა</label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            required
-            rows="3"
-          />
-        </div>
+        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+          <DialogContent>
+            {error && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {error}
+              </Alert>
+            )}
 
-        <div className="form-group">
-          <label>წელი</label>
-          <select 
-            value={yearSelection} 
-            onChange={(e) => setYearSelection(parseInt(e.target.value))}
-            required
-          >
-            {generateYearOptions().map(year => (
-              <option key={year} value={year}>{year}</option>
-            ))}
-          </select>
-        </div>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <TextField
+                name="service_name"
+                label="ივენთის სახელი"
+                value={formData.service_name}
+                onChange={handleChange}
+                fullWidth
+                required
+                variant="outlined"
+              />
 
-        <div className="form-group">
-          <label>დაწყების თარიღი</label>
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            required
-          />
-        </div>
+              <FormControl fullWidth>
+                <InputLabel>გამოფენა</InputLabel>
+                <Select
+                  name="exhibition_id"
+                  value={formData.exhibition_id}
+                  onChange={handleChange}
+                  label="გამოფენა"
+                >
+                  <MenuItem value="">აირჩიეთ გამოფენა</MenuItem>
+                  {exhibitions && Array.isArray(exhibitions) && exhibitions.map((exhibition) => (
+                    <MenuItem key={exhibition.id} value={exhibition.id}>
+                      {exhibition.exhibition_name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
 
-        <div className="form-group">
-          <label>დასრულების თარიღი</label>
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            required
-          />
-        </div>
-
-        <div className="form-group">
-          <label>დაწყების საათი</label>
-          <input
-            type="time"
-            value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
-          />
-        </div>
-
-        <div className="form-group">
-          <label>დასრულების საათი</label>
-          <input
-            type="time"
-            value={endTime}
-            onChange={(e) => setEndTime(e.target.value)}
-          />
-        </div>
-
-        <div className="form-group">
-          <label>ივენთის ტიპი</label>
-          <select 
-            value={serviceType} 
-            onChange={(e) => setServiceType(e.target.value)}
-            required
-          >
-            <option value="ივენთი">ივენთი</option>
-            <option value="გამოფენა">გამოფენა</option>
-            <option value="კონფერენცია">კონფერენცია</option>
-            <option value="გაქირავება">გაქირავება</option>
-            <option value="ფესტივალი">ფესტივალი</option>
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label>გამოფენის არჩევა</label>
-          <select 
-            value={selectedExhibitionId}
-            onChange={(e) => handleExhibitionSelect(e.target.value)}
-          >
-            <option value="">აირჩიეთ გამოფენა</option>
-            {availableExhibitions.map(exhibition => (
-              <option key={exhibition.id} value={exhibition.id}>
-                {exhibition.exhibition_name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {selectedExhibitionId && (
-          <div className="form-group">
-            <label>მონაწილე კომპანიები</label>
-            <div className="companies-info">
-              <p>ამ გამოფენას რეგისტრირებული აქვს <strong>{availableCompanies.length} კომპანია</strong>, რომლებიც ავტომატურად დაემატება მონაწილეობის მოთხოვნის სტატუსით.</p>
-              <small>მონაწილეების სია და სტატუსების მართვა შესაძლებელია ივენთის შექმნის შემდეგ.</small>
-            </div>
-          </div>
-        )}
-
-        <div className="form-group">
-          <label>სივრცეების არჩევა</label>
-          <div className="spaces-selection">
-            {availableSpaces.map(space => (
-              <label key={space.id} className="space-checkbox">
-                <input
-                  type="checkbox"
-                  checked={selectedSpaces.includes(space.id)}
-                  onChange={() => handleSpaceToggle(space.id)}
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <DatePicker
+                  label="დაწყების თარიღი"
+                  value={formData.start_date}
+                  onChange={(newValue) => handleDateChange(newValue, 'start_date')}
+                  renderInput={(params) => <TextField {...params} fullWidth required />}
                 />
-                <span>{space.building_name} - {space.category}</span>
-              </label>
-            ))}
-          </div>
-        </div>
 
-        <div className="form-actions">
-          <button type="submit" className="submit-btn">
-            {isEditing ? 'განახლება' : 'დამატება'}
-          </button>
-          <button
-            type="button"
-            className="cancel-btn"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onEventUpdated();
-            }}
-          >
-            გაუქმება
-          </button>
-        </div>
-      </form>
-        </div>
-      </div>
-    </div>
+                <DatePicker
+                  label="დასრულების თარიღი"
+                  value={formData.end_date}
+                  onChange={(newValue) => handleDateChange(newValue, 'end_date')}
+                  renderInput={(params) => <TextField {...params} fullWidth required />}
+                />
+              </Box>
+
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <TimePicker
+                  label="დაწყების საათი"
+                  value={formData.start_time}
+                  onChange={(newValue) => handleTimeChange(newValue, 'start_time')}
+                  renderInput={(params) => <TextField {...params} fullWidth />}
+                />
+
+                <TimePicker
+                  label="დასრულების საათი"
+                  value={formData.end_time}
+                  onChange={(newValue) => handleTimeChange(newValue, 'end_time')}
+                  renderInput={(params) => <TextField {...params} fullWidth />}
+                />
+              </Box>
+            </Box>
+          </DialogContent>
+
+          <DialogActions sx={{ p: 3, gap: 1 }}>
+            <Button
+              onClick={onClose}
+              variant="outlined"
+              color="inherit"
+            >
+              გაუქმება
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              sx={{
+                background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #218838 0%, #1aa179 100%)'
+                }
+              }}
+            >
+              {editingEvent ? 'განახლება' : 'დამატება'}
+            </Button>
+          </DialogActions>
+        </Box>
+      </Dialog>
+    </LocalizationProvider>
   );
 };
 

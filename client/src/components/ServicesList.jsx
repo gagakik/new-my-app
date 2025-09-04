@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import './ServicesList.css';
 import ServiceForm from './ServiceForm';
 import { useNavigate } from 'react-router-dom';
+import { servicesAPI } from '../services/api';
 
 const ServicesList = ({ showNotification, userRole }) => {
   const [services, setServices] = useState([]);
@@ -19,22 +20,12 @@ const ServicesList = ({ showNotification, userRole }) => {
 
   const fetchServices = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token'); 
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-
-      const response = await fetch('/api/annual-services', {
-        headers: headers
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'მონაცემების მიღება ვერ მოხერხდა.');
-      }
-      const data = await response.json();
+      const data = await servicesAPI.getAll();
       setServices(data);
     } catch (err) {
-      setError(err.message);
-      showNotification(`შეცდომა სერვისების ჩატვირთვისას: ${err.message}`, 'error');
+      const errorMessage = err.response?.data?.message || err.message || 'მონაცემების მიღება ვერ მოხერხდა';
+      setError(errorMessage);
+      showNotification(`შეცდომა სერვისების ჩატვირთვისას: ${errorMessage}`, 'error');
     } finally {
       setLoading(false);
     }

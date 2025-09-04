@@ -1,30 +1,50 @@
-import React, { useEffect } from 'react';
-import './Notification.css';
 
-const Notification = ({ message, type, onClose }) => {
+import React, { useEffect } from 'react';
+import { Alert, Snackbar } from '@mui/material';
+
+function Notification({ message, type, onClose }) {
   useEffect(() => {
     if (message) {
       const timer = setTimeout(() => {
         onClose();
-      }, 3000); // შეტყობინება გაქრება 3 წამში
+      }, 5000);
+      
       return () => clearTimeout(timer);
     }
   }, [message, onClose]);
 
-  if (!message) {
-    return null;
-  }
+  const getSeverity = (type) => {
+    switch (type) {
+      case 'success':
+        return 'success';
+      case 'error':
+        return 'error';
+      case 'warning':
+        return 'warning';
+      case 'info':
+        return 'info';
+      default:
+        return 'info';
+    }
+  };
 
   return (
-    <div className={`notification ${type}`}>
-      <div className="notification-content">
+    <Snackbar
+      open={!!message}
+      autoHideDuration={5000}
+      onClose={onClose}
+      anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+    >
+      <Alert 
+        onClose={onClose} 
+        severity={getSeverity(type)}
+        variant="filled"
+        sx={{ width: '100%' }}
+      >
         {message}
-      </div>
-      <button className="close-btn" onClick={onClose} aria-label="დახურვა">
-        &times;
-      </button>
-    </div>
+      </Alert>
+    </Snackbar>
   );
-};
+}
 
 export default Notification;

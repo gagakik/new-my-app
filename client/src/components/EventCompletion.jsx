@@ -1,138 +1,202 @@
 
 import React, { useState, useEffect } from 'react';
-import './EventCompletion.css';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Typography,
+  TextField,
+  Button,
+  Box,
+  Grid,
+  Card,
+  CardContent,
+  Alert,
+  IconButton,
+  Divider
+} from '@mui/material';
+import {
+  Close as CloseIcon,
+  CheckCircle as CheckCircleIcon,
+  Warning as WarningIcon
+} from '@mui/icons-material';
 
 const EventCompletion = ({ eventId, eventName, onClose, onSuccess }) => {
-  const [notes, setNotes] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [participants, setParticipants] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [statistics, setStatistics] = useState({});
+  const [notes, setNotes] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
+    const fetchEventStatistics = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`/api/annual-services/${eventId}/statistics`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setStatistics(data);
+        } else {
+          setError('სტატისტიკის ჩატვირთვა ვერ მოხერხდა');
+        }
+      } catch (error) {
+        console.error('Error fetching statistics:', error);
+        setError('სერვერთან კავშირის შეცდომა');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchEventStatistics();
   }, [eventId]);
 
-  const fetchEventStatistics = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/events/${eventId}/participants`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setParticipants(data);
-        
-        // სტატისტიკის გამოთვლა
-        const totalParticipants = data.length;
-        const totalBooths = data.filter(p => p.booth_number).length;
-        const totalRevenue = data.reduce((sum, p) => sum + (parseFloat(p.payment_amount) || 0), 0);
-        
-        setStatistics({
-          totalParticipants,
-          totalBooths,
-          totalRevenue
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching event statistics:', error);
-    }
-  };
-
-  const handleComplete = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+  const handleComplete = async () => {
+    setSubmitting(true);
+    setError('');
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/events/${eventId}/complete`, {
+      const response = await fetch(`/api/annual-services/${eventId}/complete`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ notes })
       });
 
       if (response.ok) {
-        const result = await response.json();
-        alert('ივენთი წარმატებით დასრულდა და მონაცემები არქივირდა!');
-        onSuccess(result.report);
+        onSuccess();
         onClose();
       } else {
-        const error = await response.json();
-        alert(`შეცდომა: ${error.message}`);
+        const errorData = await response.json();
+        setError(errorData.message || 'ივენთის დასრულება ვერ მოხერხდა');
       }
     } catch (error) {
       console.error('Error completing event:', error);
-      alert('სერვერის შეცდომა');
+      setError('სერვერთან კავშირის შეცდომა');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
+  const statItems = [
+    { label: 'მონაწილეები', value: statistics.totalParticipants || 0, color: 'primary' },
+    { label: 'კომპანიები', value: statistics.totalCompanies || 0, color: 'secondary' },
+    { label: 'სტენდები', value: statistics.totalBooths || 0, color: 'success' },
+    { label: 'შემოსავალი', value: `${statistics.totalRevenue || 0} ₾`, color: 'warning' }
+  ];
+
   return (
-    <div className="modal-overlay">
-      <div className="modal-content event-completion-modal">
-        <div className="modal-header">
-          <h2>ივენთის დასრულება</h2>
-          <button className="close-button" onClick={onClose}>&times;</button>
-        </div>
+    <Dialog open={true} onClose={onClose} maxWidth="md" fullWidth>
+      <DialogTitle sx={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+        color: 'white'
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <CheckCircleIcon />
+          <Typography variant="h6">
+            ივენთის დასრულება
+          </Typography>
+        </Box>
+        <IconButton
+          edge="end"
+          onClick={onClose}
+          sx={{ color: 'white' }}
+        >
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
 
-        <div className="event-completion-content">
-          <div className="event-info">
-            <h3>{eventName}</h3>
-            <div className="statistics-summary">
-              <div className="stat-item">
-                <span className="stat-label">მონაწილეები:</span>
-                <span className="stat-value">{statistics.totalParticipants}</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-label">სტენდები:</span>
-                <span className="stat-value">{statistics.totalBooths}</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-label">მთლიანი შემოსავალი:</span>
-                <span className="stat-value">{statistics.totalRevenue?.toFixed(2)} ₾</span>
-              </div>
-            </div>
-          </div>
+      <DialogContent sx={{ mt: 2 }}>
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
 
-          <form onSubmit={handleComplete} className="completion-form">
-            <div className="form-group">
-              <label htmlFor="notes">შენიშვნები (არასავალდებულო):</label>
-              <textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows="4"
-                placeholder="შეიყვანეთ დამატებითი შენიშვნები ივენთის შესახებ..."
-              />
-            </div>
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            {eventName}
+          </Typography>
+          <Divider sx={{ mb: 2 }} />
 
-            <div className="warning-message">
-              <p><strong>გაფრთხილება:</strong> ივენთის დასრულების შემდეგ:</p>
-              <ul>
-                <li>ყველა მონაწილე და მათი მონაცემები არქივირდება</li>
-                <li>ივენთი გადაინაცვლებს არქივში</li>
-                <li>ეს მოქმედება შეუქცევადია</li>
-              </ul>
-            </div>
+          {loading ? (
+            <Typography>სტატისტიკის ჩატვირთვა...</Typography>
+          ) : (
+            <Grid container spacing={2} sx={{ mb: 3 }}>
+              {statItems.map((item, index) => (
+                <Grid item xs={6} sm={3} key={index}>
+                  <Card sx={{ textAlign: 'center' }}>
+                    <CardContent>
+                      <Typography color="text.secondary" gutterBottom variant="body2">
+                        {item.label}
+                      </Typography>
+                      <Typography variant="h5" component="div" color={`${item.color}.main`}>
+                        {item.value}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          )}
 
-            <div className="form-actions">
-              <button type="button" onClick={onClose} className="cancel-button">
-                გაუქმება
-              </button>
-              <button type="submit" disabled={loading} className="complete-button">
-                {loading ? 'დამუშავება...' : 'ივენთის დასრულება'}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
+          <TextField
+            fullWidth
+            multiline
+            rows={4}
+            label="შენიშვნები (არასავალდებულო)"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="შეიყვანეთ დამატებითი შენიშვნები ივენთის შესახებ..."
+            sx={{ mb: 3 }}
+          />
+
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+              გაფრთხილება: ივენთის დასრულების შემდეგ:
+            </Typography>
+            <Box component="ul" sx={{ m: 0, pl: 2 }}>
+              <li>ყველა მონაწილე და მათი მონაცემები არქივირდება</li>
+              <li>ივენთი გადაიტანება არქივში</li>
+              <li>რედაქტირება აღარ იქნება შესაძლებელი</li>
+            </Box>
+          </Alert>
+        </Box>
+      </DialogContent>
+
+      <DialogActions sx={{ p: 3, gap: 1 }}>
+        <Button
+          onClick={onClose}
+          variant="outlined"
+          color="inherit"
+          disabled={submitting}
+        >
+          გაუქმება
+        </Button>
+        <Button
+          onClick={handleComplete}
+          variant="contained"
+          disabled={submitting}
+          sx={{
+            background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+            '&:hover': {
+              background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)'
+            }
+          }}
+        >
+          {submitting ? 'დასრულება...' : 'დაასრულე ივენთი'}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 };
 

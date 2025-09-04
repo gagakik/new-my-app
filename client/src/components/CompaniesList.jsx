@@ -1,87 +1,145 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import './CompaniesList.css';
-import CompanyForm from './CompanyForm'; // კომპანიის ფორმის იმპორტი
-import CompanyImport from './CompanyImport'; // კომპანიის იმპორტის კომპონენტის კომპონენტის იმპორტი
-import './ButtonIcons.css';
 
-const CompaniesList = ({ showNotification, userRole }) => {
+import React, { useState, useEffect } from 'react';
+import {
+  Container,
+  Typography,
+  Box,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Button,
+  TextField,
+  IconButton,
+  Alert,
+  Tooltip,
+  CircularProgress,
+  Chip,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
+} from '@mui/material';
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Business as BusinessIcon,
+  Public as PublicIcon,
+  FileUpload as FileUploadIcon,
+  Clear as ClearIcon
+} from '@mui/icons-material';
+import CompanyForm from './CompanyForm';
+import CompanyImport from './CompanyImport';
+
+const CompaniesList = ({ showNotification }) => {
   const [companies, setCompanies] = useState([]);
+  const [filteredCompanies, setFilteredCompanies] = useState([]);
+  const [exhibitions, setExhibitions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editingId, setEditingId] = useState(null);
+  const [showImport, setShowImport] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterCountry, setFilterCountry] = useState('');
-  const [filterProfile, setFilterProfile] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
-  const [filterIdentificationCode, setFilterIdentificationCode] = useState(''); // ახალი სტეიტი საიდენტიფიკაციო კოდისთვის
-  const [selectedCompany, setSelectedCompany] = useState(null); // დეტალური ხედვისთვის
-  const [showImport, setShowImport] = useState(false); // იმპორტის მოდალის საჩვენებლად
-  const [exhibitions, setExhibitions] = useState([]); // გამოფენების სია
-  const [editingExhibitions, setEditingExhibitions] = useState(null); // რომელი კომპანიის გამოფენებს ვარედაქტირებთ
+  const [selectedExhibition, setSelectedExhibition] = useState('');
+  const [selectedCountry, setSelectedCountry] = useState('');
 
-  // განსაზღვრეთ, აქვს თუ არა მომხმარებელს მართვის უფლება
-  const isAuthorizedForManagement =
-    userRole === 'admin' ||
-    userRole === 'sales';
+  const fetchCompanies = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/companies', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
 
-  // გამოფენების ჩატვირთვა
-  const fetchExhibitions = useCallback(async () => {
+      if (response.ok) {
+        const data = await response.json();
+        setCompanies(data);
+      } else {
+        throw new Error('კომპანიების ჩატვირთვა ვერ მოხერხდა');
+      }
+    } catch (err) {
+      setError(err.message);
+      showNotification(`შეცდომა: ${err.message}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchExhibitions = async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch('/api/exhibitions', {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
+
       if (response.ok) {
         const data = await response.json();
         setExhibitions(data);
       }
-    } catch (error) {
-      console.error('გამოფენების ჩატვირთვის შეცდომა:', error);
-    }
-  }, []);
-
-  const fetchCompanies = useCallback(async () => {
-    try {
-      const token = localStorage.getItem('token');
-
-      if (!token) {
-        throw new Error('ავტორიზაცია საჭიროა კომპანიების ნახვისთვის');
-      }
-
-      const headers = {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      };
-
-      let url = '/api/companies?';
-      if (searchTerm) url += `searchTerm=${searchTerm}&`;
-      if (filterCountry) url += `country=${filterCountry}&`;
-      if (filterProfile) url += `profile=${filterProfile}&`;
-      if (filterStatus) url += `status=${filterStatus}&`;
-      if (filterIdentificationCode) url += `identification_code=${filterIdentificationCode}&`;
-
-      const response = await fetch(url, { headers });
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          throw new Error('არ გაქვთ კომპანიების ნახვის უფლება');
-        }
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'მონაცემების მიღება ვერ მოხერხდა.');
-      }
-      const data = await response.json();
-      setCompanies(data);
     } catch (err) {
-      setError(err.message);
-      showNotification(`შეცდომა კომპანიების ჩატვირთვისას: ${err.message}`, 'error');
-    } finally {
-      setLoading(false);
+      console.error('გამოფენების ჩატვირთვის შეცდომა:', err);
     }
-  }, [searchTerm, filterCountry, filterProfile, filterStatus, filterIdentificationCode, showNotification]);
+  };
 
   useEffect(() => {
     fetchCompanies();
     fetchExhibitions();
-  }, [fetchCompanies, fetchExhibitions]);
+  }, []);
+
+  useEffect(() => {
+    let filtered = companies;
+
+    if (searchTerm) {
+      filtered = filtered.filter(company =>
+        company.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        company.country?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        company.identification_code?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    if (selectedExhibition) {
+      filtered = filtered.filter(company => {
+        const selectedExhibitions = company.selected_exhibitions || [];
+        return selectedExhibitions.includes(parseInt(selectedExhibition));
+      });
+    }
+
+    if (selectedCountry) {
+      filtered = filtered.filter(company =>
+        company.country === selectedCountry
+      );
+    }
+
+    setFilteredCompanies(filtered);
+  }, [companies, searchTerm, selectedExhibition, selectedCountry]);
+
+  const getUniqueCountries = () => {
+    const countries = companies.map(company => company.country).filter(Boolean);
+    return [...new Set(countries)].sort();
+  };
+
+  const getExhibitionNames = (exhibitionIds) => {
+    if (!exhibitionIds || !Array.isArray(exhibitionIds)) return [];
+    return exhibitionIds.map(id => {
+      const exhibition = exhibitions.find(e => e.id === id);
+      return exhibition ? exhibition.exhibition_name : `გამოფენა ${id}`;
+    });
+  };
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setSelectedExhibition('');
+    setSelectedCountry('');
+  };
 
   const handleDelete = async (id) => {
     const isConfirmed = window.confirm('ნამდვილად გსურთ ამ კომპანიის წაშლა?');
@@ -89,13 +147,12 @@ const CompaniesList = ({ showNotification, userRole }) => {
 
     try {
       const token = localStorage.getItem('token');
-      if (!token) {
-        showNotification('ავტორიზაციის ტოკენი არ მოიძებნა. გთხოვთ, შეხვიდეთ სისტემაში.', 'error');
-        return;
-      }
       const response = await fetch(`/api/companies/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
 
       if (response.ok) {
@@ -103,21 +160,15 @@ const CompaniesList = ({ showNotification, userRole }) => {
         fetchCompanies();
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'წაშლა ვერ მოხერხდა.');
+        showNotification(`წაშლა ვერ მოხერხდა: ${errorData.message}`, 'error');
       }
     } catch (error) {
-      console.error('შეცდომა წაშლისას:', error);
-      showNotification(`დაფიქსირდა შეცდომა წაშლისას: ${error.message}`, 'error');
+      showNotification('შეცდომა სერვერთან კავშირისას', 'error');
     }
-  };
-
-  const handleEditClick = (company) => {
-    setEditingId(company.id);
   };
 
   const handleCompanyUpdated = () => {
     setEditingId(null);
-    setSelectedCompany(null); // დეტალური ხედვიდან გასვლა
     fetchCompanies();
   };
 
@@ -126,364 +177,230 @@ const CompaniesList = ({ showNotification, userRole }) => {
     fetchCompanies();
   };
 
-  const handleViewDetails = (company) => {
-    setSelectedCompany(company);
-  };
-
-  const handleEditExhibitions = (company) => {
-    setEditingExhibitions({
-      companyId: company.id,
-      companyName: company.company_name,
-      selectedExhibitions: company.selected_exhibitions || []
-    });
-  };
-
-  const handleExhibitionToggle = (exhibitionId, isChecked) => {
-    const numericId = Number(exhibitionId);
-
-    setEditingExhibitions(prev => {
-      const newSelectedExhibitions = isChecked
-        ? [...prev.selectedExhibitions, numericId]
-        : prev.selectedExhibitions.filter(id => id !== numericId);
-
-      return {
-        ...prev,
-        selectedExhibitions: newSelectedExhibitions
-      };
-    });
-  };
-
-  const saveExhibitionChanges = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/companies/${editingExhibitions.companyId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          selected_exhibitions: editingExhibitions.selectedExhibitions
-        })
-      });
-
-      if (response.ok) {
-        showNotification('გამოფენები წარმატებით განახლდა!', 'success');
-        setEditingExhibitions(null);
-        fetchCompanies();
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'განახლება ვერ მოხერხდა');
-      }
-    } catch (error) {
-      showNotification(`შეცდომა: ${error.message}`, 'error');
-    }
-  };
-
-  const cancelExhibitionEdit = () => {
-    setEditingExhibitions(null);
-  };
-
   if (loading) {
-    return <div>იტვირთება...</div>;
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
+        <CircularProgress />
+      </Container>
+    );
   }
 
   if (error) {
-    return <div>შეცდომა: {error}</div>;
-  }
-
-  if (selectedCompany) {
     return (
-      <div className="company-details-container">
-        <h2>{selectedCompany.company_name} - დეტალები</h2>
-        <p><strong>ქვეყანა:</strong> {selectedCompany.country}</p>
-        <p><strong>კომპანიის პროფილი:</strong> {selectedCompany.company_profile}</p>
-        <p><strong>საიდენტიფიკაციო კოდი:</strong> {selectedCompany.identification_code}</p>
-        <p><strong>იურიდიული მისამართი:</strong> {selectedCompany.legal_address}</p>
-
-        {/* საკონტაქტო პირების გამოტანა */}
-        {selectedCompany.contact_persons && selectedCompany.contact_persons.length > 0 && (
-          <div>
-            <h4>საკონტაქტო პირები:</h4>
-            {selectedCompany.contact_persons.map((person, index) => (
-              <div key={index} className="contact-person-details-card">
-                <p><strong>პოზიცია:</strong> {person.position || 'არ არის მითითებული'}</p>
-                <p><strong>სახელი გვარი:</strong> {person.name || 'არ არის მითითებული'}</p>
-                <p><strong>ტელეფონი:</strong> {person.phone || 'არ არის მითითებული'}</p>
-                <p><strong>მეილი:</strong> {person.email || 'არ არის მითითებული'}</p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <p><strong>ვებგვერდი:</strong> <a href={`http://${selectedCompany.website}`} target="_blank" rel="noopener noreferrer">{selectedCompany.website}</a></p>
-        <p><strong>კომენტარი:</strong> {selectedCompany.comment}</p>
-        <p><strong>სტატუსი:</strong> {selectedCompany.status}</p>
-        <p className="meta-info">
-          <strong>შექმნის ინფორმაცია:</strong>
-          {new Date(selectedCompany.created_at).toLocaleDateString()}
-          {selectedCompany.created_by_username && ` - ${selectedCompany.created_by_username}`}
-        </p>
-        {selectedCompany.updated_at && (
-          <p className="meta-info">
-            <strong>განახლების ინფორმაცია:</strong>
-            {new Date(selectedCompany.updated_at).toLocaleDateString()}
-            {selectedCompany.updated_by_username && ` - ${selectedCompany.updated_by_username}`}
-          </p>
-        )}
-        <button className="back-btn" onClick={() => setSelectedCompany(null)}>უკან დაბრუნება</button>
-      </div>
+      <Container maxWidth="lg" sx={{ mt: 4 }}>
+        <Alert severity="error">შეცდომა: {error}</Alert>
+      </Container>
     );
   }
 
   return (
-    <div className="companies-container">
-      <h2>კომპანიების სია</h2>
+    <Container maxWidth="lg" sx={{ mt: 2, mb: 4 }}>
+      {/* Header */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" component="h1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <BusinessIcon fontSize="large" />
+          კომპანიები
+        </Typography>
 
-      {/* ფილტრები და ძებნა */}
-      <div className="filters">
-        <input
-          type="text"
-          placeholder="ძებნა დასახელებით..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-        <select value={filterCountry} onChange={(e) => setFilterCountry(e.target.value)}>
-          <option value="">ყველა ქვეყანა</option>
-          <option value="საქართველო">საქართველო</option>
-          <option value="აშშ">აშშ</option>
-          <option value="გერმანია">გერმანია</option>
-          <option value="საფრანგეთი">საფრანგეთი</option>
-          <option value="დიდი ბრიტანეთი">დიდი ბრიტანეთი</option>
-          <option value="იტალია">იტალია</option>
-          <option value="ესპანეთი">ესპანეთი</option>
-          <option value="კანადა">კანადა</option>
-          <option value="ავსტრალია">ავსტრალია</option>
-          <option value="იაპონია">იაპონია</option>
-          <option value="ჩინეთი">ჩინეთი</option>
-          <option value="ბრაზილია">ბრაზილია</option>
-          <option value="მექსიკა">მექსიკა</option>
-          <option value="არგენტინა">არგენტინა</option>
-          <option value="ჩილე">ჩილე</option>
-          <option value="ინდოეთი">ინდოეთი</option>
-          <option value="თურქეთი">თურქეთი</option>
-          <option value="რუსეთი">რუსეთი</option>
-          <option value="უკრაინა">უკრაინა</option>
-          <option value="პოლონეთი">პოლონეთი</option>
-        </select>
-        <input
-          type="text"
-          placeholder="პროფილი..."
-          value={filterProfile}
-          onChange={(e) => setFilterProfile(e.target.value)}
-        />
-        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-          <option value="">ყველა სტატუსი</option>
-          <option value="აქტიური">აქტიური</option>
-          <option value="არქივი">არქივი</option>
-        </select>
-        <input
-          type="text"
-          placeholder="საიდენტიფიკაციო კოდი..."
-          value={filterIdentificationCode}
-          onChange={(e) => setFilterIdentificationCode(e.target.value)}
-        /> {/* ახალი ველი საიდენტიფიკაციო კოდისთვის */}
-        <button onClick={fetchCompanies}>ფილტრი</button> {/* ფილტრის ღილაკი */}
-      </div> {/* filters დასასრული */}
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            variant="outlined"
+            startIcon={<FileUploadIcon />}
+            onClick={() => setShowImport(true)}
+          >
+            ინპორტი
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setEditingId(0)}
+            size="large"
+          >
+            კომპანიის დამატება
+          </Button>
+        </Box>
+      </Box>
 
-      {isAuthorizedForManagement && (
-        <>
-          <button className="add-new" onClick={() => setEditingId(0)}>ახალი კომპანიის დამატება</button>
-          <button className="import-excel" onClick={() => setShowImport(!showImport)}>Excel-ით იმპორტი</button>
-        </>
-      )}
-
-      {editingId !== null && isAuthorizedForManagement && (
+      {/* Company Form Modal */}
+      {editingId !== null && (
         <CompanyForm
           companyToEdit={companies.find(c => c.id === editingId)}
           onCompanyUpdated={handleCompanyUpdated}
           showNotification={showNotification}
-          userRole={userRole}
+          exhibitions={exhibitions}
         />
       )}
 
+      {/* Import Modal */}
       {showImport && (
         <CompanyImport
+          onClose={() => setShowImport(false)}
           onImportComplete={handleImportComplete}
           showNotification={showNotification}
         />
       )}
 
-      {editingExhibitions && (
-        <div className="modal-overlay">
-          <div className="exhibition-edit-modal">
-            <h3>გამოფენების რედაქტირება: {editingExhibitions.companyName}</h3>
-            <div className="exhibitions-selection">
-              {exhibitions.map(exhibition => {
-                const isChecked = editingExhibitions.selectedExhibitions.includes(Number(exhibition.id));
+      {/* Filters */}
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          ფილტრები და ძიება
+        </Typography>
 
-                return (
-                  <div key={exhibition.id} className="exhibition-checkbox-wrapper">
-                    <label className="exhibition-checkbox">
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={(e) => handleExhibitionToggle(exhibition.id, e.target.checked)}
-                      />
-                      {exhibition.exhibition_name}
-                    </label>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="modal-actions">
-              <button className="save-btn" onClick={saveExhibitionChanges}>
-                შენახვა
-              </button>
-              <button className="cancel-btn" onClick={cancelExhibitionEdit}>
-                გაუქმება
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+          <TextField
+            label="ძიება"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="ძიება კომპანიის სახელით, ქვეყნით ან კოდით..."
+            size="small"
+            sx={{ minWidth: 300 }}
+          />
 
-      {companies.length === 0 ? (
-        <p className="no-companies">კომპანიები არ მოიძებნა.</p>
-      ) : (
-        <>
-          {/* Desktop Table View */}
-          <table className="companies-table desktop-only">
-            <thead>
-              <tr>
-                <th>კომპანია</th>
-                <th>ქვეყანა</th>
-                <th>საიდ. კოდი</th>
-                <th>სტატუსი</th>
-                <th>გამოფენები</th>
-                <th>შექმნა</th>
-                <th>განახლება</th>
-                <th>მოქმედებები</th>
-              </tr>
-            </thead>
-            <tbody>
-              {companies.map(company => (
-                <tr key={company.id}>
-                  <td className="company-name" onClick={() => handleViewDetails(company)} style={{cursor: 'pointer'}}>{company.company_name}</td>
-                  <td>{company.country}</td>
-                  <td>{company.identification_code}</td>
-                  <td>
-                    <span className={`status-badge ${company.status?.toLowerCase()}`}>
-                      {company.status}
-                    </span>
-                  </td>
-                  <td className="exhibitions-cell">
-                    <div className="exhibitions-display">
-                      {company.selected_exhibitions && company.selected_exhibitions.length > 0 ? (
-                        <>
-                          <span className="exhibitions-count">
-                            {company.selected_exhibitions.length} გამოფენა
-                          </span>
-                          <div className="exhibitions-list">
-                            {exhibitions
-                              .filter(ex => company.selected_exhibitions.includes(ex.id))
-                              .slice(0, 2)
-                              .map(ex => (
-                                <span key={ex.id} className="exhibition-tag">
-                                  {ex.exhibition_name}
-                                </span>
-                              ))
-                            }
-                            {company.selected_exhibitions.length > 2 && (
-                              <span className="exhibition-tag more">
-                                +{company.selected_exhibitions.length - 2}
-                              </span>
-                            )}
-                          </div>
-                        </>
-                      ) : (
-                        <span className="no-exhibitions">-</span>
-                      )}
-                    </div>
-                    {isAuthorizedForManagement && (
-                      <button
-                        className="edit-exhibitions-btn"
-                        onClick={() => handleEditExhibitions(company)}
-                        title="გამოფენების რედაქტირება"
-                      >
-                        ✏️
-                      </button>
-                    )}
-                  </td>
-                  <td className="date-info">
-                    <div className="date">{new Date(company.created_at).toLocaleDateString()}</div>
-                    {company.created_by_username && (
-                      <div className="user">{company.created_by_username}</div>
-                    )}
-                  </td>
-                  <td className="date-info">
-                    {company.updated_at ? (
-                      <>
-                        <div className="date">{new Date(company.updated_at).toLocaleDateString()}</div>
-                        {company.updated_by_username && (
-                          <div className="user">{company.updated_by_username}</div>
-                        )}
-                      </>
-                    ) : (
-                      <span className="no-update">-</span>
-                    )}
-                  </td>
-                  <td>
-                    <div className="actions">
-                      <button
-                        className="edit"
-                        onClick={() => handleEditClick(company)}
-                        title="რედაქტირება"
-                      >
-                      </button>
-                      <button
-                        className="delete"
-                        onClick={() => handleDelete(company.id)}
-                        title="წაშლა"
-                      >
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+          <FormControl size="small" sx={{ minWidth: 200 }}>
+            <InputLabel>გამოფენა</InputLabel>
+            <Select
+              value={selectedExhibition}
+              onChange={(e) => setSelectedExhibition(e.target.value)}
+              label="გამოფენა"
+            >
+              <MenuItem value="">ყველა გამოფენა</MenuItem>
+              {exhibitions.map(exhibition => (
+                <MenuItem key={exhibition.id} value={exhibition.id}>
+                  {exhibition.exhibition_name}
+                </MenuItem>
               ))}
-            </tbody>
-          </table>
+            </Select>
+          </FormControl>
 
-          {/* Mobile Card View */}
-          <div className="mobile-cards mobile-only">
-            {companies.map(company => (
-              <div key={company.id} className="company-card">
-                <h3 onClick={() => handleViewDetails(company)} style={{cursor: 'pointer'}}>{company.company_name}</h3>
-                <div className="company-info">
-                  <span><strong>ქვეყანა:</strong> {company.country}</span>
-                  <span><strong>პროფილი:</strong> {company.company_profile}</span>
-                  <span><strong>სტატუსი:</strong> {company.status}</span>
-                </div>
-                <div className="company-actions">
-                  <button
-                    onClick={() => handleEditClick(company)}
-                    className="edit"
-                    title="რედაქტირება"
-                  >
-                  </button>
-                  <button
-                    onClick={() => handleDelete(company.id)}
-                    className="delete"
-                    title="წაშლა"
-                  >
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
+          <FormControl size="small" sx={{ minWidth: 200 }}>
+            <InputLabel>ქვეყანა</InputLabel>
+            <Select
+              value={selectedCountry}
+              onChange={(e) => setSelectedCountry(e.target.value)}
+              label="ქვეყანა"
+            >
+              <MenuItem value="">ყველა ქვეყანა</MenuItem>
+              {getUniqueCountries().map(country => (
+                <MenuItem key={country} value={country}>
+                  {country}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <Button
+            variant="outlined"
+            onClick={clearFilters}
+            startIcon={<ClearIcon />}
+            size="small"
+          >
+            გასუფთავება
+          </Button>
+        </Box>
+
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+          ნაპოვნია: {filteredCompanies.length} კომპანია
+        </Typography>
+      </Paper>
+
+      {/* Companies Table */}
+      {filteredCompanies.length === 0 ? (
+        <Paper sx={{ p: 4, textAlign: 'center' }}>
+          <Typography variant="h6" color="text.secondary">
+            {companies.length === 0 ? 'კომპანიები არ მოიძებნა.' : 'ფილტრების შესაბამისი კომპანიები ვერ მოიძებნა.'}
+          </Typography>
+        </Paper>
+      ) : (
+        <TableContainer component={Paper}>
+          <Table sx={{ minWidth: 650 }}>
+            <TableHead>
+              <TableRow>
+                <TableCell>კომპანიის სახელი</TableCell>
+                <TableCell>ქვეყანა</TableCell>
+                <TableCell>საიდენტიფიკაციო კოდი</TableCell>
+                <TableCell>გამოფენები</TableCell>
+                <TableCell>შექმნის თარიღი</TableCell>
+                <TableCell align="center">მოქმედებები</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredCompanies.map((company) => (
+                <TableRow key={company.id} hover>
+                  <TableCell component="th" scope="row">
+                    <Typography variant="subtitle1" fontWeight="medium">
+                      {company.company_name}
+                    </Typography>
+                    {company.company_profile && (
+                      <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 200 }}>
+                        {company.company_profile.substring(0, 50)}
+                        {company.company_profile.length > 50 && '...'}
+                      </Typography>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <PublicIcon fontSize="small" sx={{ mr: 1, color: 'primary.main' }} />
+                      <Typography variant="body2">
+                        {company.country || '-'}
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">
+                      {company.identification_code || '-'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {company.selected_exhibitions && company.selected_exhibitions.length > 0 ? (
+                        getExhibitionNames(company.selected_exhibitions).map((name, index) => (
+                          <Chip
+                            key={index}
+                            label={name}
+                            size="small"
+                            variant="outlined"
+                          />
+                        ))
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">-</Typography>
+                      )}
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" color="text.secondary">
+                      {new Date(company.created_at).toLocaleDateString('ka-GE')}
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="center">
+                    <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                      <Tooltip title="რედაქტირება">
+                        <IconButton
+                          color="primary"
+                          onClick={() => setEditingId(company.id)}
+                          size="small"
+                        >
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
+
+                      <Tooltip title="წაშლა">
+                        <IconButton
+                          color="error"
+                          onClick={() => handleDelete(company.id)}
+                          size="small"
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
-    </div>
+    </Container>
   );
 };
 

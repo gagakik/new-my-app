@@ -325,7 +325,7 @@ const createTables = async () => {
       )
     `);
 
-    // Add missing columns one by one
+    // Add missing columns to exhibition_packages table
     const columnsToAdd = [
       { name: "is_bundle", type: "BOOLEAN DEFAULT false" },
       { name: "bundle_discount_percent", type: "DECIMAL(5,2) DEFAULT 0" },
@@ -578,7 +578,8 @@ const addMissingColumns = async () => {
         ADD COLUMN IF NOT EXISTS invoice_files JSONB DEFAULT '[]',
         ADD COLUMN IF NOT EXISTS expense_files JSONB DEFAULT '[]',
         ADD COLUMN IF NOT EXISTS plan_updated_at TIMESTAMP,
-        ADD COLUMN IF NOT EXISTS files_updated_at TIMESTAMP
+        ADD COLUMN IF NOT EXISTS files_updated_at TIMESTAMP,
+        ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       `);
       console.log("ფაილების მართვის სვეტები დაემატა annual_services ცხრილში");
     } catch (fileColumnsError) {

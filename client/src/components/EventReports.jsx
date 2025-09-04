@@ -1,452 +1,315 @@
-import React, { useState, useEffect } from 'react';
-import './EventReports.css';
 
-const EventReports = ({ onClose, showNotification, userRole }) => {
-  const [reportType, setReportType] = useState('participants');
-  const [events, setEvents] = useState([]);
-  const [selectedEvent, setSelectedEvent] = useState('');
-  const [dateRange, setDateRange] = useState({
-    start: '',
-    end: ''
-  });
+import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Paper,
+  Typography,
+  Button,
+  Grid,
+  Card,
+  CardContent,
+  Chip,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Alert,
+  CircularProgress,
+  Divider
+} from '@mui/material';
+import {
+  Download as DownloadIcon,
+  Assessment as AssessmentIcon,
+  People as PeopleIcon,
+  AttachMoney as MoneyIcon,
+  EventAvailable as EventIcon
+} from '@mui/icons-material';
+
+const EventReports = ({ eventId, eventName, showNotification }) => {
   const [reportData, setReportData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [userStats, setUserStats] = useState([]);
-  const [eventFinancials, setEventFinancials] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    fetchEvents();
-    fetchUserStatistics();
-    fetchEventFinancials();
-  }, []);
-
-  const fetchEvents = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/events', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setEvents(data);
-      }
-    } catch (error) {
-      console.error('ივენთების მიღების შეცდომა:', error);
+    if (eventId) {
+      fetchReportData();
     }
-  };
+  }, [eventId]);
 
-  const fetchUserStatistics = async () => {
+  const fetchReportData = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/reports/user-companies', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUserStats(data);
-      }
-    } catch (error) {
-      console.error('იუზერების სტატისტიკის მიღების შეცდომა:', error);
-    }
-  };
-
-  const fetchEventFinancials = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/reports/event-financials', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setEventFinancials(data);
-      }
-    } catch (error) {
-      console.error('ივენთების ფინანსური ანალიზის მიღების შეცდომა:', error);
-    }
-  };
-
-  const generateReport = async () => {
-    if (!selectedEvent && reportType !== 'summary') {
-      showNotification('გთხოვთ აირჩიოთ ივენთი', 'error');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      const params = new URLSearchParams({
-        type: reportType,
-        eventId: selectedEvent,
-        startDate: dateRange.start,
-        endDate: dateRange.end
-      });
-
-      const response = await fetch(`/api/reports/events?${params}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
+      setLoading(true);
+      const response = await fetch(`/api/events/${eventId}/reports`);
       if (response.ok) {
         const data = await response.json();
         setReportData(data);
-        showNotification('რეპორტი წარმატებით შეიქმნა', 'success');
       } else {
-        const errorText = await response.text();
-        console.error('Report error:', response.status, errorText);
-        showNotification('რეპორტის შექმნა ვერ მოხერხდა', 'error');
+        setError('მონაცემების ჩატვირთვა ვერ მოხერხდა');
       }
     } catch (error) {
-      console.error('რეპორტის შექმნა ვერ მოხერხდა:', error);
-      showNotification('რეპორტის შექმნა ვერ მოხერხდა', 'error');
+      console.error('Error fetching report data:', error);
+      setError('მონაცემების ჩატვირთვა ვერ მოხერხდა');
     } finally {
       setLoading(false);
     }
   };
 
-  const exportReport = (format) => {
-    if (!reportData) return;
-
-    const fileName = `report_${reportType}_${new Date().toISOString().split('T')[0]}`;
-
-    if (format === 'csv') {
-      exportToCSV(reportData, fileName);
-    } else if (format === 'pdf') {
-      exportToPDF(reportData, fileName);
+  const downloadReport = async (reportType) => {
+    try {
+      const response = await fetch(`/api/events/${eventId}/reports/${reportType}/download`);
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${eventName}_${reportType}_report.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        showNotification('რეპორტი წარმატებით გადმოიწერა', 'success');
+      } else {
+        showNotification('რეპორტის გადმოწერა ვერ მოხერხდა', 'error');
+      }
+    } catch (error) {
+      console.error('Error downloading report:', error);
+      showNotification('რეპორტის გადმოწერა ვერ მოხერხდა', 'error');
     }
   };
 
-  const exportToCSV = (data, fileName) => {
-    if (!data.participants) return;
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
-    const headers = ['კომპანია', 'ქვეყანა', 'სტატუსი', 'გადახდა', 'თანხა', 'რეგისტრაცია'];
-    const csvContent = [
-      headers.join(','),
-      ...data.participants.map(p => [
-        p.company_name,
-        p.country,
-        p.registration_status,
-        p.payment_status,
-        p.payment_amount || 0,
-        new Date(p.registration_date).toLocaleDateString('ka-GE')
-      ].join(','))
-    ].join('\n');
+  if (error) {
+    return (
+      <Alert severity="error" sx={{ m: 2 }}>
+        {error}
+      </Alert>
+    );
+  }
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `${fileName}.csv`;
-    link.click();
-  };
+  if (!reportData) {
+    return (
+      <Alert severity="info" sx={{ m: 2 }}>
+        მონაცემები არ არის ხელმისაწვდომი
+      </Alert>
+    );
+  }
 
-  const exportToPDF = (data, fileName) => {
-    // PDF ექსპორტი - მოგვიანებით დავამატებთ jsPDF ბიბლიოთეკით
-    showNotification('PDF ექსპორტი მომზადების ეტაპზეა', 'info');
-  };
-
-  const renderReportData = () => {
-    if (!reportData) return null;
-
-    switch (reportType) {
-      case 'participants':
-        return (
-          <div className="report-results">
-            <div className="report-stats">
-              <div className="stat-card">
-                <h4>სულ მონაწილეები</h4>
-                <span className="stat-number">{reportData.totalParticipants || 0}</span>
-              </div>
-              <div className="stat-card">
-                <h4>დადასტურებული</h4>
-                <span className="stat-number confirmed">{reportData.confirmedParticipants || 0}</span>
-              </div>
-              <div className="stat-card">
-                <h4>გადახდილი</h4>
-                <span className="stat-number paid">{reportData.paidParticipants || 0}</span>
-              </div>
-              <div className="stat-card">
-                <h4>შემოსავალი</h4>
-                <span className="stat-number revenue">€{reportData.totalRevenue || '0.00'}</span>
-              </div>
-            </div>
-
-            {reportData.participants && reportData.participants.length > 0 && (
-              <div className="participants-list">
-                <h3>მონაწილეები</h3>
-                <div className="summary-table">
-                  <div className="table-header">
-                    <div>კომპანია</div>
-                    <div>ქვეყანა</div>
-                    <div>სტატუსი</div>
-                    <div>გადახდის სტატუსი</div>
-                    <div>თანხა</div>
-                  </div>
-                  {reportData.participants.map((participant, index) => (
-                    <div key={index} className="table-row">
-                      <div><strong>{participant.company_name}</strong></div>
-                      <div>{participant.country}</div>
-                      <div><span className={`status-badge ${participant.registration_status}`}>{participant.registration_status}</span></div>
-                      <div><span className={`payment-badge ${participant.payment_status}`}>{participant.payment_status}</span></div>
-                      <div><strong>€{parseFloat(participant.payment_amount || 0).toFixed(2)}</strong></div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        );
-
-      case 'financial':
-        return (
-          <div className="report-results">
-            <div className="financial-stats">
-              <div className="stat-card">
-                <h4>მოსალოდნელი შემოსავალი</h4>
-                <span className="stat-number expected">€{reportData.expectedRevenue || '0.00'}</span>
-              </div>
-              <div className="stat-card">
-                <h4>ფაქტიური შემოსავალი</h4>
-                <span className="stat-number actual">€{reportData.actualRevenue || '0.00'}</span>
-              </div>
-              <div className="stat-card">
-                <h4>დავალიანება</h4>
-                <span className="stat-number overdue">€{reportData.overdueAmount || '0.00'}</span>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'summary':
-        return (
-          <div className="report-results">
-            <div className="summary-stats">
-              <div className="stat-card">
-                <h4>სულ ივენთები</h4>
-                <span className="stat-number">{reportData.totalEvents || 0}</span>
-              </div>
-              <div className="stat-card">
-                <h4>აქტიური ივენთები</h4>
-                <span className="stat-number active">{reportData.activeEvents || 0}</span>
-              </div>
-              <div className="stat-card">
-                <h4>სულ მონაწილეები</h4>
-                <span className="stat-number">{reportData.totalParticipants || 0}</span>
-              </div>
-              <div className="stat-card">
-                <h4>ჯამური შემოსავალი</h4>
-                <span className="stat-number revenue">€{reportData.totalRevenue || '0.00'}</span>
-              </div>
-            </div>
-
-            <div className="additional-reports">
-              <h3>იუზერების სტატისტიკა</h3>
-              {userStats && userStats.length > 0 ? (
-                <div className="user-stats-table">
-                  <div className="table-header">
-                    <div>იუზერი</div>
-                    <div>კომპანიები</div>
-                    <div>ბოლო განახლება</div>
-                    <div>განახლების თარიღი</div>
-                  </div>
-                  {userStats.map((user, index) => (
-                    <div key={index} className="table-row">
-                      <div><strong>{user.username}</strong></div>
-                      <div>{user.companies_count}</div>
-                      <div>{user.last_updated_by || 'N/A'}</div>
-                      <div>{user.last_update_date ? new Date(user.last_update_date).toLocaleDateString('ka-GE') : 'N/A'}</div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p>იუზერების მონაცემები ვერ მოიძებნა</p>
-              )}
-
-              <h3>ივენთების ფინანსური ანალიზი</h3>
-              {eventFinancials && eventFinancials.length > 0 ? (
-                <>
-                  <div className="financial-summary">
-                    <div className="stat-card total-revenue">
-                      <h4>ჯამური შემოსავალი ყველა ივენთიდან</h4>
-                      <span className="stat-number revenue">
-                        €{parseFloat(eventFinancials.reduce((sum, event) => sum + parseFloat(event.total_paid || 0), 0)).toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="events-financial-table">
-                    <div className="table-header">
-                      <div>ივენთი</div>
-                      <div>მონაწილეები</div>
-                      <div>გადახდილი თანხა</div>
-                      <div>მომლოდინე გადახდა</div>
-                      <div>ჯამი</div>
-                    </div>
-                    {eventFinancials.map((event, index) => (
-                      <div key={index} className="table-row">
-                        <div><strong>{event.event_name}</strong></div>
-                        <div>{event.participants_count}</div>
-                        <div><span className="paid-amount">{parseFloat(event.total_paid || 0).toFixed(2)}€</span></div>
-                        <div><span className="pending-amount">{parseFloat(event.total_pending || 0).toFixed(2)}€</span></div>
-                        <div><strong>{parseFloat(event.total_expected || 0).toFixed(2)}€</strong></div>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <p>ფინანსური მონაცემები ვერ მოიძებნა</p>
-              )}
-            </div>
-          </div>
-        );
-
-      default:
-        return null;
-    }
-  };
+  const {
+    totalParticipants = 0,
+    totalRevenue = 0,
+    paidParticipants = 0,
+    pendingPayments = 0,
+    participantsByCategory = [],
+    revenueByCategory = []
+  } = reportData;
 
   return (
-    <div className="event-reports-container">
-      <div className="reports-header">
-        <h2>ივენთების რეპორტები</h2>
-      </div>
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h4" gutterBottom sx={{ 
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        fontWeight: 'bold'
+      }}>
+        <AssessmentIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+        {eventName} - ანგარიშები
+      </Typography>
 
-      <div className="reports-content">
-          <div className="report-controls">
-            <div className="control-group">
-              <label>რეპორტის ტიპი</label>
-              <select 
-                value={reportType}
-                onChange={(e) => setReportType(e.target.value)}
-              >
-                <option value="participants">მონაწილეების ანალიზი</option>
-                <option value="financial">ფინანსური ანალიზი</option>
-                <option value="summary">ზოგადი მიმოხილვა</option>
-                <option value="user-companies">იუზერების კომპანიები</option>
-                <option value="event-financials">ივენთების ფინანსები</option>
-              </select>
-            </div>
+      {/* Summary Cards */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card sx={{ 
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white'
+          }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box>
+                  <Typography variant="h4" component="div">
+                    {totalParticipants}
+                  </Typography>
+                  <Typography variant="body2">
+                    მონაწილეები
+                  </Typography>
+                </Box>
+                <PeopleIcon sx={{ fontSize: 40, opacity: 0.8 }} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
 
-            {!['summary', 'user-companies', 'event-financials'].includes(reportType) && (
-              <div className="control-group">
-                <label>ივენთი</label>
-                <select 
-                  value={selectedEvent}
-                  onChange={(e) => setSelectedEvent(e.target.value)}
-                >
-                  <option value="">აირჩიეთ ივენთი</option>
-                  {events.map(event => (
-                    <option key={event.id} value={event.id}>
-                      {event.service_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+        <Grid item xs={12} sm={6} md={3}>
+          <Card sx={{ 
+            background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
+            color: 'white'
+          }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box>
+                  <Typography variant="h4" component="div">
+                    ₾{totalRevenue.toFixed(2)}
+                  </Typography>
+                  <Typography variant="body2">
+                    მთლიანი შემოსავალი
+                  </Typography>
+                </Box>
+                <MoneyIcon sx={{ fontSize: 40, opacity: 0.8 }} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
 
-            <div className="control-group">
-              <label>თარიღების ინტერვალი</label>
-              <div className="date-range">
-                <input 
-                  type="date"
-                  value={dateRange.start}
-                  onChange={(e) => setDateRange({...dateRange, start: e.target.value})}
-                />
-                <span>-</span>
-                <input 
-                  type="date"
-                  value={dateRange.end}
-                  onChange={(e) => setDateRange({...dateRange, end: e.target.value})}
-                />
-              </div>
-            </div>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card sx={{ 
+            background: 'linear-gradient(135deg, #17a2b8 0%, #138496 100%)',
+            color: 'white'
+          }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box>
+                  <Typography variant="h4" component="div">
+                    {paidParticipants}
+                  </Typography>
+                  <Typography variant="body2">
+                    გადახდილი
+                  </Typography>
+                </Box>
+                <EventIcon sx={{ fontSize: 40, opacity: 0.8 }} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
 
-            <div className="control-actions">
-              <button 
-                className="generate-btn"
-                onClick={generateReport}
-                disabled={loading}
-              >
-                {loading ? 'იქმნება...' : 'რეპორტის შექმნა'}
-              </button>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card sx={{ 
+            background: 'linear-gradient(135deg, #ffc107 0%, #e0a800 100%)',
+            color: 'white'
+          }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box>
+                  <Typography variant="h4" component="div">
+                    {pendingPayments}
+                  </Typography>
+                  <Typography variant="body2">
+                    მოლოდინში
+                  </Typography>
+                </Box>
+                <MoneyIcon sx={{ fontSize: 40, opacity: 0.8 }} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
 
-              {reportData && (
-                <div className="export-actions">
-                  <button 
-                    className="export-btn csv"
-                    onClick={() => exportReport('csv')}
-                  >
-                    CSV ექსპორტი
-                  </button>
-                  <button 
-                    className="export-btn pdf"
-                    onClick={() => exportReport('pdf')}
-                  >
-                    PDF ექსპორტი
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
+      {/* Report Actions */}
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          რეპორტების გადმოწერა
+        </Typography>
+        <Divider sx={{ mb: 2 }} />
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6} md={4}>
+            <Button
+              variant="contained"
+              startIcon={<DownloadIcon />}
+              onClick={() => downloadReport('participants')}
+              fullWidth
+              sx={{ 
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)'
+                }
+              }}
+            >
+              მონაწილეების ჩამონათვალი
+            </Button>
+          </Grid>
+          <Grid item xs={12} sm={6} md={4}>
+            <Button
+              variant="contained"
+              startIcon={<DownloadIcon />}
+              onClick={() => downloadReport('financial')}
+              fullWidth
+              sx={{ 
+                background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #218838 0%, #1aa179 100%)'
+                }
+              }}
+            >
+              ფინანსური ანგარიში
+            </Button>
+          </Grid>
+          <Grid item xs={12} sm={6} md={4}>
+            <Button
+              variant="contained"
+              startIcon={<DownloadIcon />}
+              onClick={() => downloadReport('detailed')}
+              fullWidth
+              sx={{ 
+                background: 'linear-gradient(135deg, #17a2b8 0%, #138496 100%)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #138496 0%, #117a8b 100%)'
+                }
+              }}
+            >
+              დეტალური ანგარიში
+            </Button>
+          </Grid>
+        </Grid>
+      </Paper>
 
-          {reportType === 'user-companies' ? (
-            <div className="report-content">
-              <div className="user-companies-report">
-                <h4>იუზერების მიერ დარეგისტრირებული კომპანიები</h4>
-                <div className="user-stats-table">
-                  <div className="table-header">
-                    <div>იუზერი</div>
-                    <div>დარეგისტრირებული კომპანიები</div>
-                    <div>ბოლო განახლება</div>
-                    <div>ბოლო განახლების თარიღი</div>
-                  </div>
-                  {userStats.map((user, index) => (
-                    <div key={index} className="table-row">
-                      <div>{user.username}</div>
-                      <div><strong>{user.companies_count}</strong></div>
-                      <div>{user.last_updated_by || '-'}</div>
-                      <div>{user.last_update_date ? new Date(user.last_update_date).toLocaleDateString('ka-GE') : '-'}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : reportType === 'event-financials' ? (
-            <div className="report-content">
-              <div className="event-financials-report">
-                <h4>ივენთების ფინანსური ანალიზი</h4>
-                <div className="financial-summary">
-                  <div className="stat-card">
-                    <h4>ჯამური შემოსავალი ყველა ივენთიდან</h4>
-                    <span className="stat-number revenue">
-                      €{parseFloat(eventFinancials.reduce((sum, event) => sum + parseFloat(event.total_paid || 0), 0)).toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-                <div className="events-financial-table">
-                  <div className="table-header">
-                    <div>ივენთი</div>
-                    <div>მონაწილეები</div>
-                    <div>გადახდილი თანხა</div>
-                    <div>მომლოდინე გადახდა</div>
-                    <div>ჯამი</div>
-                  </div>
-                  {eventFinancials.map((event, index) => (
-                    <div key={index} className="table-row">
-                      <div><strong>{event.event_name}</strong></div>
-                      <div>{event.participants_count}</div>
-                      <div><span className="paid-amount">{parseFloat(event.total_paid || 0).toFixed(2)}€</span></div>
-                      <div><span className="pending-amount">{parseFloat(event.total_pending || 0).toFixed(2)}€</span></div>
-                      <div><strong>{parseFloat(event.total_expected || 0).toFixed(2)}€</strong></div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : (
-            renderReportData()
-          )}
-        </div>
-    </div>
+      {/* Category Statistics */}
+      {participantsByCategory.length > 0 && (
+        <Paper sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            სტატისტიკა კატეგორიების მიხედვით
+          </Typography>
+          <Divider sx={{ mb: 2 }} />
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell><strong>კატეგორია</strong></TableCell>
+                  <TableCell><strong>მონაწილეები</strong></TableCell>
+                  <TableCell><strong>შემოსავალი</strong></TableCell>
+                  <TableCell><strong>სტატუსი</strong></TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {participantsByCategory.map((category, index) => {
+                  const revenue = revenueByCategory.find(r => r.category === category.category);
+                  return (
+                    <TableRow key={index}>
+                      <TableCell>{category.category}</TableCell>
+                      <TableCell>{category.count}</TableCell>
+                      <TableCell>₾{revenue ? revenue.amount.toFixed(2) : '0.00'}</TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={category.count > 0 ? 'აქტიური' : 'არარქტიური'}
+                          color={category.count > 0 ? 'success' : 'default'}
+                          size="small"
+                        />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+      )}
+    </Box>
   );
 };
 

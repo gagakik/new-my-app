@@ -1,5 +1,42 @@
+
 import React, { useState, useEffect } from 'react';
-import './EventFileManager.css';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Box,
+  Typography,
+  Paper,
+  Grid,
+  Card,
+  CardContent,
+  CardActions,
+  IconButton,
+  Chip,
+  Alert,
+  CircularProgress,
+  Divider,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction,
+  FormControl,
+  FormControlLabel,
+  Radio,
+  RadioGroup
+} from '@mui/material';
+import {
+  Close as CloseIcon,
+  CloudUpload as CloudUploadIcon,
+  Download as DownloadIcon,
+  Delete as DeleteIcon,
+  PictureAsPdf as PdfIcon,
+  Description as DocIcon,
+  Folder as FolderIcon,
+  AttachFile as AttachFileIcon
+} from '@mui/icons-material';
 
 const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
   const [planFile, setPlanFile] = useState(null);
@@ -109,7 +146,14 @@ const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
       if (response.ok) {
         const result = await response.json();
         showNotification(result.message, 'success');
-        await refreshEventData();
+        
+        if (type === 'plan') {
+          setPlanFile(null);
+        } else if (type === 'invoice') {
+          setInvoiceFiles(prev => prev.filter(f => f.name !== fileName));
+        } else if (type === 'expense') {
+          setExpenseFiles(prev => prev.filter(f => f.name !== fileName));
+        }
       } else {
         const error = await response.json();
         showNotification(error.message, 'error');
@@ -137,156 +181,243 @@ const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
     });
   };
 
-  return (
-    <div className="modal-overlay">
-      <div className="modal-content file-manager-modal">
-        <div className="modal-header">
-          <h3>ფაილების მართვა - {event.service_name}</h3>
-          <button className="close-modal" onClick={onClose}>✕</button>
-        </div>
+  const getFileIcon = (fileName) => {
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    if (extension === 'pdf') return <PdfIcon color="error" />;
+    return <DocIcon color="primary" />;
+  };
 
-        <div className="modal-body">
+  return (
+    <Dialog open={true} onClose={onClose} maxWidth="md" fullWidth>
+      <DialogTitle sx={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        color: 'white'
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <FolderIcon />
+          <Typography variant="h6">
+            ფაილების მართვა - {event.service_name}
+          </Typography>
+        </Box>
+        <IconButton onClick={onClose} sx={{ color: 'white' }}>
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
+
+      <DialogContent sx={{ p: 0 }}>
+        <Box sx={{ p: 3 }}>
           {/* Plan File Section */}
-          <div className="file-section">
-            <h4>გეგმის ფაილი (PDF)</h4>
-            <div className="file-content">
-              {planFile ? (
-                <div className="file-item">
-                  <div className="file-info">
-                    <span className="file-name">გეგმა.pdf</span>
-                    {event.plan_uploaded_by && (
-                      <span className="file-author">ატვირთა: {event.plan_uploaded_by}</span>
-                    )}
-                    <div className="file-actions">
-                      <a
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <PdfIcon />
+              გეგმის ფაილი (PDF)
+            </Typography>
+
+            {planFile ? (
+              <Card variant="outlined">
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <PdfIcon color="error" fontSize="large" />
+                    <Box sx={{ flexGrow: 1 }}>
+                      <Typography variant="subtitle1" fontWeight="bold">
+                        გეგმა.pdf
+                      </Typography>
+                      {event.plan_uploaded_by && (
+                        <Typography variant="body2" color="text.secondary">
+                          ატვირთა: {event.plan_uploaded_by}
+                        </Typography>
+                      )}
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Button
+                        variant="outlined"
+                        startIcon={<DownloadIcon />}
+                        size="small"
+                        component="a"
                         href={`/api/download/${planFile.replace('/uploads/', '')}`}
                         download="გეგმა.pdf"
-                        className="btn-download"
                       >
                         ჩამოტვირთვა
-                      </a>
+                      </Button>
                       {isAuthorizedForManagement && (
-                        <button
-                          className="btn-delete"
+                        <IconButton
+                          color="error"
                           onClick={() => handleFileDelete('plan')}
+                          size="small"
                         >
-                          წაშლა
-                        </button>
+                          <DeleteIcon />
+                        </IconButton>
                       )}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <p className="no-file">გეგმის ფაილი არ არის ატვირთული</p>
-              )}
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            ) : (
+              <Alert severity="info">
+                გეგმის ფაილი არ არის ატვირთული
+              </Alert>
+            )}
 
-              {isAuthorizedForManagement && (
-                <div className="upload-section">
-                  <input
-                    type="file"
-                    accept=".pdf"
-                    onChange={(e) => {
-                      if (e.target.files[0]) {
-                        handleFileUpload(e.target.files[0], 'plan');
-                        e.target.value = '';
+            {isAuthorizedForManagement && (
+              <Box sx={{ mt: 2 }}>
+                <input
+                  type="file"
+                  accept=".pdf"
+                  style={{ display: 'none' }}
+                  id="plan-file-upload"
+                  onChange={(e) => {
+                    if (e.target.files[0]) {
+                      handleFileUpload(e.target.files[0], 'plan');
+                      e.target.value = '';
+                    }
+                  }}
+                  disabled={uploading && uploadType === 'plan'}
+                />
+                <label htmlFor="plan-file-upload">
+                  <Button
+                    variant="contained"
+                    component="span"
+                    startIcon={uploading && uploadType === 'plan' ? <CircularProgress size={20} /> : <CloudUploadIcon />}
+                    disabled={uploading && uploadType === 'plan'}
+                    sx={{
+                      background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #218838 0%, #1aa179 100%)'
                       }
                     }}
-                    disabled={uploading && uploadType === 'plan'}
-                  />
-                  {uploading && uploadType === 'plan' && <span>ატვირთვა...</span>}
-                </div>
-              )}
-            </div>
-          </div>
+                  >
+                    {uploading && uploadType === 'plan' ? 'ატვირთვა...' : 'ფაილის ატვირთვა'}
+                  </Button>
+                </label>
+              </Box>
+            )}
+          </Paper>
 
           {/* Attached Files Section */}
-          <div className="file-section">
-            <h4>მიმაგრებული ფაილები</h4>
-            <div className="file-content">
-              {[...invoiceFiles, ...expenseFiles].length > 0 ? (
-                <div className="files-list">
-                  {[...invoiceFiles, ...expenseFiles].map((file, index) => {
-                    const isInvoice = invoiceFiles.includes(file);
-                    return (
-                      <div key={index} className="file-item">
-                        <div className="file-info">
-                          <span className="file-name">
-                            {file.name}
-                            <span className="file-type-badge">
-                              {isInvoice ? 'ინვოისი' : 'ხარჯი'}
-                            </span>
-                          </span>
-                          <span className="file-meta">
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <AttachFileIcon />
+              მიმაგრებული ფაილები
+            </Typography>
+
+            {[...invoiceFiles, ...expenseFiles].length > 0 ? (
+              <List>
+                {[...invoiceFiles, ...expenseFiles].map((file, index) => {
+                  const isInvoice = invoiceFiles.includes(file);
+                  return (
+                    <ListItem key={index} divider>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
+                        {getFileIcon(file.name)}
+                        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                            <Typography variant="subtitle1" noWrap>
+                              {file.name}
+                            </Typography>
+                            <Chip
+                              size="small"
+                              label={isInvoice ? 'ინვოისი' : 'ხარჯი'}
+                              color={isInvoice ? 'primary' : 'secondary'}
+                              variant="outlined"
+                            />
+                          </Box>
+                          <Typography variant="body2" color="text.secondary">
                             {formatFileSize(file.size)} • {formatDate(file.uploaded_at)}
                             {file.uploaded_by && ` • ${file.uploaded_by}`}
-                          </span>
-                          <div className="file-actions">
-                            <a
-                              href={`/api/download/${file.path.replace('/uploads/', '')}`}
-                              download={file.name}
-                              className="btn-download"
+                          </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<DownloadIcon />}
+                            component="a"
+                            href={`/api/download/${file.path.replace('/uploads/', '')}`}
+                            download={file.name}
+                          >
+                            ჩამოტვირთვა
+                          </Button>
+                          {isAuthorizedForManagement && (
+                            <IconButton
+                              color="error"
+                              size="small"
+                              onClick={() => handleFileDelete(isInvoice ? 'invoice' : 'expense', file.name)}
                             >
-                              ჩამოტვირთვა
-                            </a>
-                            {isAuthorizedForManagement && (
-                              <button
-                                className="btn-delete"
-                                onClick={() => handleFileDelete(isInvoice ? 'invoice' : 'expense', file.name)}
-                              >
-                                წაშლა
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="no-file">მიმაგრებული ფაილები არ არის ატვირთული</p>
-              )}
+                              <DeleteIcon />
+                            </IconButton>
+                          )}
+                        </Box>
+                      </Box>
+                    </ListItem>
+                  );
+                })}
+              </List>
+            ) : (
+              <Alert severity="info">
+                მიმაგრებული ფაილები არ არის ატვირთული
+              </Alert>
+            )}
 
-              {isAuthorizedForManagement && (
-                <div className="upload-section">
-                  <div className="upload-type-selection">
-                    <label>
-                      <input
-                        type="radio"
-                        name="file-type"
-                        value="invoice"
-                        defaultChecked
-                      />
-                      ინვოისი
-                    </label>
-                    <label>
-                      <input
-                        type="radio"
-                        name="file-type"
-                        value="expense"
-                      />
-                      ხარჯი
-                    </label>
-                  </div>
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx,.xlsx,.xls"
-                    onChange={(e) => {
-                      if (e.target.files[0]) {
-                        const fileType = document.querySelector('input[name="file-type"]:checked').value;
-                        handleFileUpload(e.target.files[0], fileType);
-                        e.target.value = '';
+            {isAuthorizedForManagement && (
+              <Box sx={{ mt: 3 }}>
+                <FormControl component="fieldset" sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    ფაილის ტიპი:
+                  </Typography>
+                  <RadioGroup
+                    row
+                    defaultValue="invoice"
+                    name="file-type-radio"
+                  >
+                    <FormControlLabel value="invoice" control={<Radio />} label="ინვოისი" />
+                    <FormControlLabel value="expense" control={<Radio />} label="ხარჯი" />
+                  </RadioGroup>
+                </FormControl>
+
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.xlsx,.xls"
+                  style={{ display: 'none' }}
+                  id="attached-file-upload"
+                  onChange={(e) => {
+                    if (e.target.files[0]) {
+                      const fileType = document.querySelector('input[name="file-type-radio"]:checked').value;
+                      handleFileUpload(e.target.files[0], fileType);
+                      e.target.value = '';
+                    }
+                  }}
+                  disabled={uploading && (uploadType === 'invoice' || uploadType === 'expense')}
+                />
+                <label htmlFor="attached-file-upload">
+                  <Button
+                    variant="contained"
+                    component="span"
+                    startIcon={uploading && (uploadType === 'invoice' || uploadType === 'expense') ? <CircularProgress size={20} /> : <CloudUploadIcon />}
+                    disabled={uploading && (uploadType === 'invoice' || uploadType === 'expense')}
+                    sx={{
+                      background: 'linear-gradient(135deg, #007bff 0%, #0056b3 100%)',
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #0056b3 0%, #004085 100%)'
                       }
                     }}
-                    disabled={uploading && (uploadType === 'invoice' || uploadType === 'expense')}
-                  />
-                  {uploading && (uploadType === 'invoice' || uploadType === 'expense') && <span>ატვირთვა...</span>}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+                  >
+                    {uploading && (uploadType === 'invoice' || uploadType === 'expense') ? 'ატვირთვა...' : 'ფაილის ატვირთვა'}
+                  </Button>
+                </label>
+              </Box>
+            )}
+          </Paper>
+        </Box>
+      </DialogContent>
+
+      <DialogActions sx={{ p: 2 }}>
+        <Button onClick={onClose} variant="outlined">
+          დახურვა
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 };
 

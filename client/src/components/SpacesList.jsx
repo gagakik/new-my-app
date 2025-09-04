@@ -1,53 +1,113 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import './SpacesList.css';
-import SpaceForm from './SpaceForm'; // სივრცის ფორმის იმპორტი
 
-const SpacesList = ({ showNotification, userRole }) => {
+import React, { useState, useEffect } from 'react';
+import {
+  Container,
+  Typography,
+  Box,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Button,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  IconButton,
+  Alert,
+  Tooltip,
+  CircularProgress,
+  Chip
+} from '@mui/material';
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Domain as DomainIcon,
+  Square as SquareIcon,
+  Search as SearchIcon,
+  Clear as ClearIcon
+} from '@mui/icons-material';
+import SpaceForm from './SpaceForm';
+
+const SpacesList = ({ showNotification }) => {
   const [spaces, setSpaces] = useState([]);
+  const [filteredSpaces, setFilteredSpaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editingId, setEditingId] = useState(null);
-  const [showForm, setShowForm] = useState(false); // მოდალური ფანჯრის მართვისთვის
+  const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [buildingFilter, setBuildingFilter] = useState('');
 
-  // განსაზღვრეთ, აქვს თუ არა მომხმარებელს სივრცეების მართვის უფლება
-  const isAuthorizedForManagement = 
-    userRole === 'admin' || 
-    userRole === 'manager';
-
-  const fetchSpaces = useCallback(async () => {
+  const fetchSpaces = async () => {
     try {
       const token = localStorage.getItem('token');
-
-      if (!token) {
-        throw new Error('ავტორიზაცია საჭიროა სივრცეების ნახვისთვის');
-      }
-
-      const headers = { 
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      };
-
-      const response = await fetch('/api/spaces', { headers }); // API მოთხოვნა სივრცეებისთვის
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          throw new Error('არ გაქვთ სივრცეების ნახვის უფლება');
+      const response = await fetch('/api/spaces', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'სივრცეების მიღება ვერ მოხერხდა.');
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSpaces(data);
+      } else {
+        throw new Error('სივრცეების ჩატვირთვა ვერ მოხერხდა');
       }
-      const data = await response.json();
-      setSpaces(data);
     } catch (err) {
       setError(err.message);
-      showNotification(`შეცდომა სივრცეების ჩატვირთვისას: ${err.message}`, 'error');
+      showNotification(`შეცდომა: ${err.message}`, 'error');
     } finally {
       setLoading(false);
     }
-  }, [showNotification]);
+  };
 
   useEffect(() => {
     fetchSpaces();
-  }, [fetchSpaces]);
+  }, []);
+
+  useEffect(() => {
+    let filtered = spaces;
+
+    if (searchTerm) {
+      filtered = filtered.filter(space =>
+        space.building_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        space.description?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    if (categoryFilter) {
+      filtered = filtered.filter(space => space.category === categoryFilter);
+    }
+
+    if (buildingFilter) {
+      filtered = filtered.filter(space => space.building_name === buildingFilter);
+    }
+
+    setFilteredSpaces(filtered);
+  }, [spaces, searchTerm, categoryFilter, buildingFilter]);
+
+  const getUniqueCategories = () => {
+    const categories = spaces.map(space => space.category).filter(Boolean);
+    return [...new Set(categories)].sort();
+  };
+
+  const getUniqueBuildings = () => {
+    const buildings = spaces.map(space => space.building_name).filter(Boolean);
+    return [...new Set(buildings)].sort();
+  };
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setCategoryFilter('');
+    setBuildingFilter('');
+  };
 
   const handleDelete = async (id) => {
     const isConfirmed = window.confirm('ნამდვილად გსურთ ამ სივრცის წაშლა?');
@@ -55,174 +115,244 @@ const SpacesList = ({ showNotification, userRole }) => {
 
     try {
       const token = localStorage.getItem('token');
-      if (!token) {
-        showNotification('ავტორიზაციის ტოკენი არ მოიძებნა. გთხოვთ, შეხვიდეთ სისტემაში.', 'error');
-        return;
-      }
       const response = await fetch(`/api/spaces/${id}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
       });
 
       if (response.ok) {
         showNotification('სივრცე წარმატებით წაიშალა!', 'success');
-        fetchSpaces(); // სიის განახლება
+        fetchSpaces();
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'წაშლა ვერ მოხერხდა.');
+        showNotification(`წაშლა ვერ მოხერხდა: ${errorData.message}`, 'error');
       }
     } catch (error) {
-      console.error('შეცდომა წაშლისას:', error);
-      showNotification(`დაფიქსირდა შეცდომა წაშლისას: ${error.message}`, 'error');
+      showNotification('შეცდომა სერვერთან კავშირისას', 'error');
     }
   };
 
-  const handleEditClick = (space) => {
-    setEditingId(space.id);
-    setShowForm(true); // ფორმის ჩვენება
-  };
-
-  const handleAddSpaceClick = () => {
-    setEditingId(0); // 0-ის დანიშვნა ახალი სივრცის დამატების რეჟიმის აღსანიშნავად
-    setShowForm(true); // ფორმის ჩვენება
-  };
-
   const handleSpaceUpdated = () => {
-    setEditingId(null); // რედაქტირების რეჟიმიდან გასვლა
-    setShowForm(false); // ფორმის დამალვა
-    fetchSpaces(); // სიის განახლება
+    setEditingId(null);
+    fetchSpaces();
+  };
+
+  const getCategoryColor = (category) => {
+    const colors = {
+      'გამოფენის დარბაზი': 'primary',
+      'კონფერენციის დარბაზი': 'secondary',
+      'საოფისე სივრცე': 'success',
+      'საცავი': 'warning',
+      'სხვა': 'default'
+    };
+    return colors[category] || 'default';
   };
 
   if (loading) {
-    return <div>იტვირთება...</div>;
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
+        <CircularProgress />
+      </Container>
+    );
   }
 
   if (error) {
-    return <div>შეცდომა: {error}</div>;
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4 }}>
+        <Alert severity="error">შეცდომა: {error}</Alert>
+      </Container>
+    );
   }
 
   return (
-    <div className="spaces-container">
-      <h2>სივრცეების სია</h2>
-      {isAuthorizedForManagement && (
-        <button className="add-new" onClick={handleAddSpaceClick}>ახალი სივრცის დამატება</button>
+    <Container maxWidth="lg" sx={{ mt: 2, mb: 4 }}>
+      {/* Header */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" component="h1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <DomainIcon fontSize="large" />
+          სივრცეები
+        </Typography>
+        
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => setEditingId(0)}
+          size="large"
+        >
+          სივრცის დამატება
+        </Button>
+      </Box>
+
+      {/* Space Form Modal */}
+      {editingId !== null && (
+        <SpaceForm
+          spaceToEdit={spaces.find(s => s.id === editingId)}
+          onSpaceUpdated={handleSpaceUpdated}
+          showNotification={showNotification}
+        />
       )}
 
-      {showForm && (
-        <div className="modal-overlay" onClick={() => {
-          setShowForm(false);
-          setEditingId(null);
-        }}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <SpaceForm 
-              spaceToEdit={editingId === 0 ? null : spaces.find(s => s.id === editingId)} // 0-ის შემთხვევაში null-ს გადაცემა
-              onFormClose={() => {
-                setShowForm(false);
-                setEditingId(null);
-              }}
-              onSpaceUpdated={handleSpaceUpdated}
-              showNotification={showNotification}
-            />
-          </div>
-        </div>
-      )}
-
-      {spaces.length === 0 ? (
-        <p className="no-spaces">სივრცეები არ მოიძებნა.</p>
-      ) : (
-        <>
-          {/* Desktop Table */}
-          <table className="spaces-table">
-            <thead>
-              <tr>
-                <th>კატეგორია</th>
-                <th>შენობის დასახელება</th>
-                <th>აღწერილობა</th>
-                <th>ფართობი (კვ.მ)</th>
-                <th>განახლებულია</th>
-                <th>მოქმედებები</th>
-              </tr>
-            </thead>
-            <tbody>
-              {spaces.map((space) => (
-                <tr key={space.id}>
-                  <td>{space.category}</td>
-                  <td>{space.building_name}</td>
-                  <td>{space.description}</td>
-                  <td>{space.area_sqm || 'არ არის მითითებული'}</td>
-                  <td className="date-info">
-                    {space.updated_by && space.updated_at && (
-                      <div className="date-info">
-                        <div className="user">{space.updated_by}</div>
-                        <div className="date">
-                          {new Date(space.updated_at).toLocaleDateString('ka-GE', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </div>
-                      </div>
-                    )}
-                  </td>
-                  <td>
-                    {isAuthorizedForManagement && (
-                      <div className="actions">
-                        <button 
-                          className="edit" 
-                          onClick={() => handleEditClick(space)}
-                          title="რედაქტირება"
-                        >
-                        </button>
-                        <button 
-                          className="delete" 
-                          onClick={() => handleDelete(space.id)}
-                          title="წაშლა"
-                        >
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
+      {/* Filters */}
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          ფილტრები და ძიება
+        </Typography>
+        
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+          <TextField
+            label="ძიება"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="ძიება შენობის სახელით ან აღწერით..."
+            size="small"
+            sx={{ minWidth: 300 }}
+            InputProps={{
+              startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
+            }}
+          />
+          
+          <FormControl size="small" sx={{ minWidth: 200 }}>
+            <InputLabel>კატეგორია</InputLabel>
+            <Select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              label="კატეგორია"
+            >
+              <MenuItem value="">ყველა კატეგორია</MenuItem>
+              {getUniqueCategories().map(category => (
+                <MenuItem key={category} value={category}>
+                  {category}
+                </MenuItem>
               ))}
-            </tbody>
-          </table>
+            </Select>
+          </FormControl>
+          
+          <FormControl size="small" sx={{ minWidth: 200 }}>
+            <InputLabel>შენობა</InputLabel>
+            <Select
+              value={buildingFilter}
+              onChange={(e) => setBuildingFilter(e.target.value)}
+              label="შენობა"
+            >
+              <MenuItem value="">ყველა შენობა</MenuItem>
+              {getUniqueBuildings().map(building => (
+                <MenuItem key={building} value={building}>
+                  {building}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          
+          <Button
+            variant="outlined"
+            onClick={clearFilters}
+            startIcon={<ClearIcon />}
+            size="small"
+          >
+            გასუფთავება
+          </Button>
+        </Box>
+        
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+          ნაპოვნია: {filteredSpaces.length} სივრცე
+        </Typography>
+      </Paper>
 
-          {/* Mobile Cards */}
-          <div className="mobile-cards">
-            {spaces.map(space => (
-              <div key={space.id} className="space-card">
-                <h3>{space.building_name}</h3>
-                <div className="space-info">
-                  <span><strong>კატეგორია:</strong> {space.category}</span>
-                  <span><strong>ფართობი:</strong> {space.area_sqm || 'არ არის მითითებული'} კვ.მ</span>
-                  <span><strong>აღწერილობა:</strong> {space.description}</span>
-                </div>
-                {isAuthorizedForManagement && (
-                  <div className="actions">
-                    <button 
-                      className="edit" 
-                      onClick={() => handleEditClick(space)}
-                      title="რედაქტირება"
-                    >
-                    </button>
-                    <button 
-                      className="delete" 
-                      onClick={() => handleDelete(space.id)}
-                      title="წაშლა"
-                    >
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </>
+      {/* Spaces Table */}
+      {filteredSpaces.length === 0 ? (
+        <Paper sx={{ p: 4, textAlign: 'center' }}>
+          <Typography variant="h6" color="text.secondary">
+            {spaces.length === 0 ? 'სივრცეები არ მოიძებნა.' : 'ფილტრების შესაბამისი სივრცეები ვერ მოიძებნა.'}
+          </Typography>
+        </Paper>
+      ) : (
+        <TableContainer component={Paper}>
+          <Table sx={{ minWidth: 650 }}>
+            <TableHead>
+              <TableRow>
+                <TableCell>შენობის სახელი</TableCell>
+                <TableCell>კატეგორია</TableCell>
+                <TableCell>ფართობი (მ²)</TableCell>
+                <TableCell>აღწერა</TableCell>
+                <TableCell>შექმნის თარიღი</TableCell>
+                <TableCell align="center">მოქმედებები</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredSpaces.map((space) => (
+                <TableRow key={space.id} hover>
+                  <TableCell component="th" scope="row">
+                    <Typography variant="subtitle1" fontWeight="medium">
+                      {space.building_name}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={space.category}
+                      color={getCategoryColor(space.category)}
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <SquareIcon fontSize="small" sx={{ mr: 1, color: 'primary.main' }} />
+                      {space.area_sqm || '-'}
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ maxWidth: 300 }}>
+                      {space.description 
+                        ? (space.description.length > 80 
+                          ? `${space.description.substring(0, 80)}...` 
+                          : space.description)
+                        : '-'
+                      }
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" color="text.secondary">
+                      {new Date(space.created_at).toLocaleDateString('ka-GE')}
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="center">
+                    <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                      <Tooltip title="რედაქტირება">
+                        <IconButton
+                          color="primary"
+                          onClick={() => setEditingId(space.id)}
+                          size="small"
+                        >
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
+                      
+                      <Tooltip title="წაშლა">
+                        <IconButton
+                          color="error"
+                          onClick={() => handleDelete(space.id)}
+                          size="small"
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
-    </div>
+      
+      <Box sx={{ mt: 3 }}>
+        <Typography variant="body2" color="text.secondary" align="center">
+          სულ: {filteredSpaces.length} სივრცე | სულ ფართობი: {filteredSpaces.reduce((sum, space) => sum + (space.area_sqm || 0), 0)} მ²
+        </Typography>
+      </Box>
+    </Container>
   );
 };
 

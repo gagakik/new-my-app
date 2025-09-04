@@ -1,61 +1,75 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import './ExhibitionsList.css';
-import ExhibitionForm from './ExhibitionForm'; // გამოფენის ფორმის იმპორტი
 
-const ExhibitionsList = ({ showNotification, userRole }) => { // მივიღეთ userRole
+import React, { useState, useEffect } from 'react';
+import {
+  Container,
+  Typography,
+  Box,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Button,
+  TextField,
+  IconButton,
+  Alert,
+  Tooltip,
+  CircularProgress
+} from '@mui/material';
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Business as BusinessIcon,
+  AttachMoney as MoneyIcon
+} from '@mui/icons-material';
+import ExhibitionForm from './ExhibitionForm';
+
+const ExhibitionsList = ({ showNotification }) => {
   const [exhibitions, setExhibitions] = useState([]);
+  const [filteredExhibitions, setFilteredExhibitions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [editingId, setEditingId] = useState(null); // ახალი სტეიტი
+  const [editingId, setEditingId] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  // განსაზღვრეთ, აქვს თუ არა მომხმარებელს მართვის უფლება
-  const isAuthorizedForManagement = 
-    userRole === 'admin' || 
-    userRole === 'sales' || 
-    userRole === 'marketing';
-
-  // fetchExhibitions ფუნქცია მოთავსებულია useCallback-ში
-  const fetchExhibitions = useCallback(async () => {
+  const fetchExhibitions = async () => {
     try {
-      const token = localStorage.getItem('token'); 
-
-      if (!token) {
-        throw new Error('ავტორიზაცია საჭიროა გამოფენების ნახვისთვის');
-      }
-
-      const headers = { 
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      };
-
+      const token = localStorage.getItem('token');
       const response = await fetch('/api/exhibitions', {
-        headers: headers
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
 
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          throw new Error('არ გაქვთ ივენთების ნახვის უფლება');
-        }
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'მონაცემების მიღება ვერ მოხერხდა.');
+      if (response.ok) {
+        const data = await response.json();
+        setExhibitions(data);
+      } else {
+        throw new Error('გამოფენების ჩატვირთვა ვერ მოხერხდა');
       }
-      const data = await response.json();
-      console.log('მიღებული გამოფენების მონაცემები:', data);
-      if (data.length > 0) {
-        console.log('პირველი გამოფენის price_per_sqm:', data[0].price_per_sqm);
-      }
-      setExhibitions(data);
     } catch (err) {
       setError(err.message);
-      showNotification(`შეცდომა გამოფენების ჩატვირთვისას: ${err.message}`, 'error');
+      showNotification(`შეცდომა: ${err.message}`, 'error');
     } finally {
       setLoading(false);
     }
-  }, [showNotification]);
+  };
 
   useEffect(() => {
     fetchExhibitions();
-  }, [fetchExhibitions]);
+  }, []);
+
+  useEffect(() => {
+    const filtered = exhibitions.filter(exhibition =>
+      exhibition.exhibition_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      exhibition.manager?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFilteredExhibitions(filtered);
+  }, [exhibitions, searchTerm]);
 
   const handleDelete = async (id) => {
     const isConfirmed = window.confirm('ნამდვილად გსურთ ამ გამოფენის წაშლა?');
@@ -63,118 +77,167 @@ const ExhibitionsList = ({ showNotification, userRole }) => { // მივიღ
 
     try {
       const token = localStorage.getItem('token');
-      if (!token) {
-        showNotification('ავტორიზაციის ტოკენი არ მოიძებნა. გთხოვთ, შეხვიდეთ სისტემაში.', 'error');
-        return;
-      }
-
       const response = await fetch(`/api/exhibitions/${id}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
       });
 
       if (response.ok) {
         showNotification('გამოფენა წარმატებით წაიშალა!', 'success');
-        setExhibitions(exhibitions.filter((exhibition) => exhibition.id !== id));
+        fetchExhibitions();
       } else {
         const errorData = await response.json();
         showNotification(`წაშლა ვერ მოხერხდა: ${errorData.message}`, 'error');
       }
     } catch (error) {
-      console.error('შეცდომა წაშლისას:', error);
-      showNotification('დაფიქსირდა შეცდომა სერვერთან კავშირისას.', 'error');
+      showNotification('შეცდომა სერვერთან კავშირისას', 'error');
     }
   };
 
-  const handleEditClick = (exhibition) => {
-    setEditingId(exhibition.id);
-  };
-
   const handleExhibitionUpdated = () => {
-      setEditingId(null); // რედაქტირების რეჟიმიდან გასვლა
-      fetchExhibitions(); // სიის განახლება
+    setEditingId(null);
+    fetchExhibitions();
   };
 
   if (loading) {
-    return <div>იტვირთება...</div>;
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
+        <CircularProgress />
+      </Container>
+    );
   }
 
   if (error) {
-    return <div>შეცდომა: {error}</div>;
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4 }}>
+        <Alert severity="error">შეცდომა: {error}</Alert>
+      </Container>
+    );
   }
 
   return (
-    <div className="exhibitions-container">
-      <h2>გამოფენების სია</h2>
-      {isAuthorizedForManagement && ( // ღილაკი მხოლოდ უფლებამოსილი როლებისთვის
-        <button className="add-new" onClick={() => setEditingId(0)}>ახალი გამოფენის დამატება</button>
+    <Container maxWidth="lg" sx={{ mt: 2, mb: 4 }}>
+      {/* Header */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" component="h1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <BusinessIcon fontSize="large" />
+          გამოფენები
+        </Typography>
+        
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => setEditingId(0)}
+          size="large"
+        >
+          გამოფენის დამატება
+        </Button>
+      </Box>
+
+      {/* Exhibition Form Modal */}
+      {editingId !== null && (
+        <ExhibitionForm
+          exhibitionToEdit={exhibitions.find(e => e.id === editingId)}
+          onExhibitionUpdated={handleExhibitionUpdated}
+          showNotification={showNotification}
+        />
       )}
 
-      {editingId !== null && isAuthorizedForManagement && ( // ფორმაც მხოლოდ უფლებამოსილი როლებისთვის
-         <ExhibitionForm 
-            exhibitionToEdit={exhibitions.find(e => e.id === editingId)} 
-            onExhibitionUpdated={handleExhibitionUpdated} 
-            showNotification={showNotification} 
-         />
-      )}
+      {/* Search */}
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <TextField
+          fullWidth
+          label="ძიება"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="ძიება გამოფენის სახელით ან მენეჯერით..."
+        />
+      </Paper>
 
-      {exhibitions.length === 0 ? (
-        <p className="no-exhibitions">გამოფენები არ მოიძებნა.</p>
+      {/* Exhibitions Table */}
+      {filteredExhibitions.length === 0 ? (
+        <Paper sx={{ p: 4, textAlign: 'center' }}>
+          <Typography variant="h6" color="text.secondary">
+            {exhibitions.length === 0 ? 'გამოფენები არ მოიძებნა.' : 'ძიების შედეგად გამოფენები ვერ მოიძებნა.'}
+          </Typography>
+        </Paper>
       ) : (
-        <table className="exhibitions-table">
-          <thead>
-            <tr>
-              <th>დასახელება</th>
-              <th>მენეჯერი</th>
-              <th>განახლებულია</th>
-              {isAuthorizedForManagement && <th>მოქმედებები</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {exhibitions.map((exhibition) => (
-              <tr key={exhibition.id}>
-                <td>{exhibition.exhibition_name}</td>
-                <td>{exhibition.manager}</td>
-                <td className="date-info">
-                  {exhibition.updated_by && exhibition.updated_at && (
-                    <div>
-                      <div className="user">{exhibition.updated_by}</div>
-                      <div className="date">
-                        {new Date(exhibition.updated_at).toLocaleDateString('ka-GE', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </td>
-                {isAuthorizedForManagement && (
-                  <td>
-                    <div className="actions">
-                      <button
-                        className="edit"
-                        onClick={() => handleEditClick(exhibition)}
-                        title="რედაქტირება"
-                      >
-                      </button>
-                      <button
-                        className="delete"
-                        onClick={() => handleDelete(exhibition.id)}
-                        title="წაშლა"
-                      >
-                      </button>
-                    </div>
-                  </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <TableContainer component={Paper}>
+          <Table sx={{ minWidth: 650 }}>
+            <TableHead>
+              <TableRow>
+                <TableCell>გამოფენის სახელი</TableCell>
+                <TableCell>მენეჯერი</TableCell>
+                <TableCell>ფასი მ²-ზე (₾)</TableCell>
+                <TableCell>შექმნის თარიღი</TableCell>
+                <TableCell align="center">მოქმედებები</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredExhibitions.map((exhibition) => (
+                <TableRow key={exhibition.id} hover>
+                  <TableCell component="th" scope="row">
+                    <Typography variant="subtitle1" fontWeight="medium">
+                      {exhibition.exhibition_name}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">
+                      {exhibition.manager || '-'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <MoneyIcon fontSize="small" sx={{ mr: 1, color: 'success.main' }} />
+                      <Typography variant="body2">
+                        {exhibition.price_per_sqm || 0}
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" color="text.secondary">
+                      {new Date(exhibition.created_at).toLocaleDateString('ka-GE')}
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="center">
+                    <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                      <Tooltip title="რედაქტირება">
+                        <IconButton
+                          color="primary"
+                          onClick={() => setEditingId(exhibition.id)}
+                          size="small"
+                        >
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
+                      
+                      <Tooltip title="წაშლა">
+                        <IconButton
+                          color="error"
+                          onClick={() => handleDelete(exhibition.id)}
+                          size="small"
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
-    </div>
+      
+      <Box sx={{ mt: 3 }}>
+        <Typography variant="body2" color="text.secondary" align="center">
+          სულ: {filteredExhibitions.length} გამოფენა
+        </Typography>
+      </Box>
+    </Container>
   );
 };
 
