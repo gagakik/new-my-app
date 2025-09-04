@@ -1716,32 +1716,51 @@ app.delete('/api/annual-services/:id', authenticateToken, authorizeRoles('admin'
 
 // Event file management endpoints
 app.post('/api/events/:id/upload-plan', authenticateToken, authorizeRoles('admin', 'manager', 'sales', 'marketing'), upload.single('plan_file'), async (req, res) => {
-  const { eventId } = req.params;
+  const { id: eventId } = req.params;
 
   try {
+    console.log('Plan upload request for event:', eventId);
+    console.log('File received:', req.file ? req.file.filename : 'No file');
+
     if (!req.file) {
       return res.status(400).json({ message: 'ფაილი არ არის ატვირთული' });
     }
 
     const filePath = req.file.path.replace(/\\/g, '/');
     const relativePath = filePath.replace(path.join(__dirname, 'uploads').replace(/\\/g, '/'), '');
+    console.log('File saved at:', relativePath);
 
     // Get username for plan_uploaded_by field
     const userResult = await db.query('SELECT username FROM users WHERE id = $1', [req.user.id]);
     const username = userResult.rows[0]?.username || 'Unknown';
 
-    await db.query(
-      'UPDATE annual_services SET plan_file_path = $1, plan_uploaded_by = $2, plan_updated_at = CURRENT_TIMESTAMP WHERE id = $3',
-      [relativePath, username, eventId]
-    );
+    // Try to update with plan_uploaded_by and plan_updated_at columns
+    try {
+      await db.query(
+        'UPDATE annual_services SET plan_file_path = $1, plan_uploaded_by = $2, plan_updated_at = CURRENT_TIMESTAMP WHERE id = $3',
+        [relativePath, username, eventId]
+      );
+    } catch (columnError) {
+      console.log('Some columns may not exist, trying simpler update');
+      await db.query(
+        'UPDATE annual_services SET plan_file_path = $1 WHERE id = $2',
+        [relativePath, eventId]
+      );
+    }
 
+    console.log('Plan file successfully updated in database');
     res.json({ 
       message: 'გეგმის ფაილი წარმატებით ატვირთულია',
       filePath: relativePath
     });
   } catch (error) {
     console.error('Plan file upload error:', error);
-    res.status(500).json({ message: 'ფაილის ატვირთვისას მოხდა შეცდომა' });
+    console.error('Error details:', error.message);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      message: 'ფაილის ატვირთვისას მოხდა შეცდომა',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
