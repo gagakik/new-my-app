@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Container,
@@ -22,10 +21,10 @@ import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  Business as BusinessIcon,
-  AttachMoney as MoneyIcon
+  Business as BusinessIcon
 } from '@mui/icons-material';
 import ExhibitionForm from './ExhibitionForm';
+import api from '../services/api';
 
 const ExhibitionsList = ({ showNotification }) => {
   const [exhibitions, setExhibitions] = useState([]);
@@ -37,20 +36,8 @@ const ExhibitionsList = ({ showNotification }) => {
 
   const fetchExhibitions = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/exhibitions', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setExhibitions(data);
-      } else {
-        throw new Error('გამოფენების ჩატვირთვა ვერ მოხერხდა');
-      }
+      const response = await api.get('/exhibitions');
+      setExhibitions(response.data);
     } catch (err) {
       setError(err.message);
       showNotification(`შეცდომა: ${err.message}`, 'error');
@@ -76,22 +63,9 @@ const ExhibitionsList = ({ showNotification }) => {
     if (!isConfirmed) return;
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/exhibitions/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        showNotification('გამოფენა წარმატებით წაიშალა!', 'success');
-        fetchExhibitions();
-      } else {
-        const errorData = await response.json();
-        showNotification(`წაშლა ვერ მოხერხდა: ${errorData.message}`, 'error');
-      }
+      await api.delete(`/exhibitions/${id}`);
+      showNotification('გამოფენა წარმატებით წაიშალა!', 'success');
+      fetchExhibitions();
     } catch (error) {
       showNotification('შეცდომა სერვერთან კავშირისას', 'error');
     }
@@ -126,7 +100,7 @@ const ExhibitionsList = ({ showNotification }) => {
           <BusinessIcon fontSize="large" />
           გამოფენები
         </Typography>
-        
+
         <Button
           variant="contained"
           startIcon={<AddIcon />}
@@ -171,7 +145,6 @@ const ExhibitionsList = ({ showNotification }) => {
               <TableRow>
                 <TableCell>გამოფენის სახელი</TableCell>
                 <TableCell>მენეჯერი</TableCell>
-                <TableCell>ფასი მ²-ზე (₾)</TableCell>
                 <TableCell>შექმნის თარიღი</TableCell>
                 <TableCell align="center">მოქმედებები</TableCell>
               </TableRow>
@@ -190,14 +163,6 @@ const ExhibitionsList = ({ showNotification }) => {
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <MoneyIcon fontSize="small" sx={{ mr: 1, color: 'success.main' }} />
-                      <Typography variant="body2">
-                        {exhibition.price_per_sqm || 0}
-                      </Typography>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
                     <Typography variant="body2" color="text.secondary">
                       {new Date(exhibition.created_at).toLocaleDateString('ka-GE')}
                     </Typography>
@@ -213,7 +178,7 @@ const ExhibitionsList = ({ showNotification }) => {
                           <EditIcon />
                         </IconButton>
                       </Tooltip>
-                      
+
                       <Tooltip title="წაშლა">
                         <IconButton
                           color="error"
@@ -231,7 +196,7 @@ const ExhibitionsList = ({ showNotification }) => {
           </Table>
         </TableContainer>
       )}
-      
+
       <Box sx={{ mt: 3 }}>
         <Typography variant="body2" color="text.secondary" align="center">
           სულ: {filteredExhibitions.length} გამოფენა

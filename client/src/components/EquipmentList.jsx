@@ -30,6 +30,7 @@ import {
   Search as SearchIcon
 } from '@mui/icons-material';
 import EquipmentForm from './EquipmentForm';
+import { equipmentAPI } from '../services/api';
 
 const EquipmentList = ({ showNotification }) => {
   const [equipment, setEquipment] = useState([]);
@@ -41,20 +42,8 @@ const EquipmentList = ({ showNotification }) => {
 
   const fetchEquipment = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/equipment', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setEquipment(data);
-      } else {
-        throw new Error('აღჭურვილობის ჩატვირთვა ვერ მოხერხდა');
-      }
+      const data = await equipmentAPI.getAll();
+      setEquipment(data);
     } catch (err) {
       setError(err.message);
       showNotification(`შეცდომა: ${err.message}`, 'error');
@@ -80,22 +69,9 @@ const EquipmentList = ({ showNotification }) => {
     if (!isConfirmed) return;
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/equipment/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        showNotification('აღჭურვილობა წარმატებით წაიშალა!', 'success');
-        fetchEquipment();
-      } else {
-        const errorData = await response.json();
-        showNotification(`წაშლა ვერ მოხერხდა: ${errorData.message}`, 'error');
-      }
+      await equipmentAPI.delete(id);
+      showNotification('აღჭურვილობა წარმატებით წაიშალა!', 'success');
+      fetchEquipment();
     } catch (error) {
       showNotification('შეცდომა სერვერთან კავშირისას', 'error');
     }

@@ -85,6 +85,11 @@ export const servicesAPI = {
     return response.data;
   },
   
+  getExhibitions: async () => {
+    const response = await api.get('/exhibitions');
+    return response.data;
+  },
+  
   getById: async (id) => {
     const response = await api.get(`/annual-services/${id}`);
     return response.data;
@@ -114,13 +119,33 @@ export const servicesAPI = {
     const response = await api.put(`/annual-services/${id}/archive`);
     return response.data;
   },
+
+  createEvent: async (eventData) => {
+    const response = await api.post('/annual-services', eventData);
+    return response.data;
+  },
+
+  updateEvent: async (id, eventData) => {
+    const response = await api.put(`/annual-services/${id}`, eventData);
+    return response.data;
+  },
+
+  restoreEvent: async (id) => {
+    const response = await api.put(`/annual-services/${id}/restore`);
+    return response.data;
+  },
 };
 
 // Companies API
 export const companiesAPI = {
   getAll: async () => {
-    const response = await api.get('/companies');
-    return response.data;
+    try {
+      const response = await api.get('/companies');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching companies:', error);
+      throw error;
+    }
   },
   
   create: async (companyData) => {

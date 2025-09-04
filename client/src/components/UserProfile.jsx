@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import './UserProfile.css';
+import api from '../services/api';
 
 const UserProfile = ({ showNotification, userRole, userName, userId }) => {
   const [userInfo, setUserInfo] = useState(null);
@@ -12,26 +13,8 @@ const UserProfile = ({ showNotification, userRole, userName, userId }) => {
 
   const fetchUserProfile = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/user/profile', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUserInfo(data);
-      } else {
-        // If API doesn't exist, use localStorage data
-        setUserInfo({
-          id: userId || localStorage.getItem('userId'),
-          username: userName || localStorage.getItem('userName'),
-          role: userRole || localStorage.getItem('userRole'),
-          created_at: new Date().toISOString() // Default to current date
-        });
-      }
+      const response = await api.get('/user/profile');
+      setUserInfo(response.data);
     } catch (error) {
       console.error('მომხმარებლის ინფორმაციის მიღების შეცდომა:', error);
       // Use localStorage data as fallback

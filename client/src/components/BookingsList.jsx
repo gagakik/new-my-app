@@ -2,38 +2,29 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './BookingsList.css';
 import BookingForm from './BookingForm';
+import api from '../services/api';
 
 const BookingsList = ({ showNotification, userRole }) => {
   const [bookings, setBookings] = useState([]);
+  const [filteredBookings, setFilteredBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editingId, setEditingId] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
 
-  const isAuthorizedForManagement = 
-    userRole === 'admin' || 
-    userRole === 'sales' || 
-    userRole === 'marketing';
+  const isAuthorized = userRole === 'admin' || userRole === 'sales' || userRole === 'marketing';
 
   const fetchBookings = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token'); 
-      if (!token) {
-        throw new Error('ავტორიზაცია საჭიროა');
-      }
-
-      const response = await fetch('/api/bookings', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'მონაცემების მიღება ვერ მოხერხდა.');
-      }
-      const data = await response.json();
-      setBookings(data);
+      setLoading(true);
+      const response = await api.get('/bookings');
+      setBookings(response.data || []);
     } catch (err) {
+      console.error('Error fetching bookings:', err);
       setError(err.message);
-      showNotification(`შეცდომა ჯავშნების ჩატვირთვისას: ${err.message}`, 'error');
+      showNotification(`შეცდომა ბრონირებების ჩატვირთვისას: ${err.message}`, 'error');
+      setBookings([]);
     } finally {
       setLoading(false);
     }
@@ -43,154 +34,176 @@ const BookingsList = ({ showNotification, userRole }) => {
     fetchBookings();
   }, [fetchBookings]);
 
-  const handleStatusChange = async (id, newStatus) => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/bookings/${id}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
+  // Filter bookings based on search and status
+  useEffect(() => {
+    let filtered = [...bookings];
 
-      if (response.ok) {
-        showNotification('ჯავშნის სტატუსი წარმატებით განახლდა!', 'success');
-        fetchBookings();
-      } else {
-        const errorData = await response.json();
-        showNotification(`სტატუსის განახლება ვერ მოხერხდა: ${errorData.message}`, 'error');
-      }
-    } catch (error) {
-      console.error('შეცდომა სტატუსის განახლებისას:', error);
-      showNotification('დაფიქსირდა შეცდომა სერვერთან კავშირისას.', 'error');
+    if (searchTerm.trim()) {
+      const search = searchTerm.toLowerCase().trim();
+      filtered = filtered.filter(booking =>
+        booking.company_name?.toLowerCase().includes(search) ||
+        booking.event_name?.toLowerCase().includes(search) ||
+        booking.booth_number?.toLowerCase().includes(search)
+      );
     }
-  };
 
-  const handleDeleteBooking = async (id) => {
-    const isConfirmed = window.confirm('ნამდვილად გსურთ ამ ჯავშნის წაშლა?');
+    if (statusFilter) {
+      filtered = filtered.filter(booking => booking.status === statusFilter);
+    }
+
+    setFilteredBookings(filtered);
+  }, [bookings, searchTerm, statusFilter]);
+
+  const handleDelete = async (id) => {
+    const isConfirmed = window.confirm('ნამდვილად გსურთ ამ ბრონირების წაშლა?');
     if (!isConfirmed) return;
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/bookings/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        showNotification('ჯავშანი წარმატებით წაიშალა!', 'success');
-        fetchBookings();
-      } else {
-        const errorData = await response.json();
-        showNotification(`წაშლა ვერ მოხერხდა: ${errorData.message}`, 'error');
-      }
+      await api.delete(`/bookings/${id}`);
+      showNotification('ბრონირება წარმატებით წაიშალა!', 'success');
+      fetchBookings();
     } catch (error) {
-      console.error('შეცდომა ჯავშნის წაშლისას:', error);
-      showNotification('დაფიქსირდა შეცდომა სერვერთან კავშირისას.', 'error');
+      showNotification(`შეცდომა: ${error.response?.data?.message || error.message}`, 'error');
     }
   };
-  
-  const handleBookingUpdated = () => {
-    setEditingId(null);
-    fetchBookings();
-  };
-  
-  if (loading) {
-    return <div>იტვირთება...</div>;
-  }
-
-  if (error) {
-    return <div>შეცდომა: {error}</div>;
-  }
 
   const formatDate = (dateString) => {
+    if (!dateString) return '';
     return new Date(dateString).toLocaleDateString('ka-GE');
   };
 
-  const formatTime = (timeString) => {
-    if (!timeString) return '';
-    return timeString.substring(0, 5);
-  };
-
-  const getStatusBadge = (status) => {
-    const statusMap = {
-      pending: { label: 'მუშავდება', className: 'status-pending' },
-      confirmed: { label: 'დადასტურებული', className: 'status-confirmed' },
-      cancelled: { label: 'გაუქმებული', className: 'status-cancelled' },
-      completed: { label: 'დასრულებული', className: 'status-completed' }
-    };
-    
-    const statusInfo = statusMap[status] || { label: status, className: '' };
-    return <span className={`status-badge ${statusInfo.className}`}>{statusInfo.label}</span>;
-  };
+  if (loading) return <div className="loading">იტვირთება...</div>;
+  if (error) return <div className="error">შეცდომა: {error}</div>;
 
   return (
     <div className="bookings-container">
-      <h2>ჯავშნები</h2>
-      
-      {editingId !== null && (
-         <BookingForm 
-            bookingToEdit={bookings.find(b => b.id === editingId)} 
-            onBookingUpdated={handleBookingUpdated} 
-            showNotification={showNotification} 
-         />
-      )}
-      
-      {bookings.length === 0 ? (
-        <p className="no-bookings">ჯავშნები არ მოიძებნა.</p>
-      ) : (
+      <div className="bookings-header">
+        <h2>ბრონირებები</h2>
+        {isAuthorized && (
+          <button
+            className="add-booking-btn"
+            onClick={() => setEditingId(0)}
+          >
+            + ახალი ბრონირება
+          </button>
+        )}
+      </div>
+
+      {/* Filters */}
+      <div className="filters">
+        <input
+          type="text"
+          placeholder="ძიება..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="search-input"
+        />
+        
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="status-filter"
+        >
+          <option value="">ყველა სტატუსი</option>
+          <option value="დადასტურებული">დადასტურებული</option>
+          <option value="მოლოდინში">მოლოდინში</option>
+          <option value="გაუქმებული">გაუქმებული</option>
+        </select>
+
+        <button
+          onClick={() => {
+            setSearchTerm('');
+            setStatusFilter('');
+          }}
+          className="clear-filters-btn"
+        >
+          გასუფთავება
+        </button>
+      </div>
+
+      {/* Bookings Table */}
+      <div className="bookings-table-container">
         <table className="bookings-table">
           <thead>
             <tr>
-              <th>სერვისი</th>
-              <th>გამოფენა</th>
               <th>კომპანია</th>
-              <th>ჯავშნის თარიღი</th>
-              <th>დრო</th>
+              <th>ივენთი</th>
+              <th>სტენდის ნომერი</th>
               <th>სტატუსი</th>
-              {isAuthorizedForManagement && <th>მოქმედებები</th>}
+              <th>თარიღი</th>
+              <th>მოქმედებები</th>
             </tr>
           </thead>
           <tbody>
-            {bookings.map((booking) => (
-              <tr key={booking.id}>
-                <td>{booking.service_name}</td>
-                <td>{booking.exhibition_name}</td>
-                <td>{booking.company_name}</td>
-                <td>{formatDate(booking.booking_date)}</td>
-                <td>{formatTime(booking.start_time)} - {formatTime(booking.end_time)}</td>
-                <td>{getStatusBadge(booking.status)}</td>
-                {isAuthorizedForManagement && (
+            {filteredBookings.length === 0 ? (
+              <tr>
+                <td colSpan="6" className="no-data">
+                  ბრონირებები არ მოიძებნა
+                </td>
+              </tr>
+            ) : (
+              filteredBookings.map((booking) => (
+                <tr key={booking.id}>
+                  <td>{booking.company_name}</td>
+                  <td>{booking.event_name}</td>
+                  <td>{booking.booth_number}</td>
+                  <td>
+                    <span className={`status-badge status-${booking.status?.toLowerCase().replace(/\s+/g, '-')}`}>
+                      {booking.status}
+                    </span>
+                  </td>
+                  <td>{formatDate(booking.created_at)}</td>
                   <td>
                     <div className="actions">
-                      <select 
-                        value={booking.status} 
-                        onChange={(e) => handleStatusChange(booking.id, e.target.value)}
-                        className="status-select"
-                      >
-                        <option value="pending">მუშავდება</option>
-                        <option value="confirmed">დადასტურებული</option>
-                        <option value="completed">დასრულებული</option>
-                        <option value="cancelled">გაუქმებული</option>
-                      </select>
-                      <button 
-                        onClick={() => handleDeleteBooking(booking.id)}
-                        className="delete-btn"
-                        title="ჯავშნის წაშლა"
-                      >
-                        🗑️
-                      </button>
+                      {isAuthorized && (
+                        <>
+                          <button
+                            className="edit"
+                            onClick={() => setEditingId(booking.id)}
+                            title="რედაქტირება"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            className="delete"
+                            onClick={() => handleDelete(booking.id)}
+                            title="წაშლა"
+                          >
+                            🗑️
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
-                )}
-              </tr>
-            ))}
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
+      </div>
+
+      {/* Booking Form Modal */}
+      {editingId !== null && isAuthorized && (
+        <BookingForm
+          isOpen={editingId !== null}
+          onClose={() => setEditingId(null)}
+          onSubmit={async (formData) => {
+            try {
+              if (editingId === 0) {
+                await api.post('/bookings', formData);
+                showNotification('ბრონირება წარმატებით შეიქმნა!', 'success');
+              } else {
+                await api.put(`/bookings/${editingId}`, formData);
+                showNotification('ბრონირება წარმატებით განახლდა!', 'success');
+              }
+              fetchBookings();
+              setEditingId(null);
+            } catch (error) {
+              showNotification(`შეცდომა: ${error.response?.data?.message || error.message}`, 'error');
+            }
+          }}
+          editingBooking={editingId !== 0 ? bookings.find(b => b.id === editingId) : null}
+        />
       )}
     </div>
   );

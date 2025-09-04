@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import './StandManagement.css';
+import api from '../services/api';
 
 const StandManagement = ({ eventId, eventName, onClose, showNotification, userRole }) => {
   const [stands, setStands] = useState([]);
@@ -64,18 +65,9 @@ const StandManagement = ({ eventId, eventName, onClose, showNotification, userRo
 
   const fetchStands = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/events/${eventId}/stands`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setStands(data);
-        setFilteredStands(data);
-      } else {
-        showNotification('სტენდების მიღება ვერ მოხერხდა', 'error');
-      }
+      const response = await api.get(`/events/${eventId}/stands`);
+      setStands(response.data);
+      setFilteredStands(response.data);
     } catch (error) {
       console.error('სტენდების მიღების შეცდომა:', error);
       showNotification('შეცდომა მონაცემების ჩატვირთვისას', 'error');

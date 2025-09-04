@@ -1,5 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
+import { servicesAPI } from '../services/api';
 import {
   Container,
   Typography,
@@ -41,7 +41,7 @@ import {
 } from '@mui/icons-material';
 import ServiceForm from './ServiceForm';
 import EventParticipants from './EventParticipants';
-import { servicesAPI } from '../services/api';
+import EventForm from './EventForm';
 
 const ServicesList = ({ showNotification }) => {
   const [services, setServices] = useState([]);
@@ -69,8 +69,8 @@ const ServicesList = ({ showNotification }) => {
       setLoading(true);
       const data = await servicesAPI.getAll();
       setServices(data);
-    } catch (error) {
-      console.error('Error fetching services:', error);
+    } catch (err) {
+      console.error('Error fetching services:', err);
       setError('სერვისების ჩატვირთვა ვერ მოხერხდა');
       showNotification('სერვისების ჩატვირთვა ვერ მოხერხდა', 'error');
     } finally {
@@ -79,7 +79,7 @@ const ServicesList = ({ showNotification }) => {
   };
 
   const filterServices = () => {
-    let filtered = services.filter(service => 
+    let filtered = services.filter(service =>
       (showArchived ? service.is_archived : !service.is_archived)
     );
 
@@ -121,13 +121,15 @@ const ServicesList = ({ showNotification }) => {
   };
 
   const handleArchiveService = async (id) => {
-    try {
-      await servicesAPI.archive(id);
-      showNotification('სერვისი დაარქივდა', 'success');
-      fetchServices();
-    } catch (error) {
-      console.error('Error archiving service:', error);
-      showNotification('სერვისის დაარქივება ვერ მოხერხდა', 'error');
+    if (window.confirm('ნამდვილად გსურთ ამ სერვისის არქივში გადატანა?')) {
+      try {
+        await servicesAPI.archive(id);
+        showNotification('სერვისი დაარქივდა', 'success');
+        fetchServices();
+      } catch (error) {
+        console.error('Error archiving service:', error);
+        showNotification('სერვისის დაარქივება ვერ მოხერხდა', 'error');
+      }
     }
   };
 
@@ -271,14 +273,14 @@ const ServicesList = ({ showNotification }) => {
                 </TableRow>
               ) : (
                 filteredServices.map((service) => (
-                  <TableRow 
-                    key={service.id} 
-                    sx={{ 
-                      '&:hover': { 
+                  <TableRow
+                    key={service.id}
+                    sx={{
+                      '&:hover': {
                         bgcolor: 'action.hover',
                         transform: 'scale(1.01)',
                         transition: 'all 0.2s ease'
-                      } 
+                      }
                     }}
                   >
                     <TableCell>
@@ -298,8 +300,8 @@ const ServicesList = ({ showNotification }) => {
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Chip 
-                        label={getStatusLabel(service.status)} 
+                      <Chip
+                        label={getStatusLabel(service.status)}
                         color={getStatusColor(service.status)}
                         size="small"
                         sx={{ fontWeight: 'medium' }}
@@ -308,10 +310,10 @@ const ServicesList = ({ showNotification }) => {
                     <TableCell>
                       <Box sx={{ display: 'flex', gap: 1 }}>
                         <Tooltip title="მონაწილეები">
-                          <IconButton 
-                            size="small" 
+                          <IconButton
+                            size="small"
                             onClick={() => handleViewParticipants(service)}
-                            sx={{ 
+                            sx={{
                               color: 'primary.main',
                               '&:hover': { bgcolor: 'primary.light', color: 'white' }
                             }}
@@ -320,10 +322,10 @@ const ServicesList = ({ showNotification }) => {
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="რედაქტირება">
-                          <IconButton 
-                            size="small" 
+                          <IconButton
+                            size="small"
                             onClick={() => handleEditService(service)}
-                            sx={{ 
+                            sx={{
                               color: 'info.main',
                               '&:hover': { bgcolor: 'info.light', color: 'white' }
                             }}
@@ -333,10 +335,10 @@ const ServicesList = ({ showNotification }) => {
                         </Tooltip>
                         {showArchived ? (
                           <Tooltip title="აღდგენა">
-                            <IconButton 
-                              size="small" 
+                            <IconButton
+                              size="small"
                               onClick={() => handleArchiveService(service.id)}
-                              sx={{ 
+                              sx={{
                                 color: 'success.main',
                                 '&:hover': { bgcolor: 'success.light', color: 'white' }
                               }}
@@ -346,10 +348,10 @@ const ServicesList = ({ showNotification }) => {
                           </Tooltip>
                         ) : (
                           <Tooltip title="დაარქივება">
-                            <IconButton 
-                              size="small" 
+                            <IconButton
+                              size="small"
                               onClick={() => handleArchiveService(service.id)}
-                              sx={{ 
+                              sx={{
                                 color: 'warning.main',
                                 '&:hover': { bgcolor: 'warning.light', color: 'white' }
                               }}
@@ -359,10 +361,10 @@ const ServicesList = ({ showNotification }) => {
                           </Tooltip>
                         )}
                         <Tooltip title="წაშლა">
-                          <IconButton 
-                            size="small" 
+                          <IconButton
+                            size="small"
                             onClick={() => handleDeleteService(service.id)}
-                            sx={{ 
+                            sx={{
                               color: 'error.main',
                               '&:hover': { bgcolor: 'error.light', color: 'white' }
                             }}

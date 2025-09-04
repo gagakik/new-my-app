@@ -33,6 +33,7 @@ import {
   Clear as ClearIcon
 } from '@mui/icons-material';
 import SpaceForm from './SpaceForm';
+import api from '../services/api';
 
 const SpacesList = ({ showNotification }) => {
   const [spaces, setSpaces] = useState([]);
@@ -46,20 +47,8 @@ const SpacesList = ({ showNotification }) => {
 
   const fetchSpaces = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/spaces', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setSpaces(data);
-      } else {
-        throw new Error('სივრცეების ჩატვირთვა ვერ მოხერხდა');
-      }
+      const response = await api.get('/spaces');
+      setSpaces(response.data);
     } catch (err) {
       setError(err.message);
       showNotification(`შეცდომა: ${err.message}`, 'error');
@@ -114,22 +103,9 @@ const SpacesList = ({ showNotification }) => {
     if (!isConfirmed) return;
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/spaces/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        showNotification('სივრცე წარმატებით წაიშალა!', 'success');
-        fetchSpaces();
-      } else {
-        const errorData = await response.json();
-        showNotification(`წაშლა ვერ მოხერხდა: ${errorData.message}`, 'error');
-      }
+      await api.delete(`/spaces/${id}`);
+      showNotification('სივრცე წარმატებით წაიშალა!', 'success');
+      fetchSpaces();
     } catch (error) {
       showNotification('შეცდომა სერვერთან კავშირისას', 'error');
     }

@@ -140,13 +140,42 @@ const createTables = async () => {
       )
     `);
 
-    // Service spaces junction table
+    // Service spaces mapping table
     await query(`
       CREATE TABLE IF NOT EXISTS service_spaces (
         id SERIAL PRIMARY KEY,
         service_id INTEGER NOT NULL,
         space_id INTEGER NOT NULL,
         UNIQUE(service_id, space_id)
+      )
+    `);
+    console.log('Service spaces table created/verified successfully');
+
+    // Event participants table
+    await query(`
+      CREATE TABLE IF NOT EXISTS event_participants (
+        id SERIAL PRIMARY KEY,
+        company_id INTEGER,
+        event_id INTEGER,
+        registration_status VARCHAR(50) DEFAULT 'pending',
+        payment_status VARCHAR(50) DEFAULT 'pending',
+        payment_amount DECIMAL(10,2) DEFAULT 0,
+        booth_number VARCHAR(50),
+        booth_category VARCHAR(50) DEFAULT 'ოქტანორმის სტენდები',
+        booth_type VARCHAR(50),
+        contact_person VARCHAR(255),
+        contact_position VARCHAR(255),
+        contact_email VARCHAR(255),
+        contact_phone VARCHAR(255),
+        payment_due_date DATE,
+        payment_method VARCHAR(50),
+        invoice_number VARCHAR(100),
+        invoice_file VARCHAR(500),
+        contract_file VARCHAR(500),
+        handover_file VARCHAR(500),
+        registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
@@ -585,6 +614,43 @@ const addMissingColumns = async () => {
     } catch (fileColumnsError) {
       console.log("ფაილების სვეტების დამატების შეცდომა:", fileColumnsError.message);
     }
+
+    // Check and add all missing columns for annual_services
+    const requiredAnnualColumns = [
+      'exhibition_id INTEGER REFERENCES exhibitions(id)',
+      'description TEXT',
+      'year_selection INTEGER',
+      'service_type VARCHAR(50) DEFAULT \'გამოფენა\'',
+      'is_active BOOLEAN DEFAULT TRUE',
+      'is_archived BOOLEAN DEFAULT FALSE',
+      'start_time TIME',
+      'end_time TIME',
+      'plan_file_path VARCHAR(500)',
+      'invoice_files JSONB DEFAULT \'[]\'',
+      'expense_files JSONB DEFAULT \'[]\'',
+      'plan_updated_at TIMESTAMP',
+      'files_updated_at TIMESTAMP'
+    ];
+
+    for (const column of requiredAnnualColumns) {
+      const columnName = column.split(' ')[0];
+      const columnExists = await query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'annual_services' 
+        AND column_name = '${columnName}'
+      `);
+
+      if (columnExists.rows.length === 0) {
+        try {
+          await query(`ALTER TABLE annual_services ADD COLUMN ${column}`);
+          console.log(`${columnName} სვეტი დაემატა annual_services ცხრილში`);
+        } catch (columnError) {
+          console.log(`${columnName} სვეტის დამატების შეცდომა:`, columnError.message);
+        }
+      }
+    }
+
 
     console.log("ყველა საჭირო სვეტი წარმატებით შემოწმდა და დაემატა!");
   } catch (error) {

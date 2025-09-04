@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Container,
@@ -125,7 +124,7 @@ const Statistics = ({ showNotification }) => {
             სტატისტიკა და ანალიტიკა
           </Typography>
         </Box>
-        
+
         <Grid container spacing={3}>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard
@@ -136,7 +135,7 @@ const Statistics = ({ showNotification }) => {
               description="ყველა რეგისტრირებული ღონისძიება"
             />
           </Grid>
-          
+
           <Grid item xs={12} sm={6} md={3}>
             <StatCard
               title="კომპანიები"
@@ -146,7 +145,7 @@ const Statistics = ({ showNotification }) => {
               description="რეგისტრირებული კომპანიების რაოდენობა"
             />
           </Grid>
-          
+
           <Grid item xs={12} sm={6} md={3}>
             <StatCard
               title="მონაწილეები"
@@ -156,7 +155,7 @@ const Statistics = ({ showNotification }) => {
               description="ღონისძიებებში რეგისტრირებული მონაწილეები"
             />
           </Grid>
-          
+
           <Grid item xs={12} sm={6} md={3}>
             <StatCard
               title="სრული შემოსავალი"
@@ -178,7 +177,7 @@ const Statistics = ({ showNotification }) => {
                 აქტიური ღონისძიებები
               </Typography>
             </Box>
-            
+
             {stats?.activeEvents && stats.activeEvents.length > 0 ? (
               <List>
                 {stats.activeEvents.map((event, index) => (
@@ -226,7 +225,7 @@ const Statistics = ({ showNotification }) => {
                 ბოლო ღონისძიებები
               </Typography>
             </Box>
-            
+
             {stats?.recentEvents && stats.recentEvents.length > 0 ? (
               <List>
                 {stats.recentEvents.map((event, index) => (

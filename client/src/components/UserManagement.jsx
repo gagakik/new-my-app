@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Container,
@@ -51,7 +50,7 @@ const UserManagement = ({ showNotification, currentUser }) => {
   const [openForm, setOpenForm] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState('all');
+  const [roleFilter, setRoleFilter] = 'all';
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -68,7 +67,6 @@ const UserManagement = ({ showNotification, currentUser }) => {
 
   const fetchUsers = async () => {
     try {
-      setLoading(true);
       const data = await usersAPI.getAll();
       setUsers(data);
     } catch (error) {
@@ -137,19 +135,19 @@ const UserManagement = ({ showNotification, currentUser }) => {
   };
 
   const handleDeleteUser = async (id) => {
-    if (currentUser.userId === id) {
+    if (currentUser?.userId === id) {
       showNotification('საკუთარი ანგარიშის წაშლა შეუძლებელია', 'error');
       return;
     }
 
-    if (window.confirm('დარწმუნებული ხართ, რომ გსურთ ამ მომხმარებლის წაშლა?')) {
+    if (window.confirm('ნამდვილად გსურთ ამ მომხმარებლის წაშლა?')) {
       try {
         await usersAPI.delete(id);
         showNotification('მომხმარებელი წარმატებით წაიშალა', 'success');
         fetchUsers();
       } catch (error) {
-        console.error('Error deleting user:', error);
-        showNotification('მომხმარებლის წაშლა ვერ მოხერხდა', 'error');
+        const errorMessage = error.response?.data?.message || 'წაშლა ვერ მოხერხდა';
+        showNotification(`შეცდომა: ${errorMessage}`, 'error');
       }
     }
   };
@@ -336,7 +334,7 @@ const UserManagement = ({ showNotification, currentUser }) => {
                           <IconButton 
                             size="small" 
                             onClick={() => handleDeleteUser(user.id)}
-                            disabled={currentUser.userId === user.id}
+                            disabled={currentUser?.userId === user.id}
                             sx={{ 
                               color: 'error.main',
                               '&:hover': { bgcolor: 'error.light', color: 'white' },

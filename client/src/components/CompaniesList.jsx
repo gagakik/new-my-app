@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Container,
@@ -34,11 +33,13 @@ import {
 } from '@mui/icons-material';
 import CompanyForm from './CompanyForm';
 import CompanyImport from './CompanyImport';
+import { companiesAPI, servicesAPI } from '../services/api';
 
 const CompaniesList = ({ showNotification }) => {
   const [companies, setCompanies] = useState([]);
   const [filteredCompanies, setFilteredCompanies] = useState([]);
   const [exhibitions, setExhibitions] = useState([]);
+  const [countries, setCountries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editingId, setEditingId] = useState(null);
@@ -49,50 +50,34 @@ const CompaniesList = ({ showNotification }) => {
 
   const fetchCompanies = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/companies', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setCompanies(data);
-      } else {
-        throw new Error('კომპანიების ჩატვირთვა ვერ მოხერხდა');
+      setLoading(true);
+      const companiesData = await companiesAPI.getAll();
+      
+      // Get exhibitions list separately if needed
+      try {
+        const exhibitionsData = await servicesAPI.getExhibitions();
+        setExhibitions(exhibitionsData);
+      } catch (exhibitionsError) {
+        console.warn('Could not load exhibitions:', exhibitionsError);
+        setExhibitions([]);
       }
-    } catch (err) {
-      setError(err.message);
-      showNotification(`შეცდომა: ${err.message}`, 'error');
+      
+      setCompanies(companiesData);
+
+      // Extract unique countries from companies data
+      const uniqueCountries = [...new Set(companiesData.map(c => c.country).filter(Boolean))];
+      setCountries(uniqueCountries);
+    } catch (error) {
+      console.error('Error fetching companies:', error);
+      setError(error.message);
+      showNotification(`შეცდომა: ${error.message}`, 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchExhibitions = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/exhibitions', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setExhibitions(data);
-      }
-    } catch (err) {
-      console.error('გამოფენების ჩატვირთვის შეცდომა:', err);
-    }
-  };
-
   useEffect(() => {
     fetchCompanies();
-    fetchExhibitions();
   }, []);
 
   useEffect(() => {
@@ -123,8 +108,7 @@ const CompaniesList = ({ showNotification }) => {
   }, [companies, searchTerm, selectedExhibition, selectedCountry]);
 
   const getUniqueCountries = () => {
-    const countries = companies.map(company => company.country).filter(Boolean);
-    return [...new Set(countries)].sort();
+    return countries.sort();
   };
 
   const getExhibitionNames = (exhibitionIds) => {
@@ -146,22 +130,9 @@ const CompaniesList = ({ showNotification }) => {
     if (!isConfirmed) return;
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/companies/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        showNotification('კომპანია წარმატებით წაიშალა!', 'success');
-        fetchCompanies();
-      } else {
-        const errorData = await response.json();
-        showNotification(`წაშლა ვერ მოხერხდა: ${errorData.message}`, 'error');
-      }
+      await companiesAPI.delete(id);
+      showNotification('კომპანია წარმატებით წაიშალა!', 'success');
+      fetchCompanies();
     } catch (error) {
       showNotification('შეცდომა სერვერთან კავშირისას', 'error');
     }

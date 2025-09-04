@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -37,6 +36,7 @@ import {
   Folder as FolderIcon,
   AttachFile as AttachFileIcon
 } from '@mui/icons-material';
+import api from '../services/api'; // Assuming api is imported from '../services/api'
 
 const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
   const [planFile, setPlanFile] = useState(null);
@@ -61,13 +61,10 @@ const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
 
   const refreshEventData = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/events/${event.id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const response = await api.get(`/events/${event.id}`);
 
-      if (response.ok) {
-        const updatedEvent = await response.json();
+      if (response.status === 200) {
+        const updatedEvent = response.data;
         setPlanFile(updatedEvent.plan_file_path);
         setInvoiceFiles(updatedEvent.invoice_files || []);
         setExpenseFiles(updatedEvent.expense_files || []);
@@ -77,14 +74,12 @@ const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
     }
   };
 
-  const handleFileUpload = async (file, type) => {
+  const handleFileUpload = async (type, file) => {
     if (!file) return;
-
     setUploading(true);
     setUploadType(type);
 
     try {
-      const token = localStorage.getItem('token');
       const formData = new FormData();
 
       if (type === 'plan') {
@@ -97,22 +92,16 @@ const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
         formData.append('file_name', file.name);
       }
 
-      const response = await fetch(`/api/events/${event.id}/upload-${type}`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-        body: formData
+      const response = await api.post(`/events/${event.id}/upload-${type}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        showNotification(result.message, 'success');
-        await refreshEventData();
-      } else {
-        const error = await response.json();
-        showNotification(error.message, 'error');
-      }
+      showNotification(response.data.message, 'success');
+      await refreshEventData();
     } catch (error) {
-      showNotification('ფაილის ატვირთვა ვერ მოხერხდა', 'error');
+      showNotification(error.response?.data?.message || 'ფაილის ატვირთვა ვერ მოხერხდა', 'error');
     } finally {
       setUploading(false);
       setUploadType('');
@@ -127,39 +116,29 @@ const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
     if (!window.confirm(confirmMessage)) return;
 
     try {
-      const token = localStorage.getItem('token');
       let url;
 
       if (type === 'plan') {
-        url = `/api/events/${event.id}/delete-plan`;
+        url = `/events/${event.id}/delete-plan`;
       } else if (type === 'invoice') {
-        url = `/api/events/${event.id}/delete-invoice/${encodeURIComponent(fileName)}`;
+        url = `/events/${event.id}/delete-invoice/${encodeURIComponent(fileName)}`;
       } else if (type === 'expense') {
-        url = `/api/events/${event.id}/delete-expense/${encodeURIComponent(fileName)}`;
+        url = `/events/${event.id}/delete-expense/${encodeURIComponent(fileName)}`;
       }
 
-      const response = await fetch(url, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const response = await api.delete(url);
 
-      if (response.ok) {
-        const result = await response.json();
-        showNotification(result.message, 'success');
-        
-        if (type === 'plan') {
-          setPlanFile(null);
-        } else if (type === 'invoice') {
-          setInvoiceFiles(prev => prev.filter(f => f.name !== fileName));
-        } else if (type === 'expense') {
-          setExpenseFiles(prev => prev.filter(f => f.name !== fileName));
-        }
-      } else {
-        const error = await response.json();
-        showNotification(error.message, 'error');
+      showNotification(response.data.message, 'success');
+
+      if (type === 'plan') {
+        setPlanFile(null);
+      } else if (type === 'invoice') {
+        setInvoiceFiles(prev => prev.filter(f => f.name !== fileName));
+      } else if (type === 'expense') {
+        setExpenseFiles(prev => prev.filter(f => f.name !== fileName));
       }
     } catch (error) {
-      showNotification('ფაილის წაშლა ვერ მოხერხდა', 'error');
+      showNotification(error.response?.data?.message || 'ფაილის წაშლა ვერ მოხერხდა', 'error');
     }
   };
 
@@ -270,7 +249,7 @@ const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
                   id="plan-file-upload"
                   onChange={(e) => {
                     if (e.target.files[0]) {
-                      handleFileUpload(e.target.files[0], 'plan');
+                      handleFileUpload('plan', e.target.files[0]);
                       e.target.value = '';
                     }
                   }}
@@ -384,7 +363,7 @@ const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
                   onChange={(e) => {
                     if (e.target.files[0]) {
                       const fileType = document.querySelector('input[name="file-type-radio"]:checked').value;
-                      handleFileUpload(e.target.files[0], fileType);
+                      handleFileUpload(fileType, e.target.files[0]);
                       e.target.value = '';
                     }
                   }}

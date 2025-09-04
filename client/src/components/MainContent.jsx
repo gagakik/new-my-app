@@ -1,24 +1,23 @@
-
 import React, { useState } from 'react';
-import { 
-  Box, 
-  AppBar, 
-  Toolbar, 
-  Typography, 
-  Button, 
-  Drawer, 
-  List, 
-  ListItem, 
-  ListItemIcon, 
-  ListItemText, 
-  IconButton, 
+import {
+  Box,
+  AppBar,
+  Toolbar,
+  Typography,
+  Button,
+  Drawer,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  IconButton,
   Divider,
   Container,
   Paper,
   useMediaQuery,
   useTheme
 } from '@mui/material';
-import { 
+import {
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
   Business as BusinessIcon,
@@ -28,7 +27,9 @@ import {
   BarChart as BarChartIcon,
   People as PeopleIcon,
   ExitToApp as ExitIcon,
-  AccountCircle as AccountIcon
+  AccountCircle as AccountIcon,
+  Assignment as AssignmentIcon,
+  BusinessCenter as ExhibitionIcon
 } from '@mui/icons-material';
 
 // Import components
@@ -49,7 +50,7 @@ function MainContent({ showNotification, userRole, userName, onLogout }) {
   const menuItems = [
     { id: 'dashboard', label: 'მთავარი', icon: <DashboardIcon />, roles: ['admin', 'manager', 'user'] },
     { id: 'events', label: 'ივენთები', icon: <EventIcon />, roles: ['admin', 'manager', 'sales', 'marketing'] },
-    { id: 'exhibitions', label: 'გამოფენები', icon: <BusinessIcon />, roles: ['admin', 'manager'] },
+    { id: 'exhibitions', label: 'გამოფენები', icon: <ExhibitionIcon />, roles: ['admin', 'manager'] },
     { id: 'companies', label: 'კომპანიები', icon: <BusinessIcon />, roles: ['admin', 'manager'] },
     { id: 'equipment', label: 'აღჭურვილობა', icon: <BuildIcon />, roles: ['admin', 'manager'] },
     { id: 'spaces', label: 'სივრცეები', icon: <RoomIcon />, roles: ['admin', 'manager'] },
@@ -57,7 +58,7 @@ function MainContent({ showNotification, userRole, userName, onLogout }) {
     { id: 'users', label: 'მომხმარებლები', icon: <PeopleIcon />, roles: ['admin'] },
   ];
 
-  const filteredMenuItems = menuItems.filter(item => 
+  const filteredMenuItems = menuItems.filter(item =>
     item.roles.includes(userRole)
   );
 
@@ -82,11 +83,11 @@ function MainContent({ showNotification, userRole, userName, onLogout }) {
                 მოგესალმებით, {userName}!
               </Typography>
               <Typography variant="body1" color="text.secondary">
-                თქვენი როლი: {userRole === 'admin' ? 'ადმინისტრატორი' : 
+                თქვენი როლი: {userRole === 'admin' ? 'ადმინისტრატორი' :
                               userRole === 'manager' ? 'მენეჯერი' : 'მომხმარებელი'}
               </Typography>
             </Paper>
-            
+
             <Paper sx={{ p: 3 }}>
               <Typography variant="h5" gutterBottom>
                 სისტემის ფუნქციები
@@ -126,12 +127,12 @@ function MainContent({ showNotification, userRole, userName, onLogout }) {
       <Divider />
       <List>
         {filteredMenuItems.map((item) => (
-          <ListItem 
-            button 
+          <ListItem
             key={item.id}
-            onClick={() => handleViewChange(item.id)}
-            selected={activeView === item.id}
+            component="div"
             sx={{ cursor: 'pointer' }}
+            selected={activeView === item.id}
+            onClick={() => handleViewChange(item.id)}
           >
             <ListItemIcon>
               {item.icon}
@@ -157,18 +158,18 @@ function MainContent({ showNotification, userRole, userName, onLogout }) {
               <MenuIcon />
             </IconButton>
           )}
-          
+
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             Expo Georgia Co - მართვის სისტემა
           </Typography>
-          
+
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <AccountIcon />
             <Typography variant="body1" sx={{ mr: 2 }}>
               {userName}
             </Typography>
-            <Button 
-              color="inherit" 
+            <Button
+              color="inherit"
               onClick={onLogout}
               startIcon={<ExitIcon />}
             >

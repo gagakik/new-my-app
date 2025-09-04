@@ -248,10 +248,6 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// Companies routes - using separate router
-const companiesRouter = require('./routes/companies');
-app.use('/api/companies', companiesRouter);
-
 // Equipment routes
 app.get('/api/equipment', authenticateToken, async (req, res) => {
   try {
@@ -829,8 +825,8 @@ app.post('/api/events/:eventId/participants',
 
       // Insert participant
       const participantResult = await db.query(
-        `INSERT INTO event_participants 
-         (event_id, company_id, booth_size, booth_number, payment_amount, payment_status, registration_status, notes, created_by_user_id, invoice_file_path, contract_file_path, handover_file_path, package_id, registration_type)
+        `INSERT INTO event_participants (
+         event_id, company_id, booth_size, booth_number, payment_amount, payment_status, registration_status, notes, created_by_user_id, invoice_file_path, contract_file_path, handover_file_path, package_id, registration_type)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
         [eventId, company_id, booth_size, booth_number, payment_amount, payment_status, registration_status, notes, req.user.id, invoice_file_path, contract_file_path, handover_file_path, package_id || null, registration_type || 'individual']
       );
@@ -1340,22 +1336,75 @@ app.delete('/api/users/:id', authenticateToken, authorizeRoles('admin'), async (
 // Annual Services routes
 app.get('/api/annual-services', authenticateToken, async (req, res) => {
   try {
+    console.log('Getting annual services...');
+
+    // First ensure price_per_sqm column exists in exhibitions table
+    try {
+      await db.query(`ALTER TABLE exhibitions ADD COLUMN IF NOT EXISTS price_per_sqm DECIMAL(10,2) DEFAULT 0`);
+      console.log('price_per_sqm column ensured in exhibitions table');
+    } catch (alterError) {
+      console.log('price_per_sqm column already exists or error:', alterError.message);
+    }
+
+    // First check if annual_services table exists and has data
+    const tableCheck = await db.query(`
+      SELECT COUNT(*) as count FROM annual_services
+    `);
+    console.log('Annual services count:', tableCheck.rows[0].count);
+
     const result = await db.query(`
       SELECT 
-        as_main.*,
-        COUNT(DISTINCT ss.space_id) as spaces_count,
-        e.exhibition_name,
-        e.price_per_sqm
-      FROM annual_services as_main
-      LEFT JOIN service_spaces ss ON as_main.id = ss.service_id
-      LEFT JOIN exhibitions e ON as_main.exhibition_id = e.id
-      GROUP BY as_main.id, e.exhibition_name, e.price_per_sqm
-      ORDER BY as_main.created_at DESC
+        a.id,
+        a.service_name,
+        a.description,
+        a.year_selection,
+        a.start_date,
+        a.end_date,
+        a.start_time,
+        a.end_time,
+        a.service_type,
+        a.is_active,
+        a.is_archived,
+        a.exhibition_id,
+        a.created_at,
+        a.updated_at,
+        a.created_by_user_id,
+        COALESCE(COUNT(DISTINCT ss.space_id), 0) as spaces_count,
+        COALESCE(e.exhibition_name, 'უცნობი გამოფენა') as exhibition_name
+      FROM annual_services a
+      LEFT JOIN service_spaces ss ON a.id = ss.service_id
+      LEFT JOIN exhibitions e ON a.exhibition_id = e.id
+      GROUP BY 
+        a.id, 
+        a.service_name, 
+        a.description, 
+        a.year_selection, 
+        a.start_date, 
+        a.end_date, 
+        a.start_time, 
+        a.end_time, 
+        a.service_type, 
+        a.is_active, 
+        a.is_archived, 
+        a.exhibition_id, 
+        a.created_at, 
+        a.updated_at, 
+        a.created_by_user_id, 
+        e.exhibition_name
+      ORDER BY COALESCE(a.created_at, CURRENT_TIMESTAMP) DESC
     `);
+
+    console.log('Annual services query successful, rows:', result.rows.length);
     res.json(result.rows);
   } catch (error) {
     console.error('სერვისების მიღების შეცდომა:', error);
-    res.status(500).json({ message: 'სერვისების მიღება ვერ მოხერხდა' });
+    console.error('Error details:', error.message);
+    console.error('Error code:', error.code);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      message: 'სერვისების მიღება ვერ მოხერხდა',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined 
+    });
   }
 });
 
@@ -1992,7 +2041,7 @@ app.delete('/api/events/:id/delete-plan', authenticateToken, authorizeRoles('adm
     // Delete physical file
     try {
       let filePathToDelete;
-      
+
       if (planFilePath.startsWith('/uploads/')) {
         filePathToDelete = path.join(__dirname, planFilePath);
       } else if (planFilePath.startsWith('uploads/')) {
@@ -2002,7 +2051,7 @@ app.delete('/api/events/:id/delete-plan', authenticateToken, authorizeRoles('adm
       }
 
       console.log('Attempting to delete file at:', filePathToDelete);
-      
+
       if (fs.existsSync(filePathToDelete)) {
         fs.unlinkSync(filePathToDelete);
         console.log('Physical file deleted successfully');
@@ -2110,16 +2159,16 @@ app.get('/api/reports/user-analysis', authenticateToken, async (req, res) => {
 });
 
 // Routes
-const companiesRoutes = require('./routes/companies');
 const equipmentRoutes = require('./routes/equipment');
 const importRoutes = require('./routes/import');
-const statisticsRoutes = require('./routes/statistics');
 const packagesRoutes = require('./routes/packages');
 const reportsRoutes = require('./routes/reports');
+const statisticsRoutes = require('./routes/statistics');
+const companiesRoutes = require('./routes/companies');
 
 app.use('/api/companies', companiesRoutes);
 app.use('/api/equipment', equipmentRoutes);
 app.use('/api/import', importRoutes);
-app.use('/api/statistics', statisticsRoutes);
 app.use('/api/packages', authenticateToken, packagesRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/statistics', statisticsRoutes);

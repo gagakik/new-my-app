@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import api from '../services/api';
 import './DocumentGenerator.css';
 
 const DocumentGenerator = ({ participantId, participantName, onClose, showNotification }) => {
@@ -10,21 +11,12 @@ const DocumentGenerator = ({ participantId, participantName, onClose, showNotifi
   const generateDocument = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/documents/${documentType}/${participantId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setDocumentData(data);
-        showNotification(`${documentType === 'invoice' ? 'ინვოისი' : 'ხელშეკრულება'} წარმატებით გენერირდა`, 'success');
-      } else {
-        const errorData = await response.json();
-        showNotification(errorData.message || 'დოკუმენტის გენერაცია ვერ მოხერხდა', 'error');
-      }
+      const response = await api.get(`/documents/${documentType}/${participantId}`);
+      setDocumentData(response.data);
+      showNotification(`${documentType === 'invoice' ? 'ინვოისი' : 'ხელშეკრულება'} წარმატებით გენერირდა`, 'success');
     } catch (error) {
-      showNotification('შეცდომა დოკუმენტის გენერაციისას', 'error');
+      const errorMessage = error.response?.data?.message || 'დოკუმენტის გენერაცია ვერ მოხერხდა';
+      showNotification(errorMessage, 'error');
     } finally {
       setLoading(false);
     }

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 
-
 const SpaceForm = ({ spaceToEdit, onFormClose, onSpaceUpdated, showNotification }) => {
   const [category, setCategory] = useState('');
   const [buildingName, setBuildingName] = useState('');

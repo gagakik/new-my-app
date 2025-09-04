@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-
 import PackageManager from './PackageManager';
 
 const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotification, onCancel }) => {

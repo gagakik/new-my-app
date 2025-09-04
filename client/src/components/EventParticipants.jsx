@@ -60,6 +60,8 @@ import {
   FilePresent as FilePresentIcon
 } from '@mui/icons-material';
 import InvoiceForm from './InvoiceForm';
+import { companiesAPI, servicesAPI, equipmentAPI } from '../services/api';
+import api from '../services/api';
 import InvitationGenerator from './InvitationGenerator';
 
 const EventParticipants = ({ eventId, eventName, onClose, showNotification, userRole }) => {
@@ -140,15 +142,8 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
 
   const fetchEventDetails = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/events/${eventId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setEventDetails(data);
-      }
+      const response = await api.get(`/annual-services/${eventId}`);
+      setEventDetails(response.data);
     } catch (error) {
       console.error('ივენთის დეტალების მიღების შეცდომა:', error);
     }
@@ -156,36 +151,22 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
 
   const fetchExhibitionData = async () => {
     try {
-      const token = localStorage.getItem('token');
       console.log('Fetching exhibition data for event:', eventId);
 
-      const eventResponse = await fetch(`/api/events/${eventId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const eventResponse = await api.get(`/annual-services/${eventId}`);
+      const eventData = eventResponse.data;
+      console.log('Event data received:', eventData);
 
-      if (eventResponse.ok) {
-        const eventData = await eventResponse.json();
-        console.log('Event data received:', eventData);
-
-        if (eventData.exhibition_id) {
-          try {
-            const exhibitionResponse = await fetch(`/api/exhibitions/${eventData.exhibition_id}`, {
-              headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            if (exhibitionResponse.ok) {
-              const exhibitionData = await exhibitionResponse.json();
-              setExhibitionData(exhibitionData);
-            } else {
-              setExhibitionData(eventData);
-            }
-          } catch (exhibitionError) {
-            console.log('Exhibition fetch failed, using event data as fallback');
-            setExhibitionData(eventData);
-          }
-        } else {
+      if (eventData.exhibition_id) {
+        try {
+          const exhibitionResponse = await api.get(`/exhibitions/${eventData.exhibition_id}`);
+          setExhibitionData(exhibitionResponse.data);
+        } catch (exhibitionError) {
+          console.log('Exhibition fetch failed, using event data as fallback');
           setExhibitionData(eventData);
         }
+      } else {
+        setExhibitionData(eventData);
       }
     } catch (error) {
       console.error('გამოფენის მონაცემების მიღების შეცდომა:', error);
@@ -196,15 +177,8 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
     try {
       if (!eventDetails?.exhibition_id) return;
 
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/packages/${eventDetails.exhibition_id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        const packages = await response.json();
-        setAvailablePackages(packages);
-      }
+      const response = await api.get(`/packages/${eventDetails.exhibition_id}`);
+      setAvailablePackages(response.data);
     } catch (error) {
       console.error('პაკეტების მიღების შეცდომა:', error);
     }
@@ -343,18 +317,9 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
 
   const fetchParticipants = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/events/${eventId}/participants`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setParticipants(data);
-        setFilteredParticipants(data);
-      } else {
-        showNotification('მონაწილეების მიღება ვერ მოხერხდა', 'error');
-      }
+      const response = await api.get(`/annual-services/${eventId}/participants`);
+      setParticipants(response.data);
+      setFilteredParticipants(response.data);
     } catch (error) {
       showNotification('შეცდომა მონაცემების ჩატვირთვისას', 'error');
     } finally {
@@ -364,15 +329,8 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
 
   const fetchCompanies = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/companies', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setCompanies(data);
-      }
+      const data = await companiesAPI.getAll();
+      setCompanies(data);
     } catch (error) {
       console.error('კომპანიების მიღების შეცდომა:', error);
     }
@@ -380,23 +338,14 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
 
   const fetchAvailableEquipment = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/equipment', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const data = await equipmentAPI.getAll();
+      const equipmentWithAvailability = data.map(equipment => ({
+        ...equipment,
+        booked_quantity: 0,
+        available_quantity: equipment.quantity || 100
+      }));
 
-      if (response.ok) {
-        const data = await response.json();
-        const equipmentWithAvailability = data.map(equipment => ({
-          ...equipment,
-          booked_quantity: 0,
-          available_quantity: equipment.quantity || 100
-        }));
-
-        setAvailableEquipment(equipmentWithAvailability);
-      } else {
-        showNotification('აღჭურვილობის ჩატვირთვა ვერ მოხერხდა', 'error');
-      }
+      setAvailableEquipment(equipmentWithAvailability);
     } catch (error) {
       showNotification('აღჭურვილობის ჩატვირთვის შეცდომა', 'error');
       setAvailableEquipment([]);
@@ -412,11 +361,9 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
     }
 
     try {
-      const token = localStorage.getItem('token');
-      const method = editingParticipant ? 'PUT' : 'POST';
       const url = editingParticipant
-        ? `/api/events/${eventId}/participants/${editingParticipant.id}`
-        : `/api/events/${eventId}/participants`;
+        ? `/annual-services/${eventId}/participants/${editingParticipant.id}`
+        : `/annual-services/${eventId}/participants`;
 
       const submitData = new FormData();
 
@@ -443,30 +390,17 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
         submitData.append('selected_packages', JSON.stringify(selectedPackages));
       }
 
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: submitData
-      });
+      const response = editingParticipant
+        ? await api.put(url, submitData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          })
+        : await api.post(url, submitData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
 
-      if (response.ok) {
-        const data = await response.json();
-        showNotification(data.message || 'ოპერაცია წარმატებით დასრულდა', 'success');
-        fetchParticipants();
-        resetForm();
-      } else {
-        const errorText = await response.text();
-        let errorMessage = 'შეცდომა მოთხოვნის დამუშავებისას';
-        try {
-          const errorData = JSON.parse(errorText);
-          errorMessage = errorData.message || errorMessage;
-        } catch (parseError) {
-          errorMessage = `სერვერის შეცდომა: ${response.status}`;
-        }
-        showNotification(errorMessage, 'error');
-      }
+      showNotification(response.data.message || 'ოპერაცია წარმატებით დასრულდა', 'success');
+      fetchParticipants();
+      resetForm();
     } catch (error) {
       showNotification('შეცდომა ქსელურ მოთხოვნაში', 'error');
     }
@@ -476,21 +410,12 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
     if (!window.confirm('ნამდვილად გსურთ ამ მონაწილის წაშლა?')) return;
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/events/${eventId}/participants/${participantId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        showNotification('მონაწილე წარმატებით წაიშალა', 'success');
-        fetchParticipants();
-      } else {
-        const errorData = await response.json();
-        showNotification(errorData.message || 'მონაწილის წაშლა ვერ მოხერხდა', 'error');
-      }
+      await api.delete(`/annual-services/${eventId}/participants/${participantId}`);
+      showNotification('მონაწილე წარმატებით წაიშალა', 'success');
+      fetchParticipants();
     } catch (error) {
-      showNotification('შეცდომა წაშლისას', 'error');
+      const errorMessage = error.response?.data?.message || 'მონაწილის წაშლა ვერ მოხერხდა';
+      showNotification(errorMessage, 'error');
     }
   };
 
@@ -1029,13 +954,8 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                             onClick={async () => {
                               setLoadingCompanyDetails(true);
                               try {
-                                const token = localStorage.getItem('token');
-                                const response = await fetch(`/api/companies/${participant.company_id}`, {
-                                  headers: { 'Authorization': `Bearer ${token}` }
-                                });
-
-                                if (response.ok) {
-                                  const companyData = await response.json();
+                                const response = await api.get(`/companies/${participant.company_id}`);
+                                const companyData = response.data;
                                   if (companyData.contact_persons) {
                                     if (Array.isArray(companyData.contact_persons)) {
                                       companyData.contact_persons = companyData.contact_persons;
@@ -1053,8 +973,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                                   }
 
                                   setSelectedCompanyForDetails(companyData);
-                                  setShowCompanyDetails(true);
-                                }
+                                setShowCompanyDetails(true);
                               } catch (error) {
                                 showNotification('კომპანიის დეტალების მიღება ვერ მოხერხდა', 'error');
                               } finally {

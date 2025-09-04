@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 
-
 const PackageManager = ({ exhibitionId, showNotification }) => {
   const [packages, setPackages] = useState([]);
   const [availableEquipment, setAvailableEquipment] = useState([]);

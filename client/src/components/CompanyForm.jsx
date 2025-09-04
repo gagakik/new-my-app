@@ -1,35 +1,58 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Button,
+  Box,
+  Typography,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Checkbox,
+  FormControlLabel,
+  FormGroup,
+  IconButton,
+  Card,
+  CardContent,
+  Divider,
+  Grid
+} from '@mui/material';
+import {
+  Close as CloseIcon,
+  Add as AddIcon,
+  Delete as DeleteIcon,
+  Business as BusinessIcon
+} from '@mui/icons-material';
+import { servicesAPI, companiesAPI } from '../services/api';
 
-const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification, onCancel }) => { // onCancel prop დაემატა
+const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification, onCancel }) => {
   const [companyName, setCompanyName] = useState('');
   const [country, setCountry] = useState('');
   const [companyProfile, setCompanyProfile] = useState('');
   const [identificationCode, setIdentificationCode] = useState('');
   const [legalAddress, setLegalAddress] = useState('');
-
   const [website, setWebsite] = useState('');
   const [comment, setComment] = useState('');
-  const [status, setStatus] = useState('აქტიური'); // დეფაულტად აქტიური
-  const [selectedExhibitions, setSelectedExhibitions] = useState([]); // ახალი სტეიტი გამოფენებისთვის
-  const [exhibitions, setExhibitions] = useState([]); // ყველა გამოფენის სია
+  const [status, setStatus] = useState('აქტიური');
+  const [selectedExhibitions, setSelectedExhibitions] = useState([]);
+  const [exhibitions, setExhibitions] = useState([]);
   const [contactPersons, setContactPersons] = useState([
     { name: '', position: '', phone: '', email: '' }
-  ]); // საკონტაქტო პირების სტეიტი
+  ]);
+  
   const isEditing = !!companyToEdit;
 
   // გამოფენების ჩატვირთვა
   useEffect(() => {
     const fetchExhibitions = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const response = await fetch('/api/exhibitions', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setExhibitions(data);
-        }
+        const data = await servicesAPI.getExhibitions();
+        setExhibitions(data);
       } catch (error) {
         console.error('გამოფენების ჩატვირთვის შეცდომა:', error);
       }
@@ -50,35 +73,6 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification, onCanc
     }
   }, [companyToEdit, isEditing, exhibitions]);
 
-  // მოდალის ავტომატური scroll და ცენტრირება
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const modalOverlay = document.querySelector('.modal-overlay');
-      const modalContent = document.querySelector('.modal-content');
-      
-      if (modalOverlay && modalContent) {
-        // ეკრანის ცენტრში გადატანა
-        modalOverlay.scrollTo({
-          top: 0,
-          left: 0,
-          behavior: 'smooth'
-        });
-        
-        // მოდალზე ფოკუსირება
-        modalContent.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'center',
-          inline: 'center'
-        });
-        
-        // წინა პლანზე გამოტანა
-        modalContent.focus();
-      }
-    }, 150);
-
-    return () => clearTimeout(timer);
-  }, []);
-
   useEffect(() => {
     if (isEditing && companyToEdit) {
       setCompanyName(companyToEdit.company_name || '');
@@ -96,7 +90,6 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification, onCanc
       } else {
         setContactPersons([{ name: '', position: '', phone: '', email: '' }]);
       }
-
     } else if (!isEditing) {
       setCompanyName('');
       setCountry('');
@@ -111,17 +104,13 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification, onCanc
     }
   }, [companyToEdit, isEditing]);
 
-
-
   const handleExhibitionToggle = useCallback((exhibitionId, isChecked) => {
     const numericId = Number(exhibitionId);
 
     setSelectedExhibitions(prev => {
       if (isChecked) {
-        // თუ checkbox მონიშნულია და ჯერ არ არის სიაში - დავამატოთ
         return prev.includes(numericId) ? prev : [...prev, numericId];
       } else {
-        // თუ checkbox გაუქმებულია - ამოვიღოთ სიიდან
         return prev.filter(id => id !== numericId);
       }
     });
@@ -154,247 +143,301 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification, onCanc
       company_profile: companyProfile,
       identification_code: identificationCode,
       legal_address: legalAddress,
-
       website,
       comment,
       status,
-      selected_exhibitions: selectedExhibitions, // გამოფენების IDs
+      selected_exhibitions: selectedExhibitions,
       contact_persons: contactPersons.filter(person => 
         person.name.trim() !== '' || person.position.trim() !== '' || 
         person.phone.trim() !== '' || person.email.trim() !== ''
-      ), // მხოლოდ შევსებული ველებით
+      ),
     };
 
-    const method = isEditing ? 'PUT' : 'POST';
-    const url = isEditing
-      ? `/api/companies/${companyToEdit.id}`
-      : '/api/companies';
-
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        showNotification('ავტორიზაციის ტოკენი არ მოიძებნა. გთხოვთ, შეხვიდეთ სისტემაში.', 'error');
-        return;
+      let response;
+      if (isEditing) {
+        response = await companiesAPI.update(companyToEdit.id, companyData);
+      } else {
+        response = await companiesAPI.create(companyData);
       }
 
-      const response = await fetch(url, {
-        method,
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(companyData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'ოპერაცია ვერ შესრულდა');
-      }
-
-      const data = await response.json();
-      showNotification(data.message, 'success');
-      onCompanyUpdated();
+      showNotification(response.message || 'ოპერაცია წარმატებით დასრულდა', 'success');
+      UpanyUpdated();
     } catch (error) {
       showNotification(`შეცდომა: ${error.message}`, 'error');
     }
   };
 
+  const countries = [
+    'საქართველო', 'აშშ', 'გერმანია', 'საფრანგეთი', 'დიდი ბრიტანეთი', 'იტალია', 
+    'ესპანეთი', 'კანადა', 'ავსტრალია', 'იაპონია', 'ჩინეთი', 'ბრაზილია', 
+    'მექსიკო', 'არგენტინა', 'ჩილე', 'ინდოეთი', 'თურქეთი', 'რუსეთი', 
+    'უკრაინა', 'პოლონეთი'
+  ];
+
   return (
-    <div className="modal-overlay" onClick={onCancel}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3>{isEditing ? 'კომპანიის რედაქტირება' : 'ახალი კომპანიის დამატება'}</h3>
-          <button 
-            type="button"
-            className="modal-close" 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onCompanyUpdated();
-            }}
-          >
-            ✕
-          </button>
-        </div>
-        <div className="modal-body">
-          <div className="form-container">
-            <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label>კომპანიის დასახელება</label>
-                <input type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required />
-              </div>
-              <div className="form-group">
-                <label>ქვეყანა</label>
-                <select value={country} onChange={(e) => setCountry(e.target.value)} required>
-                  <option value="">აირჩიეთ ქვეყანა</option>
-                  <option value="საქართველო">საქართველო</option>
-                  <option value="აშშ">აშშ</option>
-                  <option value="გერმანია">გერმანია</option>
-                  <option value="საფრანგეთი">საფრანგეთი</option>
-                  <option value="დიდი ბრიტანეთი">დიდი ბრიტანეთი</option>
-                  <option value="იტალია">იტალია</option>
-                  <option value="ესპანეთი">ესპანეთი</option>
-                  <option value="კანადა">კანადა</option>
-                  <option value="ავსტრალია">ავსტრალია</option>
-                  <option value="იაპონია">იაპონია</option>
-                  <option value="ჩინეთი">ჩინეთი</option>
-                  <option value="ბრაზილია">ბრაზილია</option>
-                  <option value="მექსიკო">მექსიკო</option>
-                  <option value="არგენტინა">არგენტინა</option>
-                  <option value="ჩილე">ჩილე</option>
-                  <option value="ინდოეთი">ინდოეთი</option>
-                  <option value="თურქეთი">თურქეთი</option>
-                  <option value="რუსეთი">რუსეთი</option>
-                  <option value="უკრაინა">უკრაინა</option>
-                  <option value="პოლონეთი">პოლონეთი</option>
-                  <option value="აშშ">აშშ</option>
-                  <option value="გერმანია">გერმანია</option>
-                  <option value="საფრანგეთი">საფრანგეთი</option>
-                  <option value="დიდი ბრიტანეთი">დიდი ბრიტანეთი</option>
-                  <option value="იაპონია">იაპონია</option>
-                  <option value="ჩინეთი">ჩინეთი</option>
-                  <option value="ინდოეთი">ინდოეთი</option>
-                  <option value="ბრაზილია">ბრაზილია</option>
-                  <option value="კანადა">კანადა</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label>კომპანიის პროფილი</label>
-                <input type="text" value={companyProfile} onChange={(e) => setCompanyProfile(e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label>საიდენტიფიკაციო კოდი</label>
-                <input type="text" value={identificationCode} onChange={(e) => setIdentificationCode(e.target.value)} required />
-              </div>
-              <div className="form-group">
-                <label>იურიდიული მისამართი</label>
-                <input type="text" value={legalAddress} onChange={(e) => setLegalAddress(e.target.value)} />
-              </div>
+    <Dialog 
+      open={true} 
+      onClose={onCancel}
+      maxWidth="md" 
+      fullWidth
+      PaperProps={{
+        sx: { maxHeight: '90vh' }
+      }}
+    >
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <BusinessIcon />
+          <Typography variant="h6">
+            {isEditing ? 'კომპანიის რედაქტირება' : 'ახალი კომპანიის დამატება'}
+          </Typography>
+        </Box>
+        <IconButton onClick={onCompanyUpdated}>
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
 
-              <div className="form-group">
-                <label>ვებგვერდი</label>
-                <input type="text" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="მაგალითად: expogeorgia.ge" />
-              </div>
-              <div className="form-group">
-                <label>კომენტარი</label>
-                <textarea value={comment} onChange={(e) => setComment(e.target.value)}></textarea>
-              </div>
-              <div className="form-group">
-                <label>სტატუსი</label>
-                <select value={status} onChange={(e) => setStatus(e.target.value)}>
-                  <option value="აქტიური">აქტიური</option>
-                  <option value="არქივი">არქივი</option>
-                </select>
-              </div>
+      <form onSubmit={handleSubmit}>
+        <DialogContent dividers>
+          <Grid container spacing={3}>
+            {/* ძირითადი ინფორმაცია */}
+            <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom color="primary">
+                ძირითადი ინფორმაცია
+              </Typography>
+            </Grid>
 
-              <div className="form-group">
-                <label>მონაწილეობა გამოფენებში</label>
-                <div className="exhibitions-selection">
-                  {exhibitions.map(exhibition => {
-                    const exhibitionId = Number(exhibition.id);
-                    const isChecked = selectedExhibitions.includes(exhibitionId);
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="კომპანიის დასახელება"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                required
+                variant="outlined"
+              />
+            </Grid>
 
-                    return (
-                      <div key={`exhibition-wrapper-${exhibition.id}`} className="exhibition-checkbox-wrapper">
-                        <label className="exhibition-checkbox">
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            value={exhibitionId}
-                            onChange={(e) => handleExhibitionToggle(exhibitionId, e.target.checked)}
-                          />
-                          {exhibition.exhibition_name}
-                        </label>
-                      </div>
-                    );
-                  })}
-                </div>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth required>
+                <InputLabel>ქვეყანა</InputLabel>
+                <Select
+                  value={country}
+                  label="ქვეყანა"
+                  onChange={(e) => setCountry(e.target.value)}
+                >
+                  <MenuItem value="">აირჩიეთ ქვეყანა</MenuItem>
+                  {countries.map(countryName => (
+                    <MenuItem key={countryName} value={countryName}>
+                      {countryName}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
 
-              </div>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="კომპანიის პროფილი"
+                value={companyProfile}
+                onChange={(e) => setCompanyProfile(e.target.value)}
+                variant="outlined"
+              />
+            </Grid>
 
-              {/* საკონტაქტო პირების სექცია */}
-              <div className="form-group">
-                <label>საკონტაქტო პირები</label>
-                {contactPersons.map((person, index) => (
-                  <div key={index} className="contact-person-group">
-                    <h5>საკონტაქტო პირი {index + 1}</h5>
-                    <div className="form-group">
-                      <label>სახელი გვარი</label>
-                      <input
-                        type="text"
-                        value={person.name}
-                        onChange={(e) => updateContactPerson(index, 'name', e.target.value)}
-                        placeholder="მაგ: ნინო გელაშვილი"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>პოზიცია</label>
-                      <input
-                        type="text"
-                        value={person.position}
-                        onChange={(e) => updateContactPerson(index, 'position', e.target.value)}
-                        placeholder="მაგ: გაყიდვების მენეჯერი"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>ტელეფონის ნომერი</label>
-                      <input
-                        type="tel"
-                        value={person.phone}
-                        onChange={(e) => updateContactPerson(index, 'phone', e.target.value)}
-                        placeholder="მაგ: +995 555 123 456"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>ელ-ფოსტა</label>
-                      <input
-                        type="email"
-                        value={person.email}
-                        onChange={(e) => updateContactPerson(index, 'email', e.target.value)}
-                        placeholder="მაგ: nino@company.ge"
-                      />
-                    </div>
-                    {contactPersons.length > 1 && (
-                      <button
-                        type="button"
-                        className="remove-contact-btn"
-                        onClick={() => removeContactPerson(index)}
-                      >
-                        ამ კონტაქტის წაშლა
-                      </button>
-                    )}
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  className="add-contact-btn"
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="საიდენტიფიკაციო კოდი"
+                value={identificationCode}
+                onChange={(e) => setIdentificationCode(e.target.value)}
+                required
+                variant="outlined"
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="იურიდიული მისამართი"
+                value={legalAddress}
+                onChange={(e) => setLegalAddress(e.target.value)}
+                variant="outlined"
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="ვებგვერდი"
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+                placeholder="მაგალითად: expogeorgia.ge"
+                variant="outlined"
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>სტატუსი</InputLabel>
+                <Select
+                  value={status}
+                  label="სტატუსი"
+                  onChange={(e) => setStatus(e.target.value)}
+                >
+                  <MenuItem value="აქტიური">აქტიური</MenuItem>
+                  <MenuItem value="არქივი">არქივი</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="კომენტარი"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                multiline
+                rows={3}
+                variant="outlined"
+              />
+            </Grid>
+
+            {/* გამოფენები */}
+            <Grid item xs={12}>
+              <Divider sx={{ my: 2 }} />
+              <Typography variant="h6" gutterBottom color="primary">
+                მონაწილეობა გამოფენებში
+              </Typography>
+              <FormGroup>
+                {exhibitions.map(exhibition => {
+                  const exhibitionId = Number(exhibition.id);
+                  const isChecked = selectedExhibitions.includes(exhibitionId);
+
+                  return (
+                    <FormControlLabel
+                      key={exhibition.id}
+                      control={
+                        <Checkbox
+                          checked={isChecked}
+                          onChange={(e) => handleExhibitionToggle(exhibitionId, e.target.checked)}
+                        />
+                      }
+                      label={exhibition.exhibition_name}
+                    />
+                  );
+                })}
+              </FormGroup>
+            </Grid>
+
+            {/* საკონტაქტო პირები */}
+            <Grid item xs={12}>
+              <Divider sx={{ my: 2 }} />
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6" color="primary">
+                  საკონტაქტო პირები
+                </Typography>
+                <Button
+                  startIcon={<AddIcon />}
                   onClick={addContactPerson}
+                  variant="outlined"
+                  size="small"
                 >
-                  ახალი საკონტაქტო პირის დამატება
-                </button>
-              </div>
+                  ახალი კონტაქტი
+                </Button>
+              </Box>
 
-              <div className="form-actions">
-                <button type="submit" className="submit-btn">
-                  {isEditing ? 'განახლება' : 'დამატება'}
-                </button>
-                <button
-                  type="button"
-                  className="cancel-btn"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onCompanyUpdated();
-                  }}
-                >
-                  გაუქმება
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-    </div>
+              {contactPersons.map((person, index) => (
+                <Card key={index} sx={{ mb: 2 }}>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                      <Typography variant="subtitle1" fontWeight="bold">
+                        საკონტაქტო პირი {index + 1}
+                      </Typography>
+                      {contactPersons.length > 1 && (
+                        <IconButton
+                          color="error"
+                          onClick={() => removeContactPerson(index)}
+                          size="small"
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      )}
+                    </Box>
+
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} md={6}>
+                        <TextField
+                          fullWidth
+                          label="სახელი გვარი"
+                          value={person.name}
+                          onChange={(e) => updateContactPerson(index, 'name', e.target.value)}
+                          placeholder="მაგ: ნინო გელაშვილი"
+                          variant="outlined"
+                          size="small"
+                        />
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <TextField
+                          fullWidth
+                          label="პოზიცია"
+                          value={person.position}
+                          onChange={(e) => updateContactPerson(index, 'position', e.target.value)}
+                          placeholder="მაგ: გაყიდვების მენეჯერი"
+                          variant="outlined"
+                          size="small"
+                        />
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <TextField
+                          fullWidth
+                          label="ტელეფონის ნომერი"
+                          type="tel"
+                          value={person.phone}
+                          onChange={(e) => updateContactPerson(index, 'phone', e.target.value)}
+                          placeholder="მაგ: +995 555 123 456"
+                          variant="outlined"
+                          size="small"
+                        />
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <TextField
+                          fullWidth
+                          label="ელ-ფოსტა"
+                          type="email"
+                          value={person.email}
+                          onChange={(e) => updateContactPerson(index, 'email', e.target.value)}
+                          placeholder="მაგ: nino@company.ge"
+                          variant="outlined"
+                          size="small"
+                        />
+                      </Grid>
+                    </Grid>
+                  </CardContent>
+                </Card>
+              ))}
+            </Grid>
+          </Grid>
+        </DialogContent>
+
+        <DialogActions sx={{ p: 3 }}>
+          <Button 
+            onClick={onCompanyUpdated}
+            variant="outlined"
+          >
+            გაუქმება
+          </Button>
+          <Button 
+            type="submit" 
+            variant="contained"
+            size="large"
+          >
+            {isEditing ? 'განახლება' : 'დამატება'}
+          </Button>
+        </DialogActions>
+      </form>
+    </Dialog>
   );
 };
 
