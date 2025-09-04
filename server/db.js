@@ -124,19 +124,17 @@ const createTables = async () => {
         end_date DATE,
         start_time TIME,
         end_time TIME,
-        service_type VARCHAR(50) DEFAULT 'ივენთი',
-        is_active BOOLEAN DEFAULT TRUE,
+        service_type VARCHAR(100),
+        is_active BOOLEAN DEFAULT true,
         is_archived BOOLEAN DEFAULT FALSE,
-        exhibition_id INTEGER,
-        created_by_user_id INTEGER,
+        plan_file_path TEXT,
+        plan_uploaded_by TEXT,
+        invoice_files JSONB DEFAULT '[]'::jsonb,
+        expense_files JSONB DEFAULT '[]'::jsonb,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        archived_at TIMESTAMP,
-        plan_file_path VARCHAR(500),
-        invoice_files JSONB DEFAULT '[]',
-        expense_files JSONB DEFAULT '[]',
-        plan_updated_at TIMESTAMP,
-        files_updated_at TIMESTAMP
+        exhibition_id INTEGER REFERENCES exhibitions(id),
+        created_by_user_id INTEGER REFERENCES users(id)
       )
     `);
 
@@ -344,13 +342,7 @@ const createTables = async () => {
         created_by_user_id INTEGER REFERENCES users(id),
         updated_by_user_id INTEGER REFERENCES users(id),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        is_bundle BOOLEAN DEFAULT false,
-        bundle_discount_percent DECIMAL(5,2) DEFAULT 0,
-        early_bird_price DECIMAL(10,2),
-        early_bird_end_date DATE,
-        last_minute_price DECIMAL(10,2),
-        last_minute_start_date DATE
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
@@ -470,6 +462,39 @@ const createTables = async () => {
         UNIQUE(bundle_id, package_id)
       )
     `);
+
+    // File storage table for storing files in database
+    await query(`
+      CREATE TABLE IF NOT EXISTS file_storage (
+        id SERIAL PRIMARY KEY,
+        filename VARCHAR(255) NOT NULL,
+        original_name VARCHAR(255) NOT NULL,
+        mime_type VARCHAR(100),
+        file_data BYTEA,
+        file_size INTEGER NOT NULL,
+        related_table VARCHAR(50),
+        related_id INTEGER,
+        uploaded_by INTEGER REFERENCES users(id),
+        uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        metadata JSONB DEFAULT '{}'
+      )
+    `);
+    console.log('File storage table created/verified successfully');
+
+    // Alternative JSON-based file storage
+    await query(`
+      CREATE TABLE IF NOT EXISTS json_file_storage (
+        id SERIAL PRIMARY KEY,
+        filename VARCHAR(255) NOT NULL,
+        original_name VARCHAR(255) NOT NULL,
+        file_info JSONB NOT NULL,
+        related_table VARCHAR(50),
+        related_id INTEGER,
+        uploaded_by INTEGER REFERENCES users(id),
+        uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('JSON file storage table created/verified successfully');
 
     console.log("ყველა PostgreSQL ცხრილა წარმატებით შეიქმნა");
   } catch (error) {
