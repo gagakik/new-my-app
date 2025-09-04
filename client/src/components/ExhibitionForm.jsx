@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import './ExhibitionForm.css';
+
 import PackageManager from './PackageManager';
 
 const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotification, onCancel }) => {

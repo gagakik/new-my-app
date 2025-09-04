@@ -4,7 +4,7 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import QRCodeLib from 'qrcode';
 import QRCodeGenerator from 'qrcode-generator';
-import './InvitationGenerator.css';
+
 
 const generateQRCodeDataURL = async (text, size = 120) => {
   try {

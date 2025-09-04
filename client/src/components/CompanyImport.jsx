@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import './CompanyImport.css';
+
 
 const CompanyImport = ({ showNotification, onImportComplete }) => {
   const [file, setFile] = useState(null);

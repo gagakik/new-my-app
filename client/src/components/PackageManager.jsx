@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import './PackageManager.css';
+
 
 const PackageManager = ({ exhibitionId, showNotification }) => {
   const [packages, setPackages] = useState([]);

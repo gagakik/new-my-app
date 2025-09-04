@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import './InvoiceForm.css';
+
 
 const InvoiceForm = ({ participant, onClose, showNotification, eventData }) => {
   const [invoiceData, setInvoiceData] = useState({

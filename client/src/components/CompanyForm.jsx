@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import './CompanyForm.css';
+
 
 const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification, onCancel }) => { // onCancel prop დაემატა
   const [companyName, setCompanyName] = useState('');
