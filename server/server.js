@@ -1594,9 +1594,32 @@ app.put('/api/annual-services/:id', authenticateToken, authorizeRoles('admin', '
       selected_spaces = []
     } = req.body;
 
-    console.log('Updating event with data:', {
-      id, service_name, exhibition_id, space_ids, selected_spaces
-    });
+    console.log('Updating annual service with ID:', id);
+    console.log('Request body:', req.body);
+
+    // Get current service data first
+    const currentService = await db.query('SELECT * FROM annual_services WHERE id = $1', [id]);
+    if (currentService.rows.length === 0) {
+      return res.status(404).json({ message: 'სერვისი ვერ მოიძებნა' });
+    }
+
+    const current = currentService.rows[0];
+
+    // Use current values as defaults if new values are not provided
+    const updateData = {
+      service_name: service_name || current.service_name,
+      description: description !== undefined ? description : current.description,
+      year_selection: year_selection || current.year_selection || new Date().getFullYear(),
+      start_date: start_date || current.start_date,
+      end_date: end_date || current.end_date,
+      start_time: start_time !== undefined ? start_time : current.start_time,
+      end_time: end_time !== undefined ? end_time : current.end_time,
+      service_type: service_type || current.service_type || 'ივენთი',
+      is_active: is_active !== undefined ? is_active : current.is_active,
+      exhibition_id: exhibition_id !== undefined ? exhibition_id : current.exhibition_id
+    };
+
+    console.log('Update data prepared:', updateData);
 
     const result = await db.query(
       `UPDATE annual_services SET 
@@ -1605,13 +1628,22 @@ app.put('/api/annual-services/:id', authenticateToken, authorizeRoles('admin', '
         service_type = $8, is_active = $9, exhibition_id = $10, updated_at = CURRENT_TIMESTAMP 
       WHERE id = $11 RETURNING *`,
       [
-        service_name, description, year_selection, start_date, end_date,
-        start_time, end_time, service_type, is_active, exhibition_id, id
+        updateData.service_name, 
+        updateData.description, 
+        updateData.year_selection, 
+        updateData.start_date, 
+        updateData.end_date,
+        updateData.start_time, 
+        updateData.end_time, 
+        updateData.service_type, 
+        updateData.is_active, 
+        updateData.exhibition_id, 
+        id
       ]
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'სერვისი ვერ მოიძებნა' });
+      return res.status(404).json({ message: 'სერვისის განახლება ვერ მოხერხდა' });
     }
 
     const service = result.rows[0];
@@ -1619,21 +1651,26 @@ app.put('/api/annual-services/:id', authenticateToken, authorizeRoles('admin', '
     // Use selected_spaces if available, fallback to space_ids
     const spacesToUpdate = selected_spaces.length > 0 ? selected_spaces : space_ids;
 
-    // Update space associations - first remove existing ones
-    await db.query('DELETE FROM service_spaces WHERE service_id = $1', [id]);
+    // Update space associations only if spaces are provided
+    if (spacesToUpdate.length > 0) {
+      // First remove existing ones
+      await db.query('DELETE FROM service_spaces WHERE service_id = $1', [id]);
 
-    // Add new space associations
-    for (const spaceId of spacesToUpdate) {
-      try {
-        await db.query(
-          'INSERT INTO service_spaces (service_id, space_id) VALUES ($1, $2)',
-          [id, spaceId]
-        );
-        console.log(`Updated space ${spaceId} for service ${id}`);
-      } catch (spaceError) {
-        console.error(`Error updating space ${spaceId}:`, spaceError);
+      // Add new space associations
+      for (const spaceId of spacesToUpdate) {
+        try {
+          await db.query(
+            'INSERT INTO service_spaces (service_id, space_id) VALUES ($1, $2)',
+            [id, spaceId]
+          );
+          console.log(`Updated space ${spaceId} for service ${id}`);
+        } catch (spaceError) {
+          console.error(`Error updating space ${spaceId}:`, spaceError);
+        }
       }
     }
+
+    console.log('Annual service updated successfully:', service.id);
 
     res.json({
       message: 'სერვისი წარმატებით განახლდა',
@@ -1641,7 +1678,12 @@ app.put('/api/annual-services/:id', authenticateToken, authorizeRoles('admin', '
     });
   } catch (error) {
     console.error('სერვისის განახლების შეცდომა:', error);
-    res.status(500).json({ message: 'სერვისის განახლება ვერ მოხერხდა' });
+    console.error('Error details:', error.message);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      message: 'სერვისის განახლება ვერ მოხერხდა',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 

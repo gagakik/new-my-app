@@ -379,20 +379,20 @@ const EventsList = ({ showNotification, userRole }) => {
           onClose={() => setEditingId(null)}
           onSubmit={async (formData) => {
             try {
-              const submitData = {
+              const data = {
                 service_name: formData.service_name,
                 exhibition_id: formData.exhibition_id || null,
-                start_date: formData.start_date ? formData.start_date.toISOString().split('T')[0] : null,
-                end_date: formData.end_date ? formData.end_date.toISOString().split('T')[0] : null,
-                start_time: formData.start_time ? formData.start_time.toTimeString().split(' ')[0].substring(0, 5) : null,
-                end_time: formData.end_time ? formData.end_time.toTimeString().split(' ')[0].substring(0, 5) : null
+                start_date: formData.start_date ? formData.start_date : null,
+                end_date: formData.end_date ? formData.end_date : null,
+                start_time: formData.start_time ? formData.start_time : null,
+                end_time: formData.end_time ? formData.end_time : null
               };
 
               if (editingId === 0) {
-                await servicesAPI.create(submitData);
+                await servicesAPI.create(data);
                 showNotification('ივენთი წარმატებით შეიქმნა!', 'success');
               } else {
-                await servicesAPI.update(editingId, submitData);
+                await servicesAPI.update(editingId, data);
                 showNotification('ივენთი წარმატებით განახლდა!', 'success');
               }
 

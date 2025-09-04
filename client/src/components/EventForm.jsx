@@ -19,6 +19,7 @@ import { Close as CloseIcon } from '@mui/icons-material';
 import { DatePicker, TimePicker } from '@mui/x-date-pickers';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import EventIcon from '@mui/icons-material/Event';
 
 const EventForm = ({ isOpen, onClose, onSubmit, editingEvent, exhibitions = [] }) => {
   const [formData, setFormData] = useState({
@@ -30,6 +31,8 @@ const EventForm = ({ isOpen, onClose, onSubmit, editingEvent, exhibitions = [] }
     end_time: null
   });
   const [error, setError] = useState('');
+
+  const isEdit = !!editingEvent;
 
   useEffect(() => {
     if (editingEvent) {
@@ -67,7 +70,15 @@ const EventForm = ({ isOpen, onClose, onSubmit, editingEvent, exhibitions = [] }
       return;
     }
 
-    onSubmit(formData);
+    const processedData = {
+      ...formData,
+      start_date: formData.start_date ? formData.start_date.toISOString().split('T')[0] : null,
+      end_date: formData.end_date ? formData.end_date.toISOString().split('T')[0] : null,
+      start_time: formData.start_time ? formData.start_time.toTimeString().split(' ')[0].substring(0, 5) : null,
+      end_time: formData.end_time ? formData.end_time.toTimeString().split(' ')[0].substring(0, 5) : null,
+    };
+
+    onSubmit(processedData);
   };
 
   const handleChange = (e) => {
@@ -85,9 +96,22 @@ const EventForm = ({ isOpen, onClose, onSubmit, editingEvent, exhibitions = [] }
     setFormData(prev => ({ ...prev, [field]: newValue }));
   };
 
+  const handleClose = () => {
+    onClose();
+    setFormData({
+      service_name: '',
+      exhibition_id: '',
+      start_date: null,
+      end_date: null,
+      start_time: null,
+      end_time: null
+    });
+    setError('');
+  };
+
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Dialog open={isOpen} onClose={onClose} maxWidth="md" fullWidth>
+      <Dialog open={isOpen} onClose={handleClose} maxWidth="md" fullWidth>
         <DialogTitle sx={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -95,12 +119,13 @@ const EventForm = ({ isOpen, onClose, onSubmit, editingEvent, exhibitions = [] }
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           color: 'white'
         }}>
-          <Typography variant="h6">
-            {editingEvent ? 'ივენთის რედაქტირება' : 'ახალი ივენთის დამატება'}
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <EventIcon />
+            {isEdit ? 'ივენთის რედაქტირება' : 'ახალი ივენთის დამატება'}
+          </Box>
           <IconButton
             edge="end"
-            onClick={onClose}
+            onClick={handleClose}
             sx={{ color: 'white' }}
           >
             <CloseIcon />
@@ -148,14 +173,18 @@ const EventForm = ({ isOpen, onClose, onSubmit, editingEvent, exhibitions = [] }
                   label="დაწყების თარიღი"
                   value={formData.start_date}
                   onChange={(newValue) => handleDateChange(newValue, 'start_date')}
-                  renderInput={(params) => <TextField {...params} fullWidth required />}
+                  enableAccessibleFieldDOMStructure={false}
+                  slots={{ textField: TextField }}
+                  slotProps={{ textField: { fullWidth: true } }}
                 />
 
                 <DatePicker
                   label="დასრულების თარიღი"
                   value={formData.end_date}
                   onChange={(newValue) => handleDateChange(newValue, 'end_date')}
-                  renderInput={(params) => <TextField {...params} fullWidth required />}
+                  enableAccessibleFieldDOMStructure={false}
+                  slots={{ textField: TextField }}
+                  slotProps={{ textField: { fullWidth: true } }}
                 />
               </Box>
 
@@ -164,14 +193,18 @@ const EventForm = ({ isOpen, onClose, onSubmit, editingEvent, exhibitions = [] }
                   label="დაწყების საათი"
                   value={formData.start_time}
                   onChange={(newValue) => handleTimeChange(newValue, 'start_time')}
-                  renderInput={(params) => <TextField {...params} fullWidth />}
+                  enableAccessibleFieldDOMStructure={false}
+                  slots={{ textField: TextField }}
+                  slotProps={{ textField: { fullWidth: true } }}
                 />
 
                 <TimePicker
                   label="დასრულების საათი"
                   value={formData.end_time}
                   onChange={(newValue) => handleTimeChange(newValue, 'end_time')}
-                  renderInput={(params) => <TextField {...params} fullWidth />}
+                  enableAccessibleFieldDOMStructure={false}
+                  slots={{ textField: TextField }}
+                  slotProps={{ textField: { fullWidth: true } }}
                 />
               </Box>
             </Box>
@@ -179,7 +212,7 @@ const EventForm = ({ isOpen, onClose, onSubmit, editingEvent, exhibitions = [] }
 
           <DialogActions sx={{ p: 3, gap: 1 }}>
             <Button
-              onClick={onClose}
+              onClick={handleClose}
               variant="outlined"
               color="inherit"
             >
@@ -195,7 +228,7 @@ const EventForm = ({ isOpen, onClose, onSubmit, editingEvent, exhibitions = [] }
                 }
               }}
             >
-              {editingEvent ? 'განახლება' : 'დამატება'}
+              {isEdit ? 'განახლება' : 'დამატება'}
             </Button>
           </DialogActions>
         </Box>

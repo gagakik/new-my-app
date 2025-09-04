@@ -45,14 +45,8 @@ const PackageManager = ({ exhibitionId, showNotification }) => {
   const fetchEquipment = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/equipment', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setAvailableEquipment(data);
-      }
+      const response = await api.get('/equipment');
+      setAvailableEquipment(response.data);
     } catch (error) {
       console.error('აღჭურვილობის ჩატვირთვის შეცდომა:', error);
     }
