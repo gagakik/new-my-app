@@ -131,6 +131,7 @@ function MainContent({ showNotification, userRole, userName, onLogout }) {
             key={item.id}
             onClick={() => handleViewChange(item.id)}
             selected={activeView === item.id}
+            sx={{ cursor: 'pointer' }}
           >
             <ListItemIcon>
               {item.icon}

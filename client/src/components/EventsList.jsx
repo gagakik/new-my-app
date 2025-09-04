@@ -425,7 +425,7 @@ const EventsList = ({ showNotification, userRole }) => {
         </Typography>
 
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={3}>
+          <Grid item xs={12} md={4}>
             <TextField
               fullWidth
               label="ძიება"
@@ -436,7 +436,7 @@ const EventsList = ({ showNotification, userRole }) => {
             />
           </Grid>
 
-          <Grid item xs={12} md={2}>
+          <Grid item xs={6} md={2}>
             <FormControl fullWidth size="small">
               <InputLabel>წელი</InputLabel>
               <Select
@@ -452,7 +452,7 @@ const EventsList = ({ showNotification, userRole }) => {
             </FormControl>
           </Grid>
 
-          <Grid item xs={12} md={2}>
+          <Grid item xs={6} md={2}>
             <FormControl fullWidth size="small">
               <InputLabel>თვე</InputLabel>
               <Select
@@ -468,7 +468,7 @@ const EventsList = ({ showNotification, userRole }) => {
             </FormControl>
           </Grid>
 
-          <Grid item xs={12} md={2}>
+          <Grid item xs={6} md={2}>
             <FormControl fullWidth size="small">
               <InputLabel>სტატუსი</InputLabel>
               <Select
@@ -486,13 +486,14 @@ const EventsList = ({ showNotification, userRole }) => {
             </FormControl>
           </Grid>
 
-          <Grid item xs={12} md={3}>
+          <Grid item xs={6} md={2}>
             <Box sx={{ display: 'flex', gap: 1 }}>
               <Button
                 variant="outlined"
                 onClick={clearFilters}
                 startIcon={<ClearIcon />}
-                size="small"
+                size="medium"
+                sx={{ color: 'white' }}
               >
                 გასუფთავება
               </Button>
@@ -500,7 +501,8 @@ const EventsList = ({ showNotification, userRole }) => {
                 variant="outlined"
                 onClick={() => setSortDirection(sortDirection === 'desc' ? 'asc' : 'desc')}
                 startIcon={<SortIcon />}
-                size="small"
+                size="medium"
+                sx={{ color: 'white' }}
               >
                 {sortDirection === 'desc' ? 'ახალი→ძველი' : 'ძველი→ახალი'}
               </Button>
@@ -529,12 +531,18 @@ const EventsList = ({ showNotification, userRole }) => {
             return (
               <Grid item xs={12} md={6} lg={4} key={event.id}>
                 <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                  <CardContent sx={{ flexGrow: 1 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <CardContent sx={{ flexGrow: 1, pb: 1 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
                       <Typography
                         variant="h6"
                         component="h3"
-                        sx={{ cursor: 'pointer', color: 'primary.main' }}
+                        sx={{ 
+                          cursor: 'pointer', 
+                          color: 'primary.main',
+                          fontSize: '1.1rem',
+                          lineHeight: 1.2,
+                          maxWidth: '70%'
+                        }}
                         onClick={() => viewEventDetails(event)}
                       >
                         {event.service_name}
@@ -543,118 +551,149 @@ const EventsList = ({ showNotification, userRole }) => {
                         label={status.text}
                         color={status.color}
                         size="small"
+                        sx={{ fontSize: '0.75rem' }}
                       />
                     </Box>
 
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      {event.description}
-                    </Typography>
+                    {event.description && (
+                      <Typography 
+                        variant="body2" 
+                        color="text.secondary" 
+                        sx={{ 
+                          mb: 1.5, 
+                          fontSize: '0.875rem',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical'
+                        }}
+                      >
+                        {event.description}
+                      </Typography>
+                    )}
 
-                    <Box sx={{ mb: 2 }}>
-                      <Typography variant="body2">
+                    <Box sx={{ mb: 1 }}>
+                      <Typography variant="body2" sx={{ fontSize: '0.8rem', mb: 0.5 }}>
                         <strong>დაწყება:</strong> {formatDateTime(event.start_date, event.start_time)}
                       </Typography>
-                      <Typography variant="body2">
+                      <Typography variant="body2" sx={{ fontSize: '0.8rem', mb: 0.5 }}>
                         <strong>დასრულება:</strong> {formatDateTime(event.end_date, event.end_time)}
                       </Typography>
-                      <Typography variant="body2">
-                        <strong>ტიპი:</strong> {event.service_type}
-                      </Typography>
-                      <Typography variant="body2">
-                        <strong>სივრცეები:</strong> {event.spaces_count || 0}
-                      </Typography>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                          <strong>ტიპი:</strong> {event.service_type}
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                          <strong>სივრცეები:</strong> {event.spaces_count || 0}
+                        </Typography>
+                      </Box>
                     </Box>
-                  </CardContent>
 
-                  <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
-                    <Box>
+                    {/* Action buttons moved inside content */}
+                    <Box sx={{ 
+                      display: 'flex', 
+                      flexWrap: 'wrap',
+                      gap: 0.5,
+                      mt: 1.5,
+                      pt: 1,
+                      borderTop: '1px solid',
+                      borderColor: 'divider'
+                    }}>
                       <Tooltip title="მონაწილეები">
                         <IconButton
+                          size="small"
                           color="primary"
                           onClick={() => {
                             setSelectedEvent(event);
                             setShowParticipants(true);
                           }}
                         >
-                          <PeopleIcon />
+                          <PeopleIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
 
                       <Tooltip title="ფაილები">
                         <IconButton
+                          size="small"
                           color="primary"
                           onClick={() => {
                             setSelectedEventForFiles(event);
                             setShowFileManager(true);
                           }}
                         >
-                          <FolderIcon />
+                          <FolderIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
+
+                      {isAuthorizedForManagement && (
+                        <>
+                          {!showArchivedOnly && (
+                            <Tooltip title="რედაქტირება">
+                              <IconButton
+                                size="small"
+                                color="primary"
+                                onClick={() => setEditingId(event.id)}
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+
+                          {status.class === 'finished' && !event.is_archived && (
+                            <>
+                              <Tooltip title="დასრულება">
+                                <IconButton
+                                  size="small"
+                                  color="success"
+                                  onClick={() => {
+                                    setSelectedEventForCompletion(event);
+                                    setShowEventCompletion(true);
+                                  }}
+                                >
+                                  <CheckCircleIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+
+                              <Tooltip title="არქივში გადატანა">
+                                <IconButton
+                                  size="small"
+                                  color="warning"
+                                  onClick={() => handleArchive(event.id)}
+                                >
+                                  <ArchiveIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            </>
+                          )}
+
+                          {showArchivedOnly && event.is_archived && (
+                            <Tooltip title="არქივიდან აღდგენა">
+                              <IconButton
+                                size="small"
+                                color="info"
+                                onClick={() => handleRestore(event.id)}
+                              >
+                                <RestoreIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+
+                          {isAuthorizedForDeletion && (
+                            <Tooltip title="წაშლა">
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => handleDelete(event.id)}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                        </>
+                      )}
                     </Box>
-
-                    {isAuthorizedForManagement && (
-                      <Box>
-                        {!showArchivedOnly && (
-                          <Tooltip title="რედაქტირება">
-                            <IconButton
-                              color="primary"
-                              onClick={() => setEditingId(event.id)}
-                            >
-                              <EditIcon />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-
-                        {status.class === 'finished' && !event.is_archived && (
-                          <>
-                            <Tooltip title="დასრულება">
-                              <IconButton
-                                color="success"
-                                onClick={() => {
-                                  setSelectedEventForCompletion(event);
-                                  setShowEventCompletion(true);
-                                }}
-                              >
-                                <CheckCircleIcon />
-                              </IconButton>
-                            </Tooltip>
-
-                            <Tooltip title="არქივში გადატანა">
-                              <IconButton
-                                color="warning"
-                                onClick={() => handleArchive(event.id)}
-                              >
-                                <ArchiveIcon />
-                              </IconButton>
-                            </Tooltip>
-                          </>
-                        )}
-
-                        {showArchivedOnly && event.is_archived && (
-                          <Tooltip title="არქივიდან აღდგენა">
-                            <IconButton
-                              color="info"
-                              onClick={() => handleRestore(event.id)}
-                            >
-                              <RestoreIcon />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-
-                        {isAuthorizedForDeletion && (
-                          <Tooltip title="წაშლა">
-                            <IconButton
-                              color="error"
-                              onClick={() => handleDelete(event.id)}
-                            >
-                              <DeleteIcon />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                      </Box>
-                    )}
-                  </CardActions>
+                  </CardContent>
                 </Card>
               </Grid>
             );
