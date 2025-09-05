@@ -229,7 +229,7 @@ app.get('/api/events/:id/files', authenticateToken, async (req, res) => {
 });
 
 // File download endpoint
-app.get('/api/download/:filename', authenticateToken, async (req, res) => {
+app.get('/api/download/:filename', async (req, res) => {
   try {
     const { filename } = req.params;
     const filePath = path.join(__dirname, 'uploads', filename);
@@ -578,10 +578,10 @@ app.delete('/api/events/:id/delete-expense/:fileName', authenticateToken, async 
       }
     }
 
-    const initialLength = expenseFiles.length;
+    // Filter out the file to delete
     const filteredFiles = expenseFiles.filter(f => f.name !== fileName);
 
-    if (filteredFiles.length === initialLength) {
+    if (filteredFiles.length === expenseFiles.length) {
       return res.status(404).json({ message: 'ფაილი ვერ მოიძებნა' });
     }
 
@@ -2560,7 +2560,7 @@ app.post('/api/events/:id/upload-invoice', authenticateToken, upload.single('inv
   }
 });
 
-app.post('/api/events/:id/upload-expense', authenticateToken, authorizeRoles('admin', 'manager', 'sales', 'marketing'), upload.single('expense_file'), async (req, res) => {
+app.post('/api/events/:id/upload-expense', authenticateToken, upload.single('expense_file'), async (req, res) => {
   try {
     const { id } = req.params;
     const fileName = req.body.file_name || req.file.originalname;
@@ -2618,89 +2618,7 @@ app.post('/api/events/:id/upload-expense', authenticateToken, authorizeRoles('ad
   }
 });
 
-app.delete('/api/events/:id/delete-invoice/:fileName', authenticateToken, authorizeRoles('admin', 'manager', 'sales', 'marketing'), async (req, res) => {
-  try {
-    const { id, fileName } = req.params;
-
-    const currentEvent = await db.query('SELECT invoice_files FROM annual_services WHERE id = $1', [id]);
-    if (currentEvent.rows.length === 0) {
-      return res.status(404).json({ message: 'ივენთი ვერ მოიძებნა' });
-    }
-
-    let invoiceFiles = currentEvent.rows[0]?.invoice_files || [];
-    const fileIndex = invoiceFiles.findIndex(f => f.name === fileName);
-
-    if (fileIndex === -1) {
-      return res.status(404).json({ message: 'ფაილი ვერ მოიძებნა' });
-    }
-
-    const fileToDelete = invoiceFiles[fileIndex];
-
-    // Delete physical file
-    if (fileToDelete.path && fileToDelete.path.startsWith('/uploads/')) {
-      const filePath = path.join(__dirname, fileToDelete.path);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-    }
-
-    // Remove from array
-    invoiceFiles.splice(fileIndex, 1);
-
-    await db.query(
-      'UPDATE annual_services SET invoice_files = $1, files_updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-      [JSON.stringify(invoiceFiles), id]
-    );
-
-    res.json({ message: 'ინვოისის ფაილი წარმატებით წაიშალა' });
-  } catch (error) {
-    console.error('ინვოისის ფაილის წაშლის შეცდომა:', error);
-    res.status(500).json({ message: 'ფაილის წაშლა ვერ მოხერხდა' });
-  }
-});
-
-app.delete('/api/events/:id/delete-expense/:fileName', authenticateToken, authorizeRoles('admin', 'manager', 'sales', 'marketing'), async (req, res) => {
-  try {
-    const { id, fileName } = req.params;
-
-    const currentEvent = await db.query('SELECT expense_files FROM annual_services WHERE id = $1', [id]);
-    if (currentEvent.rows.length === 0) {
-      return res.status(404).json({ message: 'ივენთი ვერ მოიძებნა' });
-    }
-
-    let expenseFiles = currentEvent.rows[0]?.expense_files || [];
-    const fileIndex = expenseFiles.findIndex(f => f.name === fileName);
-
-    if (fileIndex === -1) {
-      return res.status(404).json({ message: 'ფაილი ვერ მოიძებნა' });
-    }
-
-    const fileToDelete = expenseFiles[fileIndex];
-
-    // Delete physical file
-    if (fileToDelete.path && fileToDelete.path.startsWith('/uploads/')) {
-      const filePath = path.join(__dirname, fileToDelete.path);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-    }
-
-    // Remove from array
-    expenseFiles.splice(fileIndex, 1);
-
-    await db.query(
-      'UPDATE annual_services SET expense_files = $1, files_updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-      [JSON.stringify(expenseFiles), id]
-    );
-
-    res.json({ message: 'ხარჯების ფაილი წარმატებით წაიშალა' });
-  } catch (error) {
-    console.error('ხარჯების ფაილის წაშლის შეცდომა:', error);
-    res.status(500).json({ message: 'ფაილის წაშლა ვერ მოხერხდა' });
-  }
-});
-
-app.delete('/api/events/:id/delete-plan', authenticateToken, authorizeRoles('admin', 'manager', 'sales', 'marketing'), async (req, res) => {
+app.delete('/api/events/:id/delete-plan', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     console.log('Delete plan request for event:', id);
@@ -2776,6 +2694,88 @@ app.delete('/api/events/:id/delete-plan', authenticateToken, authorizeRoles('adm
       message: 'ფაილის წაშლა ვერ მოხერხდა',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
+  }
+});
+
+app.delete('/api/events/:id/delete-invoice/:fileName', authenticateToken, async (req, res) => {
+  try {
+    const { id, fileName } = req.params;
+
+    const currentEvent = await db.query('SELECT invoice_files FROM annual_services WHERE id = $1', [id]);
+    if (currentEvent.rows.length === 0) {
+      return res.status(404).json({ message: 'ივენთი ვერ მოიძებნა' });
+    }
+
+    let invoiceFiles = currentEvent.rows[0]?.invoice_files || [];
+    const fileIndex = invoiceFiles.findIndex(f => f.name === fileName);
+
+    if (fileIndex === -1) {
+      return res.status(404).json({ message: 'ფაილი ვერ მოიძებნა' });
+    }
+
+    const fileToDelete = invoiceFiles[fileIndex];
+
+    // Delete physical file
+    if (fileToDelete.path && fileToDelete.path.startsWith('/uploads/')) {
+      const filePath = path.join(__dirname, fileToDelete.path);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+
+    // Remove from array
+    invoiceFiles.splice(fileIndex, 1);
+
+    await db.query(
+      'UPDATE annual_services SET invoice_files = $1, files_updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      [JSON.stringify(invoiceFiles), id]
+    );
+
+    res.json({ message: 'ინვოისის ფაილი წარმატებით წაიშალა' });
+  } catch (error) {
+    console.error('ინვოისის ფაილის წაშლის შეცდომა:', error);
+    res.status(500).json({ message: 'ფაილის წაშლა ვერ მოხერხდა' });
+  }
+});
+
+app.delete('/api/events/:id/delete-expense/:fileName', authenticateToken, async (req, res) => {
+  try {
+    const { id, fileName } = req.params;
+
+    const currentEvent = await db.query('SELECT expense_files FROM annual_services WHERE id = $1', [id]);
+    if (currentEvent.rows.length === 0) {
+      return res.status(404).json({ message: 'ივენთი ვერ მოიძებნა' });
+    }
+
+    let expenseFiles = currentEvent.rows[0]?.expense_files || [];
+    const fileIndex = expenseFiles.findIndex(f => f.name === fileName);
+
+    if (fileIndex === -1) {
+      return res.status(404).json({ message: 'ფაილი ვერ მოიძებნა' });
+    }
+
+    const fileToDelete = expenseFiles[fileIndex];
+
+    // Delete physical file
+    if (fileToDelete.path && fileToDelete.path.startsWith('/uploads/')) {
+      const filePath = path.join(__dirname, fileToDelete.path);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+
+    // Remove from array
+    expenseFiles.splice(fileIndex, 1);
+
+    await db.query(
+      'UPDATE annual_services SET expense_files = $1, files_updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      [JSON.stringify(expenseFiles), id]
+    );
+
+    res.json({ message: 'ხარჯების ფაილი წარმატებით წაიშალა' });
+  } catch (error) {
+    console.error('ხარჯის ფაილის წაშლის შეცდომა:', error);
+    res.status(500).json({ message: 'ფაილის წაშლა ვერ მოხერხდა' });
   }
 });
 

@@ -330,24 +330,28 @@ export const filesAPI = {
   },
 
   downloadFile: async (fileName) => {
+    const token = localStorage.getItem('token');
     const response = await api.get(`/download/${fileName}`, {
       responseType: 'blob',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
     });
     return response;
   },
 
   deletePlanFile: async (eventId) => {
-    const response = await api.delete(`/events/${eventId}/plan`);
+    const response = await api.delete(`/events/${eventId}/delete-plan`);
     return response.data;
   },
 
   deleteInvoiceFile: async (eventId, fileName) => {
-    const response = await api.delete(`/events/${eventId}/invoice/${fileName}`);
+    const response = await api.delete(`/events/${eventId}/delete-invoice/${encodeURIComponent(fileName)}`);
     return response.data;
   },
 
   deleteExpenseFile: async (eventId, fileName) => {
-    const response = await api.delete(`/events/${eventId}/expense/${fileName}`);
+    const response = await api.delete(`/events/${eventId}/delete-expense/${encodeURIComponent(fileName)}`);
     return response.data;
   }
 };

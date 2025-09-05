@@ -842,7 +842,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
           ) : (
             <Grid container spacing={2}>
               {filteredParticipants.map((participant) => (
-                <Grid item xs={12} sm={6} md={4} key={participant.id}>
+                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={participant.id}>
                   <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                     <CardContent sx={{ flexGrow: 1 }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
