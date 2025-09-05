@@ -142,7 +142,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
 
   const fetchEventDetails = async () => {
     try {
-      const response = await api.get(`/annual-services/${eventId}`);
+      const response = await api.get(`/events/${eventId}`);
       setEventDetails(response.data);
     } catch (error) {
       console.error('ივენთის დეტალების მიღების შეცდომა:', error);
@@ -153,7 +153,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
     try {
       console.log('Fetching exhibition data for event:', eventId);
 
-      const eventResponse = await api.get(`/annual-services/${eventId}`);
+      const eventResponse = await api.get(`/events/${eventId}`);
       const eventData = eventResponse.data;
       console.log('Event data received:', eventData);
 
@@ -317,7 +317,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
 
   const fetchParticipants = async () => {
     try {
-      const response = await api.get(`/annual-services/${eventId}/participants`);
+      const response = await api.get(`/events/${eventId}/participants`);
       setParticipants(response.data);
       setFilteredParticipants(response.data);
     } catch (error) {
@@ -362,8 +362,8 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
 
     try {
       const url = editingParticipant
-        ? `/annual-services/${eventId}/participants/${editingParticipant.id}`
-        : `/annual-services/${eventId}/participants`;
+        ? `/events/${eventId}/participants/${editingParticipant.id}`
+        : `/events/${eventId}/participants`;
 
       const submitData = new FormData();
 
@@ -410,7 +410,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
     if (!window.confirm('ნამდვილად გსურთ ამ მონაწილის წაშლა?')) return;
 
     try {
-      await api.delete(`/annual-services/${eventId}/participants/${participantId}`);
+      await api.delete(`/events/${eventId}/participants/${participantId}`);
       showNotification('მონაწილე წარმატებით წაიშალა', 'success');
       fetchParticipants();
     } catch (error) {
