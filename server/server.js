@@ -20,6 +20,34 @@ try {
 
 require('dotenv').config();
 
+// Token verification middleware
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ message: 'Access token არ არის მოწოდებული' });
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret', (err, user) => {
+    if (err) {
+      return res.status(403).json({ message: 'არასწორი token' });
+    }
+    req.user = user;
+    next();
+  });
+};
+
+// Authorization middleware
+const authorizeRoles = (...roles) => {
+  return (req, res, next) => {
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({ message: 'არ გაქვთ ამ მოქმედების ნებართვა' });
+    }
+    next();
+  };
+};
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -82,14 +110,136 @@ app.use(express.urlencoded({ extended: true }));
 // Serve static files (including uploaded files)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Get event files endpoint
+app.get('/api/events/:id/files', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log('Getting files for event ID:', id);
+
+    // First ensure required columns exist
+    try {
+      await db.query(`
+        ALTER TABLE annual_services 
+        ADD COLUMN IF NOT EXISTS plan_file_path VARCHAR(500)
+      `);
+      await db.query(`
+        ALTER TABLE annual_services 
+        ADD COLUMN IF NOT EXISTS plan_uploaded_by VARCHAR(255)
+      `);
+      await db.query(`
+        ALTER TABLE annual_services 
+        ADD COLUMN IF NOT EXISTS plan_uploaded_at TIMESTAMP
+      `);
+      await db.query(`
+        ALTER TABLE annual_services 
+        ADD COLUMN IF NOT EXISTS plan_updated_at TIMESTAMP
+      `);
+      await db.query(`
+        ALTER TABLE annual_services 
+        ADD COLUMN IF NOT EXISTS invoice_files TEXT
+      `);
+      await db.query(`
+        ALTER TABLE annual_services 
+        ADD COLUMN IF NOT EXISTS expense_files TEXT
+      `);
+      await db.query(`
+        ALTER TABLE annual_services 
+        ADD COLUMN IF NOT EXISTS files_updated_at TIMESTAMP
+      `);
+      console.log('Ensured file columns exist');
+    } catch (alterError) {
+      console.log('File columns might already exist:', alterError.message);
+    }
+
+    const result = await db.query(`
+      SELECT 
+        plan_file_path, 
+        plan_uploaded_by,
+        plan_uploaded_at,
+        plan_updated_at,
+        invoice_files,
+        expense_files,
+        files_updated_at
+      FROM annual_services 
+      WHERE id = $1
+    `, [id]);
+
+    if (result.rows.length === 0) {
+      console.log('Event not found for ID:', id);
+      return res.status(404).json({ message: 'ივენთი ვერ მოიძებნა' });
+    }
+
+    const event = result.rows[0];
+    console.log('Event found, file data:', {
+      plan_file_path: event.plan_file_path,
+      invoice_files_type: typeof event.invoice_files,
+      expense_files_type: typeof event.expense_files
+    });
+
+    // Parse JSON files safely
+    let invoiceFiles = [];
+    let expenseFiles = [];
+
+    try {
+      if (event.invoice_files) {
+        if (typeof event.invoice_files === 'string') {
+          invoiceFiles = JSON.parse(event.invoice_files);
+        } else if (Array.isArray(event.invoice_files)) {
+          invoiceFiles = event.invoice_files;
+        }
+      }
+    } catch (e) {
+      console.error('Error parsing invoice files:', e);
+      invoiceFiles = [];
+    }
+
+    try {
+      if (event.expense_files) {
+        if (typeof event.expense_files === 'string') {
+          expenseFiles = JSON.parse(event.expense_files);
+        } else if (Array.isArray(event.expense_files)) {
+          expenseFiles = event.expense_files;
+        }
+      }
+    } catch (e) {
+      console.error('Error parsing expense files:', e);
+      expenseFiles = [];
+    }
+
+    const response = {
+      plan_file_path: event.plan_file_path,
+      plan_uploaded_by: event.plan_uploaded_by,
+      plan_uploaded_at: event.plan_uploaded_at,
+      invoice_files: invoiceFiles,
+      expense_files: expenseFiles
+    };
+
+    console.log('Sending response:', response);
+    res.json(response);
+
+  } catch (error) {
+    console.error('Get event files error:', error);
+    console.error('Error details:', error.message);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      message: 'სერვერის შეცდომა',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
 // File download endpoint
 app.get('/api/download/:filename', authenticateToken, async (req, res) => {
   try {
     const { filename } = req.params;
     const filePath = path.join(__dirname, 'uploads', filename);
 
+    console.log('Download request for file:', filename);
+    console.log('Full file path:', filePath);
+
     // Check if file exists
     if (!fs.existsSync(filePath)) {
+      console.log('File not found at path:', filePath);
       return res.status(404).json({ message: 'ფაილი ვერ მოიძებნა' });
     }
 
@@ -107,14 +257,32 @@ app.get('/api/download/:filename', authenticateToken, async (req, res) => {
       contentType = 'application/msword';
     } else if (fileExtension === '.docx') {
       contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    } else if (['.jpg', '.jpeg'].includes(fileExtension)) {
+      contentType = 'image/jpeg';
+    } else if (fileExtension === '.png') {
+      contentType = 'image/png';
+    } else if (fileExtension === '.gif') {
+      contentType = 'image/gif';
+    } else if (fileExtension === '.bmp') {
+      contentType = 'image/bmp';
+    } else if (fileExtension === '.webp') {
+      contentType = 'image/webp';
     }
 
+    console.log('Serving file with content type:', contentType);
+
     res.setHeader('Content-Type', contentType);
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(filename)}"`);
     res.setHeader('Content-Length', stats.size);
 
     // Stream the file
     const fileStream = fs.createReadStream(filePath);
+    fileStream.on('error', (streamError) => {
+      console.error('File stream error:', streamError);
+      if (!res.headersSent) {
+        res.status(500).json({ message: 'ფაილის ჩამოტვირთვის შეცდომა' });
+      }
+    });
     fileStream.pipe(res);
 
   } catch (error) {
@@ -136,35 +304,6 @@ if (process.env.NODE_ENV === 'production') {
     }
   });
 }
-
-// Token verification middleware
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ message: 'Access token არ არის მოწოდებული' });
-  }
-
-  jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret', (err, user) => {
-    if (err) {
-      return res.status(403).json({ message: 'არასწორი token' });
-    }
-    req.user = user;
-    next();
-  });
-};
-
-// Authorization middleware
-const authorizeRoles = (...roles) => {
-  return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ message: 'არ გაქვთ ამ მოქმედების ნებართვა' });
-    }
-    next();
-  };
-};
-
 
 // Event file upload endpoints
 app.post('/api/events/:id/upload-plan', authenticateToken, upload.single('plan_file'), async (req, res) => {

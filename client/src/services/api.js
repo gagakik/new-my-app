@@ -234,4 +234,122 @@ export const statisticsAPI = {
   },
 };
 
+// Files API
+export const filesAPI = {
+  downloadPlanFile: async (fileName) => {
+    const response = await api.get(`/download/${fileName}`, {
+      responseType: 'blob',
+    });
+    
+    // Create download link
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', fileName);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  },
+
+  downloadInvoiceFile: async (fileName) => {
+    const response = await api.get(`/download/${fileName}`, {
+      responseType: 'blob',
+    });
+    
+    // Create download link
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', fileName);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  },
+
+  downloadExpenseFile: async (fileName) => {
+    const response = await api.get(`/download/${fileName}`, {
+      responseType: 'blob',
+    });
+    
+    // Create download link
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', fileName);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  },
+
+  getEventFiles: async (eventId) => {
+    const response = await api.get(`/events/${eventId}/files`);
+    return response.data;
+  },
+
+  uploadPlanFile: async (eventId, file) => {
+    const formData = new FormData();
+    formData.append('plan_file', file);
+    
+    const response = await api.post(`/events/${eventId}/upload-plan`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  uploadInvoiceFiles: async (eventId, files) => {
+    const formData = new FormData();
+    files.forEach(file => {
+      formData.append('invoice_files', file);
+    });
+    
+    const response = await api.post(`/events/${eventId}/upload-invoices`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  uploadExpenseFiles: async (eventId, files) => {
+    const formData = new FormData();
+    files.forEach(file => {
+      formData.append('expense_files', file);
+    });
+    
+    const response = await api.post(`/events/${eventId}/upload-expenses`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  downloadFile: async (fileName) => {
+    const response = await api.get(`/download/${fileName}`, {
+      responseType: 'blob',
+    });
+    return response;
+  },
+
+  deletePlanFile: async (eventId) => {
+    const response = await api.delete(`/events/${eventId}/plan`);
+    return response.data;
+  },
+
+  deleteInvoiceFile: async (eventId, fileName) => {
+    const response = await api.delete(`/events/${eventId}/invoice/${fileName}`);
+    return response.data;
+  },
+
+  deleteExpenseFile: async (eventId, fileName) => {
+    const response = await api.delete(`/events/${eventId}/expense/${fileName}`);
+    return response.data;
+  }
+};
+
 export default api;

@@ -24,7 +24,10 @@ import {
   FormControl,
   FormControlLabel,
   Radio,
-  RadioGroup
+  RadioGroup,
+  Modal,
+  Backdrop,
+  Fade
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -35,8 +38,11 @@ import {
   Description as DocIcon,
   Folder as FolderIcon,
   AttachFile as AttachFileIcon,
-  Autorenew as AutorenewIcon
+  Autorenew as AutorenewIcon,
+  Visibility as VisibilityIcon,
+  Image as ImageIcon
 } from '@mui/icons-material';
+import { filesAPI } from '../services/api';
 import api from '../services/api'; // Assuming api is imported from '../services/api'
 
 const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
@@ -46,6 +52,9 @@ const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
   const [uploading, setUploading] = useState(false);
   const [uploadType, setUploadType] = useState('');
   const [eventData, setEventData] = useState(event || {}); // Use state to hold event data
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewFile, setPreviewFile] = useState(null);
+  const [previewType, setPreviewType] = useState('');
 
   const isAuthorizedForManagement =
     userRole === 'admin' ||
@@ -54,9 +63,9 @@ const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
     userRole === 'marketing';
 
   useEffect(() => {
-    if (event) {
+    if (event && event.id) {
       console.log('Event data:', event);
-      setEventData(event); // Initialize eventData with the event prop
+      setEventData(event);
       setPlanFile(event.plan_file_path);
 
       // Parse JSON strings if they exist
@@ -64,8 +73,8 @@ const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
       let parsedExpenseFiles = [];
 
       try {
-        parsedInvoiceFiles = typeof event.invoice_files === 'string' 
-          ? JSON.parse(event.invoice_files) 
+        parsedInvoiceFiles = typeof event.invoice_files === 'string'
+          ? JSON.parse(event.invoice_files)
           : event.invoice_files || [];
       } catch (e) {
         console.log('Error parsing invoice files:', e);
@@ -73,8 +82,8 @@ const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
       }
 
       try {
-        parsedExpenseFiles = typeof event.expense_files === 'string' 
-          ? JSON.parse(event.expense_files) 
+        parsedExpenseFiles = typeof event.expense_files === 'string'
+          ? JSON.parse(event.expense_files)
           : event.expense_files || [];
       } catch (e) {
         console.log('Error parsing expense files:', e);
@@ -83,56 +92,51 @@ const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
 
       setInvoiceFiles(parsedInvoiceFiles);
       setExpenseFiles(parsedExpenseFiles);
-
-      // Refresh data to ensure we have latest info
-      // refreshEventData(); // Removed automatic refresh on mount to avoid double fetch if event is already fresh
     }
-  }, [event]);
+  }, [event]); // Include the full event object in dependencies
+
+  const [refreshing, setRefreshing] = useState(false);
 
   const refreshEventData = async () => {
+    // Prevent multiple simultaneous refresh requests
+    if (refreshing) return;
+
     // Ensure event.id is available before making the API call
     if (!event || !event.id) {
       console.error("Cannot refresh data: event or event.id is not available.");
       return;
     }
+
+    setRefreshing(true);
     try {
-      const response = await api.get(`/annual-services/${event.id}`);
+      const response = await api.get(`/events/${event.id}/files`);
 
       if (response.status === 200) {
-        const updatedEvent = response.data;
-        console.log('Updated event data:', updatedEvent);
-        setEventData(updatedEvent); // Update eventData state
-        setPlanFile(updatedEvent.plan_file_path);
-        console.log('Plan file updated:', updatedEvent.plan_file_path);
+        const updatedFiles = response.data;
+        console.log('Updated files data:', updatedFiles);
 
-        // Parse JSON strings if they exist
-        let parsedInvoiceFiles = [];
-        let parsedExpenseFiles = [];
+        // Update plan file
+        setPlanFile(updatedFiles.plan_file_path);
 
-        try {
-          parsedInvoiceFiles = typeof updatedEvent.invoice_files === 'string' 
-            ? JSON.parse(updatedEvent.invoice_files) 
-            : updatedEvent.invoice_files || [];
-        } catch (e) {
-          console.log('Error parsing invoice files:', e);
-          parsedInvoiceFiles = [];
-        }
+        // Update event data state with file info
+        setEventData(prev => ({
+          ...prev,
+          plan_file_path: updatedFiles.plan_file_path,
+          plan_uploaded_by: updatedFiles.plan_uploaded_by,
+          plan_uploaded_at: updatedFiles.plan_uploaded_at
+        }));
 
-        try {
-          parsedExpenseFiles = typeof updatedEvent.expense_files === 'string' 
-            ? JSON.parse(updatedEvent.expense_files) 
-            : updatedEvent.expense_files || [];
-        } catch (e) {
-          console.log('Error parsing expense files:', e);
-          parsedExpenseFiles = [];
-        }
+        // Set files arrays directly
+        setInvoiceFiles(updatedFiles.invoice_files || []);
+        setExpenseFiles(updatedFiles.expense_files || []);
 
-        setInvoiceFiles(parsedInvoiceFiles);
-        setExpenseFiles(parsedExpenseFiles);
+        console.log('Files updated - Invoice files:', updatedFiles.invoice_files?.length || 0, 'Expense files:', updatedFiles.expense_files?.length || 0);
       }
     } catch (error) {
-      console.error('ივენთის მონაცემების განახლების შეცდომა:', error);
+      console.error('ივენთის ფაილების განახლების შეცდომა:', error);
       showNotification('ფაილების სიის განახლება ვერ მოხერხდა.', 'error');
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -151,32 +155,23 @@ const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
     }
 
     try {
-      const formData = new FormData();
-
+      let response;
       if (type === 'plan') {
-        formData.append('plan_file', file);
+        response = await filesAPI.uploadPlanFile(event.id, file);
       } else if (type === 'invoice') {
-        formData.append('invoice_file', file);
-        formData.append('file_name', file.name);
+        response = await filesAPI.uploadInvoiceFiles(event.id, [file]);
       } else if (type === 'expense') {
-        formData.append('expense_file', file);
-        formData.append('file_name', file.name);
+        response = await filesAPI.uploadExpenseFiles(event.id, [file]);
       }
 
-      const response = await api.post(`/events/${event.id}/upload-${type}`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-
-      showNotification(response.data.message, 'success');
+      showNotification(response.message, 'success');
       await refreshEventData();
     } catch (error) {
       console.error('File upload error:', error);
       console.error('Error response:', error.response);
       console.error('Error response data:', error.response?.data);
 
-      const errorMessage = error.response?.data?.message || 'ფაილის ატვირთვა ვერ მოხერხდა';
+      const errorMessage = error.response?.data?.message || error.message || 'ფაილის ატვირთვა ვერ მოხერხდა';
       console.error('Showing error message:', errorMessage);
 
       showNotification(errorMessage, 'error');
@@ -201,19 +196,16 @@ const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
     }
 
     try {
-      let url;
-
+      let response;
       if (type === 'plan') {
-        url = `/events/${event.id}/delete-plan`;
+        response = await filesAPI.deletePlanFile(event.id);
       } else if (type === 'invoice') {
-        url = `/events/${event.id}/delete-invoice/${encodeURIComponent(fileName)}`;
+        response = await filesAPI.deleteInvoiceFile(event.id, fileName);
       } else if (type === 'expense') {
-        url = `/events/${event.id}/delete-expense/${encodeURIComponent(fileName)}`;
+        response = await filesAPI.deleteExpenseFile(event.id, fileName);
       }
 
-      const response = await api.delete(url);
-
-      showNotification(response.data.message, 'success');
+      showNotification(response.message, 'success');
 
       if (type === 'plan') {
         setPlanFile(null);
@@ -229,7 +221,7 @@ const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
       console.error('File delete error:', error);
       console.error('Error response:', error.response);
       console.error('Error response data:', error.response?.data);
-      showNotification(error.response?.data?.message || 'ფაილის წაშლა ვერ მოხერხდა', 'error');
+      showNotification(error.response?.data?.message || error.message || 'ფაილის წაშლა ვერ მოხერხდა', 'error');
     }
   };
 
@@ -261,8 +253,83 @@ const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
     const extension = fileName.split('.').pop()?.toLowerCase();
     if (extension === 'pdf') return <PdfIcon color="error" />;
     if (extension === 'xlsx' || extension === 'xls') return <Chip label="XLSX" size="small" color="success" variant="outlined" sx={{ mr: 1 }} />;
+    if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(extension)) return <ImageIcon color="info" />;
     return <DocIcon color="primary" />;
   };
+
+  const isPreviewable = (fileName) => {
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    return extension === 'pdf' || ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(extension);
+  };
+
+  const handlePreview = async (fileName, filePath) => {
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    if (extension === 'pdf') {
+      setPreviewType('pdf');
+    } else if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(extension)) {
+      setPreviewType('image');
+    } else {
+      return; // Not previewable
+    }
+
+    try {
+      // Extract filename from path properly
+      const actualFileName = filePath ? filePath.split('/').pop() : fileName;
+
+      const response = await filesAPI.downloadFile(actualFileName);
+
+      const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/octet-stream' });
+      const blobUrl = URL.createObjectURL(blob);
+
+      setPreviewFile({
+        name: fileName,
+        path: filePath,
+        url: blobUrl
+      });
+      setPreviewOpen(true);
+    } catch (error) {
+      console.error('Preview error:', error);
+      showNotification('ფაილის პრევიუ ვერ მოხერხდა', 'error');
+    }
+  };
+
+  const closePreview = () => {
+    // Clean up blob URL to prevent memory leaks
+    if (previewFile?.url && previewFile.url.startsWith('blob:')) {
+      URL.revokeObjectURL(previewFile.url);
+    }
+    setPreviewOpen(false);
+    setPreviewFile(null);
+    setPreviewType('');
+  };
+
+  const handlePlanFileDownload = async (fileName) => {
+    try {
+      await filesAPI.downloadPlanFile(fileName);
+    } catch (error) {
+      console.error('Error downloading plan file:', error);
+      showNotification('ფაილის ჩამოტვირთვის შეცდომა', 'error');
+    }
+  };
+
+  const handleInvoiceFileDownload = async (fileName) => {
+    try {
+      await filesAPI.downloadInvoiceFile(fileName);
+    } catch (error) {
+      console.error('Error downloading invoice file:', error);
+      showNotification('ფაილის ჩამოტვირთვის შეცდომა', 'error');
+    }
+  };
+
+  const handleExpenseFileDownload = async (fileName) => {
+    try {
+      await filesAPI.downloadExpenseFile(fileName);
+    } catch (error) {
+      console.error('Error downloading expense file:', error);
+      showNotification('ფაილის ჩამოტვირთვის შეცდომა', 'error');
+    }
+  };
+
 
   return (
     <Dialog open={true} onClose={onClose} maxWidth="md" fullWidth>
@@ -283,14 +350,15 @@ const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
           {/* Manual Refresh Button */}
           <Button
             variant="text"
-            startIcon={<AutorenewIcon />}
+            startIcon={refreshing ? <CircularProgress size={16} sx={{ color: 'white' }} /> : <AutorenewIcon />}
             onClick={refreshEventData}
             color="inherit"
             size="small"
+            disabled={refreshing}
             sx={{ color: 'white', '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)' } }}
             title="ფაილების სიის განახლება"
           >
-            განახლება
+            {refreshing ? 'განახლება...' : 'განახლება'}
           </Button>
           <IconButton onClick={onClose} sx={{ color: 'white' }}>
             <CloseIcon />
@@ -328,13 +396,29 @@ const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
                     <Box sx={{ display: 'flex', gap: 1, ml: 'auto' }}>
                       <Button
                         variant="outlined"
-                        startIcon={<DownloadIcon />}
+                        startIcon={<VisibilityIcon />}
                         size="small"
                         onClick={() => {
                           const filePath = eventData.plan_file_path || planFile;
                           if (filePath) {
                             const filename = filePath.split('/').pop();
-                            window.open(`/api/download/${filename}`, '_blank');
+                            handlePreview(filename, filePath);
+                          }
+                        }}
+                        disabled={!(eventData.plan_file_path || planFile)}
+                        sx={{ mr: 1 }}
+                      >
+                        Preview
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<DownloadIcon />}
+                        size="small"
+                        onClick={async () => {
+                          const filePath = eventData.plan_file_path || planFile;
+                          if (filePath) {
+                            const filename = filePath.split('/').pop();
+                            await handlePlanFileDownload(filename);
                           }
                         }}
                         disabled={!(eventData.plan_file_path || planFile)}
@@ -431,14 +515,30 @@ const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
                         </Box>
                       </Box>
                       <Box sx={{ display: 'flex', gap: 1, ml: 'auto' }}>
+                        {isPreviewable(file.name) && (
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<VisibilityIcon />}
+                            onClick={() => handlePreview(file.name, file.path)}
+                            disabled={!file.path}
+                            sx={{ mr: 1 }}
+                          >
+                            Preview
+                          </Button>
+                        )}
                         <Button
                           variant="outlined"
                           size="small"
                           startIcon={<DownloadIcon />}
-                          onClick={() => {
+                          onClick={async () => {
                             if (file.path) {
                               const filename = file.path.split('/').pop();
-                              window.open(`/api/download/${filename}`, '_blank');
+                              if (isInvoice) {
+                                await handleInvoiceFileDownload(filename);
+                              } else {
+                                await handleExpenseFileDownload(filename);
+                              }
                             }
                           }}
                           disabled={!file.path}
@@ -485,7 +585,7 @@ const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
 
                 <input
                   type="file"
-                  accept=".pdf,.doc,.docx,.xlsx,.xls"
+                  accept=".pdf,.doc,.docx,.xlsx,.xls,.jpg,.jpeg,.png,.gif,.bmp,.webp"
                   style={{ display: 'none' }}
                   id="attached-file-upload-input"
                   onChange={(e) => {
@@ -525,6 +625,121 @@ const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
           დახურვა
         </Button>
       </DialogActions>
+
+      {/* Preview Modal */}
+      <Modal
+        open={previewOpen}
+        onClose={closePreview}
+        closeAfterTransition
+        BackdropComponent={Backdrop}
+        BackdropProps={{
+          timeout: 500,
+        }}
+      >
+        <Fade in={previewOpen}>
+          <Box sx={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '90vw',
+            height: '90vh',
+            bgcolor: 'background.paper',
+            boxShadow: 24,
+            borderRadius: 2,
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            {/* Preview Header */}
+            <Box sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              p: 2,
+              borderBottom: '1px solid #e0e0e0',
+              backgroundColor: '#f5f5f5'
+            }}>
+              <Typography variant="h6" component="h2" sx={{ fontSize: '1.1rem' }}>
+                {previewFile?.name}
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<DownloadIcon />}
+                  onClick={async () => {
+                    if (previewFile?.path) {
+                      const filename = previewFile.path.split('/').pop();
+                      if (previewFile.name.toLowerCase().includes('invoice')) {
+                        await handleInvoiceFileDownload(filename);
+                      } else if (previewFile.name.toLowerCase().includes('expense')) {
+                        await handleExpenseFileDownload(filename);
+                      } else {
+                        await handlePlanFileDownload(filename);
+                      }
+                    }
+                  }}
+                >
+                  ჩამოტვირთვა
+                </Button>
+                <IconButton onClick={closePreview} size="small">
+                  <CloseIcon />
+                </IconButton>
+              </Box>
+            </Box>
+
+            {/* Preview Content */}
+            <Box sx={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+              {previewType === 'pdf' && previewFile && (
+                <iframe
+                  src={previewFile.url}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    border: 'none'
+                  }}
+                  title="PDF Preview"
+                />
+              )}
+
+              {previewType === 'image' && previewFile && (
+                <Box sx={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'auto',
+                  p: 2
+                }}>
+                  <img
+                    src={previewFile.url}
+                    alt={previewFile.name}
+                    style={{
+                      maxWidth: '100%',
+                      maxHeight: '100%',
+                      objectFit: 'contain',
+                      borderRadius: '4px',
+                      boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
+                    }}
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'block';
+                    }}
+                  />
+                  <Alert
+                    severity="error"
+                    sx={{ display: 'none', mt: 2 }}
+                  >
+                    სურათის ჩატვირთვა ვერ მოხერხდა
+                  </Alert>
+                </Box>
+              )}
+            </Box>
+          </Box>
+        </Fade>
+      </Modal>
     </Dialog>
   );
 };
