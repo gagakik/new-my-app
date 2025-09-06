@@ -1,0 +1,240 @@
+
+.services-container {
+  width: 100%;
+  max-width: 1400px;
+  margin: 2rem auto;
+  padding: 1.5rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.services-container h2 {
+  text-align: center;
+  color: #343a40;
+  margin-bottom: 1.5rem;
+}
+
+.services-container p.no-services {
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+}
+
+.add-new {
+  display: block;
+  width: fit-content;
+  margin: 0 auto 1.5rem;
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.add-new:hover {
+  background-color: #0056b3;
+}
+
+.services-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  background-color: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.services-table th,
+.services-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.services-table th {
+  background-color: #e9ecef;
+  color: #495057;
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+}
+
+.services-table tbody tr:nth-child(even) {
+  background-color: #f2f2f2;
+}
+
+.services-table tbody tr:hover {
+  background-color: #e2f0ff;
+}
+
+.service-name-link {
+  background: none;
+  border: none;
+  color: #007bff;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: inherit;
+  padding: 0;
+}
+
+.service-name-link:hover {
+  color: #0056b3;
+}
+
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  text-align: center;
+  display: inline-block;
+  min-width: 70px;
+}
+
+.status-badge.active {
+  background-color: #28a745;
+  color: white;
+}
+
+.status-badge.upcoming {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.status-badge.finished {
+  background-color: #6c757d;
+  color: white;
+}
+
+.status-badge.archived {
+  background-color: #343a40;
+  color: white;
+}
+
+.status-badge.inactive {
+  background-color: #dc3545;
+  color: white;
+}
+
+.service-details-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80%;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.modal-header h3 {
+  margin: 0;
+}
+
+.close-modal {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #6c757d;
+}
+
+.close-modal:hover {
+  color: #495057;
+}
+
+.modal-body {
+  padding: 1rem;
+}
+
+.modal-body h4 {
+  margin-top: 1rem;
+  color: #495057;
+}
+
+.modal-body ul {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.modal-body li {
+  margin-bottom: 0.3rem;
+}
+
+.services-table .actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-start;
+}
+
+.services-table .actions button {
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  border-radius: 4px;
+  white-space: nowrap;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 2px;
+}
+
+.services-table .view {
+  background-color: #3b82f6;
+  color: #fff;
+}
+
+.services-table .edit {
+  background-color: #28a745;
+  color: #fff;
+}
+
+.services-table .archive {
+  background-color: #6b7280;
+  color: #fff;
+}
+
+.services-table .delete {
+  background-color: #dc3545;
+  color: #fff;
+}
+
+.services-table .view:hover {
+  background-color: #2563eb;
+}
+
+.services-table .edit:hover {
+  background-color: #218838;
+}
+
+.services-table .archive:hover {
+  background-color: #4b5563;
+}
+
+.services-table .delete:hover {
+  background-color: #c82333;
+}

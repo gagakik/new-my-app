@@ -1,6 +1,6 @@
+
 import React, { useState } from 'react';
-import { companiesAPI } from '../services/api';
-import api from '../services/api';
+import './CompanyImport.css';
 
 const CompanyImport = ({ showNotification, onImportComplete }) => {
   const [file, setFile] = useState(null);
@@ -14,7 +14,7 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'application/vnd.ms-excel'
       ];
-
+      
       if (allowedTypes.includes(selectedFile.type)) {
         setFile(selectedFile);
         setImportResult(null);
@@ -27,46 +27,60 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
 
   const downloadTemplate = async () => {
     try {
-      const response = await api.get('/import/companies/template', {
-        responseType: 'blob'
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/import/companies/template', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
 
-      const blob = response.data;
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = 'companies-template.xlsx';
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      showNotification('შაბლონი ჩამოიტვირთა', 'success');
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = 'companies-template.xlsx';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        showNotification('შაბლონი ჩამოიტვირთა', 'success');
+      } else {
+        throw new Error('შაბლონის ჩამოტვირთვა ვერ მოხერხდა');
+      }
     } catch (error) {
-      showNotification(`შეცდომა: ${error.response?.data?.message || error.message}`, 'error');
+      showNotification(`შეცდომა: ${error.message}`, 'error');
     }
   };
 
-  const handleExport = async () => {
+  const exportCompanies = async () => {
     try {
-      const response = await api.get('/import/companies/export', {
-        responseType: 'blob'
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/import/companies/export', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
 
-      const blob = response.data;
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      const timestamp = new Date().toISOString().split('T')[0];
-      a.download = `companies-export-${timestamp}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      showNotification('კომპანიების ექსპორტი დასრულდა', 'success');
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        const timestamp = new Date().toISOString().split('T')[0];
+        a.download = `companies-export-${timestamp}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        showNotification('კომპანიების ექსპორტი დასრულდა', 'success');
+      } else {
+        throw new Error('ექსპორტის შეცდომა');
+      }
     } catch (error) {
-      showNotification(`შეცდომა: ${error.response?.data?.message || error.message}`, 'error');
+      showNotification(`შეცდომა: ${error.message}`, 'error');
     }
   };
 
@@ -80,15 +94,34 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
     setImportResult(null);
 
     try {
-      const data = await companiesAPI.import(file);
-      setImportResult(data);
-      showNotification(data.message, 'success');
-      if (onImportComplete) {
-        onImportComplete();
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+      formData.append('excelFile', file);
+
+      const response = await fetch('/api/import/companies', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setImportResult(result);
+        showNotification(
+          `იმპორტი დასრულდა: ${result.imported}/${result.total} კომპანია დამატებულია`,
+          'success'
+        );
+        if (onImportComplete) {
+          onImportComplete();
+        }
+      } else {
+        throw new Error(result.error || 'იმპორტის შეცდომა');
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.error || error.message || 'იმპორტის შეცდომა';
-      showNotification(`შეცდომა: ${errorMessage}`, 'error');
+      showNotification(`შეცდომა: ${error.message}`, 'error');
     } finally {
       setImporting(false);
     }
@@ -116,10 +149,10 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
           >
             📥 შაბლონის ჩამოტვირთვა
           </button>
-
+          
           <button 
             className="export-btn"
-            onClick={handleExport}
+            onClick={exportCompanies}
             type="button"
           >
             📤 კომპანიების ექსპორტი
@@ -150,9 +183,9 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
             onClick={handleImport}
             disabled={!file || importing}
           >
-            {importing ? '⏳ იმპორტირდება...' : ' 📤 იმპორტი'}
+            {importing ? '⏳ იმპორტირდება...' : '📤 იმპორტი'}
           </button>
-
+          
           {file && (
             <button
               className="reset-btn"
@@ -204,7 +237,7 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
           <li>აირჩიეთ შევსებული ფაილი და დააჭირეთ "იმპორტი"</li>
           <li>თუ კომპანია უკვე არსებობს (იგივე საიდენტიფიკაციო კოდით), ის განახლდება</li>
         </ol>
-
+        
         <h4>მნიშვნელოვანი წესები:</h4>
         <ul>
           <li><strong>საჭირო ველები:</strong> კომპანიის დასახელება და საიდენტიფიკაციო კოდი</li>

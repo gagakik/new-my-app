@@ -1,25 +1,13 @@
-
 import React from 'react';
-import { Box, Typography, Container } from '@mui/material';
+import './Footer.css';
 
 const Footer = () => {
   return (
-    <Box
-      component="footer"
-      sx={{
-        backgroundColor: 'primary.main',
-        color: 'white',
-        py: 2,
-        mt: 'auto',
-      }}
-    >
-      <Container maxWidth="lg">
-        <Typography variant="body2" align="center">
-          © 2024 Expo Georgia Co. ყველა უფლება დაცულია.
-        </Typography>
-      </Container>
-    </Box>
+    <footer className="main-footer">
+      <p>&copy; 2025 ყველა უფლება დაცულია.</p>
+      <p>გაგა კიკვილაშვილი</p>
+    </footer>
   );
 };
 
-export default Footer;
+export default Footer; // დაამატეთ ეს ხაზი

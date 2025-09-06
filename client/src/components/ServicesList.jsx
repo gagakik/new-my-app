@@ -1,410 +1,297 @@
-import React, { useState, useEffect } from 'react';
-import { servicesAPI } from '../services/api';
-import {
-  Container,
-  Typography,
-  Box,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Button,
-  TextField,
-  IconButton,
-  Alert,
-  Tooltip,
-  CircularProgress,
-  Chip,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Grid
-} from '@mui/material';
-import {
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Visibility as VisibilityIcon,
-  Archive as ArchiveIcon,
-  Restore as RestoreIcon,
-  Event as EventIcon,
-  Clear as ClearIcon,
-  Search as SearchIcon
-} from '@mui/icons-material';
+import React, { useState, useEffect, useCallback } from 'react';
+import './ServicesList.css';
 import ServiceForm from './ServiceForm';
-import EventParticipants from './EventParticipants';
-import EventForm from './EventForm';
+import { useNavigate } from 'react-router-dom';
 
-const ServicesList = ({ showNotification }) => {
+const ServicesList = ({ showNotification, userRole }) => {
   const [services, setServices] = useState([]);
-  const [filteredServices, setFilteredServices] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [openForm, setOpenForm] = useState(false);
-  const [editingService, setEditingService] = useState(null);
+  const [error, setError] = useState(null);
+  const [editingId, setEditingId] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
-  const [openParticipants, setOpenParticipants] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [showArchived, setShowArchived] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchServices();
-  }, []);
+  const isAuthorizedForManagement = 
+    userRole === 'admin' || 
+    userRole === 'sales' || 
+    userRole === 'marketing';
 
-  useEffect(() => {
-    filterServices();
-  }, [services, searchTerm, statusFilter, showArchived]);
-
-  const fetchServices = async () => {
+  const fetchServices = useCallback(async () => {
     try {
-      setLoading(true);
-      const data = await servicesAPI.getAll();
+      const token = localStorage.getItem('token'); 
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+      const response = await fetch('/api/annual-services', {
+        headers: headers
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'მონაცემების მიღება ვერ მოხერხდა.');
+      }
+      const data = await response.json();
       setServices(data);
     } catch (err) {
-      console.error('Error fetching services:', err);
-      setError('სერვისების ჩატვირთვა ვერ მოხერხდა');
-      showNotification('სერვისების ჩატვირთვა ვერ მოხერხდა', 'error');
+      setError(err.message);
+      showNotification(`შეცდომა სერვისების ჩატვირთვისას: ${err.message}`, 'error');
     } finally {
       setLoading(false);
     }
-  };
+  }, [showNotification]);
 
-  const filterServices = () => {
-    let filtered = services.filter(service =>
-      (showArchived ? service.is_archived : !service.is_archived)
-    );
+  useEffect(() => {
+    fetchServices();
+  }, [fetchServices]);
 
-    if (searchTerm) {
-      filtered = filtered.filter(service =>
-        service.service_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        service.exhibition_name?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
+  const handleDelete = async (id) => {
+    const isConfirmed = window.confirm('ნამდვილად გსურთ ამ სერვისის წაშლა?');
+    if (!isConfirmed) return;
 
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(service => service.status === statusFilter);
-    }
-
-    setFilteredServices(filtered);
-  };
-
-  const handleCreateService = () => {
-    setEditingService(null);
-    setOpenForm(true);
-  };
-
-  const handleEditService = (service) => {
-    setEditingService(service);
-    setOpenForm(true);
-  };
-
-  const handleDeleteService = async (id) => {
-    if (window.confirm('დარწმუნებული ხართ, რომ გსურთ ამ სერვისის წაშლა?')) {
-      try {
-        await servicesAPI.delete(id);
-        showNotification('სერვისი წარმატებით წაიშალა', 'success');
-        fetchServices();
-      } catch (error) {
-        console.error('Error deleting service:', error);
-        showNotification('სერვისის წაშლა ვერ მოხერხდა', 'error');
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        showNotification('ავტორიზაციის ტოკენი არ მოიძებნა. გთხოვთ, შეხვიდეთ სისტემაში.', 'error');
+        return;
       }
-    }
-  };
 
-  const handleArchiveService = async (id) => {
-    if (window.confirm('ნამდვილად გსურთ ამ სერვისის არქივში გადატანა?')) {
-      try {
-        await servicesAPI.archive(id);
-        showNotification('სერვისი დაარქივდა', 'success');
-        fetchServices();
-      } catch (error) {
-        console.error('Error archiving service:', error);
-        showNotification('სერვისის დაარქივება ვერ მოხერხდა', 'error');
+      const response = await fetch(`/api/annual-services/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        showNotification('სერვისი წარმატებით წაიშალა!', 'success');
+        setServices(services.filter((service) => service.id !== id));
+      } else {
+        const errorData = await response.json();
+        showNotification(`წაშლა ვერ მოხერხდა: ${errorData.message}`, 'error');
       }
+    } catch (error) {
+      console.error('შეცდომა წაშლისას:', error);
+      showNotification('დაფიქსირდა შეცდომა სერვერთან კავშირისას.', 'error');
     }
   };
 
-  const handleViewParticipants = (service) => {
-    setSelectedService(service);
-    setOpenParticipants(true);
+  const handleEditClick = (service) => {
+    setEditingId(service.id);
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'active': return 'success';
-      case 'completed': return 'primary';
-      case 'cancelled': return 'error';
-      default: return 'default';
+  const handleServiceUpdated = () => {
+    setEditingId(null);
+    fetchServices();
+  };
+
+  const handleArchive = async (id) => {
+    const isConfirmed = window.confirm('ნამდვილად გსურთ ამ სერვისის არქივში გადატანა?');
+    if (!isConfirmed) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/annual-services/${id}/archive`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        showNotification('სერვისი წარმატებით არქივში გადაიტანა!', 'success');
+        fetchServices();
+      } else {
+        const errorData = await response.json();
+        showNotification(`არქივში გადატანა ვერ მოხერხდა: ${errorData.message}`, 'error');
+      }
+    } catch (error) {
+      showNotification('დაფიქსირდა შეცდომა სერვერთან კავშირისას.', 'error');
     }
   };
 
-  const getStatusLabel = (status) => {
-    switch (status) {
-      case 'active': return 'აქტიური';
-      case 'completed': return 'დასრულებული';
-      case 'cancelled': return 'გაუქმებული';
-      default: return 'უცნობი';
+  const viewServiceDetails = async (service) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/annual-services/${service.id}/details`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const details = await response.json();
+        setSelectedService(details);
+        setShowDetails(true);
+      } else {
+        showNotification('სერვისის დეტალების მიღება ვერ მოხერხდა', 'error');
+      }
+    } catch (error) {
+      showNotification('შეცდომა სერვისის დეტალების ჩატვირთვისას', 'error');
     }
   };
 
   if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
-        <CircularProgress />
-      </Box>
-    );
+    return <div>იტვირთება...</div>;
   }
 
+  if (error) {
+    return <div>შეცდომა: {error}</div>;
+  }
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('ka-GE');
+  };
+
+  const getStatusBadge = (service) => {
+    const now = new Date();
+    const startDate = new Date(service.start_date);
+    const endDate = new Date(service.end_date);
+
+    if (service.is_archived) return { text: 'არქივი', class: 'archived' };
+    if (!service.is_active) return { text: 'არააქტიური', class: 'inactive' };
+    if (now < startDate) return { text: 'მომავალი', class: 'upcoming' };
+    if (now > endDate) return { text: 'დასრულებული', class: 'finished' };
+    return { text: 'მიმდინარე', class: 'active' };
+  };
+
   return (
-    <Container maxWidth="xl" sx={{ py: 3 }}>
-      <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-            <EventIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-            წლიური სერვისები
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleCreateService}
-            sx={{
-              borderRadius: 2,
-              px: 3,
-              py: 1.5,
-              background: 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)',
-              '&:hover': {
-                background: 'linear-gradient(135deg, #1565c0 0%, #1976d2 100%)'
-              }
-            }}
-          >
-            ახალი სერვისი
-          </Button>
-        </Box>
+    <div className="services-container">
+      <h2>ყოველწლური სერვისები</h2>
+      {isAuthorizedForManagement && (
+        <button className="add-new" onClick={() => setEditingId(0)}>
+          ახალი სერვისის დამატება
+        </button>
+      )}
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
-          </Alert>
-        )}
+      {editingId !== null && isAuthorizedForManagement && (
+         <ServiceForm 
+            serviceToEdit={services.find(s => s.id === editingId)} 
+            onServiceUpdated={handleServiceUpdated} 
+            showNotification={showNotification} 
+         />
+      )}
 
-        <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid item xs={12} sm={4}>
-            <TextField
-              fullWidth
-              placeholder="ძიება..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              InputProps={{
-                startAdornment: <SearchIcon sx={{ color: 'action.active', mr: 1 }} />
-              }}
-              sx={{ borderRadius: 2 }}
-            />
-          </Grid>
-          <Grid item xs={12} sm={3}>
-            <FormControl fullWidth>
-              <InputLabel>სტატუსი</InputLabel>
-              <Select
-                value={statusFilter}
-                label="სტატუსი"
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <MenuItem value="all">ყველა</MenuItem>
-                <MenuItem value="active">აქტიური</MenuItem>
-                <MenuItem value="completed">დასრულებული</MenuItem>
-                <MenuItem value="cancelled">გაუქმებული</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={3}>
-            <Button
-              variant={showArchived ? "contained" : "outlined"}
-              onClick={() => setShowArchived(!showArchived)}
-              startIcon={<ArchiveIcon />}
-              fullWidth
-              sx={{ height: '56px' }}
-            >
-              {showArchived ? 'აქტიური' : 'არქივი'}
-            </Button>
-          </Grid>
-          <Grid item xs={12} sm={2}>
-            <Button
-              variant="outlined"
-              onClick={() => {
-                setSearchTerm('');
-                setStatusFilter('all');
-              }}
-              startIcon={<ClearIcon />}
-              fullWidth
-              sx={{ height: '56px' }}
-            >
-              გასუფთავება
-            </Button>
-          </Grid>
-        </Grid>
-
-        <TableContainer component={Paper} elevation={1} sx={{ borderRadius: 2 }}>
-          <Table>
-            <TableHead>
-              <TableRow sx={{ bgcolor: 'primary.light' }}>
-                <TableCell sx={{ fontWeight: 'bold', color: 'white' }}>სერვისის სახელი</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', color: 'white' }}>გამოფენა</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', color: 'white' }}>თარიღი</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', color: 'white' }}>სტატუსი</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', color: 'white' }}>მოქმედებები</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredServices.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
-                    <Typography variant="h6" color="text.secondary">
-                      სერვისები ვერ მოიძებნა
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredServices.map((service) => (
-                  <TableRow
-                    key={service.id}
-                    sx={{
-                      '&:hover': {
-                        bgcolor: 'action.hover',
-                        transform: 'scale(1.01)',
-                        transition: 'all 0.2s ease'
-                      }
-                    }}
-                  >
-                    <TableCell>
-                      <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
-                        {service.service_name}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" color="text.secondary">
-                        {service.exhibition_name || 'N/A'}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2">
-                        {service.start_date ? new Date(service.start_date).toLocaleDateString('ka-GE') : 'N/A'}
-                        {service.end_date && ` - ${new Date(service.end_date).toLocaleDateString('ka-GE')}`}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={getStatusLabel(service.status)}
-                        color={getStatusColor(service.status)}
-                        size="small"
-                        sx={{ fontWeight: 'medium' }}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', gap: 1 }}>
-                        <Tooltip title="მონაწილეები">
-                          <IconButton
-                            size="small"
-                            onClick={() => handleViewParticipants(service)}
-                            sx={{
-                              color: 'primary.main',
-                              '&:hover': { bgcolor: 'primary.light', color: 'white' }
-                            }}
-                          >
-                            <VisibilityIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="რედაქტირება">
-                          <IconButton
-                            size="small"
-                            onClick={() => handleEditService(service)}
-                            sx={{
-                              color: 'info.main',
-                              '&:hover': { bgcolor: 'info.light', color: 'white' }
-                            }}
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        {showArchived ? (
-                          <Tooltip title="აღდგენა">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleArchiveService(service.id)}
-                              sx={{
-                                color: 'success.main',
-                                '&:hover': { bgcolor: 'success.light', color: 'white' }
-                              }}
-                            >
-                              <RestoreIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        ) : (
-                          <Tooltip title="დაარქივება">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleArchiveService(service.id)}
-                              sx={{
-                                color: 'warning.main',
-                                '&:hover': { bgcolor: 'warning.light', color: 'white' }
-                              }}
-                            >
-                              <ArchiveIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
+      {services.length === 0 ? (
+        <p className="no-services">სერვისები არ მოიძებნა.</p>
+      ) : (
+        <table className="services-table">
+          <thead>
+            <tr>
+              <th>სერვისის სახელი</th>
+              <th>წელი</th>
+              <th>ტიპი</th>
+              <th>თარიღები</th>
+              <th>სტატუსი</th>
+              <th>სივრცეები</th>
+              {isAuthorizedForManagement && <th>მოქმედებები</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {services.map((service) => {
+              const status = getStatusBadge(service);
+              return (
+                <tr key={service.id}>
+                  <td>
+                    <button 
+                      className="service-name-link"
+                      onClick={() => viewServiceDetails(service)}
+                    >
+                      {service.service_name}
+                    </button>
+                  </td>
+                  <td>{service.year_selection}</td>
+                  <td>{service.service_type}</td>
+                  <td>
+                    {formatDate(service.start_date)} - {formatDate(service.end_date)}
+                  </td>
+                  <td>
+                    <span className={`status-badge ${status.class}`}>
+                      {status.text}
+                    </span>
+                  </td>
+                  <td>{service.spaces_count || 0} სივრცე</td>
+                  {isAuthorizedForManagement && (
+                    <td>
+                      <div className="actions">
+                        <button
+                          className="view"
+                          onClick={() => viewServiceDetails(service)}
+                          title="დეტალების ნახვა"
+                        >
+                        </button>
+                        <button
+                          onClick={() => navigate(`/services/edit/${service.id}`)}
+                          className="edit"
+                          title="რედაქტირება"
+                        >
+                        </button>
+                        {status.class === 'finished' && !service.is_archived && (
+                          <button className="archive" onClick={() => handleArchive(service.id)}>
+                          </button>
                         )}
-                        <Tooltip title="წაშლა">
-                          <IconButton
-                            size="small"
-                            onClick={() => handleDeleteService(service.id)}
-                            sx={{
-                              color: 'error.main',
-                              '&:hover': { bgcolor: 'error.light', color: 'white' }
-                            }}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))
+                        <button 
+                          className="delete" 
+                          onClick={() => handleDelete(service.id)}
+                          title="წაშლა"
+                        >
+                        </button>
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+
+      {showDetails && selectedService && (
+        <div className="service-details-modal">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3>{selectedService.service_name}</h3>
+              <button 
+                className="close-modal" 
+                onClick={() => setShowDetails(false)}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="modal-body">
+              <p><strong>აღწერა:</strong> {selectedService.description}</p>
+              <p><strong>წელი:</strong> {selectedService.year_selection}</p>
+              <p><strong>ტიპი:</strong> {selectedService.service_type}</p>
+              <p><strong>თარიღები:</strong> {formatDate(selectedService.start_date)} - {formatDate(selectedService.end_date)}</p>
+
+              {selectedService.spaces && selectedService.spaces.length > 0 && (
+                <div>
+                  <h4>გამოყენებული სივრცეები:</h4>
+                  <ul>
+                    {selectedService.spaces.map(space => (
+                      <li key={space.id}>
+                        {space.building_name} - {space.category}
+                        {space.area_sqm && ` (${space.area_sqm} მ²)`}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
-            </TableBody>
-          </Table>
-        </TableContainer>
 
-        {openForm && (
-          <ServiceForm
-            open={openForm}
-            onClose={() => setOpenForm(false)}
-            onSuccess={() => {
-              setOpenForm(false);
-              fetchServices();
-            }}
-            service={editingService}
-            showNotification={showNotification}
-          />
-        )}
-
-        {openParticipants && selectedService && (
-          <EventParticipants
-            open={openParticipants}
-            onClose={() => setOpenParticipants(false)}
-            eventId={selectedService.id}
-            eventName={selectedService.service_name}
-            showNotification={showNotification}
-          />
-        )}
-      </Paper>
-    </Container>
+              {selectedService.bookings && selectedService.bookings.length > 0 && (
+                <div>
+                  <h4>მონაწილე კომპანიები ({selectedService.bookings.length}):</h4>
+                  <ul>
+                    {selectedService.bookings.map(booking => (
+                      <li key={booking.id}>
+                        {booking.company_name} - {booking.status}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

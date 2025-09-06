@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import './InvoiceForm.css';
 
 const InvoiceForm = ({ participant, onClose, showNotification, eventData }) => {
   const [invoiceData, setInvoiceData] = useState({
@@ -62,7 +63,7 @@ const InvoiceForm = ({ participant, onClose, showNotification, eventData }) => {
         // სტენდის ღირებულება (მთლიანი თანხის ნაწილი)
         const boothPortion = 0.8; // დავაფრიქსიროთ რომ სტენდი არის 80% მთლიანი თანხის
         const boothSubtotal = subtotalWithoutVAT * boothPortion;
-
+        
         items.push({
           id: 'booth',
           description: `მონაწილეობა ღონისძიებაში "${eventData?.service_name || eventData?.exhibition_name || 'ღონისძიება'}"`,
@@ -76,7 +77,7 @@ const InvoiceForm = ({ participant, onClose, showNotification, eventData }) => {
         if (participant.equipment_total && participant.equipment_total > 0) {
           const equipmentPortion = 0.2; // დარჩენილი 20%
           const equipmentSubtotal = subtotalWithoutVAT * equipmentPortion;
-
+          
           items.push({
             id: 'equipment',
             description: 'დამატებითი აღჭურვილობა',
@@ -177,7 +178,7 @@ const InvoiceForm = ({ participant, onClose, showNotification, eventData }) => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-
+      
       const updateData = {
         company_id: participant.company_id,
         registration_status: participant.registration_status,

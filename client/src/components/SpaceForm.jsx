@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import './SpaceForm.css';
 
 const SpaceForm = ({ spaceToEdit, onFormClose, onSpaceUpdated, showNotification }) => {
   const [category, setCategory] = useState('');

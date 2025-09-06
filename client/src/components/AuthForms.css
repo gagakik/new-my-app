@@ -1,0 +1,74 @@
+.auth-container {
+  max-width: 400px;
+  margin: 2rem auto;
+  padding: 2.5rem;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  text-align: center;
+}
+
+.auth-container h2 {
+  margin-bottom: 2rem;
+  color: #343a40;
+  font-size: 1.75rem;
+}
+
+.form-group {
+  margin-bottom: 1.25rem;
+  text-align: left;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #495057;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  box-sizing: border-box;
+  font-size: 1rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-group input:focus {
+  border-color: #80bdff;
+  outline: 0;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.auth-btn, .toggle-btn {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.auth-btn {
+  background-color: #007bff;
+  color: #fff;
+  margin-top: 1.5rem;
+}
+
+.auth-btn:hover {
+  background-color: #0056b3;
+}
+
+.toggle-btn {
+  background-color: transparent;
+  color: #007bff;
+  margin-top: 1rem;
+}
+
+.toggle-btn:hover {
+  text-decoration: underline;
+}

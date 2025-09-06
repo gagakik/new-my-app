@@ -1,81 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
-import { Box, Container, Alert, Button, Typography } from '@mui/material';
 import Footer from './components/Footer';
 import AuthPage from './components/AuthPage';
 import MainContent from './components/MainContent';
 import Notification from './components/Notification';
 import './index.css';
-
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#1976d2',
-      light: '#42a5f5',
-      dark: '#1565c0',
-    },
-    secondary: {
-      main: '#dc004e',
-      light: '#ff5983',
-      dark: '#9a0036',
-    },
-    background: {
-      default: '#f5f5f5',
-      paper: '#ffffff',
-    },
-    text: {
-      primary: '#333333',
-      secondary: '#666666',
-    },
-  },
-  typography: {
-    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-    h1: {
-      fontSize: '2.5rem',
-      fontWeight: 500,
-      marginBottom: '1rem',
-    },
-    h2: {
-      fontSize: '2rem',
-      fontWeight: 500,
-      marginBottom: '0.75rem',
-    },
-    h3: {
-      fontSize: '1.75rem',
-      fontWeight: 500,
-      marginBottom: '0.5rem',
-    },
-  },
-  components: {
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          borderRadius: '8px',
-          textTransform: 'none',
-          fontWeight: 500,
-        },
-      },
-    },
-    MuiPaper: {
-      styleOverrides: {
-        root: {
-          borderRadius: '12px',
-          boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-        },
-      },
-    },
-    MuiCard: {
-      styleOverrides: {
-        root: {
-          borderRadius: '12px',
-          boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-        },
-      },
-    },
-  },
-});
 
 // Error Boundary Component
 class ErrorBoundary extends React.Component {
@@ -95,35 +23,34 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <Container 
-          maxWidth="sm" 
-          sx={{
-            minHeight: '100vh',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            textAlign: 'center'
-          }}
-        >
-          <Box sx={{ p: 3 }}>
-            <Typography variant="h4" color="error" gutterBottom>
-              შეცდომა მოხდა
-            </Typography>
-            <Typography variant="body1" color="text.secondary" paragraph>
-              აპლიკაციაში შეცდომა მოხდა. გთხოვთ განაახლოთ გვერდი.
-            </Typography>
-            <Button 
-              variant="contained" 
-              color="primary"
-              size="large"
-              onClick={() => window.location.reload()}
-              sx={{ mt: 2 }}
-            >
-              გვერდის განახლება
-            </Button>
-          </Box>
-        </Container>
+        <div style={{ 
+          padding: '2rem', 
+          textAlign: 'center', 
+          background: 'var(--surface-primary)',
+          color: 'var(--text-primary)',
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center'
+        }}>
+          <h1>შეცდომა მოხდა</h1>
+          <p>აპლიკაციაში შეცდომა მოხდა. გთხოვთ განაახლოთ გვერდი.</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            style={{
+              padding: '0.75rem 1.5rem',
+              background: '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              marginTop: '1rem'
+            }}
+          >
+            გვერდის განახლება
+          </button>
+        </div>
       );
     }
 
@@ -200,11 +127,7 @@ function App() {
 
   const renderContent = () => {
     if (!isAuthReady) {
-      return (
-        <Container maxWidth="sm" sx={{ mt: 8, textAlign: 'center' }}>
-          <Typography variant="h6">იტვირთება აპლიკაცია...</Typography>
-        </Container>
-      );
+      return <div>იტვირთება აპლიკაცია...</div>;
     }
 
     if (!isLoggedIn) {
@@ -220,24 +143,21 @@ function App() {
   };
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <ErrorBoundary>
-        <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-          <Box component="main" sx={{ flexGrow: 1 }}>
-            {renderContent()}
-          </Box>
-          <Footer />
-          {notification.message && (
-            <Notification
-              message={notification.message}
-              type={notification.type}
-              onClose={clearNotification}
-            />
-          )}
-        </Box>
-      </ErrorBoundary>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <div className="App">
+        <main>
+          {renderContent()}
+        </main>
+        <Footer />
+        {notification.message && (
+          <Notification
+            message={notification.message}
+            type={notification.type}
+            onClose={clearNotification}
+          />
+        )}
+      </div>
+    </ErrorBoundary>
   );
 }
 

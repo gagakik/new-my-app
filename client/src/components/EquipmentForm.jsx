@@ -1,246 +1,171 @@
-
 import React, { useState, useEffect } from 'react';
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  TextField,
-  Box,
-  CircularProgress,
-  Grid,
-  Typography,
-  IconButton,
-  FormControl,
-  InputAdornment
-} from '@mui/material';
-import {
-  Close as CloseIcon,
-  Save as SaveIcon,
-  Cancel as CancelIcon,
-  Construction as ConstructionIcon,
-  AttachMoney as AttachMoneyIcon,
-  Inventory as InventoryIcon
-} from '@mui/icons-material';
+import './EquipmentForm.css';
 
-const EquipmentForm = ({ equipmentToEdit, onEquipmentUpdated, showNotification }) => {
-  const [formData, setFormData] = useState({
-    code_name: '',
-    description: '',
-    quantity: 0,
-    price: 0,
-    image_url: ''
-  });
-  const [loading, setLoading] = useState(false);
-  const [open, setOpen] = useState(true);
+const EquipmentForm = ({ equipmentToEdit, onEquipmentUpdated, showNotification, onCancel }) => {
+  const [codeName, setCodeName] = useState('');
+  const [quantity, setQuantity] = useState('');
+  const [price, setPrice] = useState('');
+  const [description, setDescription] = useState('');
+  const [imageFile, setImageFile] = useState(null); // ახალი სტეიტი ფაილისთვის
+  const [existingImageUrl, setExistingImageUrl] = useState(''); // არსებული სურათის URL
+  const isEditing = !!equipmentToEdit;
 
   useEffect(() => {
-    if (equipmentToEdit && equipmentToEdit.id !== 0) {
-      setFormData({
-        code_name: equipmentToEdit.code_name || '',
-        description: equipmentToEdit.description || '',
-        quantity: equipmentToEdit.quantity || 0,
-        price: equipmentToEdit.price || 0,
-        image_url: equipmentToEdit.image_url || ''
-      });
+    if (isEditing) {
+      setCodeName(equipmentToEdit.code_name);
+      setQuantity(equipmentToEdit.quantity);
+      setPrice(equipmentToEdit.price);
+      setDescription(equipmentToEdit.description);
+      setExistingImageUrl(equipmentToEdit.image_url || ''); // არსებული URL
+      setImageFile(null); // ფაილი თავიდან null-ზე დაყენება
+    } else {
+      setCodeName('');
+      setQuantity('');
+      setPrice('');
+      setDescription('');
+      setImageFile(null);
+      setExistingImageUrl('');
     }
-  }, [equipmentToEdit]);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: name === 'quantity' || name === 'price' ? parseFloat(value) || 0 : value
-    }));
-  };
+  }, [equipmentToEdit, isEditing]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+
+    const formData = new FormData(); // FormData ობიექტი ფაილების გასაგზავნად
+    formData.append('code_name', codeName);
+    formData.append('quantity', quantity);
+    formData.append('price', price);
+    formData.append('description', description);
+
+    if (imageFile) {
+      console.log('Uploading new image file:', imageFile.name, imageFile.size);
+      formData.append('image', imageFile); // დაამატეთ ფაილი
+    } else if (isEditing && existingImageUrl) {
+      console.log('Keeping existing image:', existingImageUrl);
+      formData.append('image_url_existing', existingImageUrl); // თუ სურათი არ იცვლება
+    }
+
+    const method = isEditing ? 'PUT' : 'POST';
+    const url = isEditing
+      ? `/api/equipment/${equipmentToEdit.id}`
+      : '/api/equipment';
+
+    console.log('Submitting equipment form:', method, url);
 
     try {
       const token = localStorage.getItem('token');
-      const isEdit = equipmentToEdit && equipmentToEdit.id !== 0;
-      const url = isEdit ? `/api/equipment/${equipmentToEdit.id}` : '/api/equipment';
-      const method = isEdit ? 'PUT' : 'POST';
-
       const response = await fetch(url, {
         method,
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          // 'Content-Type': 'multipart/form-data' - არ არის საჭირო FormData-სთვის
+          'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(formData)
+        body: formData, // გაგზავნეთ FormData
       });
 
-      if (response.ok) {
-        showNotification(
-          isEdit ? 'აღჭურვილობა წარმატებით განახლდა!' : 'აღჭურვილობა წარმატებით დაემატა!',
-          'success'
-        );
-        onEquipmentUpdated();
-        handleClose();
-      } else {
+      if (!response.ok) {
         const errorData = await response.json();
-        showNotification(`შეცდომა: ${errorData.message}`, 'error');
+        console.error('Upload error:', errorData);
+        throw new Error(errorData.message || 'ოპერაცია ვერ შესრულდა');
       }
+
+      const data = await response.json();
+      console.log('Upload success:', data);
+      showNotification(data.message, 'success');
+      onEquipmentUpdated();
     } catch (error) {
-      showNotification('დაფიქსირდა შეცდომა სერვერთან კავშირისას.', 'error');
-    } finally {
-      setLoading(false);
+      console.error('Submit error:', error);
+      showNotification(`შეცდომა: ${error.message}`, 'error');
     }
   };
 
-  const handleClose = () => {
-    setOpen(false);
-    setTimeout(() => onEquipmentUpdated(), 300);
-  };
-
-  const isEdit = equipmentToEdit && equipmentToEdit.id !== 0;
-
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <ConstructionIcon />
-          <Typography variant="h6">
-            {isEdit ? 'აღჭურვილობის რედაქტირება' : 'ახალი აღჭურვილობის დამატება'}
-          </Typography>
-        </Box>
-        <IconButton onClick={handleClose}>
-          <CloseIcon />
-        </IconButton>
-      </DialogTitle>
-
-      <form onSubmit={handleSubmit}>
-        <DialogContent>
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="კოდური დასახელება"
-                name="code_name"
-                value={formData.code_name}
-                onChange={handleChange}
-                required
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <ConstructionIcon />
-                    </InputAdornment>
-                  )
-                }}
-              />
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="ფასი (₾)"
-                name="price"
-                type="number"
-                value={formData.price}
-                onChange={handleChange}
-                required
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <AttachMoneyIcon />
-                    </InputAdornment>
-                  )
-                }}
-              />
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="რაოდენობა"
-                name="quantity"
-                type="number"
-                value={formData.quantity}
-                onChange={handleChange}
-                required
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <InventoryIcon />
-                    </InputAdornment>
-                  )
-                }}
-              />
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="სურათის URL"
-                name="image_url"
-                value={formData.image_url}
-                onChange={handleChange}
-                placeholder="http://example.com/image.jpg"
-              />
-            </Grid>
-
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="აღწერა"
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                multiline
-                rows={4}
-                placeholder="აღჭურვილობის დეტალური აღწერა..."
-              />
-            </Grid>
-
-            {formData.image_url && (
-              <Grid item xs={12}>
-                <Box sx={{ textAlign: 'center' }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                    სურათის წინასწარი ხედვა:
-                  </Typography>
-                  <img
-                    src={formData.image_url}
-                    alt="Preview"
-                    style={{
-                      maxWidth: '100%',
-                      maxHeight: '200px',
-                      borderRadius: '8px',
-                      border: '1px solid #ddd'
-                    }}
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                    }}
-                  />
-                </Box>
-              </Grid>
-            )}
-          </Grid>
-        </DialogContent>
-
-        <DialogActions sx={{ p: 3, gap: 1 }}>
-          <Button
-            onClick={handleClose}
-            startIcon={<CancelIcon />}
-            variant="outlined"
-            disabled={loading}
+    <div className="modal-overlay" onClick={onCancel}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>{isEditing ? 'აღჭურვილობის რედაქტირება' : 'ახალი აღჭურვილობის დამატება'}</h3>
+          <button
+            type="button"
+            className="modal-close"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onEquipmentUpdated();
+            }}
           >
-            გაუქმება
-          </Button>
-          <Button
-            type="submit"
-            variant="contained"
-            startIcon={loading ? <CircularProgress size={20} /> : <SaveIcon />}
-            disabled={loading}
-          >
-            {loading ? 'შენახვა...' : (isEdit ? 'განახლება' : 'დამატება')}
-          </Button>
-        </DialogActions>
-      </form>
-    </Dialog>
+            ✕
+          </button>
+        </div>
+        <div className="modal-body">
+          <form onSubmit={handleSubmit} encType="multipart/form-data"> {/* დაამატეთ encType */}
+            <div className="form-group">
+              <label>კოდური სახელი</label>
+              <input
+                type="text"
+                value={codeName}
+                onChange={(e) => setCodeName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>რაოდენობა</label>
+              <input
+                type="number"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>ფასი</label>
+              <input
+                type="number"
+                step="0.01"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>აღწერილობა</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                required
+              ></textarea>
+            </div>
+            <div className="form-group">
+              <label>სურათი</label>
+              <input
+                type="file"
+                accept="image/*" // მხოლოდ სურათების არჩევა
+                onChange={(e) => setImageFile(e.target.files[0])}
+              />
+              {isEditing && existingImageUrl && !imageFile && (
+                <p className="current-image-info">მიმდინარე სურათი: <a href={existingImageUrl} target="_blank" rel="noopener noreferrer">ნახვა</a></p>
+              )}
+            </div>
+            <div className="form-actions">
+              <button type="submit" className="submit-btn">
+                {isEditing ? 'განახლება' : 'დამატება'}
+              </button>
+              <button
+                type="button"
+                className="cancel-btn"
+                            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onEquipmentUpdated();
+            }}
+                
+              >
+                გაუქმება
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
   );
 };
 

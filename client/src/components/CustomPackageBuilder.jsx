@@ -1,34 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Paper,
-  Typography,
-  TextField,
-  Button,
-  Grid,
-  Card,
-  CardContent,
-  CardActions,
-  IconButton,
-  Chip,
-  Divider,
-  Alert,
-  CircularProgress,
-  Container,
-  FormControl,
-  InputLabel,
-  OutlinedInput,
-  InputAdornment
-} from '@mui/material';
-import {
-  Add as AddIcon,
-  Remove as RemoveIcon,
-  Save as SaveIcon,
-  Construction as ConstructionIcon,
-  Euro as EuroIcon,
-  StraightenIcon as AreaIcon
-} from '@mui/icons-material';
+import './CustomPackageBuilder.css';
 
 const CustomPackageBuilder = ({ exhibitionId, showNotification, onPackageBuilt }) => {
   const [availableEquipment, setAvailableEquipment] = useState([]);
@@ -155,235 +127,128 @@ const CustomPackageBuilder = ({ exhibitionId, showNotification, onPackageBuilt }
     }
   };
 
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
+  if (loading) return <div>იტვირთება...</div>;
 
   return (
-    <Container maxWidth="xl" sx={{ py: 3 }}>
-      <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
-        <Typography 
-          variant="h4" 
-          component="h1" 
-          gutterBottom
-          sx={{ 
-            fontWeight: 'bold', 
-            color: 'primary.main',
-            display: 'flex',
-            alignItems: 'center',
-            mb: 3
-          }}
-        >
-          <ConstructionIcon sx={{ mr: 1 }} />
-          მორგებული პაკეტის შემქმნელი
-        </Typography>
-        
-        <Grid container spacing={3}>
-          {/* Package Details Section */}
-          <Grid item xs={12} md={6}>
-            <Card elevation={1} sx={{ height: 'fit-content' }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom color="primary">
-                  პაკეტის დეტალები
-                </Typography>
-                
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-                  <TextField
-                    fullWidth
-                    label="პაკეტის სახელი"
-                    value={packageDetails.package_name}
-                    onChange={(e) => setPackageDetails(prev => ({
-                      ...prev,
-                      package_name: e.target.value
-                    }))}
-                    placeholder="შეიყვანეთ პაკეტის სახელი"
-                    required
-                    variant="outlined"
-                  />
+    <div className="custom-package-builder">
+      <h3>მორგებული პაკეტის შემქმნელი</h3>
+      
+      <div className="package-builder-content">
+        <div className="package-details-section">
+          <h4>პაკეტის დეტალები</h4>
+          
+          <div className="form-group">
+            <label>პაკეტის სახელი *</label>
+            <input
+              type="text"
+              value={packageDetails.package_name}
+              onChange={(e) => setPackageDetails(prev => ({
+                ...prev,
+                package_name: e.target.value
+              }))}
+              placeholder="შეიყვანეთ პაკეტის სახელი"
+            />
+          </div>
 
-                  <TextField
-                    fullWidth
-                    label="აღწერა"
-                    value={packageDetails.description}
-                    onChange={(e) => setPackageDetails(prev => ({
-                      ...prev,
-                      description: e.target.value
-                    }))}
-                    placeholder="პაკეტის აღწერა"
-                    multiline
-                    rows={3}
-                    variant="outlined"
-                  />
+          <div className="form-group">
+            <label>აღწერა</label>
+            <textarea
+              value={packageDetails.description}
+              onChange={(e) => setPackageDetails(prev => ({
+                ...prev,
+                description: e.target.value
+              }))}
+              rows="3"
+              placeholder="პაკეტის აღწერა"
+            />
+          </div>
 
-                  <FormControl fullWidth variant="outlined">
-                    <InputLabel htmlFor="area-input">ფართობი (კვმ) *</InputLabel>
-                    <OutlinedInput
-                      id="area-input"
-                      type="number"
-                      inputProps={{ step: "0.1", min: "0" }}
-                      value={packageDetails.fixed_area_sqm}
-                      onChange={(e) => setPackageDetails(prev => ({
-                        ...prev,
-                        fixed_area_sqm: e.target.value
-                      }))}
-                      startAdornment={
-                        <InputAdornment position="start">
-                          <AreaIcon />
-                        </InputAdornment>
-                      }
-                      label="ფართობი (კვმ) *"
-                    />
-                  </FormControl>
-                  
-                  <Alert severity="info" sx={{ mt: 1 }}>
-                    ფართობის ფასი: €50 თითო კვ.მ-ზე
-                  </Alert>
-                </Box>
+          <div className="form-group">
+            <label>ფართობი (კვმ) *</label>
+            <input
+              type="number"
+              step="0.1"
+              value={packageDetails.fixed_area_sqm}
+              onChange={(e) => setPackageDetails(prev => ({
+                ...prev,
+                fixed_area_sqm: e.target.value
+              }))}
+              placeholder="0.0"
+            />
+            <small>ფარული ფასი: €50 თითო კვმ-ზე</small>
+          </div>
 
-                <Divider sx={{ my: 3 }} />
+          <div className="price-summary">
+            <h4>საერთო ღირებულება: €{totalPrice.toFixed(2)}</h4>
+            <div className="price-breakdown">
+              <div>ფართობი: €{(packageDetails.fixed_area_sqm * 50).toFixed(2)}</div>
+              <div>აღჭურვილობა: €{selectedEquipment.reduce((sum, item) => sum + (item.quantity * item.price), 0).toFixed(2)}</div>
+            </div>
+          </div>
+        </div>
 
-                <Box sx={{ textAlign: 'center' }}>
-                  <Typography variant="h5" component="div" sx={{ fontWeight: 'bold', color: 'primary.main', mb: 2 }}>
-                    <EuroIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-                    საერთო ღირებულება: €{totalPrice.toFixed(2)}
-                  </Typography>
-                  
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', color: 'text.secondary' }}>
-                    <Typography variant="body2">
-                      ფართობი: €{(packageDetails.fixed_area_sqm * 50).toFixed(2)}
-                    </Typography>
-                    <Typography variant="body2">
-                      აღჭურვილობა: €{selectedEquipment.reduce((sum, item) => sum + (item.quantity * item.price), 0).toFixed(2)}
-                    </Typography>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
+        <div className="equipment-selection-section">
+          <h4>აღჭურვილობის არჩევა</h4>
+          
+          <div className="available-equipment">
+            <h5>ხელმისაწვდომი აღჭურვილობა</h5>
+            <div className="equipment-grid">
+              {availableEquipment.map(equipment => (
+                <div key={equipment.id} className="equipment-item">
+                  <div className="equipment-info">
+                    <h6>{equipment.code_name}</h6>
+                    <p>€{equipment.price}</p>
+                    <small>ხელმისაწვდომი: {equipment.available_quantity}</small>
+                  </div>
+                  <button
+                    onClick={() => addEquipmentToPackage(equipment)}
+                    disabled={equipment.available_quantity === 0}
+                    className="add-equipment-btn"
+                  >
+                    დამატება
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
 
-          {/* Equipment Selection Section */}
-          <Grid item xs={12} md={6}>
-            <Card elevation={1}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom color="primary">
-                  აღჭურვილობის არჩევა
-                </Typography>
-                
-                <Typography variant="subtitle1" sx={{ mt: 2, mb: 2, fontWeight: 'medium' }}>
-                  ხელმისაწვდომი აღჭურვილობა
-                </Typography>
-                
-                <Grid container spacing={2}>
-                  {availableEquipment.map(equipment => (
-                    <Grid item xs={12} sm={6} key={equipment.id}>
-                      <Card variant="outlined" sx={{ height: '100%' }}>
-                        <CardContent sx={{ pb: 1 }}>
-                          <Typography variant="subtitle2" component="div" noWrap>
-                            {equipment.code_name}
-                          </Typography>
-                          <Typography variant="h6" color="primary" sx={{ fontWeight: 'bold' }}>
-                            €{equipment.price}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            ხელმისაწვდომი: {equipment.available_quantity}
-                          </Typography>
-                        </CardContent>
-                        <CardActions sx={{ pt: 0 }}>
-                          <Button
-                            variant="contained"
-                            size="small"
-                            startIcon={<AddIcon />}
-                            onClick={() => addEquipmentToPackage(equipment)}
-                            disabled={equipment.available_quantity === 0}
-                            fullWidth
-                          >
-                            დამატება
-                          </Button>
-                        </CardActions>
-                      </Card>
-                    </Grid>
-                  ))}
-                </Grid>
+          <div className="selected-equipment">
+            <h5>არჩეული აღჭურვილობა</h5>
+            {selectedEquipment.length === 0 ? (
+              <p>აღჭურვილობა არ არის არჩეული</p>
+            ) : (
+              <div className="selected-items">
+                {selectedEquipment.map(item => (
+                  <div key={item.id} className="selected-item">
+                    <span>{item.code_name}</span>
+                    <div className="quantity-controls">
+                      <button
+                        onClick={() => updateEquipmentQuantity(item.id, item.quantity - 1)}
+                      >
+                        -
+                      </button>
+                      <span>{item.quantity}</span>
+                      <button
+                        onClick={() => updateEquipmentQuantity(item.id, item.quantity + 1)}
+                      >
+                        +
+                      </button>
+                    </div>
+                    <span>€{(item.quantity * item.price).toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
-                <Divider sx={{ my: 3 }} />
-
-                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'medium' }}>
-                  არჩეული აღჭურვილობა
-                </Typography>
-                
-                {selectedEquipment.length === 0 ? (
-                  <Alert severity="info">
-                    აღჭურვილობა არ არის არჩეული
-                  </Alert>
-                ) : (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    {selectedEquipment.map(item => (
-                      <Paper key={item.id} variant="outlined" sx={{ p: 2 }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
-                            {item.code_name}
-                          </Typography>
-                          
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <IconButton
-                              size="small"
-                              onClick={() => updateEquipmentQuantity(item.id, item.quantity - 1)}
-                              color="primary"
-                            >
-                              <RemoveIcon />
-                            </IconButton>
-                            
-                            <Chip 
-                              label={item.quantity} 
-                              color="primary" 
-                              size="small"
-                              sx={{ minWidth: '40px' }}
-                            />
-                            
-                            <IconButton
-                              size="small"
-                              onClick={() => updateEquipmentQuantity(item.id, item.quantity + 1)}
-                              color="primary"
-                            >
-                              <AddIcon />
-                            </IconButton>
-                            
-                            <Typography variant="body2" sx={{ fontWeight: 'bold', ml: 2, minWidth: '60px' }}>
-                              €{(item.quantity * item.price).toFixed(2)}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </Paper>
-                    ))}
-                  </Box>
-                )}
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-          <Button
-            variant="contained"
-            size="large"
-            startIcon={<SaveIcon />}
-            onClick={saveCustomPackage}
-            sx={{ 
-              px: 6, 
-              py: 1.5,
-              fontSize: '1.1rem',
-              fontWeight: 'bold'
-            }}
-          >
-            პაკეტის შენახვა
-          </Button>
-        </Box>
-      </Paper>
-    </Container>
+      <div className="builder-actions">
+        <button onClick={saveCustomPackage} className="save-package-btn">
+          პაკეტის შენახვა
+        </button>
+      </div>
+    </div>
   );
 };
 

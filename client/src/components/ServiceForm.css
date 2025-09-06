@@ -1,0 +1,103 @@
+/* Import universal modal styles */
+@import './Modal.css';
+
+.form-container {
+  width: 100%;
+  max-width: 600px;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.spaces-selection {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  padding: 10px;
+  background-color: white;
+}
+
+.space-checkbox {
+  display: block;
+  margin-bottom: 8px;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 3px;
+  transition: background-color 0.2s;
+}
+
+.space-checkbox:hover {
+  background-color: #f8f9fa;
+}
+
+.space-checkbox input {
+  margin-right: 8px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.form-container h3 {
+  text-align: center;
+  color: #343a40;
+  margin-bottom: 1.5rem;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: bold;
+  color: #555;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.form-group textarea {
+  resize: vertical;
+}
+
+.submit-btn, .cancel-btn {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  margin-right: 10px;
+}
+
+.submit-btn {
+  background-color: #28a745;
+  color: #fff;
+}
+
+.submit-btn:hover {
+  background-color: #218838;
+}
+
+.cancel-btn {
+  background-color: #6c757d;
+  color: #fff;
+}
+
+.cancel-btn:hover {
+  background-color: #5a6268;
+}

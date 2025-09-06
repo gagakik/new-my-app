@@ -1,0 +1,151 @@
+
+.event-completion-modal {
+  max-width: 600px;
+  width: 90%;
+}
+
+.event-completion-content {
+  padding: 20px;
+}
+
+.event-info {
+  margin-bottom: 25px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.event-info h3 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 1.2em;
+}
+
+.statistics-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 15px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px;
+  background-color: white;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+}
+
+.stat-label {
+  font-size: 0.9em;
+  color: #666;
+  margin-bottom: 5px;
+}
+
+.stat-value {
+  font-size: 1.4em;
+  font-weight: bold;
+  color: #007bff;
+}
+
+.completion-form {
+  margin-top: 20px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #333;
+}
+
+.form-group textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.warning-message {
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 6px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.warning-message p {
+  margin: 0 0 10px 0;
+  color: #856404;
+  font-weight: 500;
+}
+
+.warning-message ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #856404;
+}
+
+.warning-message li {
+  margin-bottom: 5px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  margin-top: 25px;
+}
+
+.cancel-button, .complete-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.cancel-button {
+  background-color: #6c757d;
+  color: white;
+}
+
+.cancel-button:hover {
+  background-color: #5a6268;
+}
+
+.complete-button {
+  background-color: #dc3545;
+  color: white;
+}
+
+.complete-button:hover:not(:disabled) {
+  background-color: #c82333;
+}
+
+.complete-button:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .statistics-summary {
+    grid-template-columns: 1fr;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+  }
+  
+  .cancel-button, .complete-button {
+    width: 100%;
+  }
+}

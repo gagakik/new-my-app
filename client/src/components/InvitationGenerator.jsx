@@ -4,6 +4,7 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import QRCodeLib from 'qrcode';
 import QRCodeGenerator from 'qrcode-generator';
+import './InvitationGenerator.css';
 
 const generateQRCodeDataURL = async (text, size = 120) => {
   try {
@@ -116,7 +117,7 @@ const InvitationGenerator = ({ eventData, participants, onClose, showNotificatio
       // Convert status to English to avoid encoding issues
       const statusMap = {
         'რეგისტრირებული': 'registered',
-        'დაყოველებული': 'approved',
+        'დაყოველებული': 'approved', 
         'მოლოდინში': 'pending',
         'გაუქმებული': 'cancelled'
       };
@@ -237,7 +238,7 @@ const InvitationGenerator = ({ eventData, participants, onClose, showNotificatio
         // Company Logo Area (left side)
         pdf.setFillColor(67, 123, 208);
         pdf.roundedRect(margin + 2, currentY + 2, 25, cardHeight - 4, 2, 2, 'F');
-
+        
         // EXPO GEORGIA logo text
         pdf.setFontSize(10);
         pdf.setTextColor(255, 255, 255);
@@ -265,7 +266,7 @@ const InvitationGenerator = ({ eventData, participants, onClose, showNotificatio
         if (participant.booth_number) {
           pdf.setFillColor(240, 240, 240);
           pdf.roundedRect(margin + 30, currentY + 24, 30, 10, 1, 1, 'F');
-
+          
           pdf.setFontSize(14);
           pdf.setTextColor(67, 123, 208);
           pdf.setFont('helvetica', 'bold');
@@ -409,7 +410,7 @@ const InvitationGenerator = ({ eventData, participants, onClose, showNotificatio
                 disabled={isGenerating || selectedParticipants.length === 0}
                 className="generate-btn"
               >
-                {isGenerating ? 'მუშაობს...' : `${selectedParticipants.length} მოსაწევის გენერაცია`}
+                {isGenerating ? 'მუშაობს...' : `${selectedParticipants.length} მოსაწვევის გენერაცია`}
               </button>
             </div>
           </div>

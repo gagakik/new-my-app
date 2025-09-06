@@ -124,56 +124,29 @@ const createTables = async () => {
         end_date DATE,
         start_time TIME,
         end_time TIME,
-        service_type VARCHAR(100),
-        is_active BOOLEAN DEFAULT true,
+        service_type VARCHAR(50) DEFAULT 'ივენთი',
+        is_active BOOLEAN DEFAULT TRUE,
         is_archived BOOLEAN DEFAULT FALSE,
-        plan_file_path TEXT,
-        plan_uploaded_by TEXT,
-        invoice_files JSONB DEFAULT '[]'::jsonb,
-        expense_files JSONB DEFAULT '[]'::jsonb,
+        exhibition_id INTEGER,
+        created_by_user_id INTEGER,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        exhibition_id INTEGER REFERENCES exhibitions(id),
-        created_by_user_id INTEGER REFERENCES users(id)
+        archived_at TIMESTAMP,
+        plan_file_path VARCHAR(500),
+        invoice_files JSONB DEFAULT '[]',
+        expense_files JSONB DEFAULT '[]',
+        plan_updated_at TIMESTAMP,
+        files_updated_at TIMESTAMP
       )
     `);
 
-    // Service spaces mapping table
+    // Service spaces junction table
     await query(`
       CREATE TABLE IF NOT EXISTS service_spaces (
         id SERIAL PRIMARY KEY,
         service_id INTEGER NOT NULL,
         space_id INTEGER NOT NULL,
         UNIQUE(service_id, space_id)
-      )
-    `);
-    console.log('Service spaces table created/verified successfully');
-
-    // Event participants table
-    await query(`
-      CREATE TABLE IF NOT EXISTS event_participants (
-        id SERIAL PRIMARY KEY,
-        company_id INTEGER,
-        event_id INTEGER,
-        registration_status VARCHAR(50) DEFAULT 'pending',
-        payment_status VARCHAR(50) DEFAULT 'pending',
-        payment_amount DECIMAL(10,2) DEFAULT 0,
-        booth_number VARCHAR(50),
-        booth_category VARCHAR(50) DEFAULT 'ოქტანორმის სტენდები',
-        booth_type VARCHAR(50),
-        contact_person VARCHAR(255),
-        contact_position VARCHAR(255),
-        contact_email VARCHAR(255),
-        contact_phone VARCHAR(255),
-        payment_due_date DATE,
-        payment_method VARCHAR(50),
-        invoice_number VARCHAR(100),
-        invoice_file VARCHAR(500),
-        contract_file VARCHAR(500),
-        handover_file VARCHAR(500),
-        registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
@@ -342,11 +315,17 @@ const createTables = async () => {
         created_by_user_id INTEGER REFERENCES users(id),
         updated_by_user_id INTEGER REFERENCES users(id),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_bundle BOOLEAN DEFAULT false,
+        bundle_discount_percent DECIMAL(5,2) DEFAULT 0,
+        early_bird_price DECIMAL(10,2),
+        early_bird_end_date DATE,
+        last_minute_price DECIMAL(10,2),
+        last_minute_start_date DATE
       )
     `);
 
-    // Add missing columns to exhibition_packages table
+    // Add missing columns one by one
     const columnsToAdd = [
       { name: "is_bundle", type: "BOOLEAN DEFAULT false" },
       { name: "bundle_discount_percent", type: "DECIMAL(5,2) DEFAULT 0" },
@@ -462,39 +441,6 @@ const createTables = async () => {
         UNIQUE(bundle_id, package_id)
       )
     `);
-
-    // File storage table for storing files in database
-    await query(`
-      CREATE TABLE IF NOT EXISTS file_storage (
-        id SERIAL PRIMARY KEY,
-        filename VARCHAR(255) NOT NULL,
-        original_name VARCHAR(255) NOT NULL,
-        mime_type VARCHAR(100),
-        file_data BYTEA,
-        file_size INTEGER NOT NULL,
-        related_table VARCHAR(50),
-        related_id INTEGER,
-        uploaded_by INTEGER REFERENCES users(id),
-        uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        metadata JSONB DEFAULT '{}'
-      )
-    `);
-    console.log('File storage table created/verified successfully');
-
-    // Alternative JSON-based file storage
-    await query(`
-      CREATE TABLE IF NOT EXISTS json_file_storage (
-        id SERIAL PRIMARY KEY,
-        filename VARCHAR(255) NOT NULL,
-        original_name VARCHAR(255) NOT NULL,
-        file_info JSONB NOT NULL,
-        related_table VARCHAR(50),
-        related_id INTEGER,
-        uploaded_by INTEGER REFERENCES users(id),
-        uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    console.log('JSON file storage table created/verified successfully');
 
     console.log("ყველა PostgreSQL ცხრილა წარმატებით შეიქმნა");
   } catch (error) {
@@ -632,50 +578,12 @@ const addMissingColumns = async () => {
         ADD COLUMN IF NOT EXISTS invoice_files JSONB DEFAULT '[]',
         ADD COLUMN IF NOT EXISTS expense_files JSONB DEFAULT '[]',
         ADD COLUMN IF NOT EXISTS plan_updated_at TIMESTAMP,
-        ADD COLUMN IF NOT EXISTS files_updated_at TIMESTAMP,
-        ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ADD COLUMN IF NOT EXISTS files_updated_at TIMESTAMP
       `);
       console.log("ფაილების მართვის სვეტები დაემატა annual_services ცხრილში");
     } catch (fileColumnsError) {
       console.log("ფაილების სვეტების დამატების შეცდომა:", fileColumnsError.message);
     }
-
-    // Check and add all missing columns for annual_services
-    const requiredAnnualColumns = [
-      'exhibition_id INTEGER REFERENCES exhibitions(id)',
-      'description TEXT',
-      'year_selection INTEGER',
-      'service_type VARCHAR(50) DEFAULT \'გამოფენა\'',
-      'is_active BOOLEAN DEFAULT TRUE',
-      'is_archived BOOLEAN DEFAULT FALSE',
-      'start_time TIME',
-      'end_time TIME',
-      'plan_file_path VARCHAR(500)',
-      'invoice_files JSONB DEFAULT \'[]\'',
-      'expense_files JSONB DEFAULT \'[]\'',
-      'plan_updated_at TIMESTAMP',
-      'files_updated_at TIMESTAMP'
-    ];
-
-    for (const column of requiredAnnualColumns) {
-      const columnName = column.split(' ')[0];
-      const columnExists = await query(`
-        SELECT column_name 
-        FROM information_schema.columns 
-        WHERE table_name = 'annual_services' 
-        AND column_name = '${columnName}'
-      `);
-
-      if (columnExists.rows.length === 0) {
-        try {
-          await query(`ALTER TABLE annual_services ADD COLUMN ${column}`);
-          console.log(`${columnName} სვეტი დაემატა annual_services ცხრილში`);
-        } catch (columnError) {
-          console.log(`${columnName} სვეტის დამატების შეცდომა:`, columnError.message);
-        }
-      }
-    }
-
 
     console.log("ყველა საჭირო სვეტი წარმატებით შემოწმდა და დაემატა!");
   } catch (error) {

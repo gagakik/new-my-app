@@ -1,0 +1,162 @@
+
+.custom-package-builder {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.package-builder-content {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 2rem;
+  margin: 2rem 0;
+}
+
+.package-details-section {
+  background: #f8fafc;
+  padding: 1.5rem;
+  border-radius: 8px;
+}
+
+.equipment-selection-section {
+  background: #f8fafc;
+  padding: 1.5rem;
+  border-radius: 8px;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.form-group input, 
+.form-group textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 0.875rem;
+}
+
+.price-summary {
+  background: #ecfdf5;
+  padding: 1rem;
+  border-radius: 6px;
+  border: 1px solid #d1fae5;
+  margin-top: 1rem;
+}
+
+.price-breakdown {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-top: 0.5rem;
+}
+
+.equipment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.equipment-item {
+  background: white;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  text-align: center;
+}
+
+.equipment-info h6 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.add-equipment-btn {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.add-equipment-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.selected-items {
+  space-y: 0.75rem;
+}
+
+.selected-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  margin-bottom: 0.75rem;
+}
+
+.quantity-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.quantity-controls button {
+  background: #6b7280;
+  color: white;
+  border: none;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.builder-actions {
+  text-align: center;
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.save-package-btn {
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.save-package-btn:hover {
+  background: #059669;
+}
+
+@media (max-width: 768px) {
+  .package-builder-content {
+    grid-template-columns: 1fr;
+  }
+  
+  .equipment-grid {
+    grid-template-columns: 1fr;
+  }
+}

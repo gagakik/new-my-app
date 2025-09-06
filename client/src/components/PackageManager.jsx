@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import './PackageManager.css';
 
 const PackageManager = ({ exhibitionId, showNotification }) => {
   const [packages, setPackages] = useState([]);
@@ -45,8 +46,14 @@ const PackageManager = ({ exhibitionId, showNotification }) => {
   const fetchEquipment = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await api.get('/equipment');
-      setAvailableEquipment(response.data);
+      const response = await fetch('/api/equipment', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableEquipment(data);
+      }
     } catch (error) {
       console.error('აღჭურვილობის ჩატვირთვის შეცდომა:', error);
     }
