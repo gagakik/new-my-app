@@ -105,7 +105,6 @@ const createTables = async () => {
         id SERIAL PRIMARY KEY,
         exhibition_name VARCHAR(255) NOT NULL,
         manager VARCHAR(255),
-        price_per_sqm DECIMAL(10,2) DEFAULT 0,
         created_by_user_id INTEGER,
         updated_by_user_id INTEGER,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

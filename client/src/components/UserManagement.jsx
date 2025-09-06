@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './UserManagement.css';
+import { usersAPI } from '../services/api';
 
 const UserManagement = ({ showNotification, userRole }) => {
     const [users, setUsers] = useState([]);
@@ -72,21 +73,9 @@ const UserManagement = ({ showNotification, userRole }) => {
         if (!isConfirmed) return;
 
         try {
-            const token = localStorage.getItem('token'); // ტოკენის აღება
-            const response = await fetch(`/api/users/${userId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (response.ok) {
-                showNotification('მომხმარებელი წარმატებით წაიშალა!', 'success');
-                fetchUsers();
-            } else {
-                const errorData = await response.json();
-                showNotification(`წაშლა ვერ მოხერხდა: ${errorData.message}`, 'error');
-            }
+            await usersAPI.delete(userId);
+            showNotification('მომხმარებელი წარმატებით წაიშალა!', 'success');
+            fetchUsers();
         } catch (error) {
             console.error('შეცდომა მომხმარებლის წაშლისას:', error);
             showNotification('დაფიქსირდა შეცდომა სერვერთან კავშირისას.', 'error');

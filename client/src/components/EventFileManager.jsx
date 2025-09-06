@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './EventFileManager.css';
+import * as filesAPI from '../services/api';
 
 const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
   const [planFile, setPlanFile] = useState(null);
@@ -24,17 +25,10 @@ const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
 
   const refreshEventData = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/events/${event.id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        const updatedEvent = await response.json();
-        setPlanFile(updatedEvent.plan_file_path);
-        setInvoiceFiles(updatedEvent.invoice_files || []);
-        setExpenseFiles(updatedEvent.expense_files || []);
-      }
+      const updatedEvent = await filesAPI.getEvent(event.id);
+      setPlanFile(updatedEvent.plan_file_path);
+      setInvoiceFiles(updatedEvent.invoice_files || []);
+      setExpenseFiles(updatedEvent.expense_files || []);
     } catch (error) {
       console.error('ივენთის მონაცემების განახლების შეცდომა:', error);
     }
@@ -47,35 +41,25 @@ const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
     setUploadType(type);
 
     try {
-      const token = localStorage.getItem('token');
       const formData = new FormData();
 
       if (type === 'plan') {
         formData.append('plan_file', file);
+        await filesAPI.uploadPlanFile(event.id, formData);
       } else if (type === 'invoice') {
         formData.append('invoice_file', file);
         formData.append('file_name', file.name);
+        await filesAPI.uploadInvoiceFile(event.id, formData);
       } else if (type === 'expense') {
         formData.append('expense_file', file);
         formData.append('file_name', file.name);
+        await filesAPI.uploadExpenseFile(event.id, formData);
       }
 
-      const response = await fetch(`/api/events/${event.id}/upload-${type}`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-        body: formData
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        showNotification(result.message, 'success');
-        await refreshEventData();
-      } else {
-        const error = await response.json();
-        showNotification(error.message, 'error');
-      }
+      showNotification('ფაილი წარმატებით აიტვირთა', 'success');
+      await refreshEventData();
     } catch (error) {
-      showNotification('ფაილის ატვირთვა ვერ მოხერხდა', 'error');
+      showNotification(error.response?.data?.message || 'ფაილის ატვირთვა ვერ მოხერხდა', 'error');
     } finally {
       setUploading(false);
       setUploadType('');
@@ -90,32 +74,20 @@ const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
     if (!window.confirm(confirmMessage)) return;
 
     try {
-      const token = localStorage.getItem('token');
-      let url;
+      let result;
 
       if (type === 'plan') {
-        url = `/api/events/${event.id}/delete-plan`;
+        result = await filesAPI.deletePlanFile(event.id);
       } else if (type === 'invoice') {
-        url = `/api/events/${event.id}/delete-invoice/${encodeURIComponent(fileName)}`;
+        result = await filesAPI.deleteInvoiceFile(event.id, fileName);
       } else if (type === 'expense') {
-        url = `/api/events/${event.id}/delete-expense/${encodeURIComponent(fileName)}`;
+        result = await filesAPI.deleteExpenseFile(event.id, fileName);
       }
 
-      const response = await fetch(url, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        showNotification(result.message, 'success');
-        await refreshEventData();
-      } else {
-        const error = await response.json();
-        showNotification(error.message, 'error');
-      }
+      showNotification(result.message, 'success');
+      await refreshEventData();
     } catch (error) {
-      showNotification('ფაილის წაშლა ვერ მოხერხდა', 'error');
+      showNotification(error.response?.data?.message || 'ფაილის წაშლა ვერ მოხერხდა', 'error');
     }
   };
 
@@ -136,6 +108,24 @@ const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
       minute: '2-digit'
     });
   };
+
+  const fetchEventFiles = async () => {
+    try {
+      const data = await filesAPI.getEventFiles(event.id);
+      setPlanFile(data.planFile);
+      setInvoiceFiles(data.invoiceFiles || []);
+      setExpenseFiles(data.expenseFiles || []);
+    } catch (error) {
+      console.error('Error fetching event files:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (event?.id) {
+      fetchEventFiles();
+    }
+  }, [event]);
+
 
   return (
     <div className="modal-overlay">

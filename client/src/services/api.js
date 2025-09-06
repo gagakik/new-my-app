@@ -1,138 +1,175 @@
 
-import axios from 'axios';
+// Base API configuration
+const API_BASE_URL = '/api';
 
-// Base API instance
-const api = axios.create({
-  baseURL: '/api',
-  timeout: 10000,
-  headers: {
+// Helper function to get auth headers
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token');
+  return {
     'Content-Type': 'application/json',
-  },
-});
+    ...(token && { 'Authorization': `Bearer ${token}` })
+  };
+};
 
-// Request interceptor - ავტომატურად ამატებს ტოკენს
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
+// Helper function to handle API responses
+const handleResponse = async (response) => {
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
   }
-);
+  return response.json();
+};
 
-// Response interceptor - ავტომატურად ამუშავებს შეცდომებს
-api.interceptors.response.use(
-  (response) => {
-    return response;
+// Base API instance replacement
+const api = {
+  get: async (url) => {
+    const response = await fetch(`${API_BASE_URL}${url}`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
   },
-  (error) => {
-    if (error.response?.status === 401) {
-      // ავტორიზაციის შეცდომის შემთხვევაში
-      localStorage.removeItem('token');
-      localStorage.removeItem('userRole');
-      localStorage.removeItem('userId');
-      localStorage.removeItem('userName');
-      window.location.href = '/';
+
+  post: async (url, data) => {
+    const headers = getAuthHeaders();
+    const body = data instanceof FormData ? data : JSON.stringify(data);
+    
+    if (!(data instanceof FormData)) {
+      headers['Content-Type'] = 'application/json';
+    } else {
+      delete headers['Content-Type']; // Let browser set multipart boundary
     }
-    return Promise.reject(error);
+
+    const response = await fetch(`${API_BASE_URL}${url}`, {
+      method: 'POST',
+      headers,
+      body,
+    });
+    return handleResponse(response);
+  },
+
+  put: async (url, data) => {
+    const response = await fetch(`${API_BASE_URL}${url}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(response);
+  },
+
+  delete: async (url) => {
+    const response = await fetch(`${API_BASE_URL}${url}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
   }
-);
+};
 
 // Auth API
 export const authAPI = {
   login: async (credentials) => {
-    const response = await api.post('/login', credentials);
-    return response.data;
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(credentials),
+    });
+    return handleResponse(response);
   },
-  
+
   register: async (userData) => {
-    const response = await api.post('/register', userData);
-    return response.data;
+    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(userData),
+    });
+    return handleResponse(response);
+  },
+
+  logout: async () => {
+    const response = await fetch(`${API_BASE_URL}/auth/logout`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  getProfile: async () => {
+    return api.get('/auth/profile');
+  },
+
+  updateProfile: async (userData) => {
+    return api.put('/auth/profile', userData);
   },
 };
 
 // Users API
 export const usersAPI = {
   getAll: async () => {
-    const response = await api.get('/users');
-    return response.data;
+    return api.get('/users');
   },
   
   create: async (userData) => {
-    const response = await api.post('/users', userData);
-    return response.data;
+    return api.post('/users', userData);
   },
   
   update: async (id, userData) => {
-    const response = await api.put(`/users/${id}`, userData);
-    return response.data;
+    return api.put(`/users/${id}`, userData);
   },
   
   delete: async (id) => {
-    const response = await api.delete(`/users/${id}`);
-    return response.data;
+    return api.delete(`/users/${id}`);
   },
 };
 
 // Services API
 export const servicesAPI = {
   getAll: async () => {
-    const response = await api.get('/annual-services');
-    return response.data;
+    return api.get('/annual-services');
   },
   
   getExhibitions: async () => {
-    const response = await api.get('/exhibitions');
-    return response.data;
+    return api.get('/exhibitions');
   },
   
   getById: async (id) => {
-    const response = await api.get(`/annual-services/${id}`);
-    return response.data;
+    return api.get(`/annual-services/${id}`);
   },
   
   getDetails: async (id) => {
-    const response = await api.get(`/annual-services/${id}/details`);
-    return response.data;
+    return api.get(`/annual-services/${id}/details`);
   },
   
   create: async (serviceData) => {
-    const response = await api.post('/annual-services', serviceData);
-    return response.data;
+    return api.post('/annual-services', serviceData);
   },
   
   update: async (id, serviceData) => {
-    const response = await api.put(`/annual-services/${id}`, serviceData);
-    return response.data;
+    return api.put(`/annual-services/${id}`, serviceData);
   },
   
   delete: async (id) => {
-    const response = await api.delete(`/annual-services/${id}`);
-    return response.data;
+    return api.delete(`/annual-services/${id}`);
   },
   
   archive: async (id) => {
-    const response = await api.put(`/annual-services/${id}/archive`);
-    return response.data;
+    return api.put(`/annual-services/${id}/archive`);
   },
 
   createEvent: async (eventData) => {
-    const response = await api.post('/annual-services', eventData);
-    return response.data;
+    return api.post('/annual-services', eventData);
   },
 
   updateEvent: async (id, eventData) => {
-    const response = await api.put(`/annual-services/${id}`, eventData);
-    return response.data;
+    return api.put(`/annual-services/${id}`, eventData);
+  },
+
+  archiveEvent: async (id) => {
+    return api.put(`/annual-services/${id}/archive`);
   },
 
   restoreEvent: async (id) => {
-    const response = await api.put(`/annual-services/${id}/restore`);
-    return response.data;
+    return api.put(`/annual-services/${id}/restore`);
   },
 };
 
@@ -140,8 +177,7 @@ export const servicesAPI = {
 export const companiesAPI = {
   getAll: async () => {
     try {
-      const response = await api.get('/companies');
-      return response.data;
+      return api.get('/companies');
     } catch (error) {
       console.error('Error fetching companies:', error);
       throw error;
@@ -149,100 +185,101 @@ export const companiesAPI = {
   },
   
   create: async (companyData) => {
-    const response = await api.post('/companies', companyData);
-    return response.data;
+    return api.post('/companies', companyData);
   },
   
   update: async (id, companyData) => {
-    const response = await api.put(`/companies/${id}`, companyData);
-    return response.data;
+    return api.put(`/companies/${id}`, companyData);
   },
   
   delete: async (id) => {
-    const response = await api.delete(`/companies/${id}`);
-    return response.data;
+    return api.delete(`/companies/${id}`);
   },
   
   import: async (file) => {
     const formData = new FormData();
     formData.append('excelFile', file);
-    const response = await api.post('/import/companies', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
+    return api.post('/import/companies', formData);
   },
 };
 
 // Equipment API
 export const equipmentAPI = {
   getAll: async () => {
-    const response = await api.get('/equipment');
-    return response.data;
+    return api.get('/equipment');
   },
   
   create: async (equipmentData) => {
-    const response = await api.post('/equipment', equipmentData);
-    return response.data;
+    return api.post('/equipment', equipmentData);
   },
   
   update: async (id, equipmentData) => {
-    const response = await api.put(`/equipment/${id}`, equipmentData);
-    return response.data;
+    return api.put(`/equipment/${id}`, equipmentData);
   },
   
   delete: async (id) => {
-    const response = await api.delete(`/equipment/${id}`);
-    return response.data;
+    return api.delete(`/equipment/${id}`);
   },
 };
 
 // Packages API
 export const packagesAPI = {
   getAll: async (exhibitionId) => {
-    const response = await api.get(`/packages/exhibition/${exhibitionId}`);
-    return response.data;
+    return api.get(`/packages/exhibition/${exhibitionId}`);
   },
   
   create: async (packageData) => {
-    const response = await api.post('/packages', packageData);
-    return response.data;
+    return api.post('/packages', packageData);
   },
   
   update: async (id, packageData) => {
-    const response = await api.put(`/packages/${id}`, packageData);
-    return response.data;
+    return api.put(`/packages/${id}`, packageData);
   },
   
   delete: async (id) => {
-    const response = await api.delete(`/packages/${id}`);
-    return response.data;
+    return api.delete(`/packages/${id}`);
   },
 };
 
 // Statistics API
 export const statisticsAPI = {
   getOverview: async () => {
-    const response = await api.get('/statistics/overview');
-    return response.data;
+    return api.get('/statistics/overview');
   },
   
   getReports: async () => {
-    const response = await api.get('/reports');
-    return response.data;
+    return api.get('/reports');
   },
 };
 
 // Files API
 export const filesAPI = {
-  downloadPlanFile: async (fileName) => {
-    const response = await api.get(`/download/${fileName}`, {
-      responseType: 'blob',
+  downloadFile: async (fileName) => {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE_URL}/download/${fileName}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
     });
     
+    if (!response.ok) {
+      throw new Error('Download failed');
+    }
+    
+    return response.blob();
+  },
+
+  downloadPlanFile: async (fileName) => {
+    const response = await fetch(`${API_BASE_URL}/download/${fileName}`);
+    
+    if (!response.ok) {
+      throw new Error('Download failed');
+    }
+    
+    const blob = await response.blob();
+    
     // Create download link
-    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
     link.setAttribute('download', fileName);
@@ -253,12 +290,16 @@ export const filesAPI = {
   },
 
   downloadInvoiceFile: async (fileName) => {
-    const response = await api.get(`/download/${fileName}`, {
-      responseType: 'blob',
-    });
+    const response = await fetch(`${API_BASE_URL}/download/${fileName}`);
+    
+    if (!response.ok) {
+      throw new Error('Download failed');
+    }
+    
+    const blob = await response.blob();
     
     // Create download link
-    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
     link.setAttribute('download', fileName);
@@ -269,12 +310,16 @@ export const filesAPI = {
   },
 
   downloadExpenseFile: async (fileName) => {
-    const response = await api.get(`/download/${fileName}`, {
-      responseType: 'blob',
-    });
+    const response = await fetch(`${API_BASE_URL}/download/${fileName}`);
+    
+    if (!response.ok) {
+      throw new Error('Download failed');
+    }
+    
+    const blob = await response.blob();
     
     // Create download link
-    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
     link.setAttribute('download', fileName);
@@ -285,20 +330,23 @@ export const filesAPI = {
   },
 
   getEventFiles: async (eventId) => {
-    const response = await api.get(`/events/${eventId}/files`);
-    return response.data;
+    return api.get(`/events/${eventId}/files`);
   },
 
-  uploadPlanFile: async (eventId, file) => {
-    const formData = new FormData();
-    formData.append('plan_file', file);
-    
-    const response = await api.post(`/events/${eventId}/upload-plan`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
+  getEvent: async (eventId) => {
+    return api.get(`/annual-services/${eventId}`);
+  },
+
+  uploadPlanFile: async (eventId, formData) => {
+    return api.post(`/events/${eventId}/upload-plan`, formData);
+  },
+
+  uploadInvoiceFile: async (eventId, formData) => {
+    return api.post(`/events/${eventId}/upload-invoices`, formData);
+  },
+
+  uploadExpenseFile: async (eventId, formData) => {
+    return api.post(`/events/${eventId}/upload-expenses`, formData);
   },
 
   uploadInvoiceFiles: async (eventId, files) => {
@@ -307,12 +355,7 @@ export const filesAPI = {
       formData.append('invoice_files', file);
     });
     
-    const response = await api.post(`/events/${eventId}/upload-invoices`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
+    return api.post(`/events/${eventId}/upload-invoices`, formData);
   },
 
   uploadExpenseFiles: async (eventId, files) => {
@@ -321,39 +364,20 @@ export const filesAPI = {
       formData.append('expense_files', file);
     });
     
-    const response = await api.post(`/events/${eventId}/upload-expenses`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
-  },
-
-  downloadFile: async (fileName) => {
-    const token = localStorage.getItem('token');
-    const response = await api.get(`/download/${fileName}`, {
-      responseType: 'blob',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    return response;
+    return api.post(`/events/${eventId}/upload-expenses`, formData);
   },
 
   deletePlanFile: async (eventId) => {
-    const response = await api.delete(`/events/${eventId}/delete-plan`);
-    return response.data;
+    return api.delete(`/events/${eventId}/delete-plan`);
   },
 
   deleteInvoiceFile: async (eventId, fileName) => {
-    const response = await api.delete(`/events/${eventId}/delete-invoice/${encodeURIComponent(fileName)}`);
-    return response.data;
+    return api.delete(`/events/${eventId}/delete-invoice/${fileName}`);
   },
 
   deleteExpenseFile: async (eventId, fileName) => {
-    const response = await api.delete(`/events/${eventId}/delete-expense/${encodeURIComponent(fileName)}`);
-    return response.data;
-  }
+    return api.delete(`/events/${eventId}/delete-expense/${fileName}`);
+  },
 };
 
 export default api;

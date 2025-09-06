@@ -519,11 +519,11 @@ app.get('/api/exhibitions/:id', authenticateToken, async (req, res) => {
 
 app.post('/api/exhibitions', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res) => {
   try {
-    const { exhibition_name, manager, price_per_sqm = 0 } = req.body;
+    const { exhibition_name, manager } = req.body;
 
     const result = await db.query(
-      'INSERT INTO exhibitions (exhibition_name, manager, price_per_sqm, created_by_user_id) VALUES ($1, $2, $3, $4) RETURNING *',
-      [exhibition_name, manager, parseFloat(price_per_sqm) || 0, req.user.id]
+      'INSERT INTO exhibitions (exhibition_name, manager, created_by_user_id) VALUES ($1, $2, $3) RETURNING *',
+      [exhibition_name, manager, req.user.id]
     );
 
     res.status(201).json({
@@ -539,11 +539,11 @@ app.post('/api/exhibitions', authenticateToken, authorizeRoles('admin', 'manager
 app.put('/api/exhibitions/:id', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res) => {
   try {
     const { id } = req.params;
-    const { exhibition_name, manager, price_per_sqm } = req.body;
+    const { exhibition_name, manager } = req.body;
 
     const result = await db.query(
-      'UPDATE exhibitions SET exhibition_name = $1, manager = $2, price_per_sqm = $3, updated_by_user_id = $4, updated_at = CURRENT_TIMESTAMP WHERE id = $5 RETURNING *',
-      [exhibition_name, manager, parseFloat(price_per_sqm) || 0, req.user.id, id]
+      'UPDATE exhibitions SET exhibition_name = $1, manager = $2, updated_by_user_id = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4 RETURNING *',
+      [exhibition_name, manager, req.user.id, id]
     );
 
     if (result.rows.length === 0) {
@@ -597,11 +597,10 @@ app.get('/api/events', authenticateToken, async (req, res) => {
         a.exhibition_id,
         COUNT(DISTINCT ss.space_id) as spaces_count,
         e.exhibition_name,
-        e.price_per_sqm
       FROM annual_services a
       LEFT JOIN service_spaces ss ON a.id = ss.service_id
       LEFT JOIN exhibitions e ON a.exhibition_id = e.id
-      GROUP BY a.id, a.service_name, a.description, a.year_selection, a.start_date, a.end_date, a.service_type, a.is_active, a.is_archived, a.created_at, a.updated_at, a.created_by_user_id, a.exhibition_id, e.exhibition_name, e.price_per_sqm
+      GROUP BY a.id, a.service_name, a.description, a.year_selection, a.start_date, a.end_date, a.service_type, a.is_active, a.is_archived, a.created_at, a.updated_at, a.created_by_user_id, a.exhibition_id, e.exhibition_name
       ORDER BY a.created_at DESC
     `);
     res.json(result.rows);
@@ -629,8 +628,7 @@ app.get('/api/events/:id', authenticateToken, async (req, res) => {
         a.updated_at,
         a.created_by_user_id,
         a.exhibition_id,
-        e.exhibition_name,
-        e.price_per_sqm
+        e.exhibition_name
       FROM annual_services a
       LEFT JOIN exhibitions e ON a.exhibition_id = e.id 
       WHERE a.id = $1
@@ -1344,12 +1342,11 @@ app.get('/api/annual-services', authenticateToken, async (req, res) => {
       SELECT 
         as_main.*,
         COUNT(DISTINCT ss.space_id) as spaces_count,
-        e.exhibition_name,
-        e.price_per_sqm
+        e.exhibition_name
       FROM annual_services as_main
       LEFT JOIN service_spaces ss ON as_main.id = ss.service_id
       LEFT JOIN exhibitions e ON as_main.exhibition_id = e.id
-      GROUP BY as_main.id, e.exhibition_name, e.price_per_sqm
+      GROUP BY as_main.id, e.exhibition_name
       ORDER BY as_main.created_at DESC
     `);
     res.json(result.rows);
@@ -1365,8 +1362,7 @@ app.get('/api/annual-services/:id', authenticateToken, async (req, res) => {
     const result = await db.query(`
       SELECT 
         as_main.*,
-        e.exhibition_name,
-        e.price_per_sqm
+        e.exhibition_name
       FROM annual_services as_main
       LEFT JOIN exhibitions e ON as_main.exhibition_id = e.id
       WHERE as_main.id = $1
@@ -1391,8 +1387,7 @@ app.get('/api/annual-services/:id/details', authenticateToken, async (req, res) 
     const serviceResult = await db.query(`
       SELECT 
         as_main.*,
-        e.exhibition_name,
-        e.price_per_sqm
+        e.exhibition_name
       FROM annual_services as_main
       LEFT JOIN exhibitions e ON as_main.exhibition_id = e.id
       WHERE as_main.id = $1
