@@ -1,10 +1,25 @@
+
 import React, { useState } from 'react';
-import './AuthForms.css';
+import {
+  Container,
+  Paper,
+  TextField,
+  Button,
+  Typography,
+  Box,
+  Alert,
+  CircularProgress,
+  Tabs,
+  Tab
+} from '@mui/material';
+import { Login, PersonAdd } from '@mui/icons-material';
 
 const AuthPage = ({ onLoginSuccess, showNotification }) => {
   const [isLoginView, setIsLoginView] = useState(true);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -15,14 +30,17 @@ const AuthPage = ({ onLoginSuccess, showNotification }) => {
     
     // Validation
     if (!username.trim() || !password.trim()) {
-      showNotification('მომხმარებლის სახელი და პაროლი აუცილებელია', 'error');
+      setError('მომხმარებლის სახელი და პაროლი აუცილებელია');
       return;
     }
 
     if (!isLoginView && password.length < 6) {
-      showNotification('პაროლი უნდა იყოს მინიმუმ 6 სიმბოლო', 'error');
+      setError('პაროლი უნდა იყოს მინიმუმ 6 სიმბოლო');
       return;
     }
+    
+    setLoading(true);
+    setError('');
     
     try {
       const response = await fetch(`/api/${endpoint}`, {
@@ -50,46 +68,161 @@ const AuthPage = ({ onLoginSuccess, showNotification }) => {
           setPassword('');
         }
       } else {
-        showNotification(data.message || 'შეცდომა დაფიქსირდა', 'error');
+        setError(data.message || 'შეცდომა დაფიქსირდა');
       }
     } catch (error) {
       console.error('Network error:', error);
-      showNotification('ქსელის შეცდომა. გთხოვთ, შეამოწმოთ ინტერნეტ კავშირი.', 'error');
+      setError('ქსელის შეცდომა. გთხოვთ, შეამოწმოთ ინტერნეტ კავშირი.');
+    } finally {
+      setLoading(false);
     }
   };
 
+  const handleTabChange = (event, newValue) => {
+    setIsLoginView(newValue === 0);
+    setError('');
+    setUsername('');
+    setPassword('');
+  };
+
   return (
-    <div className="auth-container">
-      <h2>{isLoginView ? 'შესვლა' : 'რეგისტრაცია'}</h2>
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="username">მომხმარებლის სახელი:</label>
-          <input
-            type="text"
-            id="username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
+    <Container maxWidth="sm" sx={{ mt: 8 }} >
+      <Paper
+        elevation={8}
+        sx={{
+          borderRadius: 3,
+          background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+          border: '1px solid',
+          borderColor: 'divider',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          p: 4,
+          boxShadow: (theme) => theme.shadows[10],
+          transition: 'all 0.3s ease',
+          '&:hover': { boxShadow: (theme) => theme.shadows[12] },
+          height: '100%',
+          minHeight: 500,
+          marginBottom: 16
+        }}
+      >
+        <Box sx={{ textAlign: 'center', pt: 4, pb: 2 }} >
+          {isLoginView ? (
+            <Login 
+              sx={{ 
+                fontSize: 60, 
+                color: 'primary.main',
+                mb: 2
+              }} 
+            />
+          ) : (
+            <PersonAdd 
+              sx={{ 
+                fontSize: 60, 
+                color: 'primary.main',
+                mb: 2
+              }} 
+            />
+          )}
+          <Typography 
+            variant="h4" 
+            component="h1"
+            sx={{ 
+              fontWeight: 700,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              mb: 3
+            }}
+          >
+            ავტორიზაცია
+          </Typography>
+        </Box>
+
+        <Tabs
+          value={isLoginView ? 0 : 1}
+          onChange={handleTabChange}
+          centered
+          sx={{
+            mb: 3,
+            '& .MuiTab-root': {
+              fontWeight: 600,
+              fontSize: '1rem',
+              textTransform: 'none'
+            }
+          }}
+        >
+          <Tab label="შესვლა" 
+              icon={<Login />} 
+              iconPosition="start"
+              sx={{borderRadius: '8px 0 0 8px'}}
           />
-        </div>
-        <div className="form-group">
-          <label htmlFor="password">პაროლი:</label>
-          <input
-            type="password"
-            id="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </div>
-        <button type="submit" className="auth-btn">
-          {isLoginView ? 'შესვლა' : 'რეგისტრაცია'}
-        </button>
-      </form>
-      <button onClick={() => setIsLoginView(!isLoginView)} className="toggle-btn">
-        {isLoginView ? 'არ გაქვთ ანგარიში? შექმენით!' : 'უკვე გაქვთ ანგარიში? შედით!'}
-      </button>
-    </div>
+          <Tab label="რეგისტრაცია" icon={<PersonAdd />} iconPosition="start" sx={{borderRadius: '0 8px 8px 0'}} />
+        </Tabs>
+
+        <Box sx={{ px: 4, pb: 4 }}>
+          {error && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {error}
+            </Alert>
+          )}
+
+          <Box component="form" onSubmit={handleSubmit}>
+            <TextField
+              fullWidth
+              label="მომხმარებლის სახელი"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+              margin="normal"
+              variant="outlined"
+              disabled={loading}
+              sx={{ mb: 2 }}
+            />
+            
+            <TextField
+              fullWidth
+              label="პაროლი"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              margin="normal"
+              variant="outlined"
+              disabled={loading}
+              helperText={!isLoginView ? 'პაროლი უნდა იყოს მინიმუმ 6 სიმბოლო' : ''}
+              sx={{ mb: 3 }}
+            />
+            
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              size="large"
+              disabled={loading}
+              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : (isLoginView ? <Login /> : <PersonAdd />)}
+              sx={{
+                py: 1.5,
+                fontSize: '1.1rem',
+                fontWeight: 600,
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                  transform: 'translateY(-2px)',
+                  boxShadow: (theme) => theme.shadows[8]
+                },
+                transition: 'all 0.3s ease'
+              }}
+            >
+              {loading ? 'იტვირთება...' : (isLoginView ? 'შესვლა' : 'რეგისტრაცია')}
+            </Button>
+          </Box>
+        </Box>
+      </Paper>
+    </Container>
   );
 };
 
