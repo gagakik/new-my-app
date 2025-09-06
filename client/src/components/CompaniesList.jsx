@@ -1,8 +1,49 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import './CompaniesList.css';
-import CompanyForm from './CompanyForm'; // კომპანიის ფორმის იმპორტი
-import CompanyImport from './CompanyImport'; // კომპანიის იმპორტის კომპონენტის კომპონენტის იმპორტი
-import './ButtonIcons.css';
+import {
+  Container,
+  Typography,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Box,
+  Chip,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Card,
+  CardContent,
+  CardActions,
+  Grid,
+  Checkbox,
+  FormControlLabel,
+  useTheme,
+  useMediaQuery,
+  Tooltip
+} from '@mui/material';
+import {
+  Add,
+  Upload,
+  Edit,
+  Delete,
+  Visibility,
+  FilterList,
+  Save,
+  Cancel
+} from '@mui/icons-material';
+import CompanyForm from './CompanyForm';
+import CompanyImport from './CompanyImport';
 
 const CompaniesList = ({ showNotification, userRole }) => {
   const [companies, setCompanies] = useState([]);
@@ -13,18 +54,17 @@ const CompaniesList = ({ showNotification, userRole }) => {
   const [filterCountry, setFilterCountry] = useState('');
   const [filterProfile, setFilterProfile] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
-  const [filterIdentificationCode, setFilterIdentificationCode] = useState(''); // ახალი სტეიტი საიდენტიფიკაციო კოდისთვის
-  const [selectedCompany, setSelectedCompany] = useState(null); // დეტალური ხედვისთვის
-  const [showImport, setShowImport] = useState(false); // იმპორტის მოდალის საჩვენებლად
-  const [exhibitions, setExhibitions] = useState([]); // გამოფენების სია
-  const [editingExhibitions, setEditingExhibitions] = useState(null); // რომელი კომპანიის გამოფენებს ვარედაქტირებთ
+  const [filterIdentificationCode, setFilterIdentificationCode] = useState('');
+  const [selectedCompany, setSelectedCompany] = useState(null);
+  const [showImport, setShowImport] = useState(false);
+  const [exhibitions, setExhibitions] = useState([]);
+  const [editingExhibitions, setEditingExhibitions] = useState(null);
 
-  // განსაზღვრეთ, აქვს თუ არა მომხმარებელს მართვის უფლება
-  const isAuthorizedForManagement =
-    userRole === 'admin' ||
-    userRole === 'sales';
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-  // გამოფენების ჩატვირთვა
+  const isAuthorizedForManagement = userRole === 'admin' || userRole === 'sales';
+
   const fetchExhibitions = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
@@ -117,7 +157,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
 
   const handleCompanyUpdated = () => {
     setEditingId(null);
-    setSelectedCompany(null); // დეტალური ხედვიდან გასვლა
+    setSelectedCompany(null);
     fetchCompanies();
   };
 
@@ -142,9 +182,12 @@ const CompaniesList = ({ showNotification, userRole }) => {
     const numericId = Number(exhibitionId);
 
     setEditingExhibitions(prev => {
+      if (!prev) return prev;
+
+      const currentSelected = prev.selectedExhibitions || [];
       const newSelectedExhibitions = isChecked
-        ? [...prev.selectedExhibitions, numericId]
-        : prev.selectedExhibitions.filter(id => id !== numericId);
+        ? [...currentSelected, numericId]
+        : currentSelected.filter(id => id !== numericId);
 
       return {
         ...prev,
@@ -185,305 +228,557 @@ const CompaniesList = ({ showNotification, userRole }) => {
   };
 
   if (loading) {
-    return <div>იტვირთება...</div>;
+    return (
+      <Container>
+        <Typography>იტვირთება...</Typography>
+      </Container>
+    );
   }
 
   if (error) {
-    return <div>შეცდომა: {error}</div>;
+    return (
+      <Container>
+        <Typography color="error">შეცდომა: {error}</Typography>
+      </Container>
+    );
   }
 
   if (selectedCompany) {
     return (
-      <div className="company-details-container">
-        <h2>{selectedCompany.company_name} - დეტალები</h2>
-        <p><strong>ქვეყანა:</strong> {selectedCompany.country}</p>
-        <p><strong>კომპანიის პროფილი:</strong> {selectedCompany.company_profile}</p>
-        <p><strong>საიდენტიფიკაციო კოდი:</strong> {selectedCompany.identification_code}</p>
-        <p><strong>იურიდიული მისამართი:</strong> {selectedCompany.legal_address}</p>
+      <Container maxWidth="md" sx={{ mt: 4 }}>
+        <Paper elevation={3} sx={{ p: 4, borderRadius: 2 }}>
+          <Typography variant="h4" component="h2" gutterBottom sx={{
+            textAlign: 'center',
+            background: 'linear-gradient(45deg, #667eea, #764ba2)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent'
+          }}>
+            {selectedCompany.company_name} - დეტალები
+          </Typography>
 
-        {/* საკონტაქტო პირების გამოტანა */}
-        {selectedCompany.contact_persons && selectedCompany.contact_persons.length > 0 && (
-          <div>
-            <h4>საკონტაქტო პირები:</h4>
-            {selectedCompany.contact_persons.map((person, index) => (
-              <div key={index} className="contact-person-details-card">
-                <p><strong>პოზიცია:</strong> {person.position || 'არ არის მითითებული'}</p>
-                <p><strong>სახელი გვარი:</strong> {person.name || 'არ არის მითითებული'}</p>
-                <p><strong>ტელეფონი:</strong> {person.phone || 'არ არის მითითებული'}</p>
-                <p><strong>მეილი:</strong> {person.email || 'არ არის მითითებული'}</p>
-              </div>
-            ))}
-          </div>
-        )}
+          <Box sx={{ mt: 3 }}>
+            <Typography paragraph><strong>ქვეყანა:</strong> {selectedCompany.country}</Typography>
+            <Typography paragraph><strong>კომპანიის პროფილი:</strong> {selectedCompany.company_profile}</Typography>
+            <Typography paragraph><strong>საიდენტიფიკაციო კოდი:</strong> {selectedCompany.identification_code}</Typography>
+            <Typography paragraph><strong>იურიდიული მისამართი:</strong> {selectedCompany.legal_address}</Typography>
 
-        <p><strong>ვებგვერდი:</strong> <a href={`http://${selectedCompany.website}`} target="_blank" rel="noopener noreferrer">{selectedCompany.website}</a></p>
-        <p><strong>კომენტარი:</strong> {selectedCompany.comment}</p>
-        <p><strong>სტატუსი:</strong> {selectedCompany.status}</p>
-        <p className="meta-info">
-          <strong>შექმნის ინფორმაცია:</strong>
-          {new Date(selectedCompany.created_at).toLocaleDateString()}
-          {selectedCompany.created_by_username && ` - ${selectedCompany.created_by_username}`}
-        </p>
-        {selectedCompany.updated_at && (
-          <p className="meta-info">
-            <strong>განახლების ინფორმაცია:</strong>
-            {new Date(selectedCompany.updated_at).toLocaleDateString()}
-            {selectedCompany.updated_by_username && ` - ${selectedCompany.updated_by_username}`}
-          </p>
-        )}
-        <button className="back-btn" onClick={() => setSelectedCompany(null)}>უკან დაბრუნება</button>
-      </div>
+            {selectedCompany.contact_persons && selectedCompany.contact_persons.length > 0 && (
+              <Box sx={{ mt: 3 }}>
+                <Typography variant="h6" gutterBottom>საკონტაქტო პირები:</Typography>
+                {selectedCompany.contact_persons.map((person, index) => (
+                  <Card key={index} variant="outlined" sx={{ mb: 2, p: 2 }}>
+                    <Typography><strong>პოზიცია:</strong> {person.position || 'არ არის მითითებული'}</Typography>
+                    <Typography><strong>სახელი გვარი:</strong> {person.name || 'არ არის მითითებული'}</Typography>
+                    <Typography><strong>ტელეფონი:</strong> {person.phone || 'არ არის მითითებული'}</Typography>
+                    <Typography><strong>მეილი:</strong> {person.email || 'არ არის მითითებული'}</Typography>
+                  </Card>
+                ))}
+              </Box>
+            )}
+
+            <Typography paragraph>
+              <strong>ვებგვერდი:</strong> 
+              <a href={`http://${selectedCompany.website}`} target="_blank" rel="noopener noreferrer">
+                {selectedCompany.website}
+              </a>
+            </Typography>
+            <Typography paragraph><strong>კომენტარი:</strong> {selectedCompany.comment}</Typography>
+            <Typography paragraph><strong>სტატუსი:</strong> {selectedCompany.status}</Typography>
+
+            <Box sx={{ mt: 3, p: 2, backgroundColor: 'rgba(102, 126, 234, 0.05)', borderRadius: 1, borderLeft: 3, borderColor: '#667eea' }}>
+              <Typography color="text.secondary" fontStyle="italic">
+                <strong>შექმნის ინფორმაცია:</strong> {new Date(selectedCompany.created_at).toLocaleDateString()}
+                {selectedCompany.created_by_username && ` - ${selectedCompany.created_by_username}`}
+              </Typography>
+              {selectedCompany.updated_at && (
+                <Typography color="text.secondary" fontStyle="italic">
+                  <strong>განახლების ინფორმაცია:</strong> {new Date(selectedCompany.updated_at).toLocaleDateString()}
+                  {selectedCompany.updated_by_username && ` - ${selectedCompany.updated_by_username}`}
+                </Typography>
+              )}
+            </Box>
+          </Box>
+
+          <Box sx={{ textAlign: 'center', mt: 4 }}>
+            <Button 
+              variant="contained" 
+              onClick={() => setSelectedCompany(null)}
+              sx={{ minWidth: 150 }}
+            >
+              უკან დაბრუნება
+            </Button>
+          </Box>
+        </Paper>
+      </Container>
     );
   }
 
   return (
-    <div className="companies-container">
-      <h2>კომპანიების სია</h2>
+    <Container maxWidth="xl" sx={{ mt: 4 }}>
+      <Paper elevation={3} sx={{ p: 4, borderRadius: 2 }}>
+        <Typography variant="h4" component="h2" gutterBottom sx={{
+          textAlign: 'center',
+          background: 'linear-gradient(45deg, #667eea, #764ba2)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          mb: 4
+        }}>
+          კომპანიების ბაზა
+        </Typography>
 
-      {/* ფილტრები და ძებნა */}
-      <div className="filters">
-        <input
-          type="text"
-          placeholder="ძებნა დასახელებით..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-        <select value={filterCountry} onChange={(e) => setFilterCountry(e.target.value)}>
-          <option value="">ყველა ქვეყანა</option>
-          <option value="საქართველო">საქართველო</option>
-          <option value="აშშ">აშშ</option>
-          <option value="გერმანია">გერმანია</option>
-          <option value="საფრანგეთი">საფრანგეთი</option>
-          <option value="დიდი ბრიტანეთი">დიდი ბრიტანეთი</option>
-          <option value="იტალია">იტალია</option>
-          <option value="ესპანეთი">ესპანეთი</option>
-          <option value="კანადა">კანადა</option>
-          <option value="ავსტრალია">ავსტრალია</option>
-          <option value="იაპონია">იაპონია</option>
-          <option value="ჩინეთი">ჩინეთი</option>
-          <option value="ბრაზილია">ბრაზილია</option>
-          <option value="მექსიკა">მექსიკა</option>
-          <option value="არგენტინა">არგენტინა</option>
-          <option value="ჩილე">ჩილე</option>
-          <option value="ინდოეთი">ინდოეთი</option>
-          <option value="თურქეთი">თურქეთი</option>
-          <option value="რუსეთი">რუსეთი</option>
-          <option value="უკრაინა">უკრაინა</option>
-          <option value="პოლონეთი">პოლონეთი</option>
-        </select>
-        <input
-          type="text"
-          placeholder="პროფილი..."
-          value={filterProfile}
-          onChange={(e) => setFilterProfile(e.target.value)}
-        />
-        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-          <option value="">ყველა სტატუსი</option>
-          <option value="აქტიური">აქტიური</option>
-          <option value="არქივი">არქივი</option>
-        </select>
-        <input
-          type="text"
-          placeholder="საიდენტიფიკაციო კოდი..."
-          value={filterIdentificationCode}
-          onChange={(e) => setFilterIdentificationCode(e.target.value)}
-        /> {/* ახალი ველი საიდენტიფიკაციო კოდისთვის */}
-        <button onClick={fetchCompanies}>ფილტრი</button> {/* ფილტრის ღილაკი */}
-      </div> {/* filters დასასრული */}
+        {/* ფილტრები */}
+        <Paper elevation={1} sx={{ p: 3, mb: 3, backgroundColor: 'rgba(0,0,0,0.02)' }}>
+          <Grid container spacing={2} display={'flex'} alignItems="center" justifyContent="center">
+            <Grid item xs={12} sm={6} md={2}  >
+              <TextField
+                fullWidth
+                size="small"
+                label="ძებნა დასახელებით"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={2}>
+              <FormControl sx={{ m: 1, minWidth: 120 }} fullWidth size="small">
+                <InputLabel>ქვეყანა</InputLabel>
+                <Select value={filterCountry} label="ქვეყანა" onChange={(e) => setFilterCountry(e.target.value)}>
+                  <MenuItem value="">ყველა ქვეყანა</MenuItem>
+                  <MenuItem value="საქართველო">საქართველო</MenuItem>
+                  <MenuItem value="აშშ">აშშ</MenuItem>
+                  <MenuItem value="გერმანია">გერმანია</MenuItem>
+                  <MenuItem value="საფრანგეთი">საფრანგეთი</MenuItem>
+                  <MenuItem value="დიდი ბრიტანეთი">დიდი ბრიტანეთი</MenuItem>
+                  <MenuItem value="იტალია">იტალია</MenuItem>
+                  <MenuItem value="ესპანეთი">ესპანეთი</MenuItem>
+                  <MenuItem value="კანადა">კანადა</MenuItem>
+                  <MenuItem value="ავსტრალია">ავსტრალია</MenuItem>
+                  <MenuItem value="იაპონია">იაპონია</MenuItem>
+                  <MenuItem value="ჩინეთი">ჩინეთი</MenuItem>
+                  <MenuItem value="ბრაზილია">ბრაზილია</MenuItem>
+                  <MenuItem value="მექსიკა">მექსიკა</MenuItem>
+                  <MenuItem value="არგენტინა">არგენტინა</MenuItem>
+                  <MenuItem value="ჩილე">ჩილე</MenuItem>
+                  <MenuItem value="ინდოეთი">ინდოეთი</MenuItem>
+                  <MenuItem value="თურქეთი">თურქეთი</MenuItem>
+                  <MenuItem value="რუსეთი">რუსეთი</MenuItem>
+                  <MenuItem value="უკრაინა">უკრაინა</MenuItem>
+                  <MenuItem value="პოლონეთი">პოლონეთი</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6} md={2}>
+              <TextField
+                fullWidth
+                size="small"
+                label="პროფილი"
+                value={filterProfile}
+                onChange={(e) => setFilterProfile(e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={2}>
+              <FormControl sx={{ m: 1, minWidth: 120 }} fullWidth size="small">
+                <InputLabel>სტატუსი</InputLabel>
+                <Select value={filterStatus} label="სტატუსი" onChange={(e) => setFilterStatus(e.target.value)}>
+                  <MenuItem value="">სტატუსი</MenuItem>
+                  <MenuItem value="აქტიური">აქტიური</MenuItem>
+                  <MenuItem value="არქივი">არქივი</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6} md={2}>
+              <TextField
+                fullWidth
+                size="small"
+                label="საიდენტიფიკაციო კოდი"
+                value={filterIdentificationCode}
+                onChange={(e) => setFilterIdentificationCode(e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={2}>
+              <Button
+                size="small"
+                fullWidth
+                variant="contained"
+                startIcon={<FilterList />}
+                onClick={fetchCompanies}
+                sx={{ height: '40px' }}
+              >
+                ფილტრი
+              </Button>
+            </Grid>
+          </Grid>
+        </Paper>
 
-      {isAuthorizedForManagement && (
-        <>
-          <button className="add-new" onClick={() => setEditingId(0)}>ახალი კომპანიის დამატება</button>
-          <button className="import-excel" onClick={() => setShowImport(!showImport)}>Excel-ით იმპორტი</button>
-        </>
-      )}
+        {/* მართვის ღილაკები */}
+        {isAuthorizedForManagement && (
+          <Box sx={{ display: 'flex', gap: 2, mb: 3, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Button
+              variant="contained"
+              size='small'
+              startIcon={<Add />}
+              onClick={() => setEditingId(0)}
+              sx={{ 
+                background: 'linear-gradient(135deg, #4299e1 0%, #3182ce 100%)',
+                '&:hover': { background: 'linear-gradient(135deg, #3182ce 0%, #2c5282 100%)' }
+              }}
+            >
+              ახალი კომპანიის დამატება
+            </Button>
+            <Button
+              size='small'
+              variant="contained"
+              startIcon={<Upload />}
+              onClick={() => setShowImport(!showImport)}
+              sx={{ 
+                background: 'linear-gradient(135deg, #48bb78 0%, #38a169 100%)',
+                '&:hover': { background: 'linear-gradient(135deg, #38a169 0%, #2f855a 100%)' }
+              }}
+            >
+              Excel-ით იმპორტი
+            </Button>
+          </Box>
+        )}
 
-      {editingId !== null && isAuthorizedForManagement && (
-        <CompanyForm
-          companyToEdit={companies.find(c => c.id === editingId)}
-          onCompanyUpdated={handleCompanyUpdated}
-          showNotification={showNotification}
-          userRole={userRole}
-        />
-      )}
+        {/* ფორმები და მოდალები */}
+        {editingId !== null && isAuthorizedForManagement && (
+          <CompanyForm
+            companyToEdit={companies.find(c => c.id === editingId)}
+            onCompanyUpdated={handleCompanyUpdated}
+            showNotification={showNotification}
+            userRole={userRole}
+          />
+        )}
 
-      {showImport && (
-        <CompanyImport
-          onImportComplete={handleImportComplete}
-          showNotification={showNotification}
-        />
-      )}
+        {showImport && (
+          <CompanyImport
+            onImportComplete={handleImportComplete}
+            showNotification={showNotification}
+          />
+        )}
 
-      {editingExhibitions && (
-        <div className="modal-overlay">
-          <div className="exhibition-edit-modal">
-            <h3>გამოფენების რედაქტირება: {editingExhibitions.companyName}</h3>
-            <div className="exhibitions-selection">
+        {/* გამოფენების რედაქტირების მოდალი */}
+        <Dialog 
+          open={!!editingExhibitions} 
+          onClose={cancelExhibitionEdit}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>
+            გამოფენების რედაქტირება: {editingExhibitions?.companyName}
+          </DialogTitle>
+          <DialogContent>
+            <Box sx={{ maxHeight: 400, overflowY: 'auto', mt: 1, mb: 2, p: 2, backgroundColor: 'rgba(0,0,0,0.02)', borderRadius: 1 }}>
               {exhibitions.map(exhibition => {
-                const isChecked = editingExhibitions.selectedExhibitions.includes(Number(exhibition.id));
-
+                const isChecked = Boolean(editingExhibitions?.selectedExhibitions?.includes(Number(exhibition.id)));
                 return (
-                  <div key={exhibition.id} className="exhibition-checkbox-wrapper">
-                    <label className="exhibition-checkbox">
-                      <input
-                        type="checkbox"
+                  <FormControlLabel
+                    key={exhibition.id}
+                    control={
+                      <Checkbox
                         checked={isChecked}
                         onChange={(e) => handleExhibitionToggle(exhibition.id, e.target.checked)}
                       />
-                      {exhibition.exhibition_name}
-                    </label>
-                  </div>
+                    }
+                    label={exhibition.exhibition_name}
+                    sx={{ display: 'block', mb: 1, backgroundColor: isChecked ? 'rgba(25, 118, 210, 0.04)' : 'inherit', borderRadius: 1, p: 1, border: '1px solid #1976d2', paddingLeft: 2 }}
+                  />
                 );
               })}
-            </div>
-            <div className="modal-actions">
-              <button className="save-btn" onClick={saveExhibitionChanges}>
-                შენახვა
-              </button>
-              <button className="cancel-btn" onClick={cancelExhibitionEdit}>
-                გაუქმება
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={cancelExhibitionEdit} startIcon={<Cancel />} sx={{ backgroundColor: 'grey.500', color: 'grey.300' }}>
+              გაუქმება
+            </Button>
+            <Button onClick={saveExhibitionChanges} startIcon={<Save />} variant="contained">
+              შენახვა
+            </Button>
+          </DialogActions>
+        </Dialog>
 
-      {companies.length === 0 ? (
-        <p className="no-companies">კომპანიები არ მოიძებნა.</p>
-      ) : (
-        <>
-          {/* Desktop Table View */}
-          <table className="companies-table desktop-only">
-            <thead>
-              <tr>
-                <th>კომპანია</th>
-                <th>ქვეყანა</th>
-                <th>საიდ. კოდი</th>
-                <th>სტატუსი</th>
-                <th>გამოფენები</th>
-                <th>შექმნა</th>
-                <th>განახლება</th>
-                <th>მოქმედებები</th>
-              </tr>
-            </thead>
-            <tbody>
-              {companies.map(company => (
-                <tr key={company.id}>
-                  <td className="company-name" onClick={() => handleViewDetails(company)} style={{cursor: 'pointer'}}>{company.company_name}</td>
-                  <td>{company.country}</td>
-                  <td>{company.identification_code}</td>
-                  <td>
-                    <span className={`status-badge ${company.status?.toLowerCase()}`}>
-                      {company.status}
-                    </span>
-                  </td>
-                  <td className="exhibitions-cell">
-                    <div className="exhibitions-display">
-                      {company.selected_exhibitions && company.selected_exhibitions.length > 0 ? (
-                        <>
-                          <span className="exhibitions-count">
-                            {company.selected_exhibitions.length} გამოფენა
-                          </span>
-                          <div className="exhibitions-list">
-                            {exhibitions
-                              .filter(ex => company.selected_exhibitions.includes(ex.id))
-                              .slice(0, 2)
-                              .map(ex => (
-                                <span key={ex.id} className="exhibition-tag">
-                                  {ex.exhibition_name}
-                                </span>
-                              ))
-                            }
-                            {company.selected_exhibitions.length > 2 && (
-                              <span className="exhibition-tag more">
-                                +{company.selected_exhibitions.length - 2}
-                              </span>
+        {/* კომპანიების სია */}
+        {companies.length === 0 ? (
+          <Typography textAlign="center" color="text.secondary" sx={{ mt: 4, fontStyle: 'italic' }}>
+            კომპანიები არ მოიძებნა.
+          </Typography>
+        ) : (
+          <>
+            {/* Desktop Table View */}
+            {!isMobile ? (
+              <TableContainer component={Paper} elevation={2}>
+                <Table>
+                  <TableHead>
+                    <TableRow sx={{ backgroundColor: 'rgba(102, 126, 234, 0.1)' }}>
+                      <TableCell align="center"><strong>კომპანია</strong></TableCell>
+                      <TableCell align="center"><strong>ქვეყანა</strong></TableCell>
+                      <TableCell align="center"><strong>საიდ. კოდი</strong></TableCell>
+                      <TableCell align="center"><strong>გამოფენები</strong></TableCell>
+                      <TableCell align="center"><strong>შექმნა</strong></TableCell>
+                      <TableCell align="center"><strong>განახლება</strong></TableCell>
+                      <TableCell align="center"><strong>მოქმედებები</strong></TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {companies.map(company => (
+                      <TableRow 
+                        key={company.id} 
+                        hover
+                        sx={{ 
+                          '&:nth-of-type(even)': { 
+                            backgroundColor: 
+                              company.status === 'აქტიური' 
+                                ? 'rgba(76, 175, 80, 0.08)' 
+                                : company.status === 'არქივი'
+                                ? 'rgba(255, 193, 7, 0.08)'
+                                : 'rgba(102, 126, 234, 0.02)' 
+                          },
+                          '&:nth-of-type(odd)': { 
+                            backgroundColor: 
+                              company.status === 'აქტიური' 
+                                ? 'rgba(76, 175, 80, 0.05)' 
+                                : company.status === 'არქივი'
+                                ? 'rgba(255, 193, 7, 0.05)'
+                                : 'transparent' 
+                          }
+                        }}
+                      >
+                        <TableCell>
+                          <Typography align="center"
+                            sx={{ cursor: 'pointer', fontWeight: 600, color: 'primary.main' }}
+                            onClick={() => handleViewDetails(company)}
+                          >
+                            {company.company_name}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="center">{company.country}</TableCell>
+                        <TableCell align="center">{company.identification_code}</TableCell>
+                        <TableCell align="center">
+                          <Box sx={{ 
+                            display: 'flex', 
+                            flexDirection: 'column',
+                            gap: '6px',
+                            maxWidth: '200px',
+                            alignItems: 'flex-start'
+                          }}>
+                            <Box sx={{ display: 'flex', flexDirection: 'row', gap: '4px', width: '100%' }}>
+                              {company.selected_exhibitions && company.selected_exhibitions.length > 0 
+                                ? exhibitions
+                                  .filter(ex => company.selected_exhibitions.includes(ex.id))
+                                  .map((exhibition, index) => (
+                                    <Chip 
+                                      key={index} 
+                                      label={exhibition.exhibition_name}
+                                      size="small"
+                                      variant="outlined"
+                                      sx={{ 
+                                        fontSize: '0.7rem',
+                                        height: '26px',
+                                        backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                                        color: '#1976d2',
+                                        borderRadius: '6px',
+                                        justifyContent: 'flex-start',
+                                      }}
+                                    />
+                                  ))
+                                : <Typography variant="caption" color="text.secondary">
+                                    არ მონაწილეობს
+                                  </Typography>
+                              }
+                            </Box>
+                            {isAuthorizedForManagement && (
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                onClick={() => handleEditExhibitions(company)}
+                                startIcon={<Edit />}
+                                sx={{ 
+                                  mt: 1,
+                                  fontSize: '0.7rem',
+                                  width: '100%',
+                                  height: '28px',
+                                  borderColor: '#1976d2',
+                                  color: '#969696ff',
+                                  '&:hover': {
+                                    backgroundColor: 'rgba(124, 154, 184, 1)',
+                                    borderColor: '#bccee2ff'
+                                  }
+                                }}
+                              >
+                            EDIT
+                              </Button>
                             )}
-                          </div>
-                        </>
-                      ) : (
-                        <span className="no-exhibitions">-</span>
-                      )}
-                    </div>
-                    {isAuthorizedForManagement && (
-                      <button
-                        className="edit-exhibitions-btn"
-                        onClick={() => handleEditExhibitions(company)}
-                        title="გამოფენების რედაქტირება"
-                      >
-                        ✏️
-                      </button>
-                    )}
-                  </td>
-                  <td className="date-info">
-                    <div className="date">{new Date(company.created_at).toLocaleDateString()}</div>
-                    {company.created_by_username && (
-                      <div className="user">{company.created_by_username}</div>
-                    )}
-                  </td>
-                  <td className="date-info">
-                    {company.updated_at ? (
-                      <>
-                        <div className="date">{new Date(company.updated_at).toLocaleDateString()}</div>
-                        {company.updated_by_username && (
-                          <div className="user">{company.updated_by_username}</div>
-                        )}
-                      </>
-                    ) : (
-                      <span className="no-update">-</span>
-                    )}
-                  </td>
-                  <td>
-                    <div className="actions">
-                      <button
-                        className="edit"
-                        onClick={() => handleEditClick(company)}
-                        title="რედაქტირება"
-                      >
-                      </button>
-                      <button
-                        className="delete"
-                        onClick={() => handleDelete(company.id)}
-                        title="წაშლა"
-                      >
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {/* Mobile Card View */}
-          <div className="mobile-cards mobile-only">
-            {companies.map(company => (
-              <div key={company.id} className="company-card">
-                <h3 onClick={() => handleViewDetails(company)} style={{cursor: 'pointer'}}>{company.company_name}</h3>
-                <div className="company-info">
-                  <span><strong>ქვეყანა:</strong> {company.country}</span>
-                  <span><strong>პროფილი:</strong> {company.company_profile}</span>
-                  <span><strong>სტატუსი:</strong> {company.status}</span>
-                </div>
-                <div className="company-actions">
-                  <button
-                    onClick={() => handleEditClick(company)}
-                    className="edit"
-                    title="რედაქტირება"
-                  >
-                  </button>
-                  <button
-                    onClick={() => handleDelete(company.id)}
-                    className="delete"
-                    title="წაშლა"
-                  >
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" align="center" display={'flex'} gap={1} sx={{ justifyContent: 'center', alignItems: 'center' }} flexDirection={'column'} fontSize={'0.7rem'}>
+                            {new Date(company.created_at).toLocaleDateString()}
+                            {company.created_by_username && (
+                              <Typography variant="caption" color="text.secondary" align="center">
+                                {company.created_by_username}
+                              </Typography>
+                            )}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          {company.updated_at ? (
+                            <>
+                              <Typography variant="body2" align="center" display={'flex'} gap={1} sx={{ justifyContent: 'center', alignItems: 'center' }} flexDirection={'column'} fontSize={'0.7rem'}>
+                                {new Date(company.updated_at).toLocaleDateString()}
+                                {company.updated_by_username && (
+                                  <Typography variant="caption" color="text.secondary" align="center">
+                                    {company.updated_by_username}
+                                  </Typography>
+                                )}
+                              </Typography>
+                            </>
+                          ) : (
+                            <Typography variant="body2" color="text.secondary">-</Typography>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', gap: 2, alignItems: "center", justifyContent: "center" }}>
+                            <Tooltip title="რედაქტირება">
+                              <Button
+                                size="small"
+                                variant="contained"
+                                onClick={() => handleEditClick(company)}
+                                color="primary"
+                                sx={{ minWidth: 'auto', px: 1 }}
+                              >
+                                <Edit fontSize="small" />
+                              </Button>
+                            </Tooltip>
+                            <Tooltip title="წაშლა">
+                              <Button
+                                size="small"
+                                variant="contained"
+                                onClick={() => handleDelete(company.id)}
+                                color="error"
+                                sx={{ minWidth: 'auto', px: 1 }}
+                              >
+                                <Delete fontSize="small" />
+                              </Button>
+                            </Tooltip>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            ) : (
+              /* Mobile Card View */
+              <Grid container spacing={2}>
+                {companies.map(company => (
+                  <Grid item xs={12} key={company.id}>
+                    <Card 
+                      elevation={2} 
+                      sx={{ 
+                        backgroundColor: 
+                          company.status === 'აქტიური' 
+                            ? 'rgba(76, 175, 80, 0.08)' 
+                            : company.status === 'არქივი'
+                            ? 'rgba(255, 193, 7, 0.08)'
+                            : 'inherit',
+                        border: 
+                          company.status === 'აქტიური' 
+                            ? '1px solid rgba(76, 175, 80, 0.3)' 
+                            : company.status === 'არქივი'
+                            ? '1px solid rgba(255, 193, 7, 0.3)'
+                            : 'inherit'
+                      }}
+                    >
+                      <CardContent>
+                        <Typography 
+                          variant="h6" 
+                          gutterBottom
+                          sx={{ cursor: 'pointer', color: 'primary.main' }}
+                          onClick={() => handleViewDetails(company)}
+                        >
+                          {company.company_name}
+                        </Typography>
+                        <Typography color="text.secondary" gutterBottom>
+                          <strong>ქვეყანა:</strong> {company.country}
+                        </Typography>
+                        <Typography color="text.secondary" gutterBottom>
+                          <strong>საიდ. კოდი:</strong> {company.identification_code}
+                        </Typography>
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="body2" color="text.primary" sx={{ fontWeight: 600, mb: 1 }}>
+                            გამოფენები:
+                          </Typography>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'flex-start' }}>
+                            {company.selected_exhibitions && company.selected_exhibitions.length > 0 
+                              ? exhibitions
+                                .filter(ex => company.selected_exhibitions.includes(ex.id))
+                                .map((exhibition, index) => (
+                                  <Chip 
+                                    key={index} 
+                                    label={exhibition.exhibition_name}
+                                    size="small"
+                                    sx={{ 
+                                      fontSize: '0.75rem',
+                                      height: '26px',
+                                      border: '1px solid #1976d2',
+                                      backgroundColor: 'rgba(25, 118, 210, 0.04)', 
+                                      color: '#1976d2',
+                                    }}
+                                  />
+                                ))
+                              : <Typography variant="caption" color="text.secondary">
+                                  არ მონაწილეობს
+                                </Typography>
+                            }
+                            {isAuthorizedForManagement && (
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                onClick={() => handleEditExhibitions(company)}
+                                startIcon={<Edit />}
+                                sx={{ 
+                                  mt: 1,
+                                  fontSize: '0.7rem',
+                                  height: '28px',
+                                  borderColor: '#3744b9ff',
+                                  color: '#1976d2',
+                                    '&:hover': {
+                                      backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                                      borderColor: '#1565c0'
+                                    }
+                                }}
+                              >
+                                გამოფენების რედაქტირება
+                              </Button>
+                            )}
+                          </Box>
+                        </Box>
+                      </CardContent>
+                      <CardActions>
+                        <Button
+                          size="small"
+                          startIcon={<Edit />}
+                          onClick={() => handleEditClick(company)}
+                        >
+                          EDIT
+                        </Button>
+                        <Button
+                          size="small"
+                          startIcon={<Delete />}
+                          color="error"
+                          onClick={() => handleDelete(company.id)}
+                        >
+                          წაშლა
+                        </Button>
+                      </CardActions>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            )}
+          </>
+        )}
+      </Paper>
+    </Container>
   );
 };
 
