@@ -1,5 +1,29 @@
+
 import React, { useState, useEffect } from 'react';
-import './EventForm.css';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Button,
+  Typography,
+  Grid,
+  Box,
+  Checkbox,
+  FormControlLabel,
+  FormGroup,
+  IconButton,
+  Paper,
+  Alert,
+  Chip,
+  Stack
+} from '@mui/material';
+import { Close, Event, Business, LocationOn, Info } from '@mui/icons-material';
 
 const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
   const [serviceName, setServiceName] = useState('');
@@ -212,10 +236,6 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
     );
   };
 
-
-
-
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -293,171 +313,291 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
-        <div className="modal-header">
-          <h3>{isEditing ? 'ივენთის რედაქტირება' : 'ახალი ივენთის დამატება'}</h3>
-          <button 
-            type="button"
-            className="modal-close" 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onEventUpdated();
-            }}
-          >
-            ✕
-          </button>
-        </div>
-        <div className="modal-body">
-          <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label>ივენთის სახელი</label>
-          <input 
-            type="text"
-            value={serviceName}
-            onChange={(e) => setServiceName(e.target.value)}
-            required
-          />
-        </div>
+    <Dialog 
+      open={true} 
+      onClose={() => onEventUpdated()}
+      maxWidth="md"
+      fullWidth
+      sx={{
+        '& .MuiDialog-paper': {
+          borderRadius: 3,
+          boxShadow: '0 24px 48px rgba(0, 0, 0, 0.2)',
+          background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)'
+        }
+      }}
+    >
+      <DialogTitle 
+        sx={{ 
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          fontWeight: 600,
+          fontSize: '1.25rem'
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Event />
+          {isEditing ? 'ივენთის რედაქტირება' : 'ახალი ივენთის დამატება'}
+        </Box>
+        <IconButton 
+          onClick={() => onEventUpdated()}
+          sx={{ 
+            color: 'white',
+            '&:hover': {
+              backgroundColor: 'rgba(255, 255, 255, 0.1)'
+            }
+          }}
+        >
+          <Close />
+        </IconButton>
+      </DialogTitle>
 
-        <div className="form-group">
-          <label>აღწერა</label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            required
-            rows="3"
-          />
-        </div>
+      <DialogContent sx={{ p: 3, maxHeight: '70vh', overflowY: 'auto' }}>
+        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+          <Grid container spacing={3} display={'flex'} alignItems="center" justifyContent="center" flexDirection={'column'}>
+            <Grid container item spacing={1} xs={12} md={12} alignItems="center" justifyContent="center" flexDirection={'row'} margin={2}>
+             <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="ივენთის სახელი"
+                value={serviceName}
+                onChange={(e) => setServiceName(e.target.value)}
+                required
+                variant="outlined"
+                InputProps={{
+                  sx: {
+                    borderRadius: 2,
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#667eea'
+                    }
+                  }
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth required>
+                <InputLabel>წელი</InputLabel>
+                <Select
+                  value={yearSelection}
+                  onChange={(e) => setYearSelection(parseInt(e.target.value))}
+                  label="წელი"
+                  sx={{ borderRadius: 2 }}
+                >
+                  {generateYearOptions().map(year => (
+                    <MenuItem key={year} value={year}>{year}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+             <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="დაწყების თარიღი"
+                  type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                required
+                InputLabelProps={{ shrink: true }}
+                InputProps={{ sx: { borderRadius: 2 } }}
+              />
+            </Grid>
 
-        <div className="form-group">
-          <label>წელი</label>
-          <select 
-            value={yearSelection} 
-            onChange={(e) => setYearSelection(parseInt(e.target.value))}
-            required
-          >
-            {generateYearOptions().map(year => (
-              <option key={year} value={year}>{year}</option>
-            ))}
-          </select>
-        </div>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="დასრულების თარიღი"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                required
+                InputLabelProps={{ shrink: true }}
+                InputProps={{ sx: { borderRadius: 2 } }}
+              />
+            </Grid>
+            </Grid>
 
-        <div className="form-group">
-          <label>დაწყების თარიღი</label>
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            required
-          />
-        </div>
+          <Grid container item spacing={1} xs={12} md={12} alignItems="center" justifyContent="center" flexDirection={'row'} margin={1}>
+<Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="დაწყების საათი"
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                InputProps={{ sx: { borderRadius: 2 } }}
+              />
+            </Grid>
 
-        <div className="form-group">
-          <label>დასრულების თარიღი</label>
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            required
-          />
-        </div>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="დასრულების საათი"
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                InputProps={{ sx: { borderRadius: 2 } }}
+              />
+            </Grid>
+             <Grid item xs={12} md={6} minWidth={200} margin={1}>
+              <FormControl fullWidth required>
+                <InputLabel>ივენთის ტიპი</InputLabel>
+                <Select
+                  value={serviceType}
+                  onChange={(e) => setServiceType(e.target.value)}
+                  label="ივენთის ტიპი"
+                  sx={{ borderRadius: 2 }}
+                >
+                  <MenuItem value="ივენთი">ივენთი</MenuItem>
+                  <MenuItem value="გამოფენა">გამოფენა</MenuItem>
+                  <MenuItem value="კონფერენცია">კონფერენცია</MenuItem>
+                  <MenuItem value="გაქირავება">გაქირავება</MenuItem>
+                  <MenuItem value="ფესტივალი">ფესტივალი</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
 
-        <div className="form-group">
-          <label>დაწყების საათი</label>
-          <input
-            type="time"
-            value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
-          />
-        </div>
+            <Grid item xs={12} md={6} minWidth={200} margin={1}>
+              <FormControl fullWidth>
+                <InputLabel>გამოფენის არჩევა</InputLabel>
+                <Select
+                  value={selectedExhibitionId}
+                  onChange={(e) => handleExhibitionSelect(e.target.value)}
+                  label="გამოფენის არჩევა"
+                  sx={{ borderRadius: 2 }}
+                >
+                  <MenuItem value="">აირჩიეთ გამოფენა</MenuItem>
+                  {availableExhibitions.map(exhibition => (
+                    <MenuItem key={exhibition.id} value={exhibition.id}>
+                      {exhibition.exhibition_name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
 
-        <div className="form-group">
-          <label>დასრულების საათი</label>
-          <input
-            type="time"
-            value={endTime}
-            onChange={(e) => setEndTime(e.target.value)}
-          />
-        </div>
+            <Grid item xs={12} width={'100%'} margin={1}>
+              <TextField
+                fullWidth
+                label="აღწერა"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                required
+                multiline
+                rows={3}
+                variant="outlined"
+                InputProps={{
+                  sx: {
+                    borderRadius: 2,
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#667eea'
+                    }
+                  }
+                }}
+              />
+            </Grid>
 
-        <div className="form-group">
-          <label>ივენთის ტიპი</label>
-          <select 
-            value={serviceType} 
-            onChange={(e) => setServiceType(e.target.value)}
-            required
-          >
-            <option value="ივენთი">ივენთი</option>
-            <option value="გამოფენა">გამოფენა</option>
-            <option value="კონფერენცია">კონფერენცია</option>
-            <option value="გაქირავება">გაქირავება</option>
-            <option value="ფესტივალი">ფესტივალი</option>
-          </select>
-        </div>
+            {selectedExhibitionId && (
+              <Grid item xs={12}>
+                <Alert 
+                  severity="info" 
+                  sx={{ 
+                    borderRadius: 2,
+                    backgroundColor: '#e3f2fd',
+                    border: '1px solid #90caf9'
+                  }}
+                  icon={<Business />}
+                >
+                  <Typography sx={{ fontWeight: 500 }}>
+                    ამ გამოფენას რეგისტრირებული აქვს <strong>{availableCompanies.length} კომპანია</strong>, 
+                    რომლებიც ავტომატურად დაემატება მონაწილეობის მოთხოვნის სტატუსით.
+                  </Typography>
+                  <Typography variant="caption" sx={{ display: 'block', mt: 1, fontStyle: 'italic' }}>
+                    მონაწილეების სია და სტატუსების მართვა შესაძლებელია ივენთის შექმნის შემდეგ.
+                  </Typography>
+                </Alert>
+              </Grid>
+            )}
 
-        <div className="form-group">
-          <label>გამოფენის არჩევა</label>
-          <select 
-            value={selectedExhibitionId}
-            onChange={(e) => handleExhibitionSelect(e.target.value)}
-          >
-            <option value="">აირჩიეთ გამოფენა</option>
-            {availableExhibitions.map(exhibition => (
-              <option key={exhibition.id} value={exhibition.id}>
-                {exhibition.exhibition_name}
-              </option>
-            ))}
-          </select>
-        </div>
+            <Grid item xs={12}>
+              <Paper 
+                sx={{ 
+                  p: 2, 
+                  borderRadius: 2,
+                  border: '1px solid #e0e0e0',
+                  backgroundColor: '#fafafa'
+                }}
+              >
+                <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <LocationOn sx={{ color: '#667eea' }} />
+                  სივრცეების არჩევა
+                </Typography>
+                <FormGroup sx={{ maxHeight: 200, overflowY: 'auto' }}>
+                  {availableSpaces.map(space => (
+                    <FormControlLabel
+                      key={space.id}
+                      control={
+                        <Checkbox
+                          checked={selectedSpaces.includes(space.id)}
+                          onChange={() => handleSpaceToggle(space.id)}
+                          sx={{
+                            color: '#667eea',
+                            '&.Mui-checked': {
+                              color: '#667eea'
+                            }
+                          }}
+                        />
+                      }
+                      label={`${space.building_name} - ${space.category}`}
+                    />
+                  ))}
+                </FormGroup>
+              </Paper>
+            </Grid>
+          </Grid>
+        </Box>
+      </DialogContent>
 
-        {selectedExhibitionId && (
-          <div className="form-group">
-            <label>მონაწილე კომპანიები</label>
-            <div className="companies-info">
-              <p>ამ გამოფენას რეგისტრირებული აქვს <strong>{availableCompanies.length} კომპანია</strong>, რომლებიც ავტომატურად დაემატება მონაწილეობის მოთხოვნის სტატუსით.</p>
-              <small>მონაწილეების სია და სტატუსების მართვა შესაძლებელია ივენთის შექმნის შემდეგ.</small>
-            </div>
-          </div>
-        )}
-
-        <div className="form-group">
-          <label>სივრცეების არჩევა</label>
-          <div className="spaces-selection">
-            {availableSpaces.map(space => (
-              <label key={space.id} className="space-checkbox">
-                <input
-                  type="checkbox"
-                  checked={selectedSpaces.includes(space.id)}
-                  onChange={() => handleSpaceToggle(space.id)}
-                />
-                <span>{space.building_name} - {space.category}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <div className="form-actions">
-          <button type="submit" className="submit-btn">
-            {isEditing ? 'განახლება' : 'დამატება'}
-          </button>
-          <button
-            type="button"
-            className="cancel-btn"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onEventUpdated();
-            }}
-          >
-            გაუქმება
-          </button>
-        </div>
-      </form>
-        </div>
-      </div>
-    </div>
+      <DialogActions sx={{ px: 3, pb: 3, pt: 1 }}>
+        <Button 
+          onClick={() => onEventUpdated()}
+          variant="outlined"
+          type="button"
+          sx={{
+            borderColor: '#6c757d',
+            color: '#6c757d',
+            borderRadius: 2,
+            '&:hover': {
+              borderColor: '#5a6268',
+              backgroundColor: 'rgba(108, 117, 125, 0.04)'
+            }
+          }}
+        >
+          გაუქმება
+        </Button>
+        <Button 
+          onClick={handleSubmit}
+          variant="contained"
+          sx={{
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            borderRadius: 2,
+            px: 3,
+            '&:hover': {
+              background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+              transform: 'translateY(-1px)',
+              boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)'
+            }
+          }}
+        >
+          {isEditing ? 'განახლება' : 'დამატება'}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 };
 

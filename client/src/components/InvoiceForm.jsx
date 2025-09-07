@@ -1,5 +1,36 @@
+
 import React, { useState, useEffect } from 'react';
-import './InvoiceForm.css';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Typography,
+  Box,
+  Grid,
+  TextField,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  IconButton,
+  Card,
+  CardContent,
+  Divider,
+  Chip,
+  CircularProgress
+} from '@mui/material';
+import {
+  Close,
+  Add,
+  Delete,
+  Print,
+  Save
+} from '@mui/icons-material';
 
 const InvoiceForm = ({ participant, onClose, showNotification, eventData }) => {
   const [invoiceData, setInvoiceData] = useState({
@@ -196,8 +227,6 @@ const InvoiceForm = ({ participant, onClose, showNotification, eventData }) => {
         notes: invoiceData.notes
       };
 
-      console.log('Saving invoice with data:', updateData);
-
       const response = await fetch(`/api/events/${participant.event_id}/participants/${participant.id}`, {
         method: 'PUT',
         headers: {
@@ -246,205 +275,334 @@ const InvoiceForm = ({ participant, onClose, showNotification, eventData }) => {
   }
 
   return (
-    <div className="invoice-modal">
-      <div className="invoice-modal-content">
-        {/* Header */}
-        <div className="invoice-header no-print">
-          <h3>ინვოისის გენერაცია</h3>
-          <button className="close-modal" onClick={onClose}>✕</button>
-        </div>
+    <Dialog
+      open={!!participant}
+      onClose={onClose}
+      maxWidth="lg"
+      fullWidth
+      PaperProps={{
+        sx: {
+          maxHeight: '95vh',
+          borderRadius: 2,
+          boxShadow: '0 24px 38px 3px rgba(0, 0, 0, 0.14)'
+        }
+      }}
+    >
+      {/* Header */}
+      <DialogTitle
+        sx={{
+          background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)',
+          color: 'white',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          p: 3
+        }}
+      >
+        <Typography variant="h5" component="h2" sx={{ fontWeight: 600 }}>
+          ინვოისის გენერაცია
+        </Typography>
+        <IconButton
+          onClick={onClose}
+          sx={{
+            color: 'white',
+            '&:hover': {
+              backgroundColor: 'rgba(255, 255, 255, 0.1)'
+            }
+          }}
+        >
+          <Close />
+        </IconButton>
+      </DialogTitle>
 
-        {/* Invoice Document */}
-        <div className="invoice-document print-version">
+      <DialogContent sx={{ p: 0, overflow: 'hidden' }}>
+        <Box sx={{ p: 4, maxHeight: '70vh', overflow: 'auto' }}>
           {/* Company Header */}
-          <div className="invoice-company-header print-header">
-            <div className="company-info">
-              <h2>{invoiceData.companyInfo.name}</h2>
-              <p>{invoiceData.companyInfo.address}</p>
-              <p>ტელ: {invoiceData.companyInfo.phone}</p>
-              <p>მეილი: {invoiceData.companyInfo.email}</p>
-              <p>ს/კ: {invoiceData.companyInfo.taxNumber}</p>
-            </div>
-            <div className="invoice-title">
-              <h1>ინვოისი</h1>
-              <p className="invoice-number">#{invoiceData.invoiceNumber}</p>
-            </div>
-          </div>
+          <Card sx={{ mb: 3, background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)' }}>
+            <CardContent sx={{ p: 3 }}>
+              <Grid container spacing={3} alignItems="flex-start">
+                <Grid item xs={12} md={8}>
+                  <Typography variant="h4" sx={{ fontWeight: 700, color: '#1976d2', mb: 1 }}>
+                    {invoiceData.companyInfo.name}
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>
+                    {invoiceData.companyInfo.address}
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>
+                    ტელ: {invoiceData.companyInfo.phone}
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>
+                    მეილი: {invoiceData.companyInfo.email}
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    ს/კ: {invoiceData.companyInfo.taxNumber}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={4} sx={{ textAlign: 'right' }}>
+                  <Typography variant="h3" sx={{ fontWeight: 300, color: '#333', mb: 1 }}>
+                    ინვოისი
+                  </Typography>
+                  <Chip
+                    label={`#${invoiceData.invoiceNumber}`}
+                    color="primary"
+                    variant="filled"
+                    sx={{ fontSize: '1rem', fontWeight: 600 }}
+                  />
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
 
           {/* Invoice Details */}
-          <div className="invoice-details">
-            <div className="invoice-dates">
-              <div className="date-group">
-                <label>მომზადების თარიღი:</label>
-                <input
-                  type="date"
-                  value={invoiceData.issueDate}
-                  onChange={(e) => setInvoiceData(prev => ({...prev, issueDate: e.target.value}))}
-                  className="date-input"
-                />
-              </div>
-              <div className="date-group">
-                <label>ვალიდურია:</label>
-                <input
-                  type="date"
-                  value={invoiceData.dueDate}
-                  onChange={(e) => setInvoiceData(prev => ({...prev, dueDate: e.target.value}))}
-                  className="date-input"
-                />
-              </div>
-            </div>
-
-            <div className="customer-info">
-              <h4>მონაწილე:</h4>
-              <div className="customer-details">
-                <p><strong>{participant.company_name}</strong></p>
-                <p>ს/კ: {participant.identification_code}</p>
-                {participant.legal_address && <p>მისამართი: {participant.legal_address}</p>}
-              </div>
-            </div>
-          </div>
+          <Grid container spacing={3} sx={{ mb: 3 }}>
+            <Grid item xs={12} md={6}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                    თარიღები
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <TextField
+                      label="მომზადების თარიღი"
+                      type="date"
+                      value={invoiceData.issueDate}
+                      onChange={(e) => setInvoiceData(prev => ({...prev, issueDate: e.target.value}))}
+                      InputLabelProps={{ shrink: true }}
+                      size="small"
+                      fullWidth
+                    />
+                    <TextField
+                      label="ვალიდურია"
+                      type="date"
+                      value={invoiceData.dueDate}
+                      onChange={(e) => setInvoiceData(prev => ({...prev, dueDate: e.target.value}))}
+                      InputLabelProps={{ shrink: true }}
+                      size="small"
+                      fullWidth
+                    />
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                    მონაწილე
+                  </Typography>
+                  <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
+                    {participant.company_name}
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+                    ს/კ: {participant.identification_code}
+                  </Typography>
+                  {participant.legal_address && (
+                    <Typography variant="body2" color="textSecondary">
+                      მისამართი: {participant.legal_address}
+                    </Typography>
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
 
           {/* Invoice Items */}
-          <div className="invoice-items">
-            <table className="items-table">
-              <thead>
-                <tr>
-                  <th>აღწერა</th>
-                  <th>დეტალები</th>
-                  <th>რაოდ.</th>
-                  <th>ერთ. ფასი</th>
-                  <th>ჯამი</th>
-                  <th className="no-print">მოქმედება</th>
-                </tr>
-              </thead>
-              <tbody>
-                {invoiceData.items.map((item, index) => (
-                  <tr key={item.id || index}>
-                    <td>
-                      <input
-                        type="text"
-                        value={item.description}
-                        onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                        className="item-input"
-                        placeholder="სერვისის აღწერა"
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="text"
-                        value={item.details}
-                        onChange={(e) => handleItemChange(index, 'details', e.target.value)}
-                        className="item-input"
-                        placeholder="დეტალები"
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        step="0.1"
-                        value={item.quantity}
-                        onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                        className="item-input quantity-input"
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={item.unitPrice}
-                        onChange={(e) => handleItemChange(index, 'unitPrice', e.target.value)}
-                        className="item-input price-input"
-                      />
-                    </td>
-                    <td className="total-cell print-currency">
-                      <span className="print-only">€{item.total.toFixed(2)}</span>
-                      <span className="no-print">{formatCurrency(item.total)}</span>
-                    </td>
-                    <td className="no-print">
-                      <button
-                        type="button"
-                        className="remove-item-btn"
-                        onClick={() => removeItem(index)}
-                      >
-                        ✕
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  სერვისები
+                </Typography>
+                <Button
+                  startIcon={<Add />}
+                  onClick={addNewItem}
+                  variant="contained"
+                  size="small"
+                  sx={{
+                    backgroundColor: '#28a745',
+                    '&:hover': {
+                      backgroundColor: '#218838'
+                    }
+                  }}
+                >
+                  სერვისის დამატება
+                </Button>
+              </Box>
 
-            <div className="add-item-section no-print">
-              <button
-                type="button"
-                className="add-item-btn"
-                onClick={addNewItem}
-              >
-                + ახალი სერვისის დამატება
-              </button>
-            </div>
-          </div>
+              <TableContainer component={Paper} variant="outlined">
+                <Table size="small">
+                  <TableHead>
+                    <TableRow sx={{ backgroundColor: '#f8f9fa' }}>
+                      <TableCell sx={{ fontWeight: 600 }}>აღწერა</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>დეტალები</TableCell>
+                      <TableCell sx={{ fontWeight: 600, width: 80 }}>რაოდ.</TableCell>
+                      <TableCell sx={{ fontWeight: 600, width: 100 }}>ერთ. ფასი</TableCell>
+                      <TableCell sx={{ fontWeight: 600, width: 100 }}>ჯამი</TableCell>
+                      <TableCell sx={{ fontWeight: 600, width: 60 }}>მოქმედება</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {invoiceData.items.map((item, index) => (
+                      <TableRow key={item.id || index}>
+                        <TableCell>
+                          <TextField
+                            value={item.description}
+                            onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                            placeholder="სერვისის აღწერა"
+                            size="small"
+                            fullWidth
+                            variant="standard"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            value={item.details}
+                            onChange={(e) => handleItemChange(index, 'details', e.target.value)}
+                            placeholder="დეტალები"
+                            size="small"
+                            fullWidth
+                            variant="standard"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            type="number"
+                            step="0.1"
+                            value={item.quantity}
+                            onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+                            size="small"
+                            variant="standard"
+                            inputProps={{ style: { textAlign: 'right' } }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            type="number"
+                            step="0.01"
+                            value={item.unitPrice}
+                            onChange={(e) => handleItemChange(index, 'unitPrice', e.target.value)}
+                            size="small"
+                            variant="standard"
+                            inputProps={{ style: { textAlign: 'right' } }}
+                          />
+                        </TableCell>
+                        <TableCell sx={{ textAlign: 'right', fontWeight: 600 }}>
+                          {formatCurrency(item.total)}
+                        </TableCell>
+                        <TableCell>
+                          <IconButton
+                            onClick={() => removeItem(index)}
+                            size="small"
+                            color="error"
+                          >
+                            <Delete fontSize="small" />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </CardContent>
+          </Card>
 
           {/* Invoice Totals */}
-          <div className="invoice-totals">
-            <div className="totals-section">
-              <div className="total-row">
-                <span>ჯამი:</span>
-                <span>
-                  <span className="print-only">€{invoiceData.subtotal.toFixed(2)}</span>
-                  <span className="no-print">{formatCurrency(invoiceData.subtotal)}</span>
-                </span>
-              </div>
-              <div className="total-row">
-                <span>დღგ (18%):</span>
-                <span>
-                  <span className="print-only">€{invoiceData.tax.toFixed(2)}</span>
-                  <span className="no-print">{formatCurrency(invoiceData.tax)}</span>
-                </span>
-              </div>
-              <div className="total-row final-total">
-                <span><strong>გადასახდელი:</strong></span>
-                <span><strong>
-                  <span className="print-only">€{invoiceData.total.toFixed(2)}</span>
-                  <span className="no-print">{formatCurrency(invoiceData.total)}</span>
-                </strong></span>
-              </div>
-            </div>
-          </div>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={8}>
+              {/* Payment Information */}
+              <Card sx={{ backgroundColor: '#f8f9fa', borderLeft: '4px solid #1976d2' }}>
+                <CardContent>
+                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                    საგადახდო ინფორმაცია
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <strong>ბანკი:</strong> JSC "TBC Bank"
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <strong>ანგარიშის ნომერი:</strong> GE12TB7373336020100002
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>სწიფტ კოდი:</strong> TBCBGE22
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Card sx={{ borderTop: '3px solid #1976d2' }}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', py: 1 }}>
+                    <Typography variant="body1">ჯამი:</Typography>
+                    <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                      {formatCurrency(invoiceData.subtotal)}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', py: 1 }}>
+                    <Typography variant="body1">დღგ (18%):</Typography>
+                    <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                      {formatCurrency(invoiceData.tax)}
+                    </Typography>
+                  </Box>
+                  <Divider sx={{ my: 1 }} />
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', py: 1 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                      გადასახდელი:
+                    </Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 700, color: '#1976d2' }}>
+                      {formatCurrency(invoiceData.total)}
+                    </Typography>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+        </Box>
+      </DialogContent>
 
-          {/* Payment Information */}
-          <div className="payment-info">
-            <h4>საგადახდო ინფორმაცია:</h4>
-            <p>ბანკი: JSC "TBC Bank"</p>
-            <p>ანგარიშის ნომერი: GE12TB7373336020100002</p>
-            <p>სწიფტ კოდი: TBCBGE22</p>
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="invoice-actions no-print">
-          <button
-            className="save-invoice-btn"
-            onClick={handleSaveInvoice}
-            disabled={loading}
-          >
-            {loading ? 'ინახება...' : 'ინვოისის შენახვა'}
-          </button>
-          <button
-            className="print-invoice-btn"
-            onClick={handlePrintInvoice}
-          >
-            ამობეჭდვა
-          </button>
-          <button
-            className="cancel-btn"
-            onClick={onClose}
-          >
-            დახურვა
-          </button>
-        </div>
-      </div>
-    </div>
+      {/* Actions */}
+      <DialogActions sx={{ p: 3, backgroundColor: '#f8f9fa', gap: 2 }}>
+        <Button
+          onClick={onClose}
+          variant="outlined"
+          sx={{
+            borderColor: '#6c757d',
+            color: '#6c757d',
+            '&:hover': {
+              borderColor: '#5a6268',
+              backgroundColor: 'rgba(108, 117, 125, 0.04)'
+            }
+          }}
+        >
+          დახურვა
+        </Button>
+        <Button
+          onClick={handlePrintInvoice}
+          variant="contained"
+          startIcon={<Print />}
+          sx={{
+            backgroundColor: '#28a745',
+            '&:hover': {
+              backgroundColor: '#218838'
+            }
+          }}
+        >
+          ამობეჭდვა
+        </Button>
+        <Button
+          onClick={handleSaveInvoice}
+          variant="contained"
+          startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <Save />}
+          disabled={loading}
+          sx={{
+            backgroundColor: '#1976d2',
+            '&:hover': {
+              backgroundColor: '#1565c0'
+            }
+          }}
+        >
+          {loading ? 'ინახება...' : 'ინვოისის შენახვა'}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 };
 

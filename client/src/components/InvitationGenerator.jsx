@@ -1,10 +1,45 @@
+
 import React, { useState, useEffect, useRef } from 'react';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Box,
+  Typography,
+  Button,
+  Checkbox,
+  FormControlLabel,
+  FormGroup,
+  TextField,
+  Chip,
+  Paper,
+  Grid,
+  Card,
+  CardContent,
+  CircularProgress,
+  IconButton,
+  Divider,
+  Switch,
+  Alert,
+  Container
+} from '@mui/material';
+import {
+  Close,
+  QrCode,
+  Download,
+  SelectAll,
+  DeselectAll,
+  PictureAsPdf,
+  Business,
+  Event,
+  Info
+} from '@mui/icons-material';
 import QRCode from 'react-qr-code';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import QRCodeLib from 'qrcode';
 import QRCodeGenerator from 'qrcode-generator';
-import './InvitationGenerator.css';
 
 const generateQRCodeDataURL = async (text, size = 120) => {
   try {
@@ -64,7 +99,6 @@ const drawQRCodeToPDF = (pdf, text, x, y, size) => {
   }
 };
 
-
 const InvitationGenerator = ({ eventData, participants, onClose, showNotification }) => {
   const [selectedParticipants, setSelectedParticipants] = useState([]);
   const [invitationTemplate, setInvitationTemplate] = useState('standard');
@@ -74,17 +108,16 @@ const InvitationGenerator = ({ eventData, participants, onClose, showNotificatio
     boothLocation: true,
     contactInfo: false,
     customMessage: '',
-    useURL: false // ახალი ოფცია
+    useURL: false
   });
   const [isGenerating, setIsGenerating] = useState(false);
-  const invitationRefs = useRef([]); // Keep refs if needed for other previews, but PDF generation is direct now
+  const invitationRefs = useRef([]);
 
   useEffect(() => {
     setSelectedParticipants(participants.map(p => p.id));
   }, [participants]);
 
   const generateQRData = (participant) => {
-    // თუ URL რეჟიმია, გავაგენერიროთ მარტივი URL
     if (includeQRInfo.useURL) {
       const baseUrl = window.location.origin;
       const params = new URLSearchParams({
@@ -114,7 +147,6 @@ const InvitationGenerator = ({ eventData, participants, onClose, showNotificatio
     if (includeQRInfo.participantInfo) {
       qrData.booth_number = participant.booth_number;
       qrData.booth_size = participant.booth_size;
-      // Convert status to English to avoid encoding issues
       const statusMap = {
         'რეგისტრირებული': 'registered',
         'დაყოველებული': 'approved', 
@@ -137,7 +169,6 @@ const InvitationGenerator = ({ eventData, participants, onClose, showNotificatio
       qrData.custom_message = includeQRInfo.customMessage;
     }
 
-    // Ensure proper UTF-8 encoding
     return JSON.stringify(qrData, null, 0);
   };
 
@@ -155,25 +186,6 @@ const InvitationGenerator = ({ eventData, participants, onClose, showNotificatio
 
   const deselectAllParticipants = () => {
     setSelectedParticipants([]);
-  };
-
-  // This function is no longer directly used for PDF generation but might be useful for other previews
-  const generateSingleInvitation = async (participant, index) => {
-    const element = invitationRefs.current[index];
-    if (!element) return null;
-
-    try {
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        backgroundColor: '#ffffff',
-        width: 800,
-        height: 600
-      });
-      return canvas;
-    } catch (error) {
-      console.error('მოსაწვევის გენერაციის შეცდომა:', error);
-      return null;
-    }
   };
 
   const generatePDF = async () => {
@@ -195,18 +207,10 @@ const InvitationGenerator = ({ eventData, participants, onClose, showNotificatio
         format: 'a4'
       });
 
-      // Register BPG Nino font for Georgian characters
-      // You would need to have the BPG Nino font file (e.g., BPG_Nino_Mtavruli.ttf) available
-      // and potentially convert it to a format jsPDF can use if it's not already embedded.
-      // For simplicity, assuming 'BPGNino' is registered or available globally.
-      // In a real app, you might load it like this:
-      // pdf.addFileToVFS('BPGNino.ttf', fontData);
-      // pdf.addFont('BPGNino.ttf', 'BPGNino', 'normal');
-
-      const pageWidth = 210; // A4 width in mm
-      const pageHeight = 297; // A4 height in mm
+      const pageWidth = 210;
+      const pageHeight = 297;
       const margin = 15;
-      const invitationHeight = 45; // More compact height
+      const invitationHeight = 45;
       const invitationsPerPage = Math.floor((pageHeight - 2 * margin) / invitationHeight);
 
       let currentY = margin;
@@ -214,55 +218,45 @@ const InvitationGenerator = ({ eventData, participants, onClose, showNotificatio
       for (let i = 0; i < selectedParticipantData.length; i++) {
         const participant = selectedParticipantData[i];
 
-        // Check if we need a new page
         if (i > 0 && i % invitationsPerPage === 0) {
           pdf.addPage();
           currentY = margin;
         }
 
-        // Generate QR data
         const qrData = generateQRData(participant);
-
         const cardWidth = pageWidth - 2 * margin;
         const cardHeight = invitationHeight - 3;
 
-        // Card background
         pdf.setFillColor(255, 255, 255);
         pdf.roundedRect(margin, currentY, cardWidth, cardHeight, 3, 3, 'F');
 
-        // Border
         pdf.setDrawColor(67, 123, 208);
         pdf.setLineWidth(0.5);
         pdf.roundedRect(margin, currentY, cardWidth, cardHeight, 3, 3, 'S');
 
-        // Company Logo Area (left side)
         pdf.setFillColor(67, 123, 208);
         pdf.roundedRect(margin + 2, currentY + 2, 25, cardHeight - 4, 2, 2, 'F');
         
-        // EXPO GEORGIA logo text
         pdf.setFontSize(10);
         pdf.setTextColor(255, 255, 255);
         pdf.setFont('helvetica', 'bold');
         pdf.text('EXPO', margin + 14, currentY + 12, { align: 'center' });
         pdf.text('GEORGIA', margin + 14, currentY + 17, { align: 'center' });
 
-        // Company name - large and prominent
         pdf.setFontSize(14);
         pdf.setTextColor(45, 45, 45);
         pdf.setFont('helvetica', 'bold');
-        const maxCompanyNameWidth = cardWidth - 70; // Leave space for logo and QR
+        const maxCompanyNameWidth = cardWidth - 70;
         const companyNameLines = pdf.splitTextToSize(participant.company_name || 'Company Name', maxCompanyNameWidth);
         if (companyNameLines.length > 0) {
           pdf.text(companyNameLines[0], margin + 30, currentY + 12);
         }
 
-        // Event name
         pdf.setFontSize(9);
         pdf.setTextColor(67, 123, 208);
         pdf.setFont('helvetica', 'normal');
         pdf.text(eventData.service_name, margin + 30, currentY + 18);
 
-        // Booth number - very prominent
         if (participant.booth_number) {
           pdf.setFillColor(240, 240, 240);
           pdf.roundedRect(margin + 30, currentY + 24, 30, 10, 1, 1, 'F');
@@ -273,14 +267,12 @@ const InvitationGenerator = ({ eventData, participants, onClose, showNotificatio
           pdf.text('BOOTH #' + participant.booth_number, margin + 32, currentY + 30);
         }
 
-        // QR Code - larger and more prominent
         const qrSize = 30;
         const qrX = pageWidth - margin - qrSize - 5;
         const qrY = currentY + 6;
 
         drawQRCodeToPDF(pdf, qrData, qrX, qrY, qrSize);
 
-        // QR Code label
         pdf.setFontSize(6);
         pdf.setTextColor(100, 100, 100);
         pdf.setFont('helvetica', 'normal');
@@ -313,170 +305,434 @@ const InvitationGenerator = ({ eventData, participants, onClose, showNotificatio
   );
 
   return (
-    <div className="invitation-generator-modal">
-      <div className="modal-content">
-        <div className="modal-header">
-          <h3>QR კოდებით მოსაწვევების გენერაცია</h3>
-          <button className="modal-close" onClick={onClose}>✕</button>
-        </div>
+    <Dialog
+      open={true}
+      onClose={onClose}
+      maxWidth="lg"
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 3,
+          minHeight: '80vh',
+          background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)'
+        }
+      }}
+    >
+      <DialogTitle
+        sx={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 2,
+          p: 3
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <QrCode sx={{ fontSize: 28 }} />
+          <Typography variant="h5" sx={{ fontWeight: 600, textShadow: '0 1px 2px rgba(0, 0, 0, 0.2)' }}>
+            QR კოდებით მოსაწვევების გენერაცია
+          </Typography>
+        </Box>
+        <IconButton 
+          onClick={onClose}
+          sx={{ 
+            color: 'white',
+            background: 'rgba(255, 255, 255, 0.1)',
+            '&:hover': {
+              background: 'rgba(255, 255, 255, 0.2)',
+              transform: 'scale(1.1)'
+            }
+          }}
+        >
+          <Close />
+        </IconButton>
+      </DialogTitle>
 
-        <div className="modal-body">
-          {/* კონტროლები */}
-          <div className="controls-section">
-            <div className="participants-selection">
-              <h4>მონაწილეების არჩევა ({selectedParticipants.length}/{participants.length})</h4>
-              <div className="selection-controls">
-                <button onClick={selectAllParticipants} className="select-btn">
-                  ყველას არჩევა
-                </button>
-                <button onClick={deselectAllParticipants} className="deselect-btn">
-                  ყველას გაუქმება
-                </button>
-              </div>
-
-              <div className="participants-list">
-                {participants.map(participant => (
-                  <label key={participant.id} className="participant-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={selectedParticipants.includes(participant.id)}
-                      onChange={() => handleParticipantToggle(participant.id)}
-                    />
-                    <span>{participant.company_name} - Booth #{participant.booth_number}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* QR კოდის პარამეტრები */}
-            <div className="qr-options">
-              <h4>QR კოდში ჩასაწერი ინფორმაცია</h4>
-              <label className="option-checkbox">
-                <input
-                  type="checkbox"
-                  checked={includeQRInfo.eventDetails}
-                  onChange={(e) => setIncludeQRInfo({...includeQRInfo, eventDetails: e.target.checked})}
+      <DialogContent sx={{ p: 3 }}>
+        <Grid container spacing={3}>
+          {/* მონაწილეების არჩევა */}
+          <Grid item xs={12} md={6}>
+            <Paper
+              elevation={3}
+              sx={{
+                p: 3,
+                background: 'linear-gradient(135deg, #f1f5f9 0%, #ffffff 100%)',
+                border: '1px solid #e2e8f0',
+                borderRadius: 3
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, color: '#2d3748', display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Business sx={{ color: '#667eea' }} />
+                  მონაწილეების არჩევა
+                </Typography>
+                <Chip
+                  label={`${selectedParticipants.length}/${participants.length}`}
+                  color="primary"
+                  variant="outlined"
                 />
-                <span>ივენთის დეტალები</span>
-              </label>
-              <label className="option-checkbox">
-                <input
-                  type="checkbox"
-                  checked={includeQRInfo.participantInfo}
-                  onChange={(e) => setIncludeQRInfo({...includeQRInfo, participantInfo: e.target.checked})}
-                />
-                <span>მონაწილის ინფორმაცია</span>
-              </label>
-              <label className="option-checkbox">
-                <input
-                  type="checkbox"
-                  checked={includeQRInfo.boothLocation}
-                  onChange={(e) => setIncludeQRInfo({...includeQRInfo, boothLocation: e.target.checked})}
-                />
-                <span>სტენდის ადგილმდებარეობა</span>
-              </label>
-              <label className="option-checkbox">
-                <input
-                  type="checkbox"
-                  checked={includeQRInfo.contactInfo}
-                  onChange={(e) => setIncludeQRInfo({...includeQRInfo, contactInfo: e.target.checked})}
-                />
-                <span>საკონტაქტო ინფორმაცია</span>
-              </label>
+              </Box>
 
-              <label className="option-checkbox">
-                <input
-                  type="checkbox"
-                  checked={includeQRInfo.useURL}
-                  onChange={(e) => setIncludeQRInfo({...includeQRInfo, useURL: e.target.checked})}
-                />
-                <span>URL ფორმატის გამოყენება (ყველა ტელეფონზე იმუშავებს)</span>
-              </label>
-
-              <div className="custom-message">
-                <label>დამატებითი შეტყობინება:</label>
-                <textarea
-                  value={includeQRInfo.customMessage}
-                  onChange={(e) => setIncludeQRInfo({...includeQRInfo, customMessage: e.target.value})}
-                  placeholder="დამატებითი შეტყობინება QR კოდისთვის..."
-                  rows="2"
-                />
-              </div>
-            </div>
-
-            <div className="generate-controls">
-              <button
-                onClick={generatePDF}
-                disabled={isGenerating || selectedParticipants.length === 0}
-                className="generate-btn"
-              >
-                {isGenerating ? 'მუშაობს...' : `${selectedParticipants.length} მოსაწვევის გენერაცია`}
-              </button>
-            </div>
-          </div>
-
-          {/* მოსაწვევების წინასწარი ნახვა */}
-          <div className="preview-section">
-            <h4>წინასწარი ნახვა</h4>
-            <div className="invitations-preview">
-              {selectedParticipantData.slice(0, 3).map((participant, index) => (
-                <div
-                  key={participant.id}
-                  ref={el => invitationRefs.current[index] = el}
-                  className="invitation-card"
+              <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                <Button
+                  onClick={selectAllParticipants}
+                  size="small"
+                  variant="outlined"
+                  startIcon={<SelectAll />}
+                  sx={{
+                    borderColor: '#4299e1',
+                    color: '#4299e1',
+                    '&:hover': {
+                      borderColor: '#3182ce',
+                      backgroundColor: 'rgba(66, 153, 225, 0.04)'
+                    }
+                  }}
                 >
-                  <div className="invitation-header">
-                    <div className="logo-section">
-                      <h2>EXPO GEORGIA</h2>
-                      <p>Exhibition & Convention Center</p>
-                    </div>
-                  </div>
+                  ყველას არჩევა
+                </Button>
+                <Button
+                  onClick={deselectAllParticipants}
+                  size="small"
+                  variant="outlined"
+                  startIcon={<DeselectAll />}
+                  sx={{
+                    borderColor: '#a0aec0',
+                    color: '#4a5568',
+                    '&:hover': {
+                      borderColor: '#718096',
+                      backgroundColor: 'rgba(160, 174, 192, 0.04)'
+                    }
+                  }}
+                >
+                  ყველას გაუქმება
+                </Button>
+              </Box>
 
-                  <div className="invitation-content">
-                    <div className="event-info">
-                      <h3>{eventData.service_name}</h3>
-                      <p className="event-date">
-                        {formatDate(eventData.start_date)} - {formatDate(eventData.end_date)}
-                      </p>
-                    </div>
+              <Box
+                sx={{
+                  maxHeight: 300,
+                  overflow: 'auto',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 2,
+                  backgroundColor: 'white',
+                  '&::-webkit-scrollbar': {
+                    width: '6px',
+                  },
+                  '&::-webkit-scrollbar-track': {
+                    backgroundColor: '#f1f5f9',
+                  },
+                  '&::-webkit-scrollbar-thumb': {
+                    backgroundColor: '#cbd5e0',
+                    borderRadius: '3px',
+                  },
+                }}
+              >
+                <FormGroup sx={{ p: 2 }}>
+                  {participants.map(participant => (
+                    <FormControlLabel
+                      key={participant.id}
+                      control={
+                        <Checkbox
+                          checked={selectedParticipants.includes(participant.id)}
+                          onChange={() => handleParticipantToggle(participant.id)}
+                          sx={{
+                            color: '#667eea',
+                            '&.Mui-checked': {
+                              color: '#667eea',
+                            }
+                          }}
+                        />
+                      }
+                      label={
+                        <Typography variant="body2">
+                          {participant.company_name} - Booth #{participant.booth_number}
+                        </Typography>
+                      }
+                      sx={{
+                        mb: 0.5,
+                        '&:hover': {
+                          backgroundColor: 'rgba(102, 126, 234, 0.04)',
+                          borderRadius: 1
+                        }
+                      }}
+                    />
+                  ))}
+                </FormGroup>
+              </Box>
+            </Paper>
+          </Grid>
 
-                    <div className="participant-details">
-                      <h4>{participant.company_name}</h4>
-                      <p><strong>სტენდის ნომერი:</strong> {participant.booth_number}</p>
-                      <p><strong>სტენდის ზომა:</strong> {participant.booth_size} მ²</p>
-                      <p><strong>ქვეყანა:</strong> {participant.country}</p>
-                    </div>
+          {/* QR კოდის პარამეტრები */}
+          <Grid item xs={12} md={6}>
+            <Paper
+              elevation={3}
+              sx={{
+                p: 3,
+                background: 'linear-gradient(135deg, #f1f5f9 0%, #ffffff 100%)',
+                border: '1px solid #e2e8f0',
+                borderRadius: 3
+              }}
+            >
+              <Typography variant="h6" sx={{ fontWeight: 600, color: '#2d3748', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Info sx={{ color: '#667eea' }} />
+                QR კოდში ჩასაწერი ინფორმაცია
+              </Typography>
 
-                    <div className="qr-section">
-                      <QRCode
-                        value={generateQRData(participant)}
-                        size={120}
-                        level="M"
-                        includeMargin={true}
-                      />
-                      <p className="qr-info">სკანირეთ დეტალური ინფორმაციისთვის</p>
-                    </div>
-                  </div>
+              <FormGroup sx={{ mb: 2 }}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={includeQRInfo.eventDetails}
+                      onChange={(e) => setIncludeQRInfo({...includeQRInfo, eventDetails: e.target.checked})}
+                      sx={{
+                        '& .MuiSwitch-switchBase.Mui-checked': {
+                          color: '#667eea',
+                        },
+                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                          backgroundColor: '#667eea',
+                        }
+                      }}
+                    />
+                  }
+                  label="ივენთის დეტალები"
+                />
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={includeQRInfo.participantInfo}
+                      onChange={(e) => setIncludeQRInfo({...includeQRInfo, participantInfo: e.target.checked})}
+                      sx={{
+                        '& .MuiSwitch-switchBase.Mui-checked': {
+                          color: '#667eea',
+                        },
+                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                          backgroundColor: '#667eea',
+                        }
+                      }}
+                    />
+                  }
+                  label="მონაწილის ინფორმაცია"
+                />
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={includeQRInfo.boothLocation}
+                      onChange={(e) => setIncludeQRInfo({...includeQRInfo, boothLocation: e.target.checked})}
+                      sx={{
+                        '& .MuiSwitch-switchBase.Mui-checked': {
+                          color: '#667eea',
+                        },
+                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                          backgroundColor: '#667eea',
+                        }
+                      }}
+                    />
+                  }
+                  label="სტენდის ადგილმდებარეობა"
+                />
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={includeQRInfo.contactInfo}
+                      onChange={(e) => setIncludeQRInfo({...includeQRInfo, contactInfo: e.target.checked})}
+                      sx={{
+                        '& .MuiSwitch-switchBase.Mui-checked': {
+                          color: '#667eea',
+                        },
+                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                          backgroundColor: '#667eea',
+                        }
+                      }}
+                    />
+                  }
+                  label="საკონტაქტო ინფორმაცია"
+                />
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={includeQRInfo.useURL}
+                      onChange={(e) => setIncludeQRInfo({...includeQRInfo, useURL: e.target.checked})}
+                      sx={{
+                        '& .MuiSwitch-switchBase.Mui-checked': {
+                          color: '#667eea',
+                        },
+                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                          backgroundColor: '#667eea',
+                        }
+                      }}
+                    />
+                  }
+                  label="URL ფორმატის გამოყენება"
+                />
+              </FormGroup>
 
-                  <div className="invitation-footer">
-                    <p><strong>მისამართი:</strong> წერეთლის გამზ. №118, თბილისი, საქართველო</p>
-                    <p><strong>ტელეფონი:</strong> +995 322 341 100 | <strong>Email:</strong> info@expogeorgia.ge</p>
-                  </div>
-                </div>
-              ))}
+              <TextField
+                fullWidth
+                label="დამატებითი შეტყობინება"
+                multiline
+                rows={3}
+                value={includeQRInfo.customMessage}
+                onChange={(e) => setIncludeQRInfo({...includeQRInfo, customMessage: e.target.value})}
+                placeholder="დამატებითი შეტყობინება QR კოდისთვის..."
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#667eea',
+                    }
+                  },
+                  '& .MuiInputLabel-root.Mui-focused': {
+                    color: '#667eea',
+                  }
+                }}
+              />
+            </Paper>
+          </Grid>
+
+          {/* წინასწარი ნახვა */}
+          <Grid item xs={12}>
+            <Paper
+              elevation={3}
+              sx={{
+                p: 3,
+                background: 'linear-gradient(135deg, #f1f5f9 0%, #ffffff 100%)',
+                border: '1px solid #e2e8f0',
+                borderRadius: 3
+              }}
+            >
+              <Typography variant="h6" sx={{ fontWeight: 600, color: '#2d3748', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Event sx={{ color: '#667eea' }} />
+                წინასწარი ნახვა
+              </Typography>
+
+              <Grid container spacing={2}>
+                {selectedParticipantData.slice(0, 3).map((participant, index) => (
+                  <Grid item xs={12} md={4} key={participant.id}>
+                    <Card
+                      sx={{
+                        background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                        border: '2px solid #667eea',
+                        borderRadius: 2,
+                        overflow: 'visible',
+                        position: 'relative'
+                      }}
+                    >
+                      <CardContent sx={{ p: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                          <Typography variant="h6" sx={{ color: '#667eea', fontWeight: 600, fontSize: '0.9rem' }}>
+                            EXPO GEORGIA
+                          </Typography>
+                        </Box>
+
+                        <Typography variant="body1" sx={{ fontWeight: 600, color: '#2d3748', mb: 0.5, fontSize: '0.8rem' }}>
+                          {eventData.service_name}
+                        </Typography>
+
+                        <Typography variant="body2" sx={{ color: '#4a5568', mb: 1, fontSize: '0.7rem' }}>
+                          {formatDate(eventData.start_date)} - {formatDate(eventData.end_date)}
+                        </Typography>
+
+                        <Divider sx={{ my: 1 }} />
+
+                        <Typography variant="body1" sx={{ fontWeight: 600, color: '#2d3748', mb: 0.5, fontSize: '0.8rem' }}>
+                          {participant.company_name}
+                        </Typography>
+
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                          <Box>
+                            <Typography variant="body2" sx={{ fontSize: '0.7rem', color: '#718096' }}>
+                              <strong>სტენდი:</strong> #{participant.booth_number}
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontSize: '0.7rem', color: '#718096' }}>
+                              <strong>ზომა:</strong> {participant.booth_size} მ²
+                            </Typography>
+                          </Box>
+                          <Box sx={{ textAlign: 'center' }}>
+                            <QRCode
+                              value={generateQRData(participant)}
+                              size={60}
+                              level="M"
+                              includeMargin={true}
+                            />
+                            <Typography variant="caption" sx={{ fontSize: '0.6rem', color: '#a0aec0' }}>
+                              სკანირეთ
+                            </Typography>
+                          </Box>
+                        </Box>
+
+                        <Typography variant="caption" sx={{ fontSize: '0.65rem', color: '#a0aec0' }}>
+                          წერეთლის გამზ. №118, თბილისი | +995 322 341 100
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
 
               {selectedParticipantData.length > 3 && (
-                <div className="more-indicator">
-                  და კიდევ {selectedParticipantData.length - 3} მოსაწვევი...
-                </div>
+                <Alert
+                  severity="info"
+                  sx={{
+                    mt: 2,
+                    backgroundColor: 'rgba(102, 126, 234, 0.04)',
+                    borderColor: '#667eea',
+                    '& .MuiAlert-icon': {
+                      color: '#667eea'
+                    }
+                  }}
+                >
+                  და კიდევ {selectedParticipantData.length - 3} მოსაწვევი გენერირდება...
+                </Alert>
               )}
-            </div>
-          </div>
+            </Paper>
+          </Grid>
+        </Grid>
+      </DialogContent>
 
-          {/* ფარული ელემენტები PDF გენერაციისთვის - ეს ნაწილი აღარ არის საჭირო, რადგან PDF პირდაპირ გენერირდება */}
-        </div>
-      </div>
-    </div>
+      <DialogActions sx={{ p: 3, backgroundColor: '#f8fafc' }}>
+        <Button
+          onClick={onClose}
+          variant="outlined"
+          sx={{
+            borderColor: '#a0aec0',
+            color: '#4a5568',
+            '&:hover': {
+              borderColor: '#718096',
+              backgroundColor: 'rgba(160, 174, 192, 0.04)'
+            }
+          }}
+        >
+          გაუქმება
+        </Button>
+        <Button
+          onClick={generatePDF}
+          disabled={isGenerating || selectedParticipants.length === 0}
+          variant="contained"
+          startIcon={
+            isGenerating ? <CircularProgress size={20} color="inherit" /> : <PictureAsPdf />
+          }
+          sx={{
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            fontWeight: 600,
+            px: 3,
+            py: 1,
+            '&:hover': {
+              background: 'linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)',
+              transform: 'translateY(-1px)',
+              boxShadow: '0 4px 20px rgba(102, 126, 234, 0.4)'
+            },
+            '&:disabled': {
+              background: '#cbd5e0',
+              color: '#a0aec0'
+            }
+          }}
+        >
+          {isGenerating ? 'მუშაობს...' : `${selectedParticipants.length} მოსაწვევის გენერაცია`}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 };
 
