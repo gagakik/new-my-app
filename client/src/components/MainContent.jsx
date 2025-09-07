@@ -51,7 +51,6 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
               <h1>მთავარი დეშბორდი</h1>
               <p>თქვენი ბიზნესის მთავარი მეტრიკები და ანალიტიკა ერთ ადგილას. აქ თვალს ადევნებთ ყველა მნიშვნელოვან ინფორმაციას.</p>
             </div>
-            <Statistics showNotification={showNotification} userRole={userRole} />
           </div>
         )}
         {activeSection === 'exhibitions' && (
