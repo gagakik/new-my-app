@@ -29,7 +29,7 @@ import {
   QrCode,
   Download,
   SelectAll,
-  DeselectAll,
+  ClearAll,
   PictureAsPdf,
   Business,
   Event,
@@ -396,7 +396,7 @@ const InvitationGenerator = ({ eventData, participants, onClose, showNotificatio
                   onClick={deselectAllParticipants}
                   size="small"
                   variant="outlined"
-                  startIcon={<DeselectAll />}
+                  startIcon={<ClearAll />}
                   sx={{
                     borderColor: '#a0aec0',
                     color: '#4a5568',

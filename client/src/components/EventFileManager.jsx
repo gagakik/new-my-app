@@ -1,13 +1,56 @@
 import React, { useState, useEffect } from 'react';
-import './EventFileManager.css';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Typography,
+  Box,
+  Card,
+  CardContent,
+  CardActions,
+  Button,
+  IconButton,
+  Chip,
+  Divider,
+  Alert,
+  CircularProgress,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  ListItemSecondaryAction,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  FormControl,
+  FormLabel,
+  Paper,
+  Stack,
+  useTheme,
+  alpha
+} from '@mui/material';
+import {
+  Close,
+  CloudUpload,
+  Download,
+  Delete,
+  PictureAsPdf,
+  Description,
+  AttachFile,
+  Schedule,
+  Person,
+  FolderOpen
+} from '@mui/icons-material';
 import * as filesAPI from '../services/api';
 
 const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
+  const theme = useTheme();
   const [planFile, setPlanFile] = useState(null);
   const [invoiceFiles, setInvoiceFiles] = useState([]);
   const [expenseFiles, setExpenseFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
-  const [uploadType, setUploadType] = useState('');
+  const [uploadType, setUploadType] = useState('invoice');
 
   const isAuthorizedForManagement =
     userRole === 'admin' ||
@@ -38,7 +81,6 @@ const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
     if (!file) return;
 
     setUploading(true);
-    setUploadType(type);
 
     try {
       const formData = new FormData();
@@ -62,7 +104,6 @@ const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
       showNotification(error.response?.data?.message || 'ფაილის ატვირთვა ვერ მოხერხდა', 'error');
     } finally {
       setUploading(false);
-      setUploadType('');
     }
   };
 
@@ -126,157 +167,346 @@ const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
     }
   }, [event]);
 
+  const FileUploadButton = ({ type, accept, children }) => (
+    <Button
+      component="label"
+      variant="outlined"
+      startIcon={<CloudUpload />}
+      disabled={uploading}
+      sx={{
+        borderStyle: 'dashed',
+        borderWidth: 2,
+        borderColor: alpha(theme.palette.primary.main, 0.5),
+        backgroundColor: alpha(theme.palette.primary.main, 0.02),
+        '&:hover': {
+          borderColor: theme.palette.primary.main,
+          backgroundColor: alpha(theme.palette.primary.main, 0.08),
+        }
+      }}
+    >
+      {uploading ? <CircularProgress size={20} sx={{ mr: 1 }} /> : null}
+      {children}
+      <input
+        type="file"
+        accept={accept}
+        hidden
+        onChange={(e) => {
+          if (e.target.files[0]) {
+            handleFileUpload(e.target.files[0], type);
+            e.target.value = '';
+          }
+        }}
+        disabled={uploading}
+      />
+    </Button>
+  );
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content file-manager-modal">
-        <div className="modal-header">
-          <h3>ფაილების მართვა - {event.service_name}</h3>
-          <button className="close-modal" onClick={onClose}>✕</button>
-        </div>
+    <Dialog
+      open={true}
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 3,
+          boxShadow: theme.shadows[20]
+        }
+      }}
+    >
+      <DialogTitle
+        sx={{
+          background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+          color: '#ffffff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          pr: 1
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <FolderOpen />
+          <Typography variant="h6" component="div">
+            ფაილების მართვა - {event.service_name}
+          </Typography>
+        </Box>
+        <IconButton
+          onClick={onClose}
+          size="small"
+          sx={{
+            color: 'white'
+          }}
+        >
+          <Close />
+        </IconButton>
+      </DialogTitle>
 
-        <div className="modal-body">
+      <DialogContent sx={{ p: 3 }}>
+        <Stack spacing={3}>
           {/* Plan File Section */}
-          <div className="file-section">
-            <h4>გეგმის ფაილი (PDF)</h4>
-            <div className="file-content">
+          <Card
+            variant="outlined"
+            sx={{
+              borderRadius: 2,
+              borderColor: alpha(theme.palette.primary.main, 0.3)
+            }}
+          >
+            <CardContent>
+              <Typography
+                variant="h6"
+                gutterBottom
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  color: theme.palette.primary.main,
+                  fontWeight: 600
+                }}
+              >
+                <PictureAsPdf />
+                გეგმის ფაილი (PDF)
+              </Typography>
+
               {planFile ? (
-                <div className="file-item">
-                  <div className="file-info">
-                    <span className="file-name">გეგმა.pdf</span>
-                    {event.plan_uploaded_by && (
-                      <span className="file-author">ატვირთა: {event.plan_uploaded_by}</span>
-                    )}
-                    <div className="file-actions">
-                      <a
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 2,
+                    backgroundColor: alpha(theme.palette.success.main, 0.05),
+                    borderColor: alpha(theme.palette.success.main, 0.3)
+                  }}
+                >
+                  <Stack direction="row" alignItems="center" justifyContent="space-between">
+                    <Box>
+                      <Typography variant="body1" fontWeight={500}>
+                        გეგმა.pdf
+                      </Typography>
+                      {event.plan_uploaded_by && (
+                        <Typography variant="caption" color="text.secondary">
+                          <Person fontSize="small" sx={{ mr: 0.5, verticalAlign: 'middle' }} />
+                          ატვირთა: {event.plan_uploaded_by}
+                        </Typography>
+                      )}
+                    </Box>
+                    <Stack direction="row" spacing={1}>
+                      <Button
                         href={`/api/download/${planFile.replace('/uploads/', '')}`}
                         download="გეგმა.pdf"
-                        className="btn-download"
+                        variant="contained"
+                        size="small"
+                        startIcon={<Download />}
+                        color="success"
                       >
                         ჩამოტვირთვა
-                      </a>
+                      </Button>
                       {isAuthorizedForManagement && (
-                        <button
-                          className="btn-delete"
+                        <Button
                           onClick={() => handleFileDelete('plan')}
+                          variant="outlined"
+                          size="small"
+                          startIcon={<Delete />}
+                          color="error"
                         >
                           წაშლა
-                        </button>
+                        </Button>
                       )}
-                    </div>
-                  </div>
-                </div>
+                    </Stack>
+                  </Stack>
+                </Paper>
               ) : (
-                <p className="no-file">გეგმის ფაილი არ არის ატვირთული</p>
+                <Alert
+                  severity="info"
+                  icon={<Description />}
+                  sx={{ borderRadius: 2 }}
+                >
+                  გეგმის ფაილი არ არის ატვირთული
+                </Alert>
               )}
 
               {isAuthorizedForManagement && (
-                <div className="upload-section">
-                  <input
-                    type="file"
-                    accept=".pdf"
-                    onChange={(e) => {
-                      if (e.target.files[0]) {
-                        handleFileUpload(e.target.files[0], 'plan');
-                        e.target.value = '';
-                      }
-                    }}
-                    disabled={uploading && uploadType === 'plan'}
-                  />
-                  {uploading && uploadType === 'plan' && <span>ატვირთვა...</span>}
-                </div>
+                <Box sx={{ mt: 2 }}>
+                  <FileUploadButton type="plan" accept=".pdf">
+                    PDF ფაილის ატვირთვა
+                  </FileUploadButton>
+                </Box>
               )}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
           {/* Attached Files Section */}
-          <div className="file-section">
-            <h4>მიმაგრებული ფაილები</h4>
-            <div className="file-content">
+          <Card
+            variant="outlined"
+            sx={{
+              borderRadius: 2,
+              borderColor: alpha(theme.palette.secondary.main, 0.3)
+            }}
+          >
+            <CardContent>
+              <Typography
+                variant="h6"
+                gutterBottom
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  color: theme.palette.secondary.main,
+                  fontWeight: 600
+                }}
+              >
+                <AttachFile />
+                მიმაგრებული ფაილები
+              </Typography>
+
               {[...invoiceFiles, ...expenseFiles].length > 0 ? (
-                <div className="files-list">
+                <List sx={{ p: 0 }}>
                   {[...invoiceFiles, ...expenseFiles].map((file, index) => {
                     const isInvoice = invoiceFiles.includes(file);
                     return (
-                      <div key={index} className="file-item">
-                        <div className="file-info">
-                          <span className="file-name">
-                            {file.name}
-                            <span className="file-type-badge">
-                              {isInvoice ? 'ინვოისი' : 'ხარჯი'}
-                            </span>
-                          </span>
-                          <span className="file-meta">
-                            {formatFileSize(file.size)} • {formatDate(file.uploaded_at)}
-                            {file.uploaded_by && ` • ${file.uploaded_by}`}
-                          </span>
-                          <div className="file-actions">
-                            <a
-                              href={`/api/download/${file.path.replace('/uploads/', '')}`}
+                      <ListItem
+                        key={index}
+                        sx={{
+                          mb: 1,
+                          backgroundColor: alpha(
+                            isInvoice ? theme.palette.info.main : theme.palette.warning.main,
+                            0.05
+                          ),
+                          borderRadius: 2,
+                          border: `1px solid ${alpha(
+                            isInvoice ? theme.palette.info.main : theme.palette.warning.main,
+                            0.2
+                          )}`
+                        }}
+                      >
+                        <ListItemIcon>
+                          <Description
+                            color={isInvoice ? "info" : "warning"}
+                          />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Typography variant="body1" fontWeight={500}>
+                                {file.name}
+                              </Typography>
+                              <Chip
+                                label={isInvoice ? 'ინვოისი' : 'ხარჯი'}
+                                size="small"
+                                color={isInvoice ? "info" : "warning"}
+                                variant="outlined"
+                              />
+                            </Box>
+                          }
+                          secondary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                              <Typography variant="caption" color="text.secondary">
+                                {formatFileSize(file.size)}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                <Schedule fontSize="small" sx={{ mr: 0.5, verticalAlign: 'middle' }} />
+                                {formatDate(file.uploaded_at)}
+                              </Typography>
+                              {file.uploaded_by && (
+                                <Typography variant="caption" color="text.secondary">
+                                  <Person fontSize="small" sx={{ mr: 0.5, verticalAlign: 'middle' }} />
+                                  {file.uploaded_by}
+                                </Typography>
+                              )}
+                            </Box>
+                          }
+                        />
+                        <ListItemSecondaryAction>
+                          <Stack direction="row" spacing={1}>
+                            <Button
+                              href={`/api/download/${file.path.replace('/uploads/', '')}?t=${Date.now()}`}
                               download={file.name}
-                              className="btn-download"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              variant="contained"
+                              size="small"
+                              startIcon={<Download />}
+                              color="success"
                             >
                               ჩამოტვირთვა
-                            </a>
+                            </Button>
                             {isAuthorizedForManagement && (
-                              <button
-                                className="btn-delete"
+                              <Button
                                 onClick={() => handleFileDelete(isInvoice ? 'invoice' : 'expense', file.name)}
+                                variant="outlined"
+                                size="small"
+                                startIcon={<Delete />}
+                                color="error"
                               >
                                 წაშლა
-                              </button>
+                              </Button>
                             )}
-                          </div>
-                        </div>
-                      </div>
+                          </Stack>
+                        </ListItemSecondaryAction>
+                      </ListItem>
                     );
                   })}
-                </div>
+                </List>
               ) : (
-                <p className="no-file">მიმაგრებული ფაილები არ არის ატვირთული</p>
+                <Alert
+                  severity="info"
+                  icon={<AttachFile />}
+                  sx={{ borderRadius: 2 }}
+                >
+                  მიმაგრებული ფაილები არ არის ატვირთული
+                </Alert>
               )}
 
               {isAuthorizedForManagement && (
-                <div className="upload-section">
-                  <div className="upload-type-selection">
-                    <label>
-                      <input
-                        type="radio"
-                        name="file-type"
+                <Box sx={{ mt: 2 }}>
+                  <FormControl component="fieldset" sx={{ mb: 2 }}>
+                    <FormLabel component="legend" sx={{ fontSize: '0.9rem', fontWeight: 500 }}>
+                      ფაილის ტიპი:
+                    </FormLabel>
+                    <RadioGroup
+                      row
+                      value={uploadType}
+                      onChange={(e) => setUploadType(e.target.value)}
+                      sx={{ mt: 1 }}
+                    >
+                      <FormControlLabel
                         value="invoice"
-                        defaultChecked
+                        control={<Radio size="small" />}
+                        label="ინვოისი"
                       />
-                      ინვოისი
-                    </label>
-                    <label>
-                      <input
-                        type="radio"
-                        name="file-type"
+                      <FormControlLabel
                         value="expense"
+                        control={<Radio size="small" />}
+                        label="ხარჯი"
                       />
-                      ხარჯი
-                    </label>
-                  </div>
-                  <input
-                    type="file"
+                    </RadioGroup>
+                  </FormControl>
+
+                  <FileUploadButton
+                    type={uploadType}
                     accept=".pdf,.doc,.docx,.xlsx,.xls"
-                    onChange={(e) => {
-                      if (e.target.files[0]) {
-                        const fileType = document.querySelector('input[name="file-type"]:checked').value;
-                        handleFileUpload(e.target.files[0], fileType);
-                        e.target.value = '';
-                      }
-                    }}
-                    disabled={uploading && (uploadType === 'invoice' || uploadType === 'expense')}
-                  />
-                  {uploading && (uploadType === 'invoice' || uploadType === 'expense') && <span>ატვირთვა...</span>}
-                </div>
+                  >
+                    დოკუმენტის ატვირთვა
+                  </FileUploadButton>
+                </Box>
               )}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+            </CardContent>
+          </Card>
+        </Stack>
+      </DialogContent>
+
+      <DialogActions sx={{ p: 3, pt: 0 }}>
+        <Button
+          onClick={onClose}
+          variant="contained"
+          startIcon={<Close />}
+          sx={{
+            borderRadius: 2,
+            px: 3
+          }}
+        >
+          დახურვა
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 };
 

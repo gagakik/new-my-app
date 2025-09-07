@@ -592,12 +592,13 @@ const CompaniesList = ({ showNotification, userRole }) => {
                                 onClick={() => handleEditExhibitions(company)}
                                 startIcon={<Edit />}
                                 sx={{ 
+                                  maxWidth: 'fit-content', 
                                   mt: 1,
                                   fontSize: '0.7rem',
                                   width: '100%',
                                   height: '28px',
                                   borderColor: '#1976d2',
-                                  color: '#969696ff',
+                                  color: '#ffffffff',
                                   '&:hover': {
                                     backgroundColor: 'rgba(124, 154, 184, 1)',
                                     borderColor: '#bccee2ff'
@@ -653,8 +654,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
                                 size="small"
                                 variant="contained"
                                 onClick={() => handleDelete(company.id)}
-                                color="error"
-                                sx={{ minWidth: 'auto', px: 1 }}
+                                sx={{ minWidth: 'auto', px: 1, color:'#d32f2f'}}
                               >
                                 <Delete fontSize="small" />
                               </Button>

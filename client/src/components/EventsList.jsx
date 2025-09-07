@@ -1,10 +1,58 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Box,
+  Typography,
+  Button,
+  Card,
+  CardContent,
+  CardActions,
+  Grid,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Chip,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Paper,
+  Container,
+  Divider,
+  Alert,
+  Tooltip,
+  Switch,
+  FormControlLabel,
+  CircularProgress,
+  Stack,
+  Badge
+} from '@mui/material';
+import {
+  Add,
+  Edit,
+  Delete,
+  Archive,
+  Restore,
+  Group,
+  FolderOpen,
+  CheckCircle,
+  Search,
+  Clear,
+  Sort,
+  Event as EventIcon,
+  Business,
+  LocationOn,
+  CalendarToday,
+  Assessment,
+  Close
+} from '@mui/icons-material';
 import EventForm from './EventForm';
 import EventParticipants from './EventParticipants';
 import EventCompletion from './EventCompletion';
 import EventFileManager from './EventFileManager';
-import './EventsList.css';
-import { servicesAPI } from '../services/api';
+
 
 const EventsList = ({ showNotification, userRole }) => {
   const [events, setEvents] = useState([]);
@@ -26,7 +74,7 @@ const EventsList = ({ showNotification, userRole }) => {
   const [selectedMonth, setSelectedMonth] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [showArchivedOnly, setShowArchivedOnly] = useState(false);
-  const [sortDirection, setSortDirection] = useState('desc'); // 'asc' ან 'desc'
+  const [sortDirection, setSortDirection] = useState('desc');
 
   const isAuthorizedForManagement =
     userRole === 'admin' ||
@@ -60,7 +108,6 @@ const EventsList = ({ showNotification, userRole }) => {
 
         if (response.status === 500) {
           console.log('Server error, trying fallback to annual-services');
-          // სერვერის შეცდომის შემთხვევაში შევცადოთ annual-services-ით
           try {
             const fallbackResponse = await fetch('/api/annual-services', { headers });
 
@@ -93,7 +140,7 @@ const EventsList = ({ showNotification, userRole }) => {
       console.error('Error fetching events:', err);
       setError(err.message);
       showNotification(`შეცდომა ივენთების ჩატვირთვისას: ${err.message}`, 'error');
-      setEvents([]); // ცარიელი მასივი დავაყენოთ შეცდომის შემთხვევაში
+      setEvents([]);
     } finally {
       setLoading(false);
     }
@@ -103,7 +150,6 @@ const EventsList = ({ showNotification, userRole }) => {
     fetchEvents();
   }, [fetchEvents]);
 
-  // ცალკე useEffect სორტირებისთვის - როცა events იტვირთება ან sortDirection იცვლება
   useEffect(() => {
     if (events.length > 0) {
       let sorted = [...events];
@@ -116,18 +162,15 @@ const EventsList = ({ showNotification, userRole }) => {
     }
   }, [sortDirection]);
 
-  // ფილტრაციის ლოგიკა
   useEffect(() => {
     let filtered = [...events];
 
-    // ფილტრაცია არქივის მიხედვით
     if (showArchivedOnly) {
       filtered = filtered.filter(event => event.is_archived);
     } else {
       filtered = filtered.filter(event => !event.is_archived);
     }
 
-    // ძიება სახელის მიხედვით
     if (searchTerm) {
       filtered = filtered.filter(event =>
         event.service_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -135,7 +178,6 @@ const EventsList = ({ showNotification, userRole }) => {
       );
     }
 
-    // ფილტრაცია წლის მიხედვით
     if (selectedYear) {
       filtered = filtered.filter(event => {
         const eventYear = new Date(event.start_date).getFullYear();
@@ -143,7 +185,6 @@ const EventsList = ({ showNotification, userRole }) => {
       });
     }
 
-    // ფილტრაცია თვის მიხედვით
     if (selectedMonth) {
       filtered = filtered.filter(event => {
         const eventMonth = new Date(event.start_date).getMonth() + 1;
@@ -151,7 +192,6 @@ const EventsList = ({ showNotification, userRole }) => {
       });
     }
 
-    // ფილტრაცია სტატუსის მიხედვით
     if (statusFilter) {
       filtered = filtered.filter(event => {
         const status = getStatusBadge(event);
@@ -159,33 +199,26 @@ const EventsList = ({ showNotification, userRole }) => {
       });
     }
 
-    // სორტირება დაწყების თარიღის მიხედვით
     if (sortDirection === 'desc') {
-      filtered.sort((a, b) => new Date(b.start_date) - new Date(a.start_date)); // ყველაზე ახალი პირველი
+      filtered.sort((a, b) => new Date(b.start_date) - new Date(a.start_date));
     } else {
-      filtered.sort((a, b) => new Date(a.start_date) - new Date(b.start_date)); // ყველაზე ძველი პირველი
+      filtered.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
     }
 
     setFilteredEvents(filtered);
   }, [events, searchTerm, selectedYear, selectedMonth, statusFilter, showArchivedOnly, sortDirection]);
 
-  // ცალკე useEffect, რომელიც გაასუფთავებს filter-ებს, როდესაც showArchivedOnly იცვლება
   useEffect(() => {
-    // თუ გადავედით არქივიდან აქტიურზე, გავასუფთავოთ ფილტრები, რადგან ზოგიერთი ფილტრი შეიძლება არქივებულებზე არ იყოს რელევანტური
     if (!showArchivedOnly) {
-      // შეგვიძლია აქ დავამატოთ კონკრეტული ფილტრების გასუფთავება, თუ საჭიროა, მაგალითად, statusFilter
-      // setStatusFilter('');
+      // შეგვიძლია აქ დავამატოთ კონკრეტული ფილტრების გასუფთავება
     }
   }, [showArchivedOnly]);
 
-
-  // წლების სია
   const getAvailableYears = () => {
     const years = events.map(event => new Date(event.start_date).getFullYear());
     return [...new Set(years)].sort((a, b) => b - a);
   };
 
-  // თვეების სია
   const months = [
     { value: '1', label: 'იანვარი' },
     { value: '2', label: 'თებერვალი' },
@@ -206,7 +239,6 @@ const EventsList = ({ showNotification, userRole }) => {
     setSelectedYear('');
     setSelectedMonth('');
     setStatusFilter('');
-    // setShowArchivedOnly(false); // არქივის ტოგლის გათიშვა არ გვინდა ფილტრების გასუფთავებისას
   };
 
   const handleDelete = async (id) => {
@@ -236,10 +268,9 @@ const EventsList = ({ showNotification, userRole }) => {
         const result = await response.json();
         showNotification('ივენთი წარმატებით წაიშალა!', 'success');
         setEvents(prevEvents => prevEvents.filter((event) => event.id !== id));
-        fetchEvents(); // Refresh the list to ensure consistency
+        fetchEvents();
       } else {
         const contentType = response.headers.get("content-type");
-
         let errorMessage = 'წაშლა ვერ მოხერხდა';
 
         if (contentType && contentType.includes("application/json")) {
@@ -251,7 +282,6 @@ const EventsList = ({ showNotification, userRole }) => {
             errorMessage = `სერვერის შეცდომა (${response.status})`;
           }
         } else {
-          // If response is not JSON (like HTML error page)
           const errorText = await response.text();
           console.error('Non-JSON error response:', errorText);
           errorMessage = `სერვერის შეცდომა (${response.status})`;
@@ -361,15 +391,23 @@ const EventsList = ({ showNotification, userRole }) => {
 
   const handleCompletionSuccess = (report) => {
     showNotification('ივენთი წარმატებით დასრულდა!', 'success');
-    fetchEvents(); // ივენთების სიის განახლება
+    fetchEvents();
   };
 
   if (loading) {
-    return <div>იტვირთება...</div>;
+    return (
+      <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <CircularProgress size={60} />
+      </Container>
+    );
   }
 
   if (error) {
-    return <div>შეცდომა: {error}</div>;
+    return (
+      <Container sx={{ mt: 4 }}>
+        <Alert severity="error">შეცდომა: {error}</Alert>
+      </Container>
+    );
   }
 
   const formatDate = (dateString) => {
@@ -378,7 +416,7 @@ const EventsList = ({ showNotification, userRole }) => {
 
   const formatTime = (timeString) => {
     if (!timeString) return '';
-    return timeString.slice(0, 5); // Format HH:MM
+    return timeString.slice(0, 5);
   };
 
   const formatDateTime = (date, time) => {
@@ -392,36 +430,96 @@ const EventsList = ({ showNotification, userRole }) => {
     const startDate = new Date(event.start_date);
     const endDate = new Date(event.end_date);
 
-    if (event.is_archived) return { text: 'არქივი', class: 'archived' };
-    if (!event.is_active) return { text: 'არააქტიური', class: 'inactive' };
-    if (now < startDate) return { text: 'მომავალი', class: 'upcoming' };
-    if (now > endDate) return { text: 'დასრულებული', class: 'finished' };
-    return { text: 'მიმდინარე', class: 'active' };
+    // არქივი ყველაზე მაღალი პრიორიტეტის სტატუსია
+    if (event.is_archived) {
+      return { text: 'არქივი', class: 'archived', color: 'default' };
+    }
+    
+    // არააქტიური ივენთი
+    if (event.is_active === false || event.is_active === 0) {
+      return { text: 'არააქტიური', class: 'inactive', color: 'error' };
+    }
+    
+    // თარიღების შემოწმება
+    if (now < startDate) {
+      return { text: 'მომავალი', class: 'upcoming', color: 'info' };
+    }
+    
+    if (now > endDate) {
+      return { text: 'დასრულებული', class: 'finished', color: 'success' };
+    }
+    
+    // თუ დღეს არის დაწყების და დასასრულის შორის
+    return { text: 'მიმდინარე', class: 'active', color: 'warning' };
   };
 
   const toggleSortDirection = () => {
     setSortDirection(prevDirection => (prevDirection === 'desc' ? 'asc' : 'desc'));
   };
 
-
   return (
-    <div className="events-container">
-      <div className="header-section">
-        <h2>{showArchivedOnly ? 'არქივი' : 'ივენთები'}</h2>
-        <div className="header-actions">
-          <button
-            className={`archive-toggle ${showArchivedOnly ? 'active' : ''}`}
-            onClick={() => setShowArchivedOnly(!showArchivedOnly)}
+    <Container maxWidth="xl" sx={{ mt: 3, mb: 3 }}>
+      {/* Header Section */}
+      <Box sx={{ mb: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, flexWrap: 'wrap', gap: 2 }}>
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 600,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1
+            }}
           >
-            {showArchivedOnly ? 'აქტიური ივენთები' : 'არქივი'}
-          </button>
-          {isAuthorizedForManagement && !showArchivedOnly && (
-            <button className="add-new new-event" onClick={() => setEditingId(0)}>
-              ივენთის დამატება
-            </button>
-          )}
-        </div>
-      </div>
+            <EventIcon sx={{ color: '#667eea' }} />
+            {showArchivedOnly ? 'არქივი' : 'ივენთები'}
+          </Typography>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={showArchivedOnly}
+                  onChange={(e) => setShowArchivedOnly(e.target.checked)}
+                  sx={{
+                    '& .MuiSwitch-switchBase.Mui-checked': {
+                      color: '#667eea'
+                    },
+                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                      backgroundColor: '#667eea'
+                    }
+                  }}
+                />
+              }
+              label={showArchivedOnly ? 'აქტიური ივენთების ნახვა' : 'არქივის ნახვა'}
+            />
+
+            {isAuthorizedForManagement && !showArchivedOnly && (
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={() => setEditingId(0)}
+                sx={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  borderRadius: 2,
+                  px: 3,
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)'
+                  }
+                }}
+              >
+                ივენთის დამატება
+              </Button>
+            )}
+          </Box>
+        </Box>
+      </Box>
 
       {editingId !== null && isAuthorizedForManagement && (
          <EventForm
@@ -431,275 +529,458 @@ const EventsList = ({ showNotification, userRole }) => {
          />
       )}
 
-      <div className="events-filters">
-        <div className="filters-row">
-          <div className="search-group">
-            <label>ძიება</label>
-            <input
-              type="text"
+      {/* Filters Section */}
+      <Paper
+        elevation={2}
+        sx={{
+          p: 3,
+          mb: 3,
+          borderRadius: 3,
+          background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+          border: '1px solid rgba(102, 126, 234, 0.1)'
+        }}
+      >
+        <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Search sx={{ color: '#667eea' }} />
+          ძიება და ფილტრაცია
+        </Typography>
+
+        <Grid container spacing={2} sx={{ mb: 2 }} display={showArchivedOnly ? 'none' : 'flex'} justifyContent={'center'} alignItems={'center'}>
+          <Grid item xs={12} md={3}>
+            <TextField
+              fullWidth
+              size='small'
+              label="ძიება"
               placeholder="ძიება სახელით..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="search-input"
+              InputProps={{
+                startAdornment: <Search sx={{ mr: 1, color: 'text.secondary' }} />,
+                sx: { borderRadius: 2 }
+              }}
             />
-          </div>
+          </Grid>
 
-          <div className="filter-group">
-            <label>წელი</label>
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(e.target.value)}
-              className="filter-select"
-            >
-              <option value="">ყველა წელი</option>
-              {getAvailableYears().map(year => (
-                <option key={year} value={year}>{year}</option>
-              ))}
-            </select>
-          </div>
+          <Grid item xs={12} md={2} minWidth={160}>
+            <FormControl fullWidth size='small'>
+              <InputLabel>წელი</InputLabel>
+              <Select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
+                label="წელი"
+                sx={{ borderRadius: 2 }}
+              >
+                <MenuItem value="">ყველა წელი</MenuItem>
+                {getAvailableYears().map(year => (
+                  <MenuItem key={year} value={year}>{year}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
 
-          <div className="filter-group">
-            <label>თვე</label>
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="filter-select"
-            >
-              <option value="">ყველა თვე</option>
-              {months.map(month => (
-                <option key={month.value} value={month.value}>{month.label}</option>
-              ))}
-            </select>
-          </div>
+          <Grid item xs={12} md={2} minWidth={160}>
+            <FormControl fullWidth size='small'>
+              <InputLabel>თვე</InputLabel>
+              <Select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                label="თვე"
+                sx={{ borderRadius: 2 }}
+              >
+                <MenuItem value="">ყველა თვე</MenuItem>
+                {months.map(month => (
+                  <MenuItem key={month.value} value={month.value}>{month.label}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
 
-          <div className="filter-group">
-            <label>სტატუსი</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="filter-select"
-            >
-              <option value="">ყველა სტატუსი</option>
-              <option value="upcoming">მომავალი</option>
-              <option value="active">მიმდინარე</option>
-              <option value="finished">დასრულებული</option>
-              <option value="archived">არქივი</option>
-              <option value="inactive">არააქტიური</option>
-            </select>
-          </div>
+          <Grid item xs={12} md={2} minWidth={160}>
+            <FormControl fullWidth size='small'>
+              <InputLabel>სტატუსი</InputLabel>
+              <Select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                label="სტატუსი"
+                sx={{ borderRadius: 2, }}
+              >
+                <MenuItem value="">ყველა სტატუსი</MenuItem>
+                <MenuItem value="upcoming">მომავალი</MenuItem>
+                <MenuItem value="active">მიმდინარე</MenuItem>
+                <MenuItem value="finished">დასრულებული</MenuItem>
+                <MenuItem value="archived">არქივი</MenuItem>
+                <MenuItem value="inactive">არააქტიური</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
 
-          <div className="filter-actions">
-            <button className="clear-filters" onClick={clearFilters}>
-              ფილტრების გასუფთავება
-            </button>
-            <button className="sort-toggle" onClick={toggleSortDirection}>
-              {sortDirection === 'desc' ? 'ახალი ძველი' : 'ძველი ახალი'}
-            </button>
-          </div>
-        </div>
+          <Grid item xs={12} md={3}>
+            <Stack direction="row" spacing={1}>
+              <Button
+                size='medium'
+                variant="outlined"
+                startIcon={<Clear />}
+                onClick={clearFilters}
+                sx={{
+                  borderRadius: 2,
+                  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.1)',
+                  color: '#ffffffff',
+                  border: 'none',
+                  '&:hover': {
+                    borderColor: '#5a6268',
+                  }
+                }}
+              >
+                გასუფთავება
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<Sort />}
+                onClick={toggleSortDirection}
+                sx={{
+                  borderRadius: 2,
+                  color: '#ffffffff',
+                  border: 'none',
+                  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.1)',
+                  '&:hover': {
+                    backgroundColor: 'rgba(102, 126, 234, 0.04)'
+                  }
+                }}
+              >
+                {sortDirection === 'desc' ? 'ახალი → ძველი' : 'ძველი → ახალი'}
+              </Button>
+            </Stack>
+          </Grid>
+        </Grid>
 
-        <div className="results-info">
-          ნაპოვნია: {filteredEvents.length} {showArchivedOnly ? 'არქივული' : 'აქტიური'} ივენთი
-        </div>
-      </div>
+        <Alert
+          severity="info"
+          sx={{
+            borderRadius: 2,
+            backgroundColor: '#e3f2fd',
+            border: '1px solid #90caf9'
+          }}
+        >
+          <Typography variant="body2">
+            <strong>ნაპოვნია:</strong> {filteredEvents.length} {showArchivedOnly ? 'არქივული' : 'აქტიური'} ივენთი
+          </Typography>
+        </Alert>
+      </Paper>
 
+      {/* Events Grid */}
       {filteredEvents.length === 0 ? (
-        <p className="no-events">
-          {showArchivedOnly
-            ? 'არქივში ივენთები არ მოიძებნა.'
-            : (events.length === 0 ? 'ივენთები არ მოიძებნა.' : 'ფილტრების შესაბამისი ივენთები არ მოიძებნა.')}
-        </p>
+        <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3 }}>
+          <EventIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+          <Typography variant="h6" color="text.secondary">
+            {showArchivedOnly
+              ? 'არქივში ივენთები არ მოიძებნა.'
+              : (events.length === 0 ? 'ივენთები არ მოიძებნა.' : 'ფილტრების შესაბამისი ივენთები არ მოიძებნა.')}
+          </Typography>
+        </Paper>
       ) : (
-        <div className="events-grid">
+        <Grid container spacing={3}>
           {filteredEvents.map((event) => {
             const status = getStatusBadge(event);
             return (
-              <div key={event.id} className="event-card">
-                <div className="event-header">
-                  <h3
-                    className="event-name"
-                    onClick={() => viewEventDetails(event)}
-                  >
-                    {event.service_name}
-                  </h3>
-                  <span className={`status-badge ${status.class}`}>
-                    {status.text}
-                  </span>
-                </div>
+              <Grid size={{ xs: 12, md: 6, lg: 4 }} key={event.id}>
+                <Card
+                elevation={3}
+                sx={{
+                  height: '100%',
+                  borderRadius: 3,
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)'
+                  },
+                  border: '1px solid rgba(102, 126, 234, 0.1)',
+                  background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)'
+                }}
+              >
+                <CardContent sx={{ pb: 2 }}>
+                  {/* Event Header */}
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        color: '#667eea',
+                        '&:hover': {
+                          textDecoration: 'underline'
+                        },
+                        flex: 1,
+                        mr: 1,
+                        lineHeight: 1.3
+                      }}
+                      onClick={() => viewEventDetails(event)}
+                    >
+                      {event.service_name}
+                    </Typography>
+                    <Chip
+                      label={status.text}
+                      color={status.color}
+                      size="small"
+                      sx={{ borderRadius: 2, fontWeight: 500 }}
+                    />
+                  </Box>
 
+                  {/* Event Details */}
+                  <Stack spacing={1} sx={{ mb: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CalendarToday sx={{ fontSize: 16, color: 'text.secondary' }} />
+                      <Typography variant="body2" color="text.secondary">
+                        <strong>დაწყება:</strong> {formatDateTime(event.start_date, event.start_time)}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CalendarToday sx={{ fontSize: 16, color: 'text.secondary' }} />
+                      <Typography variant="body2" color="text.secondary">
+                        <strong>დასრულება:</strong> {formatDateTime(event.end_date, event.end_time)}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <LocationOn sx={{ fontSize: 16, color: 'text.secondary' }} />
+                      <Typography variant="body2" color="text.secondary">
+                        <strong>სივრცეები:</strong> {event.spaces_count || 0}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Business sx={{ fontSize: 16, color: 'text.secondary' }} />
+                      <Typography variant="body2" color="text.secondary">
+                        <strong>ტიპი:</strong> {event.service_type}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </CardContent>
 
+                {/* Action Buttons */}
+                <CardActions sx={{ px: 2, pb: 2, pt: 0, justifyContent: 'space-between' }}>
+                  <Box sx={{ display: 'flex', gap: 0.5 }}>
+                    <Tooltip title="მონაწილეები">
+                      <IconButton
+                        variant="contained"
+                        size="small"
+                        onClick={() => handleShowParticipants(event)}
+                        sx={{
+                          color: '#ffffffff',
+                          '&:hover': {
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)'
+                          }
+                        }}
+                      >
+                        <Group fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
 
-                <div className="event-details">
-                  <div className="event-dates">
-                    <span className="date-label">დაწყება:</span>
-                    <span className="date-value">{formatDateTime(event.start_date, event.start_time)}</span>
-                    <span className="date-label">დასრულება:</span>
-                    <span className="date-value">{formatDateTime(event.end_date, event.end_time)}</span>
-                  </div>
-                  <div className="event-stats">
-                    <span className="stat-item">
-                      <strong>სივრცეები:</strong> {event.spaces_count || 0}
-                    </span>
-                    <span className="stat-item">
-                      <strong>ტიპი:</strong> {event.service_type}
-                    </span>
-                  </div>
-                </div>
+                    <Tooltip title="ფაილების მართვა">
+                      <IconButton
+                        size="small"
+                        onClick={() => handleShowFiles(event)}
+                        sx={{
+                          color: '#ffffffff',
+                          '&:hover': {
+                            backgroundColor: 'rgba(23, 162, 184, 0.1)'
+                          }
+                        }}
+                      >
+                        <FolderOpen fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
 
-                <div className="actions">
-                  <button
-                    className="participants"
-                    onClick={() => handleShowParticipants(event)}
-                    title="მონაწილეები"
-                  >
-                    👥
-                  </button>
-                  <button
-                    className="files-manager"
-                    onClick={() => handleShowFiles(event)}
-                    title="ფაილების მართვა - ატვირთვა, ნახვა, წაშლა"
-                  >
-                    📁
-                    <div className="files-preview">
-                      <div className="preview-section">
-                        <div className="preview-header">📋 გეგმა:</div>
-                        <div className="file-item-preview">
-                          <span>{event.plan_file_path ? '✅ გეგმა.pdf' : '❌ არ არის'}</span>
-                        </div>
-                      </div>
-                      <div className="preview-section">
-                          <div className="preview-header">მიმაგრებული ფაილები:</div>
-                          {(() => {
-                            const allFiles = [
-                              ...(event.invoice_files || []).map(f => ({...f, type: 'ინვოისი'})),
-                              ...(event.expense_files || []).map(f => ({...f, type: 'ხარჯი'}))
-                            ];
+                  <Box sx={{ display: 'flex', gap: 0.5 }}>
 
-                            if (allFiles.length > 0) {
-                              return (
-                                <>
-                                  {allFiles.slice(0, 3).map((file, index) => (
-                                    <div key={index} className="file-item-preview">
-                                      <span>📄 {file.name} ({file.type})</span>
-                                    </div>
-                                  ))}
-                                  {allFiles.length > 3 && (
-                                    <div className="file-item-preview">
-                                      <span>... და კიდევ {allFiles.length - 3} ფაილი</span>
-                                    </div>
-                                  )}
-                                </>
-                              );
-                            } else {
-                              return (
-                                <div className="file-item-preview">
-                                  <span>❌ მიმაგრებული ფაილები არ არის</span>
-                                </div>
-                              );
-                            }
-                          })()}
-                        </div>
-                      <div className="click-hint">
-                        <span>დააჭირეთ ფაილების მართვისთვის</span>
-                      </div>
-                    </div>
-                  </button>
                   {isAuthorizedForManagement && (
-                    <>
-                      {!showArchivedOnly && (
-                        <button
-                          className="edit"
-                          onClick={() => handleEditClick(event)}
-                          title="რედაქტირება"
-                        >
-                        </button>
-                      )}
-                      {status.class === 'finished' && !event.is_archived && (
-                        <>
-                          <button
-                            className="complete"
-                            onClick={() => handleCompleteEvent(event)}
-                            title="ივენთის დასრულება">
-                          </button>
-                          <button
-                            className="archive"
-                            onClick={() => handleArchive(event.id)}
-                            title="არქივში გადატანა">
-                          </button>
-                        </>
-                      )}
-                      {showArchivedOnly && event.is_archived && (
-                        <button
-                          className="restore"
-                          onClick={() => handleRestore(event.id)}
-                          title="არქივიდან აღდგენა">
-                        </button>
-                      )}
-                      {isAuthorizedForDeletion && (
-                        <button
-                          className="delete"
-                          onClick={() => handleDelete(event.id)}
-                          title="წაშლა">
-                        </button>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
+                      <>
+                        {!showArchivedOnly && (
+                          <Tooltip title="რედაქტირება">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleEditClick(event)}
+                              sx={{
+                                color: '#ffa600ff',
+                                '&:hover': {
+                                  backgroundColor: 'rgba(40, 167, 69, 0.1)'
+                                }
+                              }}
+                            >
+                              <Edit fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+
+                        {status.class === 'finished' && !event.is_archived && (
+                          <>
+                            <Tooltip title="ივენთის დასრულება">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleCompleteEvent(event)}
+                                sx={{
+                                  color: '#00ff62ff',
+                                  '&:hover': {
+                                    backgroundColor: 'rgba(23, 162, 184, 0.1)'
+                                  }
+                                }}
+                              >
+                                <CheckCircle fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="არქივში გადატანა">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleArchive(event.id)}
+                                sx={{
+                                  color: '#b34708ff',
+                                  '&:hover': {
+                                    backgroundColor: 'rgba(108, 117, 125, 0.1)'
+                                  }
+                                }}
+                              >
+                                <Archive fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </>
+                        )}
+
+                        {showArchivedOnly && event.is_archived && (
+                          <Tooltip title="არქივიდან აღდგენა">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleRestore(event.id)}
+                              sx={{
+                                color: '#28a745',
+                                '&:hover': {
+                                  backgroundColor: 'rgba(40, 167, 69, 0.1)'
+                                }
+                              }}
+                            >
+                              <Restore fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+
+                        {isAuthorizedForDeletion && (
+                          <Tooltip title="წაშლა">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleDelete(event.id)}
+                              sx={{
+                                color: '#dc3545',
+                                '&:hover': {
+                                  backgroundColor: 'rgba(220, 53, 69, 0.1)'
+                                }
+                              }}
+                            >
+                              <Delete fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </>
+                    )}
+                  </Box>
+                </CardActions>
+              </Card>
+            </Grid>
             );
           })}
-        </div>
+        </Grid>
       )}
 
+      {/* Event Details Modal */}
       {showDetails && selectedEvent && (
-        <div className="event-details-modal">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h3>{selectedEvent.service_name}</h3>
-              <button
-                className="close-modal"
-                onClick={() => setShowDetails(false)}
-              >
-                ✕
-              </button>
-            </div>
-            <div className="modal-body">
-              <p><strong>აღწერა:</strong> {selectedEvent.description}</p>
-              <p><strong>წელი:</strong> {selectedEvent.year_selection}</p>
-              <p><strong>ტიპი:</strong> {selectedEvent.service_type}</p>
-              <p><strong>თარიღები:</strong> {formatDateTime(selectedEvent.start_date, selectedEvent.start_time)} - {formatDateTime(selectedEvent.end_date, selectedEvent.end_time)}</p>
+        <Dialog
+          open={showDetails}
+          onClose={() => setShowDetails(false)}
+          maxWidth="md"
+          fullWidth
+          sx={{
+            '& .MuiDialog-paper': {
+              borderRadius: 3,
+              boxShadow: '0 24px 48px rgba(0, 0, 0, 0.2)'
+            }
+          }}
+        >
+          <DialogTitle
+            sx={{
+              background: 'linear-gradient(135deg, #667ee 0%, #764ba2 100%)',
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <EventIcon />
+              {selectedEvent.service_name}
+            </Box>
+            <IconButton
+              onClick={() => setShowDetails(false)}
+              sx={{ color: 'white' }}
+            >
+              <Close />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent sx={{ p: 3 }}>
+            <Grid container spacing={3}>
+              <Grid item xs={12}>
+                <Typography variant="h6" sx={{ mb: 1 }}>აღწერა</Typography>
+                <Typography variant="body1" sx={{ mb: 2 }}>{selectedEvent.description}</Typography>
+              </Grid>
+
+              <Grid item xs={6}>
+                <Typography variant="subtitle2" color="text.secondary">წელი</Typography>
+                <Typography variant="body1">{selectedEvent.year_selection}</Typography>
+              </Grid>
+
+              <Grid item xs={6}>
+                <Typography variant="subtitle2" color="text.secondary">ტიპი</Typography>
+                <Typography variant="body1">{selectedEvent.service_type}</Typography>
+              </Grid>
+
+              <Grid item xs={12}>
+                <Typography variant="subtitle2" color="text.secondary">თარიღები</Typography>
+                <Typography variant="body1">
+                  {formatDateTime(selectedEvent.start_date, selectedEvent.start_time)} - {formatDateTime(selectedEvent.end_date, selectedEvent.end_time)}
+                </Typography>
+              </Grid>
 
               {selectedEvent.spaces && selectedEvent.spaces.length > 0 && (
-                <div>
-                  <h4>გამოყენებული სივრცეები:</h4>
-                  <ul>
+                <Grid item xs={12}>
+                  <Typography variant="h6" sx={{ mb: 2 }}>გამოყენებული სივრცეები</Typography>
+                  <Stack spacing={1}>
                     {selectedEvent.spaces.map(space => (
-                      <li key={space.id}>
-                        {space.building_name} - {space.category}
-                        {space.area_sqm && ` (${space.area_sqm} მ²)`}
-                      </li>
+                      <Paper key={space.id} sx={{ p: 2, borderRadius: 2, bgcolor: 'grey.50' }}>
+                        <Typography variant="body1">
+                          {space.building_name} - {space.category}
+                          {space.area_sqm && ` (${space.area_sqm} მ²)`}
+                        </Typography>
+                      </Paper>
                     ))}
-                  </ul>
-                </div>
+                  </Stack>
+                </Grid>
               )}
 
               {selectedEvent.bookings && selectedEvent.bookings.length > 0 && (
-                <div>
-                  <h4>მონაწილე კომპანიები ({selectedEvent.bookings.length}):</h4>
-                  <ul>
+                <Grid item xs={12}>
+                  <Typography variant="h6" sx={{ mb: 2 }}>მონაწილე კომპანიები ({selectedEvent.bookings.length})</Typography>
+                  <Stack spacing={1}>
                     {selectedEvent.bookings.map(booking => (
-                      <li key={booking.id}>
-                        {booking.company_name} - {booking.status}
-                      </li>
+                      <Paper key={booking.id} sx={{ p: 2, borderRadius: 2, bgcolor: 'grey.50' }}>
+                        <Typography variant="body1">
+                          {booking.company_name} - <Chip label={booking.status} size="small" />
+                        </Typography>
+                      </Paper>
                     ))}
-                  </ul>
-                </div>
+                  </Stack>
+                </Grid>
               )}
-            </div>
-          </div>
-        </div>
+            </Grid>
+          </DialogContent>
+        </Dialog>
       )}
 
+      {/* Participants Modal */}
       {showParticipants && selectedEvent && (
         <EventParticipants
           eventId={selectedEvent.id}
@@ -713,6 +994,7 @@ const EventsList = ({ showNotification, userRole }) => {
         />
       )}
 
+      {/* Event Completion Modal */}
       {showEventCompletion && selectedEventForCompletion && (
         <EventCompletion
           eventId={selectedEventForCompletion.id}
@@ -725,6 +1007,7 @@ const EventsList = ({ showNotification, userRole }) => {
         />
       )}
 
+      {/* File Manager Modal */}
       {showFileManager && selectedEventForFiles && (
         <EventFileManager
           event={selectedEventForFiles}
@@ -736,7 +1019,7 @@ const EventsList = ({ showNotification, userRole }) => {
           userRole={userRole}
         />
       )}
-    </div>
+    </Container>
   );
 };
 
