@@ -590,10 +590,33 @@ const addMissingColumns = async () => {
   }
 };
 
+// Function to add image_url column to equipment table if it doesn't exist
+const addImageUrlColumn = async () => {
+  try {
+    // Check if image_url column exists
+    const checkColumn = await query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'equipment' 
+      AND column_name = 'image_url'
+    `);
+
+    if (checkColumn.rows.length === 0) {
+      await query('ALTER TABLE equipment ADD COLUMN image_url VARCHAR(500)');
+      console.log('image_url სვეტი დაემატა equipment ცხრილში');
+    } else {
+      console.log('image_url სვეტი უკვე არსებობს equipment ცხრილში');
+    }
+  } catch (error) {
+    console.error('image_url სვეტის დამატების შეცდომა:', error);
+  }
+};
+
 // Initialize database and add missing columns
 const initializeDatabase = async () => {
   await createTables();
   await addMissingColumns();
+  await addImageUrlColumn();
 };
 
 initializeDatabase();

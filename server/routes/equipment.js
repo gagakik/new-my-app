@@ -126,23 +126,18 @@ router.put('/:id', upload.single('image'), async (req, res) => {
       return res.status(404).json({ message: 'აღჭურვილობა ვერ მოიძებნა' });
     }
 
-    let imageUrl = existingResult.rows[0].image_url; // არსებული სურათი
-    
-    // თუ ახალი ფაილი აიტვირთა
+    let imageUrl = image_url_existing; // Keep existing image by default
     if (req.file) {
       imageUrl = `/uploads/${req.file.filename}`;
       
-      // წაშალოთ ძველი ფაილი
-      if (existingResult.rows[0].image_url) {
-        const oldFilePath = path.join(__dirname, '../', existingResult.rows[0].image_url);
+      // Delete old image file if it exists
+      const oldImageUrl = existingResult.rows[0].image_url;
+      if (oldImageUrl && oldImageUrl.startsWith('/uploads/')) {
+        const oldFilePath = path.join(__dirname, '..', oldImageUrl);
         if (fs.existsSync(oldFilePath)) {
           fs.unlinkSync(oldFilePath);
         }
       }
-    }
-    // თუ არსებული სურათი უნდა დაიტოვოს
-    else if (image_url_existing) {
-      imageUrl = image_url_existing;
     }
 
     const result = await db.query(
@@ -169,22 +164,14 @@ router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     
-    // ჯერ მივიღოთ სურათის URL
-    const existingResult = await db.query('SELECT image_url FROM equipment WHERE id = $1', [id]);
+    // შევამოწმოთ არსებობს თუ არა
+    const existingResult = await db.query('SELECT id FROM equipment WHERE id = $1', [id]);
     if (existingResult.rows.length === 0) {
       return res.status(404).json({ message: 'აღჭურვილობა ვერ მოიძებნა' });
     }
 
     // წავშალოთ ბაზიდან
     await db.query('DELETE FROM equipment WHERE id = $1', [id]);
-    
-    // წავშალოთ ფაილიც
-    if (existingResult.rows[0].image_url) {
-      const filePath = path.join(__dirname, '../', existingResult.rows[0].image_url);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-    }
 
     res.json({ message: 'აღჭურვილობა წარმატებით წაიშალა!' });
   } catch (error) {

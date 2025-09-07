@@ -1,6 +1,29 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import './BookingsList.css';
+import {
+  Container,
+  Paper,
+  Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Chip,
+  Select,
+  MenuItem,
+  FormControl,
+  IconButton,
+  Box,
+  CircularProgress,
+  Alert,
+  Tooltip
+} from '@mui/material';
+import {
+  Delete as DeleteIcon,
+  Edit as EditIcon
+} from '@mui/icons-material';
 import BookingForm from './BookingForm';
 
 const BookingsList = ({ showNotification, userRole }) => {
@@ -100,11 +123,24 @@ const BookingsList = ({ showNotification, userRole }) => {
   };
   
   if (loading) {
-    return <div>იტვირთება...</div>;
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, textAlign: 'center' }}>
+        <CircularProgress size={60} />
+        <Typography variant="h6" sx={{ mt: 2 }}>
+          იტვირთება...
+        </Typography>
+      </Container>
+    );
   }
 
   if (error) {
-    return <div>შეცდომა: {error}</div>;
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4 }}>
+        <Alert severity="error">
+          შეცდომა: {error}
+        </Alert>
+      </Container>
+    );
   }
 
   const formatDate = (dateString) => {
@@ -116,83 +152,161 @@ const BookingsList = ({ showNotification, userRole }) => {
     return timeString.substring(0, 5);
   };
 
-  const getStatusBadge = (status) => {
+  const getStatusChip = (status) => {
     const statusMap = {
-      pending: { label: 'მუშავდება', className: 'status-pending' },
-      confirmed: { label: 'დადასტურებული', className: 'status-confirmed' },
-      cancelled: { label: 'გაუქმებული', className: 'status-cancelled' },
-      completed: { label: 'დასრულებული', className: 'status-completed' }
+      pending: { label: 'მუშავდება', color: 'warning' },
+      confirmed: { label: 'დადასტურებული', color: 'success' },
+      cancelled: { label: 'გაუქმებული', color: 'error' },
+      completed: { label: 'დასრულებული', color: 'default' }
     };
     
-    const statusInfo = statusMap[status] || { label: status, className: '' };
-    return <span className={`status-badge ${statusInfo.className}`}>{statusInfo.label}</span>;
+    const statusInfo = statusMap[status] || { label: status, color: 'default' };
+    return (
+      <Chip 
+        label={statusInfo.label} 
+        color={statusInfo.color}
+        size="small"
+        sx={{ fontWeight: 600 }}
+      />
+    );
   };
 
   return (
-    <div className="bookings-container">
-      <h2>ჯავშნები</h2>
-      
-      {editingId !== null && (
-         <BookingForm 
-            bookingToEdit={bookings.find(b => b.id === editingId)} 
-            onBookingUpdated={handleBookingUpdated} 
-            showNotification={showNotification} 
-         />
-      )}
-      
-      {bookings.length === 0 ? (
-        <p className="no-bookings">ჯავშნები არ მოიძებნა.</p>
-      ) : (
-        <table className="bookings-table">
-          <thead>
-            <tr>
-              <th>სერვისი</th>
-              <th>გამოფენა</th>
-              <th>კომპანია</th>
-              <th>ჯავშნის თარიღი</th>
-              <th>დრო</th>
-              <th>სტატუსი</th>
-              {isAuthorizedForManagement && <th>მოქმედებები</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {bookings.map((booking) => (
-              <tr key={booking.id}>
-                <td>{booking.service_name}</td>
-                <td>{booking.exhibition_name}</td>
-                <td>{booking.company_name}</td>
-                <td>{formatDate(booking.booking_date)}</td>
-                <td>{formatTime(booking.start_time)} - {formatTime(booking.end_time)}</td>
-                <td>{getStatusBadge(booking.status)}</td>
-                {isAuthorizedForManagement && (
-                  <td>
-                    <div className="actions">
-                      <select 
-                        value={booking.status} 
-                        onChange={(e) => handleStatusChange(booking.id, e.target.value)}
-                        className="status-select"
-                      >
-                        <option value="pending">მუშავდება</option>
-                        <option value="confirmed">დადასტურებული</option>
-                        <option value="completed">დასრულებული</option>
-                        <option value="cancelled">გაუქმებული</option>
-                      </select>
-                      <button 
-                        onClick={() => handleDeleteBooking(booking.id)}
-                        className="delete-btn"
-                        title="ჯავშნის წაშლა"
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                  </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
+    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+      <Paper 
+        elevation={3}
+        sx={{
+          p: 3,
+          borderRadius: 3,
+          background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)'
+        }}
+      >
+        <Typography 
+          variant="h4" 
+          component="h2"
+          align="center"
+          sx={{
+            mb: 4,
+            fontWeight: 700,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text'
+          }}
+        >
+          ჯავშნები
+        </Typography>
+        
+        {editingId !== null && (
+           <Box sx={{ mb: 3 }}>
+             <BookingForm 
+                bookingToEdit={bookings.find(b => b.id === editingId)} 
+                onBookingUpdated={handleBookingUpdated} 
+                showNotification={showNotification} 
+             />
+           </Box>
+        )}
+        
+        {bookings.length === 0 ? (
+          <Alert severity="info" sx={{ textAlign: 'center' }}>
+            ჯავშნები არ მოიძებნა.
+          </Alert>
+        ) : (
+          <TableContainer 
+            component={Paper} 
+            sx={{ 
+              borderRadius: 2,
+              boxShadow: (theme) => theme.shadows[4]
+            }}
+          >
+            <Table sx={{ minWidth: 650 }}>
+              <TableHead>
+                <TableRow 
+                  sx={{ 
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                  }}
+                >
+                  <TableCell sx={{ color: 'white', fontWeight: 700 }}>სერვისი</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 700 }}>გამოფენა</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 700 }}>კომპანია</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 700 }}>ჯავშნის თარიღი</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 700 }}>დრო</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 700 }}>სტატუსი</TableCell>
+                  {isAuthorizedForManagement && (
+                    <TableCell sx={{ color: 'white', fontWeight: 700 }}>მოქმედებები</TableCell>
+                  )}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {bookings.map((booking, index) => (
+                  <TableRow 
+                    key={booking.id}
+                    sx={{
+                      '&:nth-of-type(odd)': {
+                        backgroundColor: 'rgba(0, 0, 0, 0.02)',
+                      },
+                      '&:hover': {
+                        backgroundColor: 'rgba(103, 126, 234, 0.1)',
+                        transform: 'scale(1.001)',
+                        transition: 'all 0.2s ease'
+                      },
+                    }}
+                  >
+                    <TableCell>{booking.service_name}</TableCell>
+                    <TableCell>{booking.exhibition_name}</TableCell>
+                    <TableCell>{booking.company_name}</TableCell>
+                    <TableCell>{formatDate(booking.booking_date)}</TableCell>
+                    <TableCell>
+                      {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
+                    </TableCell>
+                    <TableCell>{getStatusChip(booking.status)}</TableCell>
+                    {isAuthorizedForManagement && (
+                      <TableCell>
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                          <FormControl size="small" sx={{ minWidth: 120 }}>
+                            <Select
+                              value={booking.status}
+                              onChange={(e) => handleStatusChange(booking.id, e.target.value)}
+                              variant="outlined"
+                              size="small"
+                            >
+                              <MenuItem value="pending">მუშავდება</MenuItem>
+                              <MenuItem value="confirmed">დადასტურებული</MenuItem>
+                              <MenuItem value="completed">დასრულებული</MenuItem>
+                              <MenuItem value="cancelled">გაუქმებული</MenuItem>
+                            </Select>
+                          </FormControl>
+                          
+                          <Tooltip title="ჯავშნის რედაქტირება">
+                            <IconButton
+                              onClick={() => setEditingId(booking.id)}
+                              color="primary"
+                              size="small"
+                            >
+                              <EditIcon />
+                            </IconButton>
+                          </Tooltip>
+                          
+                          <Tooltip title="ჯავშნის წაშლა">
+                            <IconButton
+                              onClick={() => handleDeleteBooking(booking.id)}
+                              color="error"
+                              size="small"
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+      </Paper>
+    </Container>
   );
 };
 

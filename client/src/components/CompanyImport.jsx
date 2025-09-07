@@ -1,11 +1,47 @@
 
 import React, { useState } from 'react';
-import './CompanyImport.css';
+import {
+  Container,
+  Paper,
+  Typography,
+  Button,
+  Box,
+  Grid,
+  Card,
+  CardContent,
+  CardActions,
+  Alert,
+  LinearProgress,
+  Chip,
+  Divider,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton
+} from '@mui/material';
+import {
+  CloudUpload,
+  Download,
+  FileUpload,
+  Refresh,
+  CheckCircle,
+  Error,
+  Info,
+  Close,
+  Description,
+  Assignment
+} from '@mui/icons-material';
 
 const CompanyImport = ({ showNotification, onImportComplete }) => {
   const [file, setFile] = useState(null);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState(null);
+  const [showInstructions, setShowInstructions] = useState(false);
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
@@ -134,120 +170,345 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
   };
 
   return (
-    <div className="import-container">
-      <div className="import-header">
-        <h3>კომპანიების იმპორტი Excel ფაილიდან</h3>
-        <p>ატვირთეთ Excel ფაილი კომპანიების მონაცემებით</p>
-      </div>
-
-      <div className="import-actions">
-        <div className="download-buttons">
-          <button 
-            className="download-template-btn"
-            onClick={downloadTemplate}
-            type="button"
+    <Container maxWidth="lg" sx={{ py: 4 }} >
+      <Paper 
+        elevation={3} 
+        sx={{ 
+          p: 4, 
+          borderRadius: 3,
+          background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}
+      >
+        <Box textAlign="center" mb={4}>
+          <Typography 
+            variant="h4" 
+            gutterBottom 
+            sx={{ 
+              color: 'primary.main',
+              fontWeight: 600,
+              mb: 1
+            }}
           >
-            📥 შაბლონის ჩამოტვირთვა
-          </button>
-          
-          <button 
-            className="export-btn"
-            onClick={exportCompanies}
-            type="button"
-          >
-            📤 კომპანიების ექსპორტი
-          </button>
-        </div>
+            კომპანიების იმპორტი Excel ფაილიდან
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            ატვირთეთ Excel ფაილი კომპანიების მონაცემებით
+          </Typography>
+        </Box>
 
-        <div className="file-upload-section">
-          <input
-            id="fileInput"
-            type="file"
-            accept=".xlsx,.xls"
-            onChange={handleFileChange}
-            className="file-input"
-          />
-          <label htmlFor="fileInput" className="file-label">
-            📁 ფაილის არჩევა
-          </label>
-          {file && (
-            <span className="file-name">
-              არჩეულია: {file.name}
-            </span>
-          )}
-        </div>
+        <Grid container spacing={3} mb={4}>
+          <Grid item xs={12} md={6}>
+            <Card elevation={2} sx={{ height: '100%' }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom color="primary">
+                  ფაილის მომზადება
+                </Typography>
+                <Typography variant="body2" color="text.secondary" mb={2}>
+                  შაბლონის ჩამოტვირთვა და არსებული მონაცემების ექსპორტი
+                </Typography>
+              </CardContent>
+              <CardActions sx={{ p: 2, pt: 0 }}>
+                <Button
+                  variant="contained"
+                  startIcon={<Download />}
+                  onClick={downloadTemplate}
+                  sx={{ 
+                    mr: 1,
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    '&:hover': { 
+                      background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)' 
+                    }
+                  }}
+                >
+                  შაბლონი
+                </Button>
+                <Button
+                  variant="contained"
+                  startIcon={<FileUpload />}
+                  onClick={exportCompanies}
+                  sx={{ 
+                    background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                    '&:hover': { 
+                      background: 'linear-gradient(135deg, #e788f5 0%, #f04556 100%)' 
+                    }
+                  }}
+                >
+                  ექსპორტი
+                </Button>
+              </CardActions>
+            </Card>
+          </Grid>
 
-        <div className="import-buttons">
-          <button
-            className="import-btn"
+          <Grid item xs={12} md={6}>
+            <Card 
+              elevation={2} 
+              sx={{ 
+                height: '100%',
+                border: file ? '2px solid #4caf50' : '2px dashed #ccc',
+                backgroundColor: file ? '#f8fff8' : 'inherit'
+              }}
+            >
+              <CardContent sx={{ textAlign: 'center', py: 4 }}>
+                <input
+                  id="fileInput"
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={handleFileChange}
+                  style={{ display: 'none' }}
+                />
+                <label htmlFor="fileInput">
+                  <IconButton
+                    component="span"
+                    sx={{
+                      width: 80,
+                      height: 80,
+                      mb: 2,
+                      backgroundColor: 'primary.light',
+                      color: 'white',
+                      '&:hover': { backgroundColor: 'primary.main' }
+                    }}
+                  >
+                    <CloudUpload sx={{ fontSize: 40 }} />
+                  </IconButton>
+                </label>
+                <Typography variant="h6" gutterBottom>
+                  ფაილის არჩევა
+                </Typography>
+                {file ? (
+                  <Chip
+                    icon={<CheckCircle />}
+                    label={file.name}
+                    color="success"
+                    variant="outlined"
+                  />
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    დააწკაპუნეთ ან გადმოიტანეთ Excel ფაილი
+                  </Typography>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        <Box textAlign="center" mb={4}>
+          <Button
+            variant="contained"
+            size="large"
+            startIcon={importing ? null : <CloudUpload />}
             onClick={handleImport}
             disabled={!file || importing}
+            sx={{ 
+              mr: 2,
+              minWidth: 150,
+              background: 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)',
+              '&:hover': { 
+                background: 'linear-gradient(135deg, #45a049 0%, #3d8b40 100%)' 
+              },
+              '&:disabled': {
+                background: '#ccc'
+              }
+            }}
           >
-            {importing ? '⏳ იმპორტირდება...' : '📤 იმპორტი'}
-          </button>
+            {importing ? 'იმპორტირდება...' : 'იმპორტი'}
+          </Button>
           
           {file && (
-            <button
-              className="reset-btn"
+            <Button
+              variant="outlined"
+              startIcon={<Refresh />}
               onClick={resetImport}
               disabled={importing}
             >
-              🔄 გასუფთავება
-            </button>
+              გასუფთავება
+            </Button>
           )}
-        </div>
-      </div>
+        </Box>
 
-      {importResult && (
-        <div className="import-result">
-          <h4>იმპორტის შედეგები:</h4>
-          <div className="result-stats">
-            <div className="stat-item">
-              <span className="stat-label">სულ:</span>
-              <span className="stat-value">{importResult.total}</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-label">წარმატებული:</span>
-              <span className="stat-value success">{importResult.imported}</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-label">შეცდომები:</span>
-              <span className="stat-value error">{importResult.errors}</span>
-            </div>
-          </div>
+        {importing && (
+          <Box mb={4}>
+            <LinearProgress sx={{ borderRadius: 1 }} />
+          </Box>
+        )}
 
-          {importResult.errorDetails && importResult.errorDetails.length > 0 && (
-            <div className="error-details">
-              <h5>შეცდომების დეტალები:</h5>
-              <ul>
-                {importResult.errorDetails.map((error, index) => (
-                  <li key={index}>{error}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      )}
+        {importResult && (
+          <Card elevation={2} sx={{ mb: 4 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom color="primary">
+                იმპორტის შედეგები
+              </Typography>
+              
+              <Grid container spacing={2} mb={2}>
+                <Grid item xs={12} sm={4}>
+                  <Card variant="outlined">
+                    <CardContent sx={{ textAlign: 'center', py: 2 }}>
+                      <Typography variant="h4" color="primary">
+                        {importResult.total}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        სულ
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <Card variant="outlined">
+                    <CardContent sx={{ textAlign: 'center', py: 2 }}>
+                      <Typography variant="h4" color="success.main">
+                        {importResult.imported}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        წარმატებული
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <Card variant="outlined">
+                    <CardContent sx={{ textAlign: 'center', py: 2 }}>
+                      <Typography variant="h4" color="error.main">
+                        {importResult.errors}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        შეცდომები
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
 
-      <div className="import-instructions">
-        <h4>ინსტრუქციები:</h4>
-        <ol>
-          <li>ჩამოტვირთეთ შაბლონი Excel ფაილის სწორი ფორმატის გასაცნობად</li>
-          <li>შეავსეთ შაბლონი თქვენი კომპანიების მონაცემებით</li>
-          <li>აირჩიეთ შევსებული ფაილი და დააჭირეთ "იმპორტი"</li>
-          <li>თუ კომპანია უკვე არსებობს (იგივე საიდენტიფიკაციო კოდით), ის განახლდება</li>
-        </ol>
+              {importResult.errorDetails && importResult.errorDetails.length > 0 && (
+                <Alert severity="error" sx={{ mt: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    შეცდომების დეტალები:
+                  </Typography>
+                  <List dense>
+                    {importResult.errorDetails.map((error, index) => (
+                      <ListItem key={index} sx={{ py: 0.5 }}>
+                        <ListItemIcon>
+                          <Error color="error" />
+                        </ListItemIcon>
+                        <ListItemText primary={error} />
+                      </ListItem>
+                    ))}
+                  </List>
+                </Alert>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        <Box textAlign="center">
+          <Button
+            variant="outlined"
+            startIcon={<Info />}
+            onClick={() => setShowInstructions(true)}
+          >
+            ინსტრუქციების ნახვა
+          </Button>
+        </Box>
+      </Paper>
+
+      {/* Instructions Dialog */}
+      <Dialog
+        open={showInstructions}
+        onClose={() => setShowInstructions(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ 
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <Typography variant="h6">
+            იმპორტის ინსტრუქციები
+          </Typography>
+          <IconButton
+            onClick={() => setShowInstructions(false)}
+            sx={{ color: 'white' }}
+          >
+            <Close />
+          </IconButton>
+        </DialogTitle>
         
-        <h4>მნიშვნელოვანი წესები:</h4>
-        <ul>
-          <li><strong>საჭირო ველები:</strong> კომპანიის დასახელება და საიდენტიფიკაციო კოდი</li>
-          <li><strong>სტატუსი:</strong> მხოლოდ "აქტიური" ან "პასიური"</li>
-          <li><strong>ვებსაიტი:</strong> მიუთითეთ სრული URL (http:// ან https://)</li>
-          <li><strong>ექსპორტი:</strong> არსებული კომპანიების ჩამოტვირთვისთვის</li>
-          <li>მაქსიმალური ფაილის ზომა: 5MB</li>
-        </ul>
-      </div>
-    </div>
+        <DialogContent sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom color="primary">
+            ნაბიჯები:
+          </Typography>
+          <List>
+            <ListItem>
+              <ListItemIcon>
+                <Description color="primary" />
+              </ListItemIcon>
+              <ListItemText primary="ჩამოტვირთეთ შაბლონი Excel ფაილის სწორი ფორმატის გასაცნობად" />
+            </ListItem>
+            <ListItem>
+              <ListItemIcon>
+                <Assignment color="primary" />
+              </ListItemIcon>
+              <ListItemText primary="შეავსეთ შაბლონი თქვენი კომპანიების მონაცემებით" />
+            </ListItem>
+            <ListItem>
+              <ListItemIcon>
+                <CloudUpload color="primary" />
+              </ListItemIcon>
+              <ListItemText primary="აირჩიეთ შევსებული ფაილი და დააჭირეთ იმპორტი" />
+            </ListItem>
+            <ListItem>
+              <ListItemIcon>
+                <Refresh color="primary" />
+              </ListItemIcon>
+              <ListItemText primary="თუ კომპანია უკვე არსებობს (იგივე საიდენტიფიკაციო კოდით), ის განახლდება" />
+            </ListItem>
+          </List>
+
+          <Divider sx={{ my: 3 }} />
+
+          <Typography variant="h6" gutterBottom color="primary">
+            მნიშვნელოვანი წესები:
+          </Typography>
+          <List>
+            <ListItem>
+              <ListItemText 
+                primary="საჭირო ველები: კომპანიის დასახელება და საიდენტიფიკაციო კოდი"
+                secondary="ეს ველები აუცილებლად უნდა იყოს შევსებული"
+              />
+            </ListItem>
+            <ListItem>
+              <ListItemText 
+                primary="სტატუსი: მხოლოდ 'აქტიური' ან 'პასიური'"
+                secondary="სხვა მნიშვნელობები არ იქნება მიღებული"
+              />
+            </ListItem>
+            <ListItem>
+              <ListItemText 
+                primary="ვებსაიტი: მიუთითეთ სრული URL (http:// ან https://)"
+                secondary="მაგალითად: https://example.com"
+              />
+            </ListItem>
+            <ListItem>
+              <ListItemText 
+                primary="მაქსიმალური ფაილის ზომა: 5MB"
+                secondary="უფრო დიდი ფაილები არ იქნება დამუშავებული"
+              />
+            </ListItem>
+          </List>
+        </DialogContent>
+        
+        <DialogActions>
+          <Button onClick={() => setShowInstructions(false)}>
+            დახურვა
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Container>
   );
 };
 

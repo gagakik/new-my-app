@@ -1,5 +1,30 @@
-import React, { useState, useEffect, useCallback } from 'react'; // დავამატეთ useCallback
-import './EquipmentList.css';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Container,
+  Typography,
+  Button,
+  TextField,
+  Box,
+  IconButton,
+  Chip,
+  CircularProgress,
+  Alert,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Avatar
+} from '@mui/material';
+import {
+  Add,
+  Edit,
+  Delete,
+  Search,
+  Image as ImageIcon
+} from '@mui/icons-material';
 import EquipmentForm from './EquipmentForm';
 
 const EquipmentList = ({ showNotification, userRole }) => {
@@ -8,6 +33,7 @@ const EquipmentList = ({ showNotification, userRole }) => {
   const [error, setError] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showNewForm, setShowNewForm] = useState(false); // State for showing the new form
 
   const isAuthorizedForManagement =
     userRole === 'admin' ||
@@ -38,7 +64,6 @@ const EquipmentList = ({ showNotification, userRole }) => {
         setEquipment(data);
       } else if (response.status === 403) {
         showNotification('წვდომა აკრძალულია. გთხოვთ, ხელახლა შეხვიდეთ სისტემაში.', 'error');
-        // გაასუფთავეთ ტოკენი და გადამისამართეთ login-ზე
         localStorage.removeItem('token');
         window.location.reload();
       } else {
@@ -52,11 +77,11 @@ const EquipmentList = ({ showNotification, userRole }) => {
     } finally {
       setLoading(false);
     }
-  }, [showNotification]); // showNotification არის დამოკიდებულება
+  }, [showNotification]);
 
   useEffect(() => {
     fetchEquipment();
-  }, [fetchEquipment]); // fetchEquipment დაემატა დამოკიდებულებებში
+  }, [fetchEquipment]);
 
   // ფილტრაცია ძიების ტერმინის მიხედვით
   const filteredEquipment = equipment.filter(item =>
@@ -70,7 +95,7 @@ const EquipmentList = ({ showNotification, userRole }) => {
 
     try {
       const token = localStorage.getItem('token');
-      if (!token) { // შემოწმება, თუ ტოკენი არ არსებობს
+      if (!token) {
         showNotification('ავტორიზაციის ტოკენი არ მოიძებნა. გთხოვთ, შეხვიდეთ სისტემაში.', 'error');
         return;
       }
@@ -96,127 +121,316 @@ const EquipmentList = ({ showNotification, userRole }) => {
 
   const handleEditClick = (item) => {
     setEditingId(item.id);
+    setShowNewForm(false); // Close the new form if it was open
   };
 
   const handleEquipmentUpdated = () => {
     setEditingId(null);
+    setShowNewForm(false); // Close the new form after update
     fetchEquipment();
   };
 
-  const getImageUrl = (imageUrl) => {
-    if (!imageUrl) return null;
+  // სურათის URL-ის დამუშავება
+  const processImageUrl = (url) => {
+    if (!url) return null;
 
-    console.log('Processing image URL:', imageUrl);
+    console.log('Processing image URL:', url);
 
-    // თუ URL უკვე სრული მისამართია (http-ით იწყება), ისე დავტოვოთ
-    if (imageUrl.startsWith('http')) {
-      return imageUrl;
+    let cleanUrl = url;
+    if (cleanUrl.startsWith('http://0.0.0.0:5000/uploads/')) {
+      cleanUrl = cleanUrl.replace('http://0.0.0.0:5000/uploads/', '');
+    } else if (cleanUrl.startsWith('/uploads/')) {
+      cleanUrl = cleanUrl.replace('/uploads/', '');
+    } else if (cleanUrl.startsWith('uploads/')) {
+      cleanUrl = cleanUrl.replace('uploads/', '');
     }
 
-    // თუ URL არ იწყება /-ით, დავუმატოთ
-    if (!imageUrl.startsWith('/')) {
-      imageUrl = '/' + imageUrl;
-    }
-
-    // პროდუქშენ გარემოში სრული URL-ის ფორმირება
-    const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('replit');
-    if (isProduction) {
-      return `http://209.38.237.197${imageUrl}`;
-    }
-
-    console.log('Final image URL:', imageUrl);
-    return imageUrl;
+    return `/uploads/${cleanUrl}`;
   };
-
 
   if (loading) {
     return (
-      <div className="equipment-container">
-        <div className="loading">იტვირთება...</div>
-      </div>
+      <Container maxWidth="lg" sx={{ py: 4, textAlign: 'center' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+          <CircularProgress size={60} />
+          <Typography variant="h6" color="primary">
+            იტვირთება...
+          </Typography>
+        </Box>
+      </Container>
     );
   }
 
   if (error) {
     return (
-      <div className="equipment-container">
-        <div className="error">შეცდომა: {error}</div>
-      </div>
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Alert severity="error" sx={{ borderRadius: 2 }}>
+          შეცდომა: {error}
+        </Alert>
+      </Container>
     );
   }
 
   return (
-    <div className="equipment-container">
-      <h2>აღჭურვილობის სია</h2>
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Box sx={{ 
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        borderRadius: 3,
+        p: 4,
+        mb: 4,
+        color: 'white'
+      }}>
+        <Typography variant="h4" component="h1" sx={{ 
+          textAlign: 'center',
+          fontWeight: 600,
+          mb: 4,
+          textShadow: '0 2px 4px rgba(0,0,0,0.3)'
+        }}>
+          აღჭურვილობის სია
+        </Typography>
 
-      {/* ძიების ველი */}
-      <div className="search-container">
-        <input
-          type="text"
-          placeholder="ძებნა კოდური სახელით ან აღწერით..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="search-input"
-        />
-      </div>
+        {/* ძიების ველი */}
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+          <TextField
+            variant="outlined"
+            placeholder="ძებნა კოდური სახელით ან აღწერით..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            sx={{ 
+              maxWidth: 500,
+              width: '100%',
+              '& .MuiOutlinedInput-root': {
+                backgroundColor: 'white',
+                borderRadius: 3
+              }
+            }}
+            InputProps={{
+              startAdornment: <Search sx={{ color: 'action.active', mr: 1 }} />
+            }}
+          />
+        </Box>
 
-      {isAuthorizedForManagement && (
-        <button className="add-new" onClick={() => setEditingId(0)}>
-          ახალი აღჭურვილობის დამატება
-        </button>
-      )}
+        {isAuthorizedForManagement && (
+          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={() => {
+                setEditingId(null); // Ensure no item is being edited
+                setShowNewForm(true); // Show the new form
+              }}
+              sx={{
+                backgroundColor: 'white',
+                color: 'primary.main',
+                borderRadius: 25,
+                px: 4,
+                py: 1.5,
+                fontWeight: 600,
+                '&:hover': {
+                  backgroundColor: 'rgba(255,255,255,0.9)',
+                  transform: 'translateY(-2px)'
+                }
+              }}
+            >
+              ახალი აღჭურვილობის დამატება
+            </Button>
+          </Box>
+        )}
+      </Box>
 
-      {editingId !== null && isAuthorizedForManagement && (
+      {editingId !== null && (
         <EquipmentForm
           equipmentToEdit={equipment.find(item => item.id === editingId)}
           onEquipmentUpdated={handleEquipmentUpdated}
+          onCancel={() => setEditingId(null)}
+          showNotification={showNotification}
+          userRole={userRole}
+        />
+      )}
+
+      {showNewForm && (
+        <EquipmentForm
+          equipmentToEdit={null} // No item to edit when adding new
+          onEquipmentUpdated={() => {
+            fetchEquipment();
+            setShowNewForm(false);
+          }}
+          onCancel={() => setShowNewForm(false)}
           showNotification={showNotification}
           userRole={userRole}
         />
       )}
 
       {filteredEquipment.length === 0 ? (
-        <p className="no-equipment">
-          {searchTerm ? 'ძიების კრიტერიუმებით აღჭურვილობა არ მოიძებნა.' : 'აღჭურვილობა არ მოიძებნა.'}
-        </p>
+        <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3 }}>
+          <Typography variant="h6" color="text.secondary">
+            {searchTerm ? 'ძიების კრიტერიუმებით აღჭურვილობა არ მოიძებნა.' : 'აღჭურვილობა არ მოიძებნა.'}
+          </Typography>
+        </Paper>
       ) : (
-        <div className="equipment-grid">
-          {filteredEquipment.map((item) => (
-            <div key={item.id} className="equipment-card">
-              {item.image_url && (
-                <div className="equipment-image-container">
-                  <img
-                    src={getImageUrl(item.image_url)}
-                    alt={item.code_name}
-                    className="equipment-image"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      console.log('სურათის ჩატვირთვის შეცდომა:', item.image_url);
-                    }}
-                    loading="lazy"
-                  />
-                </div>
-              )}
+        <TableContainer 
+          component={Paper} 
+          sx={{ 
+            mt: 2,
+            borderRadius: 2,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+            maxHeight: '70vh',
+            overflow: 'auto',
+            '&::-webkit-scrollbar': {
+              width: '8px',
+              height: '8px'
+            },
+            '&::-webkit-scrollbar-track': {
+              backgroundColor: '#f1f1f1',
+              borderRadius: '10px'
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: '#667eea',
+              borderRadius: '10px',
+              '&:hover': {
+                backgroundColor: '#5a6fd8'
+              }
+            }
+          }}
+        >
+          <Table stickyHeader>
+            <TableHead>
+              <TableRow sx={{ backgroundColor: '#f8f9fa' }}>
+                <TableCell sx={{ fontWeight: 600, fontSize: '1rem' }}>სურათი</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '1rem' }}>კოდური სახელი</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '1rem' }}>აღწერა</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600, fontSize: '1rem' }}>რაოდენობა</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600, fontSize: '1rem' }}>ფასი</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '1rem' }}>შექმნა/განახლება</TableCell>
+                {isAuthorizedForManagement && (
+                  <TableCell align="center" sx={{ fontWeight: 600, fontSize: '1rem' }}>მოქმედებები</TableCell>
+                )}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredEquipment.map((item) => (
+                <TableRow 
+                  key={item.id}
+                  sx={{
+                    '&:hover': {
+                      backgroundColor: '#f5f7fa',
+                    },
+                    '&:nth-of-type(odd)': {
+                      backgroundColor: '#fafbfc',
+                    }
+                  }}
+                >
+                  <TableCell>
+                    {item.image_url ? (
+                      <Avatar
+                        src={processImageUrl(item.image_url)}
+                        alt={item.code_name}
+                        variant="rounded"
+                        sx={{ 
+                          width: 60, 
+                          height: 60,
+                          border: '2px solid #e0e6ed'
+                        }}
+                        onError={(e) => {
+                          console.error('სურათის ჩატვირთვის შეცდომა:', item.image_url);
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <Avatar
+                        variant="rounded"
+                        sx={{ 
+                          width: 60, 
+                          height: 60,
+                          backgroundColor: '#f0f0f0',
+                          border: '2px solid #e0e6ed'
+                        }}
+                      >
+                        <ImageIcon sx={{ color: '#999' }} />
+                      </Avatar>
+                    )}
+                  </TableCell>
 
-              <div className="equipment-details">
-                <h3>{item.code_name}</h3>
+                  <TableCell>
+                    <Typography 
+                      variant="h6" 
+                      component="div" 
+                      sx={{ 
+                        fontWeight: 600,
+                        color: 'primary.main',
+                        fontSize: '1.1rem'
+                      }}
+                    >
+                      {item.code_name}
+                    </Typography>
+                  </TableCell>
 
-                <div className="equipment-info">
-                  <p><strong>რაოდენობა:</strong> {item.quantity}</p>
-                  <p><strong>ფასი:</strong> ${item.price}</p>
-                  {item.description && (
-                    <div className="equipment-description">
-                      <strong>აღწერა:</strong> {item.description}
-                    </div>
-                  )}
-                </div>
+                  <TableCell>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        maxWidth: 300,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        lineHeight: 1.4
+                      }}
+                      title={item.description}
+                    >
+                      {item.description || 'აღწერა არ არის მითითებული'}
+                    </Typography>
+                  </TableCell>
 
-                <div className="equipment-meta">
-                  {item.created_by && (
-                    <div className="date-info">
-                      <div className="user">{item.created_by}</div>
+                  <TableCell align="center">
+                    <Typography 
+                      variant="body1" 
+                      sx={{ 
+                        fontWeight: 600,
+                        fontSize: '1.1rem',
+                        color: item.quantity > 0 ? 'success.main' : 'error.main'
+                      }}
+                    >
+                      {item.quantity}
+                    </Typography>
+                  </TableCell>
+
+                  <TableCell align="center">
+                    <Typography 
+                      variant="body1" 
+                      sx={{ 
+                        fontWeight: 600,
+                        fontSize: '1.1rem',
+                        color: 'success.main'
+                      }}
+                    >
+                      ${item.price}
+                    </Typography>
+                  </TableCell>
+
+                  <TableCell>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                      {item.created_by && (
+                        <Chip
+                          label={`შექმნა: ${item.created_by}`}
+                          size="small"
+                          variant="outlined"
+                          color="primary"
+                          sx={{ fontSize: '0.75rem' }}
+                        />
+                      )}
+                      {item.updated_by && item.updated_at && (
+                        <Chip
+                          label={`განახლდა: ${item.updated_by}`}
+                          size="small"
+                          variant="outlined"
+                          color="success"
+                          sx={{ fontSize: '0.75rem' }}
+                        />
+                      )}
                       {item.created_at && (
-                        <div className="date">
+                        <Typography variant="caption" color="text.secondary">
                           {new Date(item.created_at).toLocaleDateString('ka-GE', {
                             year: 'numeric',
                             month: 'short',
@@ -224,49 +438,50 @@ const EquipmentList = ({ showNotification, userRole }) => {
                             hour: '2-digit',
                             minute: '2-digit'
                           })}
-                        </div>
+                        </Typography>
                       )}
-                    </div>
-                  )}
+                    </Box>
+                  </TableCell>
 
-                  {item.updated_by && item.updated_at && (
-                    <div className="date-info update-info">
-                      <div className="user">{item.updated_by}</div>
-                      <div className="date">
-                        {new Date(item.updated_at).toLocaleDateString('ka-GE', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </div>
-                    </div>
+                  {isAuthorizedForManagement && (
+                    <TableCell align="center">
+                      <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                        <IconButton
+                          onClick={() => handleEditClick(item)}
+                          color="primary"
+                          size="small"
+                          sx={{ 
+                            '&:hover': { 
+                              backgroundColor: 'primary.main',
+                              color: 'white'
+                            }
+                          }}
+                        >
+                          <Edit />
+                        </IconButton>
+                        <IconButton
+                          onClick={() => handleDelete(item.id)}
+                          color="error"
+                          size="small"
+                          sx={{ 
+                            '&:hover': { 
+                              backgroundColor: 'error.main',
+                              color: 'white'
+                            }
+                          }}
+                        >
+                          <Delete />
+                        </IconButton>
+                      </Box>
+                    </TableCell>
                   )}
-                </div>
-              </div>
-
-              {isAuthorizedForManagement && (
-                <div className="actions">
-                  <button
-                    className="edit"
-                    onClick={() => handleEditClick(item)}
-                    title="რედაქტირება"
-                  >
-                  </button>
-                  <button
-                    className="delete"
-                    onClick={() => handleDelete(item.id)}
-                    title="წაშლა"
-                  >
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
-    </div>
+    </Container>
   );
 };
 

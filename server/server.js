@@ -1968,7 +1968,7 @@ app.delete('/api/events/:id/delete-plan', authenticateToken, authorizeRoles('adm
     // Delete physical file
     try {
       let filePathToDelete;
-      
+
       if (planFilePath.startsWith('/uploads/')) {
         filePathToDelete = path.join(__dirname, planFilePath);
       } else if (planFilePath.startsWith('uploads/')) {
@@ -1978,7 +1978,7 @@ app.delete('/api/events/:id/delete-plan', authenticateToken, authorizeRoles('adm
       }
 
       console.log('Attempting to delete file at:', filePathToDelete);
-      
+
       if (fs.existsSync(filePathToDelete)) {
         fs.unlinkSync(filePathToDelete);
         console.log('Physical file deleted successfully');
@@ -2014,6 +2014,81 @@ app.delete('/api/events/:id/delete-plan', authenticateToken, authorizeRoles('adm
       message: 'ფაილის წაშლა ვერ მოხერხდა',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
+  }
+});
+
+// Database cleanup endpoint
+app.post('/api/cleanup/image-urls', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+  try {
+    console.log('იწყება ძველი სურათების URL-ების გასწორება...');
+
+    // აღჭურვილობის ცხრილში URL-ების გასწორება
+    const equipmentResult = await db.query(`
+      SELECT id, image_url FROM equipment 
+      WHERE image_url LIKE 'http://0.0.0.0:5000/uploads/%'
+    `);
+
+    let updatedEquipment = 0;
+    for (const equipment of equipmentResult.rows) {
+      const oldUrl = equipment.image_url;
+      const newUrl = oldUrl.replace('http://0.0.0.0:5000/uploads/', '/uploads/');
+
+      await db.query(
+        'UPDATE equipment SET image_url = $1 WHERE id = $2',
+        [newUrl, equipment.id]
+      );
+
+      updatedEquipment++;
+    }
+
+    // event_participants ცხრილში ფაილების URL-ების გასწორება
+    const participantsResult = await db.query(`
+      SELECT id, invoice_file_path, contract_file_path, handover_file_path 
+      FROM event_participants 
+      WHERE invoice_file_path LIKE 'http://0.0.0.0:5000/uploads/%'
+         OR contract_file_path LIKE 'http://0.0.0.0:5000/uploads/%'
+         OR handover_file_path LIKE 'http://0.0.0.0:5000/uploads/%'
+    `);
+
+    let updatedParticipants = 0;
+    for (const participant of participantsResult.rows) {
+      let updateFields = [];
+      let updateValues = [];
+      let paramCount = 1;
+
+      if (participant.invoice_file_path && participant.invoice_file_path.startsWith('http://0.0.0.0:5000/uploads/')) {
+        updateFields.push(`invoice_file_path = $${paramCount++}`);
+        updateValues.push(participant.invoice_file_path.replace('http://0.0.0.0:5000/uploads/', '/uploads/'));
+      }
+
+      if (participant.contract_file_path && participant.contract_file_path.startsWith('http://0.0.0.0:5000/uploads/')) {
+        updateFields.push(`contract_file_path = $${paramCount++}`);
+        updateValues.push(participant.contract_file_path.replace('http://0.0.0.0:5000/uploads/', '/uploads/'));
+      }
+
+      if (participant.handover_file_path && participant.handover_file_path.startsWith('http://0.0.0.0:5000/uploads/')) {
+        updateFields.push(`handover_file_path = $${paramCount++}`);
+        updateValues.push(participant.handover_file_path.replace('http://0.0.0.0:5000/uploads/', '/uploads/'));
+      }
+
+      if (updateFields.length > 0) {
+        updateValues.push(participant.id);
+        await db.query(
+          `UPDATE event_participants SET ${updateFields.join(', ')} WHERE id = $${paramCount}`,
+          updateValues
+        );
+        updatedParticipants++;
+      }
+    }
+
+    res.json({
+      message: 'ბაზის გასწორება წარმატებით დასრულდა',
+      updatedEquipment,
+      updatedParticipants
+    });
+  } catch (error) {
+    console.error('ბაზის გასწორების შეცდომა:', error);
+    res.status(500).json({ message: 'ბაზის გასწორება ვერ მოხერხდა' });
   }
 });
 
