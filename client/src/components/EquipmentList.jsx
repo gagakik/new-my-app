@@ -405,7 +405,7 @@ const EquipmentList = ({ showNotification, userRole }) => {
                         color: 'success.main'
                       }}
                     >
-                      ${item.price}
+                      EUR {item.price}
                     </Typography>
                   </TableCell>
 
@@ -448,7 +448,7 @@ const EquipmentList = ({ showNotification, userRole }) => {
                       <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
                         <IconButton
                           onClick={() => handleEditClick(item)}
-                          color="primary"
+                          color="#e0c112ff"
                           size="small"
                           sx={{ 
                             '&:hover': { 

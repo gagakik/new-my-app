@@ -146,21 +146,27 @@ const AuthPage = ({ onLoginSuccess, showNotification }) => {
           value={isLoginView ? 0 : 1}
           onChange={handleTabChange}
           centered
+          aria-label="basic tabs example"
+          indicatorColor="#fff"
+          variant="scrollable"
+          scrollButtons="auto"
+          size="large"
           sx={{
             mb: 3,
             '& .MuiTab-root': {
               fontWeight: 600,
               fontSize: '1rem',
-              textTransform: 'none'
+              textTransform: 'none',
+              color: '#fff'
             }
           }}
         >
           <Tab label="შესვლა" 
               icon={<Login />} 
               iconPosition="start"
-              sx={{borderRadius: '8px 0 0 8px'}}
+              sx={{borderRadius: '8px 0 0 8px', color: '#fff'}}
           />
-          <Tab label="რეგისტრაცია" icon={<PersonAdd />} iconPosition="start" sx={{borderRadius: '0 8px 8px 0'}} />
+          <Tab label="რეგისტრაცია" icon={<PersonAdd />} iconPosition="start" sx={{borderRadius: '0 8px 8px 0', color: '#fff'}} />
         </Tabs>
 
         <Box sx={{ px: 4, pb: 4 }}>

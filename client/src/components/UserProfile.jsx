@@ -1,10 +1,34 @@
 
 import React, { useState, useEffect } from 'react';
-import './UserProfile.css';
+import {
+  Container,
+  Paper,
+  Typography,
+  Box,
+  Card,
+  CardContent,
+  Avatar,
+  Chip,
+  Grid,
+  Divider,
+  Stack,
+  CircularProgress,
+  useTheme,
+  alpha
+} from '@mui/material';
+import {
+  Person,
+  Badge,
+  CalendarToday,
+  Fingerprint,
+  CheckCircle,
+  AccessTime
+} from '@mui/icons-material';
 
 const UserProfile = ({ showNotification, userRole, userName, userId }) => {
   const [userInfo, setUserInfo] = useState(null);
   const [loading, setLoading] = useState(true);
+  const theme = useTheme();
 
   useEffect(() => {
     fetchUserProfile();
@@ -59,6 +83,19 @@ const UserProfile = ({ showNotification, userRole, userName, userId }) => {
     return roleNames[role] || role;
   };
 
+  const getRoleColor = (role) => {
+    const roleColors = {
+      'admin': 'error',
+      'manager': 'secondary',
+      'sales': 'primary',
+      'marketing': 'info',
+      'operation': 'warning',
+      'finance': 'success',
+      'user': 'default'
+    };
+    return roleColors[role] || 'default';
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return 'უცნობი';
     const date = new Date(dateString);
@@ -73,66 +110,155 @@ const UserProfile = ({ showNotification, userRole, userName, userId }) => {
 
   if (loading) {
     return (
-      <div className="user-profile-container">
-        <div className="loading">იტვირთება...</div>
-      </div>
+      <Container maxWidth="md" sx={{ py: 4, display: 'flex', justifyContent: 'center' }}>
+        <CircularProgress size={50} />
+      </Container>
     );
   }
 
   return (
-    <div className="user-profile-container">
-      <div className="profile-header">
-        <h2>👤 მომხმარებლის პროფილი</h2>
-      </div>
+    <Container maxWidth="md" sx={{ py: 4 }}>
+      {/* Header */}
+      <Paper 
+        elevation={0} 
+        sx={{ 
+          background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)',
+          color: 'white',
+          p: 4,
+          mb: 3,
+          borderRadius: 2
+        }}
+      >
+        <Stack direction="row" spacing={2} alignItems="center">
+          <Person sx={{ fontSize: 40 }} />
+          <Box>
+            <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
+              მომხმარებლის პროფილი
+            </Typography>
+            <Typography variant="body1" sx={{ opacity: 0.9 }}>
+              თქვენი ანგარიშის ინფორმაცია
+            </Typography>
+          </Box>
+        </Stack>
+      </Paper>
 
-      <div className="profile-content">
-        <div className="profile-card">
-          <div className="profile-avatar">
-            <div className="avatar-circle">
-              {userInfo?.username?.charAt(0).toUpperCase() || 'U'}
-            </div>
-          </div>
+      <Grid container spacing={3}>
+        {/* Main Profile Card */}
+        <Grid item xs={12} md={8}>
+          <Card elevation={3} sx={{ height: '100%' }}>
+            <CardContent sx={{ p: 4 }}>
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 3, mb: 4 }}>
+                <Avatar
+                  sx={{
+                    width: 100,
+                    height: 100,
+                    fontSize: '2.5rem',
+                    fontWeight: 700,
+                    background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)',
+                    boxShadow: `0 8px 32px ${alpha(theme.palette.primary.main, 0.3)}`
+                  }}
+                >
+                  {userInfo?.username?.charAt(0).toUpperCase() || 'U'}
+                </Avatar>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
+                    {userInfo?.username}
+                  </Typography>
+                  <Chip
+                    label={getRoleDisplayName(userInfo?.role)}
+                    color={getRoleColor(userInfo?.role)}
+                    icon={<Badge />}
+                    sx={{
+                      fontWeight: 600,
+                      fontSize: '0.875rem'
+                    }}
+                  />
+                </Box>
+              </Box>
 
-          <div className="profile-info">
-            <div className="info-group">
-              <label>მომხმარებლის სახელი:</label>
-              <span className="info-value">{userInfo?.username}</span>
-            </div>
+              <Divider sx={{ my: 3 }} />
 
-            <div className="info-group">
-              <label>როლი:</label>
-              <span className={`role-badge role-${userInfo?.role}`}>
-                {getRoleDisplayName(userInfo?.role)}
-              </span>
-            </div>
+              <Stack spacing={3}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <CalendarToday sx={{ color: 'text.secondary', fontSize: 20 }} />
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                      რეგისტრაციის თარიღი
+                    </Typography>
+                    <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                      {formatDate(userInfo?.created_at)}
+                    </Typography>
+                  </Box>
+                </Box>
 
-            <div className="info-group">
-              <label>რეგისტრაციის თარიღი:</label>
-              <span className="info-value">{formatDate(userInfo?.created_at)}</span>
-            </div>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Fingerprint sx={{ color: 'text.secondary', fontSize: 20 }} />
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                      მომხმარებლის ID
+                    </Typography>
+                    <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                      {userInfo?.id}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
 
-            <div className="info-group">
-              <label>მომხმარებლის ID:</label>
-              <span className="info-value">{userInfo?.id}</span>
-            </div>
-          </div>
-        </div>
+        {/* Stats Card */}
+        <Grid item xs={12} md={4}>
+          <Card elevation={3} sx={{ height: '100%' }}>
+            <CardContent sx={{ p: 4 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
+                სტატისტიკა
+              </Typography>
 
-        <div className="profile-stats">
-          <h3>სტატისტიკა</h3>
-          <div className="stats-grid">
-            <div className="stat-item">
-              <span className="stat-label">სტატუსი:</span>
-              <span className="stat-value active">აქტიური</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-label">ბოლო შესვლა:</span>
-              <span className="stat-value">ახლა</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+              <Stack spacing={3}>
+                <Box 
+                  sx={{ 
+                    p: 2, 
+                    borderRadius: 2,
+                    backgroundColor: alpha(theme.palette.success.main, 0.1),
+                    border: `1px solid ${alpha(theme.palette.success.main, 0.2)}`
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <CheckCircle sx={{ color: 'success.main', fontSize: 20 }} />
+                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                      სტატუსი
+                    </Typography>
+                  </Box>
+                  <Typography variant="body1" sx={{ fontWeight: 600, color: 'success.main' }}>
+                    აქტიური
+                  </Typography>
+                </Box>
+
+                <Box 
+                  sx={{ 
+                    p: 2, 
+                    borderRadius: 2,
+                    backgroundColor: alpha(theme.palette.info.main, 0.1),
+                    border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <AccessTime sx={{ color: 'info.main', fontSize: 20 }} />
+                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                      ბოლო შესვლა
+                    </Typography>
+                  </Box>
+                  <Typography variant="body1" sx={{ fontWeight: 600, color: 'info.main' }}>
+                    ახლა
+                  </Typography>
+                </Box>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+    </Container>
   );
 };
 

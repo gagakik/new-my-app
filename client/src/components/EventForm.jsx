@@ -564,12 +564,13 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
 
       <DialogActions sx={{ px: 3, pb: 3, pt: 1 }}>
         <Button 
+          size='medium'
           onClick={() => onEventUpdated()}
           variant="outlined"
           type="button"
           sx={{
-            borderColor: '#6c757d',
-            color: '#6c757d',
+            border:  'none',
+            color: '#ffffffff',
             borderRadius: 2,
             '&:hover': {
               borderColor: '#5a6268',
@@ -580,6 +581,8 @@ const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
           გაუქმება
         </Button>
         <Button 
+          type="submit"
+          size='medium'
           onClick={handleSubmit}
           variant="contained"
           sx={{

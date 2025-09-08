@@ -1,8 +1,39 @@
 
 import React, { useState } from 'react';
-import './DocumentGenerator.css';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Box,
+  Typography,
+  Button,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  FormControl,
+  FormLabel,
+  Paper,
+  CircularProgress,
+  IconButton,
+  Divider,
+  Card,
+  CardContent,
+  Stack,
+  useTheme,
+  alpha
+} from '@mui/material';
+import {
+  Close,
+  Description,
+  PictureAsPdf,
+  Download,
+  Print,
+  ArticleOutlined
+} from '@mui/icons-material';
 
 const DocumentGenerator = ({ participantId, participantName, onClose, showNotification }) => {
+  const theme = useTheme();
   const [loading, setLoading] = useState(false);
   const [documentType, setDocumentType] = useState('invoice');
   const [documentData, setDocumentData] = useState(null);
@@ -191,64 +222,214 @@ const DocumentGenerator = ({ participantId, participantName, onClose, showNotifi
   };
 
   return (
-    <div className="document-generator-modal">
-      <div className="modal-content">
-        <div className="modal-header">
-          <h3>დოკუმენტის გენერაცია - {participantName}</h3>
-          <button className="close-modal" onClick={onClose}>✕</button>
-        </div>
+    <Dialog 
+      open={true} 
+      onClose={onClose}
+      maxWidth="lg"
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 3,
+          boxShadow: theme.shadows[24]
+        }
+      }}
+    >
+      <DialogTitle
+        sx={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: '#ffffff',
+          position: 'relative',
+          py: 3
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <ArticleOutlined sx={{ fontSize: 28 }} />
+          <Typography variant="h5" component="div" sx={{ fontWeight: 600 }}>
+            დოკუმენტის გენერაცია - {participantName}
+          </Typography>
+        </Box>
+        
+        <IconButton
+          onClick={onClose}
+          size="small"
+          sx={{
+            position: 'absolute',
+            right: 16,
+            top: 16,
+            color: '#ffffff',
+            '&:hover': {
+              backgroundColor: alpha('#ffffff', 0.1)
+            }
+          }}
+        >
+          <Close />
+        </IconButton>
+      </DialogTitle>
 
-        <div className="modal-body">
-          <div className="document-type-selector">
-            <label>
-              <input
-                type="radio"
-                value="invoice"
-                checked={documentType === 'invoice'}
+      <DialogContent sx={{ p: 3 }}>
+        <Card
+          elevation={0}
+          sx={{
+            backgroundColor: alpha(theme.palette.primary.main, 0.02),
+            borderRadius: 2,
+            mb: 3
+          }}
+        >
+          <CardContent>
+            <FormControl component="fieldset">
+              <FormLabel 
+                component="legend"
+                sx={{ 
+                  fontWeight: 600, 
+                  color: theme.palette.text.primary,
+                  mb: 2
+                }}
+              >
+                აირჩიეთ დოკუმენტის ტიპი:
+              </FormLabel>
+              <RadioGroup
+                value={documentType}
                 onChange={(e) => setDocumentType(e.target.value)}
-              />
-              ინვოისი
-            </label>
-            <label>
-              <input
-                type="radio"
-                value="contract"
-                checked={documentType === 'contract'}
-                onChange={(e) => setDocumentType(e.target.value)}
-              />
-              ხელშეკრულება
-            </label>
-          </div>
+                row
+                sx={{ gap: 3 }}
+              >
+                <FormControlLabel
+                  value="invoice"
+                  control={<Radio />}
+                  label={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Description color="primary" />
+                      <Typography>ინვოისი</Typography>
+                    </Box>
+                  }
+                />
+                <FormControlLabel
+                  value="contract"
+                  control={<Radio />}
+                  label={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <ArticleOutlined color="primary" />
+                      <Typography>ხელშეკრულება</Typography>
+                    </Box>
+                  }
+                />
+              </RadioGroup>
+            </FormControl>
+          </CardContent>
+        </Card>
 
-          <div className="generate-actions">
-            <button 
-              className="generate-btn"
-              onClick={generateDocument}
-              disabled={loading}
+        <Box sx={{ textAlign: 'center', mb: 3 }}>
+          <Button
+            variant="contained"
+            size="large"
+            onClick={generateDocument}
+            disabled={loading}
+            startIcon={loading ? <CircularProgress size={20} /> : <PictureAsPdf />}
+            sx={{
+              background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+              px: 4,
+              py: 1.5,
+              fontSize: '1.1rem',
+              fontWeight: 600
+            }}
+          >
+            {loading ? 'იქმნება...' : 'დოკუმენტის გენერაცია'}
+          </Button>
+        </Box>
+
+        {documentData && (
+          <Paper
+            elevation={3}
+            sx={{
+              borderRadius: 2,
+              overflow: 'hidden'
+            }}
+          >
+            <Box
+              sx={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: '#ffffff',
+                p: 2
+              }}
             >
-              {loading ? 'იქმნება...' : 'დოკუმენტის გენერაცია'}
-            </button>
-          </div>
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                დოკუმენტის გადახედვა
+              </Typography>
+            </Box>
 
-          {documentData && (
-            <div className="document-preview">
-              <div className="preview-actions">
-                <button className="print-btn" onClick={printDocument}>
-                  📄 დაბეჭდვა
-                </button>
-                <button className="download-btn" onClick={downloadDocument}>
-                  💾 ჩამოტვირთვა
-                </button>
-              </div>
+            <Box sx={{ p: 2 }}>
+              <Stack direction="row" spacing={2} justifyContent="center" sx={{ mb: 3 }}>
+                <Button
+                  variant="outlined"
+                  startIcon={<Print />}
+                  onClick={printDocument}
+                  sx={{
+                    borderColor: '#4caf50',
+                    color: '#4caf50',
+                    '&:hover': {
+                      backgroundColor: alpha('#4caf50', 0.04),
+                      borderColor: '#45a049'
+                    }
+                  }}
+                >
+                  დაბეჭდვა
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<Download />}
+                  onClick={downloadDocument}
+                  sx={{
+                    borderColor: '#ff9800',
+                    color: '#ff9800',
+                    '&:hover': {
+                      backgroundColor: alpha('#ff9800', 0.04),
+                      borderColor: '#f57c00'
+                    }
+                  }}
+                >
+                  ჩამოტვირთვა
+                </Button>
+              </Stack>
 
-              <div className="document-content" dangerouslySetInnerHTML={{
-                __html: generateDocumentHTML()
-              }} />
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+              <Divider sx={{ mb: 2 }} />
+
+              <Box
+                sx={{
+                  border: `1px solid ${theme.palette.divider}`,
+                  borderRadius: 1,
+                  p: 2,
+                  backgroundColor: '#ffffff',
+                  minHeight: 400,
+                  maxHeight: 600,
+                  overflow: 'auto',
+                  fontFamily: 'Arial, sans-serif'
+                }}
+                dangerouslySetInnerHTML={{
+                  __html: generateDocumentHTML()
+                }}
+              />
+            </Box>
+          </Paper>
+        )}
+      </DialogContent>
+
+      <DialogActions sx={{ p: 3, backgroundColor: alpha(theme.palette.grey[100], 0.5) }}>
+        <Button
+          onClick={onClose}
+          variant="outlined"
+          sx={{
+            borderColor: alpha(theme.palette.grey[400], 0.8),
+            color: theme.palette.text.secondary,
+            '&:hover': {
+              borderColor: theme.palette.grey[600],
+              backgroundColor: alpha(theme.palette.grey[600], 0.04)
+            }
+          }}
+        >
+          დახურვა
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 };
 

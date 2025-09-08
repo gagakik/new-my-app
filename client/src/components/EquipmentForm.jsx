@@ -212,7 +212,7 @@ const EquipmentForm = ({ equipmentToEdit, onEquipmentUpdated, showNotification, 
               fullWidth
               variant="outlined"
               InputProps={{
-                endAdornment: <InputAdornment position="end">₾</InputAdornment>,
+                endAdornment: <InputAdornment position="end">EUR</InputAdornment>,
               }}
               sx={{
                 '& .MuiOutlinedInput-root': {
@@ -324,7 +324,7 @@ const EquipmentForm = ({ equipmentToEdit, onEquipmentUpdated, showNotification, 
           type="button"
           sx={{
             borderColor: '#6c757d',
-            color: '#6c757d',
+            color: '#ffffffff',
             '&:hover': {
               borderColor: '#5a6268',
               backgroundColor: 'rgba(108, 117, 125, 0.04)'
