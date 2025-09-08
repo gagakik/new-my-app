@@ -144,13 +144,20 @@ const ExhibitionsList = ({ showNotification, userRole }) => {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4 }}>
-      <Paper elevation={3} sx={{ p: 4, borderRadius: 2 }}>
-        <Typography variant="h4" component="h2" gutterBottom sx={{
+    <Container maxWidth="xl" sx={{ mt: 4}}>
+      <Paper elevation={3} 
+        sx={{ 
+          p: 4, 
+          borderRadius: 3,
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          mb: 3
+        }} >
+        <Typography variant="h4" component="h2" gutterBottom sx={{ 
+          color: 'white',
+          fontWeight: 700,
           textAlign: 'center',
-          background: 'linear-gradient(45deg, #667eea, #764ba2)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
+          textShadow: '2px 2px 4px rgba(0,0,0,0.3)',
           mb: 4
         }}>
           გამოფენების სია

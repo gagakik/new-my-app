@@ -177,15 +177,19 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
   };
 
   const renderDesktopMenu = () => (
-    <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 1 }}>
+    <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 1, flexDirection: 'row', width: '100%', justifyContent: 'center' }}>
       {getRoleBasedMenus().map((menu) => (
-        <Box key={menu.key}>
+        <Box key={menu.key}
+        sx={{ display: 'flex', alignItems: 'center', mb: 1, gap: 1, flexDirection: 'row' }}
+        >
           {menu.single ? (
             <Button
+              size='small'
               onClick={menu.action}
               startIcon={menu.icon}
               sx={{
-                color: activeView === menu.key ? 'primary.main' : 'text.primary',
+                background: 'linear-gradient(135deg, #667eea 0%, #1e7cff 100%)',
+                color: activeView === menu.key ? '#091c44ff' : '#fff',
                 fontWeight: activeView === menu.key ? 600 : 400,
                 textTransform: 'none',
                 px: 2,
@@ -204,10 +208,12 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
             <>
               <Button
                 onClick={(e) => handleMenuOpen(e, menu.key)}
+                size='small'
                 endIcon={<ExpandMore />}
                 startIcon={menu.icon}
                 sx={{
-                  color: 'text.primary',
+                  background: 'linear-gradient(135deg, #667eea 0%, #1e7cff 100%)',
+                  color: '#fff',
                   textTransform: 'none',
                   px: 2,
                   py: 1,
@@ -222,6 +228,7 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
                 {menu.label}
               </Button>
               <Menu
+              size='small'
                 anchorEl={anchorEl[menu.key]}
                 open={Boolean(anchorEl[menu.key])}
                 onClose={() => handleMenuClose(menu.key)}
@@ -344,6 +351,7 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
                 <ListItemButton
                   onClick={() => handleExpandMenu(menu.key)}
                   sx={{
+                    
                     mx: 1,
                     borderRadius: 2,
                     mb: 0.5,
@@ -405,12 +413,12 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
           <Button
             fullWidth
             variant="outlined"
-            color="error"
+            color='error'
             startIcon={<Logout />}
             onClick={onLogout}
-            sx={{ mb: 2, textTransform: 'none' }}
+            sx={{ mb: 2, textTransform: 'none', border:'none'}}
           >
-            გასვლა
+            EXIT
           </Button>
 
           <Button
@@ -476,12 +484,12 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               {/* User info - Desktop only */}
               <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', mr: 2 }}>
-                <Box sx={{ textAlign: 'right', mr: 1 }}>
+                <Box sx={{ textAlign: 'right', mr: 1, display: 'flex', flexDirection: 'row-reverse', gap: 0.8, alignItems: 'center' }}>
                   <Chip
                     label={userRole}
                     color="primary"
                     size="small"
-                    sx={{ mb: 0.5, textTransform: 'uppercase', fontWeight: 600 }}
+                    sx={{ mb: 0.5, textTransform: 'uppercase', fontWeight: 300 }}
                   />
                   <Typography variant="body2" color="text.secondary">
                     {userName}
@@ -492,8 +500,10 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
               {/* Theme toggle - Desktop only */}
               <Tooltip title={isDarkMode ? 'ღია თემაზე გადართვა' : 'მუქ თემაზე გადართვა'}>
                 <IconButton
+                  size='small'
                   onClick={toggleDarkMode}
                   sx={{
+                    color:'#f3cf2fff',
                     display: { xs: 'none', md: 'flex' },
                     bgcolor: 'action.hover',
                     '&:hover': {
@@ -510,8 +520,11 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
               {/* QR Scanner */}
               <Tooltip title="QR კოდის სკანერი">
                 <IconButton
+                  size='small'
                   onClick={() => setShowQRScanner(true)}
                   sx={{
+                    color:'#fff',
+                    display: { xs: 'none', md: 'flex' },
                     bgcolor: 'action.hover',
                     '&:hover': {
                       bgcolor: 'action.selected',
@@ -528,9 +541,12 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
               <Button
                 onClick={onLogout}
                 variant="outlined"
-                color="error"
+                size='small'
                 startIcon={<Logout />}
                 sx={{
+                  background: '#464444ff',
+                  color: '#fff',
+                  border: 'none',
                   display: { xs: 'none', md: 'flex' },
                   textTransform: 'none',
                   borderRadius: 2,
@@ -540,7 +556,7 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
                   transition: 'all 0.2s ease'
                 }}
               >
-                გასვლა
+                EXIT
               </Button>
 
               {/* Mobile menu button */}

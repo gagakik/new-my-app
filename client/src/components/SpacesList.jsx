@@ -156,7 +156,7 @@ const SpacesList = ({ showNotification, userRole }) => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <Container maxWidth="xl" sx={{ py: 4 }}>
       <Paper 
         elevation={3} 
         sx={{ 
@@ -172,6 +172,7 @@ const SpacesList = ({ showNotification, userRole }) => {
           component="h1" 
           gutterBottom
           sx={{ 
+            color: 'white',
             fontWeight: 700,
             textAlign: 'center',
             textShadow: '2px 2px 4px rgba(0,0,0,0.3)'
