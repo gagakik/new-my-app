@@ -1,6 +1,55 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import './StandManagement.css';
+import {
+  Box,
+  Paper,
+  Typography,
+  Grid,
+  Card,
+  CardContent,
+  CardActions,
+  Button,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Chip,
+  LinearProgress,
+  Alert,
+  CircularProgress,
+  Container,
+  Divider,
+  IconButton,
+  Slider,
+  FormHelperText,
+  Stack,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails
+} from '@mui/material';
+import {
+  Close,
+  Add,
+  Edit,
+  Delete,
+  Search,
+  FilterList,
+  Construction,
+  Engineering,
+  CheckCircle,
+  Warning,
+  Schedule,
+  Business,
+  ExpandMore,
+  Upload,
+  Assignment,
+  BuildCircle
+} from '@mui/icons-material';
 
 const StandManagement = ({ eventId, eventName, onClose, showNotification, userRole }) => {
   const [stands, setStands] = useState([]);
@@ -22,7 +71,6 @@ const StandManagement = ({ eventId, eventName, onClose, showNotification, userRo
     completion_percentage: 0
   });
   const [designFiles, setDesignFiles] = useState([]);
-  const [progressPhotos, setProgressPhotos] = useState([]);
 
   const isAuthorizedForManagement =
     userRole === 'admin' ||
@@ -102,7 +150,6 @@ const StandManagement = ({ eventId, eventName, onClose, showNotification, userRo
         }
       });
 
-      // დიზაინის ფაილების დამატება
       designFiles.forEach((file, index) => {
         submitData.append(`design_file_${index}`, file);
       });
@@ -206,306 +253,483 @@ const StandManagement = ({ eventId, eventName, onClose, showNotification, userRo
       completion_percentage: 0
     });
     setDesignFiles([]);
-    setProgressPhotos([]);
     setEditingStand(null);
     setShowStandForm(false);
   };
 
-  const getStatusBadge = (status) => {
+  const getStatusColor = (status) => {
     const statusMap = {
-      'დაგეგმილი': 'planned',
-      'დიზაინის ეტაპი': 'design',
-      'მშენებლობა დაწყებული': 'construction-started',
-      'მშენებლობა მიმდინარეობს': 'in-progress',
-      'ელექტრობის მოწყობა': 'electrical',
-      'დასრულების ეტაპი': 'finishing',
-      'დასრულებული': 'completed',
-      'ჩაბარებული': 'delivered',
-      'გადაუდებელი ყურადღება': 'urgent'
+      'დაგეგმილი': 'default',
+      'დიზაინის ეტაპი': 'secondary',
+      'მშენებლობა დაწყებული': 'warning',
+      'მშენებლობა მიმდინარეობს': 'info',
+      'ელექტრობის მოწყობა': 'info',
+      'დასრულების ეტაპი': 'primary',
+      'დასრულებული': 'success',
+      'ჩაბარებული': 'success',
+      'გადაუდებელი ყურადღება': 'error'
     };
-    return statusMap[status] || 'planned';
+    return statusMap[status] || 'default';
   };
 
-  const getProgressColor = (percentage) => {
-    if (percentage >= 90) return '#28a745';
-    if (percentage >= 70) return '#ffc107';
-    if (percentage >= 40) return '#fd7e14';
-    return '#dc3545';
+  const getStatusIcon = (status) => {
+    const iconMap = {
+      'დაგეგმილი': <Schedule />,
+      'დიზაინის ეტაპი': <Assignment />,
+      'მშენებლობა დაწყებული': <Construction />,
+      'მშენებლობა მიმდინარეობს': <BuildCircle />,
+      'ელექტრობის მოწყობა': <Engineering />,
+      'დასრულების ეტაპი': <Construction />,
+      'დასრულებული': <CheckCircle />,
+      'ჩაბარებული': <CheckCircle />,
+      'გადაუდებელი ყურადღება': <Warning />
+    };
+    return iconMap[status] || <Schedule />;
   };
 
-  if (loading) return <div className="loading">იტვირთება...</div>;
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress size={60} />
+        <Typography variant="h6" sx={{ ml: 2 }}>
+          იტვირთება...
+        </Typography>
+      </Box>
+    );
+  }
 
   return (
-    <div className="stand-management-modal">
-      <div className="modal-content">
-        <div className="modal-header">
-          <h3>{eventName} - სტენდების მენეჯმენტი ({filteredStands.length} / {stands.length})</h3>
-          <button
-            type="button"
-            className="modal-close"
-            onClick={onClose}
-          >
-            ✕
-          </button>
-        </div>
+    <Dialog 
+      open={true} 
+      onClose={onClose} 
+      maxWidth="xl" 
+      fullWidth
+      PaperProps={{
+        sx: { 
+          height: '95vh',
+          borderRadius: 3
+        }
+      }}
+    >
+      <DialogTitle sx={{ 
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+        color: 'white',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
+        <Box display="flex" alignItems="center">
+          <Construction sx={{ mr: 2 }} />
+          <Typography variant="h5" component="div">
+            {eventName} - სტენდების მენეჯმენტი ({filteredStands.length} / {stands.length})
+          </Typography>
+        </Box>
+        <IconButton onClick={onClose} sx={{ color: 'white' }}>
+          <Close />
+        </IconButton>
+      </DialogTitle>
 
-        <div className="modal-body">
-          <div className="stands-filters">
-            <div className="search-row">
-              <input
-                type="text"
+      <DialogContent sx={{ p: 3 }}>
+        {/* Search and Filter Section */}
+        <Paper elevation={2} sx={{ p: 2, mb: 3, borderRadius: 2 }}>
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
                 placeholder="ძიება სტენდის ნომრით ან კომპანიით..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="search-input"
-              />
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="filter-select"
-              >
-                <option value="">ყველა სტატუსი</option>
-                {standStatuses.map(status => (
-                  <option key={status} value={status}>{status}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {isAuthorizedForManagement && (
-            <div className="stands-actions">
-              <button
-                className="add-stand-btn"
-                onClick={() => {
-                  resetForm();
-                  setShowStandForm(true);
+                InputProps={{
+                  startAdornment: <Search sx={{ mr: 1, color: 'text.secondary' }} />
                 }}
-              >
-                ახალი სტენდის დამატება
-              </button>
-            </div>
-          )}
+                variant="outlined"
+                size="small"
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth size="small">
+                <InputLabel>სტატუსის ფილტრი</InputLabel>
+                <Select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  label="სტატუსის ფილტრი"
+                  startAdornment={<FilterList sx={{ mr: 1 }} />}
+                >
+                  <MenuItem value="">ყველა სტატუსი</MenuItem>
+                  {standStatuses.map(status => (
+                    <MenuItem key={status} value={status}>{status}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            {isAuthorizedForManagement && (
+              <Grid item xs={12} md={2}>
+                <Button
+                  fullWidth
+                  variant="contained"
+                  startIcon={<Add />}
+                  onClick={() => {
+                    resetForm();
+                    setShowStandForm(true);
+                  }}
+                  sx={{ 
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)'
+                    }
+                  }}
+                >
+                  ახალი სტენდი
+                </Button>
+              </Grid>
+            )}
+          </Grid>
+        </Paper>
 
-          {showStandForm && isAuthorizedForManagement && (
-            <div className="stand-form">
-              <h4>{editingStand ? 'სტენდის რედაქტირება' : 'ახალი სტენდის დამატება'}</h4>
-              <form onSubmit={handleSubmit}>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>სტენდის ნომერი *</label>
-                    <input
-                      type="text"
-                      value={formData.booth_number}
-                      onChange={(e) => setFormData({...formData, booth_number: e.target.value})}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>კომპანია *</label>
-                    <input
-                      type="text"
-                      value={formData.company_name}
-                      onChange={(e) => setFormData({...formData, company_name: e.target.value})}
-                      required
-                    />
-                  </div>
-                </div>
+        {/* Stand Form Dialog */}
+        <Dialog 
+          open={showStandForm} 
+          onClose={resetForm} 
+          maxWidth="md" 
+          fullWidth
+          PaperProps={{ sx: { borderRadius: 2 } }}
+        >
+          <DialogTitle sx={{ background: 'linear-gradient(135deg, #48bb78 0%, #38a169 100%)', color: 'white' }}>
+            <Box display="flex" alignItems="center">
+              {editingStand ? <Edit sx={{ mr: 2 }} /> : <Add sx={{ mr: 2 }} />}
+              {editingStand ? 'სტენდის რედაქტირება' : 'ახალი სტენდის დამატება'}
+            </Box>
+          </DialogTitle>
 
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>სტატუსი</label>
-                    <select
+          <form onSubmit={handleSubmit}>
+            <DialogContent sx={{ p: 3 }}>
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="სტენდის ნომერი"
+                    value={formData.booth_number}
+                    onChange={(e) => setFormData({...formData, booth_number: e.target.value})}
+                    required
+                    variant="outlined"
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="კომპანია"
+                    value={formData.company_name}
+                    onChange={(e) => setFormData({...formData, company_name: e.target.value})}
+                    required
+                    variant="outlined"
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>სტატუსი</InputLabel>
+                    <Select
                       value={formData.stand_status}
                       onChange={(e) => setFormData({...formData, stand_status: e.target.value})}
+                      label="სტატუსი"
                     >
                       {standStatuses.map(status => (
-                        <option key={status} value={status}>{status}</option>
+                        <MenuItem key={status} value={status}>{status}</MenuItem>
                       ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>დასრულების პროცენტი</label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      step="5"
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <Box>
+                    <Typography gutterBottom>დასრულების პროცენტი: {formData.completion_percentage}%</Typography>
+                    <Slider
                       value={formData.completion_percentage}
-                      onChange={(e) => setFormData({...formData, completion_percentage: parseInt(e.target.value)})}
+                      onChange={(e, newValue) => setFormData({...formData, completion_percentage: newValue})}
+                      min={0}
+                      max={100}
+                      step={5}
+                      marks
+                      valueLabelDisplay="auto"
+                      color="primary"
                     />
-                    <span className="percentage-display">{formData.completion_percentage}%</span>
-                  </div>
-                </div>
+                  </Box>
+                </Grid>
 
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>დაწყების თარიღი</label>
-                    <input
-                      type="date"
-                      value={formData.start_date}
-                      onChange={(e) => setFormData({...formData, start_date: e.target.value})}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>დასრულების ვადა</label>
-                    <input
-                      type="date"
-                      value={formData.deadline}
-                      onChange={(e) => setFormData({...formData, deadline: e.target.value})}
-                    />
-                  </div>
-                </div>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="დაწყების თარიღი"
+                    type="date"
+                    value={formData.start_date}
+                    onChange={(e) => setFormData({...formData, start_date: e.target.value})}
+                    InputLabelProps={{ shrink: true }}
+                    variant="outlined"
+                  />
+                </Grid>
 
-                
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="დასრულების ვადა"
+                    type="date"
+                    value={formData.deadline}
+                    onChange={(e) => setFormData({...formData, deadline: e.target.value})}
+                    InputLabelProps={{ shrink: true }}
+                    variant="outlined"
+                  />
+                </Grid>
 
-                <div className="form-group">
-                  <label>დიზაინის შენიშვნები</label>
-                  <textarea
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="დიზაინის შენიშვნები"
                     value={formData.design_notes}
                     onChange={(e) => setFormData({...formData, design_notes: e.target.value})}
-                    rows="3"
+                    multiline
+                    rows={3}
                     placeholder="დიზაინის მოთხოვნები, მასალები, ფერები..."
+                    variant="outlined"
                   />
-                </div>
+                </Grid>
 
-                <div className="form-group">
-                  <label>მშენებლობის შენიშვნები</label>
-                  <textarea
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="მშენებლობის შენიშვნები"
                     value={formData.construction_notes}
                     onChange={(e) => setFormData({...formData, construction_notes: e.target.value})}
-                    rows="3"
+                    multiline
+                    rows={3}
                     placeholder="მშენებლობის მიმდინარეობა, პრობლემები, შესწორებები..."
+                    variant="outlined"
                   />
-                </div>
+                </Grid>
 
-                <div className="form-group">
-                  <label>სპეციალური მოთხოვნები</label>
-                  <textarea
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="სპეციალური მოთხოვნები"
                     value={formData.special_requirements}
                     onChange={(e) => setFormData({...formData, special_requirements: e.target.value})}
-                    rows="2"
+                    multiline
+                    rows={2}
                     placeholder="განსაკუთრებული ელექტრობა, წყალი, კონდიციონერი..."
+                    variant="outlined"
                   />
-                </div>
+                </Grid>
 
-                <div className="form-group">
-                  <label>დიზაინის ფაილები</label>
-                  <input
-                    type="file"
-                    accept="image/*,.pdf,.dwg,.3ds"
-                    multiple
-                    onChange={(e) => setDesignFiles(Array.from(e.target.files))}
-                    className="file-input"
-                  />
-                  <small className="file-hint">მხარდაჭერილია: JPG, PNG, PDF, DWG, 3DS</small>
-                </div>
-
-                <div className="form-actions">
-                  <button type="submit" className="submit-btn">
-                    {editingStand ? 'განახლება' : 'დამატება'}
-                  </button>
-                  <button 
-                    type="button" 
-                    className="cancel-btn" 
-                    onClick={resetForm}
+                <Grid item xs={12}>
+                  <Button
+                    variant="outlined"
+                    component="label"
+                    startIcon={<Upload />}
+                    fullWidth
+                    sx={{ py: 2, borderStyle: 'dashed' }}
                   >
-                    გაუქმება
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
+                    დიზაინის ფაილების ატვირთვა
+                    <input
+                      type="file"
+                      accept="image/*,.pdf,.dwg,.3ds"
+                      multiple
+                      hidden
+                      onChange={(e) => setDesignFiles(Array.from(e.target.files))}
+                    />
+                  </Button>
+                  <FormHelperText>მხარდაჭერილია: JPG, PNG, PDF, DWG, 3DS</FormHelperText>
+                  {designFiles.length > 0 && (
+                    <Typography variant="body2" color="success.main" sx={{ mt: 1 }}>
+                      არჩეულია {designFiles.length} ფაილი
+                    </Typography>
+                  )}
+                </Grid>
+              </Grid>
+            </DialogContent>
 
-          <div className="stands-grid">
-            {filteredStands.length === 0 ? (
-              <div className="no-stands">
-                <p>სტენდები ჯერ არ არის დამატებული ამ ივენთისთვის.</p>
-              </div>
-            ) : (
-              filteredStands.map(stand => (
-                <div key={stand.id} className={`stand-card ${getStatusBadge(stand.stand_status)}`}>
-                  <div className="stand-header">
-                    <div className="stand-info">
-                      <h4>სტენდი #{stand.booth_number}</h4>
-                      <p className="company-name">{stand.company_name}</p>
-                    </div>
-                    <span className={`status-badge ${getStatusBadge(stand.stand_status)}`}>
-                      {stand.stand_status}
-                    </span>
-                  </div>
+            <DialogActions sx={{ p: 3, pt: 0 }}>
+              <Button onClick={resetForm} color="inherit">
+                გაუქმება
+              </Button>
+              <Button 
+                type="submit" 
+                variant="contained"
+                sx={{ 
+                  background: 'linear-gradient(135deg, #48bb78 0%, #38a169 100%)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #38a169 0%, #2f855a 100%)'
+                  }
+                }}
+              >
+                {editingStand ? 'განახლება' : 'დამატება'}
+              </Button>
+            </DialogActions>
+          </form>
+        </Dialog>
 
-                  <div className="progress-section">
-                    <div className="progress-bar">
-                      <div 
-                        className="progress-fill"
-                        style={{
-                          width: `${stand.completion_percentage}%`,
-                          backgroundColor: getProgressColor(stand.completion_percentage)
+        {/* Stands Grid */}
+        {filteredStands.length === 0 ? (
+          <Paper elevation={1} sx={{ p: 6, textAlign: 'center', borderRadius: 2 }}>
+            <Construction sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+            <Typography variant="h6" color="text.secondary">
+              სტენდები ჯერ არ არის დამატებული ამ ივენთისთვის
+            </Typography>
+          </Paper>
+        ) : (
+          <Grid container spacing={3}>
+            {filteredStands.map(stand => (
+              <Grid item xs={12} md={6} lg={4} key={stand.id}>
+                <Card 
+                  elevation={3}
+                  sx={{ 
+                    height: '100%',
+                    borderRadius: 2,
+                    transition: 'all 0.3s ease',
+                    borderLeft: `4px solid`,
+                    borderLeftColor: `${getStatusColor(stand.stand_status)}.main`,
+                    '&:hover': {
+                      transform: 'translateY(-4px)',
+                      boxShadow: 6
+                    }
+                  }}
+                >
+                  <CardContent sx={{ pb: 1 }}>
+                    <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
+                      <Box>
+                        <Typography variant="h6" component="div" color="primary" fontWeight="bold">
+                          სტენდი #{stand.booth_number}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
+                          <Business sx={{ mr: 1, fontSize: 16 }} />
+                          {stand.company_name}
+                        </Typography>
+                      </Box>
+                      <Chip
+                        icon={getStatusIcon(stand.stand_status)}
+                        label={stand.stand_status}
+                        color={getStatusColor(stand.stand_status)}
+                        size="small"
+                        variant="outlined"
+                      />
+                    </Box>
+
+                    <Box mb={2}>
+                      <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                        <Typography variant="body2" fontWeight="bold">
+                          პროგრესი
+                        </Typography>
+                        <Typography variant="body2" color="primary.main" fontWeight="bold">
+                          {stand.completion_percentage}%
+                        </Typography>
+                      </Box>
+                      <LinearProgress 
+                        variant="determinate" 
+                        value={stand.completion_percentage} 
+                        sx={{ 
+                          height: 8, 
+                          borderRadius: 4,
+                          backgroundColor: 'grey.200'
                         }}
-                      ></div>
-                    </div>
-                    <span className="progress-text">{stand.completion_percentage}% დასრულებული</span>
-                  </div>
+                      />
+                    </Box>
 
-                  
+                    {(stand.start_date || stand.deadline) && (
+                      <Box mb={2}>
+                        <Typography variant="subtitle2" color="primary" gutterBottom>
+                          თარიღები:
+                        </Typography>
+                        {stand.start_date && (
+                          <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                            <Schedule sx={{ mr: 1, fontSize: 16 }} />
+                            დაწყება: {new Date(stand.start_date).toLocaleDateString('ka-GE')}
+                          </Typography>
+                        )}
+                        {stand.deadline && (
+                          <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Warning sx={{ mr: 1, fontSize: 16 }} />
+                            ვადა: {new Date(stand.deadline).toLocaleDateString('ka-GE')}
+                          </Typography>
+                        )}
+                      </Box>
+                    )}
 
-                  {(stand.start_date || stand.deadline) && (
-                    <div className="dates-info">
-                      {stand.start_date && (
-                        <div><strong>დაწყება:</strong> {new Date(stand.start_date).toLocaleDateString('ka-GE')}</div>
-                      )}
-                      {stand.deadline && (
-                        <div><strong>ვადა:</strong> {new Date(stand.deadline).toLocaleDateString('ka-GE')}</div>
-                      )}
-                    </div>
-                  )}
-
-                  {stand.design_notes && (
-                    <div className="notes-section">
-                      <strong>დიზაინი:</strong>
-                      <p>{stand.design_notes}</p>
-                    </div>
-                  )}
-
-                  {stand.construction_notes && (
-                    <div className="notes-section">
-                      <strong>მშენებლობა:</strong>
-                      <p>{stand.construction_notes}</p>
-                    </div>
-                  )}
+                    {(stand.design_notes || stand.construction_notes) && (
+                      <Accordion sx={{ mt: 2, boxShadow: 'none', '&:before': { display: 'none' } }}>
+                        <AccordionSummary expandIcon={<ExpandMore />} sx={{ px: 0, minHeight: 'auto' }}>
+                          <Typography variant="subtitle2" color="primary">
+                            შენიშვნები
+                          </Typography>
+                        </AccordionSummary>
+                        <AccordionDetails sx={{ px: 0, pt: 0 }}>
+                          {stand.design_notes && (
+                            <Box mb={1}>
+                              <Typography variant="caption" color="primary" fontWeight="bold">
+                                დიზაინი:
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {stand.design_notes}
+                              </Typography>
+                            </Box>
+                          )}
+                          {stand.construction_notes && (
+                            <Box>
+                              <Typography variant="caption" color="primary" fontWeight="bold">
+                                მშენებლობა:
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {stand.construction_notes}
+                              </Typography>
+                            </Box>
+                          )}
+                        </AccordionDetails>
+                      </Accordion>
+                    )}
+                  </CardContent>
 
                   {isAuthorizedForManagement && (
-                    <div className="stand-actions">
-                      <select
-                        value={stand.stand_status}
-                        onChange={(e) => updateStandStatus(stand.id, e.target.value)}
-                        className="status-select"
-                      >
-                        {standStatuses.map(status => (
-                          <option key={status} value={status}>{status}</option>
-                        ))}
-                      </select>
-                      <button
-                        className="edit-btn"
-                        onClick={() => handleEdit(stand)}
-                      >
-                        ✏️ რედაქტირება
-                      </button>
-                      <button
-                        className="delete-btn"
-                        onClick={() => handleDelete(stand.id)}
-                      >
-                        🗑️ წაშლა
-                      </button>
-                    </div>
+                    <CardActions sx={{ p: 2, pt: 0, flexDirection: 'column', gap: 1 }}>
+                      <FormControl fullWidth size="small">
+                        <InputLabel>სტატუსის შეცვლა</InputLabel>
+                        <Select
+                          value={stand.stand_status}
+                          onChange={(e) => updateStandStatus(stand.id, e.target.value)}
+                          label="სტატუსის შეცვლა"
+                        >
+                          {standStatuses.map(status => (
+                            <MenuItem key={status} value={status}>{status}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      
+                      <Stack direction="row" spacing={1} width="100%">
+                        <Button
+                          fullWidth
+                          variant="outlined"
+                          startIcon={<Edit />}
+                          onClick={() => handleEdit(stand)}
+                          size="small"
+                        >
+                          რედაქტირება
+                        </Button>
+                        <Button
+                          fullWidth
+                          variant="outlined"
+                          color="error"
+                          startIcon={<Delete />}
+                          onClick={() => handleDelete(stand.id)}
+                          size="small"
+                        >
+                          წაშლა
+                        </Button>
+                      </Stack>
+                    </CardActions>
                   )}
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 };
 

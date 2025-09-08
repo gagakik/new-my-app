@@ -1,18 +1,68 @@
+
 import React, { useState, useRef, useEffect } from 'react';
-import './Header.css';
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  Button,
+  IconButton,
+  Menu,
+  MenuItem,
+  Box,
+  Avatar,
+  Chip,
+  Drawer,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  useTheme,
+  useMediaQuery,
+  Collapse,
+  Badge,
+  Tooltip,
+  Container
+} from '@mui/material';
+import {
+  Menu as MenuIcon,
+  Close as CloseIcon,
+  Dashboard,
+  Business,
+  Event,
+  Store,
+  CalendarToday,
+  Assessment,
+  Build,
+  AttachMoney,
+  Campaign,
+  AdminPanelSettings,
+  People,
+  Logout,
+  DarkMode,
+  LightMode,
+  QrCodeScanner,
+  ExpandLess,
+  ExpandMore,
+  AccountCircle,
+  Notifications
+} from '@mui/icons-material';
 import UserProfile from './UserProfile';
 import NotificationCenter from './NotificationCenter';
 import QRScanner from './QRScanner';
 
 const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewChange, unreadCount, showNotification }) => {
-  const [dropdownOpen, setDropdownOpen] = useState({});
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  
+  const [anchorEl, setAnchorEl] = useState({});
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const dropdownRefs = useRef({});
   const [showProfile, setShowProfile] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
-
+  const [expandedMenus, setExpandedMenus] = useState({});
 
   // Initialize dark mode from localStorage
   useEffect(() => {
@@ -34,42 +84,25 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
     localStorage.setItem('theme', theme);
   };
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      Object.keys(dropdownRefs.current).forEach(key => {
-        if (dropdownRefs.current[key] && !dropdownRefs.current[key].contains(event.target)) {
-          setDropdownOpen(prev => ({ ...prev, [key]: false }));
-        }
-      });
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-  const toggleDropdown = (key) => {
-    setDropdownOpen(prev => {
-      const newState = { ...prev };
-      // Close all other dropdowns
-      Object.keys(newState).forEach(k => {
-        if (k !== key) newState[k] = false;
-      });
-      // Toggle the clicked dropdown
-      newState[key] = !prev[key];
-      return newState;
-    });
+  const handleMenuOpen = (event, menuKey) => {
+    setAnchorEl({ ...anchorEl, [menuKey]: event.currentTarget });
   };
 
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
+  const handleMenuClose = (menuKey) => {
+    setAnchorEl({ ...anchorEl, [menuKey]: null });
   };
 
   const handleViewChange = (view) => {
     onViewChange(view);
-    setDropdownOpen({});
+    setAnchorEl({});
+    setMobileDrawerOpen(false);
+  };
+
+  const handleExpandMenu = (menuKey) => {
+    setExpandedMenus(prev => ({
+      ...prev,
+      [menuKey]: !prev[menuKey]
+    }));
   };
 
   const getRoleBasedMenus = () => {
@@ -79,7 +112,7 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
     menus.push({
       key: 'dashboard',
       label: 'Dashboard',
-      icon: '📊',
+      icon: <Dashboard />,
       single: true,
       action: () => handleViewChange('dashboard')
     });
@@ -89,14 +122,15 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
       menus.push({
         key: 'sales',
         label: 'Sales',
-        icon: '💼',
+        icon: <Business />,
         items: [
-          { key: 'exhibitions', label: 'გამოფენები', icon: '🎪' },
-          { key: 'companies', label: 'კომპანიები', icon: '🏬' },
-          { key: 'spaces', label: 'სივრცეები', icon: '🏠' },
-          { key: 'events', label: 'ივენთები', icon: '🎪' },
-          { key: 'statistics', label: 'სტატისტიკა', icon: '📈' },
-          { key: 'eventReports', label: 'Event Reports', icon: '📋' }
+          { key: 'exhibitions', label: 'გამოფენები', icon: <Event /> },
+          { key: 'companies', label: 'კომპანიები', icon: <Business /> },
+          { key: 'spaces', label: 'სივრცეები', icon: <Store /> },
+          { key: 'events', label: 'ივენთები', icon: <Event /> },
+          { key: 'bookings', label: 'ჯავშნები', icon: <CalendarToday /> },
+          { key: 'statistics', label: 'სტატისტიკა', icon: <Assessment /> },
+          { key: 'eventReports', label: 'Event Reports', icon: <Assessment /> }
         ]
       });
     }
@@ -106,9 +140,9 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
       menus.push({
         key: 'operation',
         label: 'Operation',
-        icon: '⚙️',
+        icon: <Build />,
         items: [
-          { key: 'equipment', label: 'აღჭურვილობა', icon: '🔧' }
+          { key: 'equipment', label: 'აღჭურვილობა', icon: <Build /> }
         ]
       });
     }
@@ -117,7 +151,7 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
     menus.push({
       key: 'finance',
       label: 'Finance',
-      icon: '💰',
+      icon: <AttachMoney />,
       single: true,
       action: () => handleViewChange('finance')
     });
@@ -126,7 +160,7 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
     menus.push({
       key: 'marketing',
       label: 'Marketing',
-      icon: '📢',
+      icon: <Campaign />,
       single: true,
       action: () => handleViewChange('marketing')
     });
@@ -136,10 +170,9 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
       menus.push({
         key: 'admin',
         label: 'Admin',
-        icon: '⚡',
+        icon: <AdminPanelSettings />,
         items: [
-          { key: 'users', label: 'მომხმარებლები', icon: '👤' },
-         
+          { key: 'users', label: 'მომხმარებლები', icon: <People /> }
         ]
       });
     }
@@ -147,110 +180,392 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
     return menus;
   };
 
-  return (
-    <header className="header">
-      <div className="logo">
-        <span className="logo-icon">🏢</span>
-        <span className="logo-text">logo</span>
-      </div>
-
-      <nav className="nav">
-        {isLoggedIn ? (
-          <>
-            <div className="user-info desktop-only">
-              <span className="user-role">{userRole}</span>
-              <span className="user-name">{userName}</span>
-            </div>
-
-            <button className="mobile-menu-toggle" onClick={toggleMobileMenu}>
-              <span className={`hamburger ${isMobileMenuOpen ? 'open' : ''}`}></span>
-              <span className={`hamburger ${isMobileMenuOpen ? 'open' : ''}`}></span>
-              <span className={`hamburger ${isMobileMenuOpen ? 'open' : ''}`}></span>
-            </button>
-
-            <div className={`nav-menu ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
-              <div className="mobile-user-info">
-                <span className="user-role">{userRole}</span>
-                <span className="user-name">{userName}</span>
-              </div>
-
-              {getRoleBasedMenus().map((menu) => (
-                <div key={menu.key} className="nav-item">
-                  {menu.single ? (
-                    <button 
-                      onClick={() => {
-                        menu.action();
-                        setIsMobileMenuOpen(false);
-                      }}
-                      className={`nav-btn single ${activeView === menu.key ? 'active' : ''}`}
-                    >
-                      <span className="nav-icon">{menu.icon}</span>
-                      <span className="nav-label">{menu.label}</span>
-                    </button>
-                  ) : (
-                    <div 
-                      className={`dropdown ${dropdownOpen[menu.key] ? 'open' : ''}`} 
-                      ref={el => dropdownRefs.current[menu.key] = el}
-                    >
-                      <button 
-                        onClick={() => toggleDropdown(menu.key)} 
-                        className="dropdown-btn"
-                      >
-                        <span className="nav-icon">{menu.icon}</span>
-                        <span className="nav-label">{menu.label}</span>
-                        <span className="dropdown-arrow">▼</span>
-                      </button>
-                      <div className="dropdown-content">
-                        {menu.items.length > 0 ? (
-                          menu.items.map((item) => (
-                            <button
-                              key={item.key}
-                              onClick={() => {
-                                handleViewChange(item.key);
-                                setDropdownOpen({});
-                                setIsMobileMenuOpen(false);
-                              }}
-                              className={`dropdown-item ${activeView === item.key ? 'active' : ''}`}
-                            >
-                              <span className="item-icon">{item.icon}</span>
-                              <span className="item-label">{item.label}</span>
-                            </button>
-                          ))
-                        ) : (
-                          <div className="dropdown-item empty">
-                            <span className="item-label">მალე დაემატება...</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            <button onClick={toggleDarkMode} className="theme-toggle-btn desktop-only">
-              <span className="theme-icon">{isDarkMode ? '☀️' : '🌙'}</span>
-            </button>
-
-            <button
-              className="qr-scanner-btn"
-              onClick={() => setShowQRScanner(true) || setIsMobileMenuOpen(false)}
-              title="QR კოდის სკანერი"
+  const renderDesktopMenu = () => (
+    <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 1 }}>
+      {getRoleBasedMenus().map((menu) => (
+        <Box key={menu.key}>
+          {menu.single ? (
+            <Button
+              onClick={menu.action}
+              startIcon={menu.icon}
+              sx={{
+                color: activeView === menu.key ? 'primary.main' : 'text.primary',
+                fontWeight: activeView === menu.key ? 600 : 400,
+                textTransform: 'none',
+                px: 2,
+                py: 1,
+                borderRadius: 2,
+                '&:hover': {
+                  backgroundColor: 'action.hover',
+                  transform: 'translateY(-1px)',
+                },
+                transition: 'all 0.2s ease'
+              }}
             >
-              📱
-            </button>
+              {menu.label}
+            </Button>
+          ) : (
+            <>
+              <Button
+                onClick={(e) => handleMenuOpen(e, menu.key)}
+                endIcon={<ExpandMore />}
+                startIcon={menu.icon}
+                sx={{
+                  color: 'text.primary',
+                  textTransform: 'none',
+                  px: 2,
+                  py: 1,
+                  borderRadius: 2,
+                  '&:hover': {
+                    backgroundColor: 'action.hover',
+                    transform: 'translateY(-1px)',
+                  },
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {menu.label}
+              </Button>
+              <Menu
+                anchorEl={anchorEl[menu.key]}
+                open={Boolean(anchorEl[menu.key])}
+                onClose={() => handleMenuClose(menu.key)}
+                PaperProps={{
+                  sx: {
+                    mt: 1,
+                    borderRadius: 2,
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    minWidth: 200
+                  }
+                }}
+              >
+                {menu.items.map((item) => (
+                  <MenuItem
+                    key={item.key}
+                    onClick={() => {
+                      handleViewChange(item.key);
+                      handleMenuClose(menu.key);
+                    }}
+                    sx={{
+                      py: 1.5,
+                      px: 2,
+                      borderRadius: 1,
+                      mx: 0.5,
+                      '&:hover': {
+                        backgroundColor: 'action.hover',
+                      },
+                      backgroundColor: activeView === item.key ? 'action.selected' : 'transparent'
+                    }}
+                  >
+                    <ListItemIcon sx={{ color: activeView === item.key ? 'primary.main' : 'text.secondary' }}>
+                      {item.icon}
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary={item.label}
+                      primaryTypographyProps={{
+                        fontWeight: activeView === item.key ? 600 : 400,
+                        color: activeView === item.key ? 'primary.main' : 'text.primary'
+                      }}
+                    />
+                  </MenuItem>
+                ))}
+              </Menu>
+            </>
+          )}
+        </Box>
+      ))}
+    </Box>
+  );
 
-            <button onClick={onLogout} className="logout-btn desktop-only">
-              <span className="logout-icon">🚪</span>
-              <span className="logout-text">გასვლა</span>
-            </button>
-
-          </>
-        ) : (
-          <span className="guest-info">სტუმარი</span>
+  const renderMobileMenu = () => (
+    <Drawer
+      anchor="left"
+      open={mobileDrawerOpen}
+      onClose={() => setMobileDrawerOpen(false)}
+      PaperProps={{
+        sx: {
+          width: 280,
+          bgcolor: 'background.paper',
+          borderRadius: '0 16px 16px 0'
+        }
+      }}
+    >
+      <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
+            🏢 logo
+          </Typography>
+          <IconButton onClick={() => setMobileDrawerOpen(false)} size="small">
+            <CloseIcon />
+          </IconButton>
+        </Box>
+        
+        {isLoggedIn && (
+          <Box sx={{ textAlign: 'center' }}>
+            <Chip 
+              label={userRole} 
+              color="primary" 
+              size="small" 
+              sx={{ mb: 1, textTransform: 'uppercase', fontWeight: 600 }} 
+            />
+            <Typography variant="body2" color="text.secondary">
+              {userName}
+            </Typography>
+          </Box>
         )}
-      </nav>
+      </Box>
 
+      <List sx={{ flex: 1, py: 1 }}>
+        {getRoleBasedMenus().map((menu) => (
+          <Box key={menu.key}>
+            {menu.single ? (
+              <ListItemButton
+                onClick={menu.action}
+                sx={{
+                  mx: 1,
+                  borderRadius: 2,
+                  mb: 0.5,
+                  backgroundColor: activeView === menu.key ? 'action.selected' : 'transparent',
+                  '&:hover': {
+                    backgroundColor: 'action.hover',
+                  }
+                }}
+              >
+                <ListItemIcon sx={{ color: activeView === menu.key ? 'primary.main' : 'text.secondary' }}>
+                  {menu.icon}
+                </ListItemIcon>
+                <ListItemText 
+                  primary={menu.label}
+                  primaryTypographyProps={{
+                    fontWeight: activeView === menu.key ? 600 : 400,
+                    color: activeView === menu.key ? 'primary.main' : 'text.primary'
+                  }}
+                />
+              </ListItemButton>
+            ) : (
+              <>
+                <ListItemButton
+                  onClick={() => handleExpandMenu(menu.key)}
+                  sx={{
+                    mx: 1,
+                    borderRadius: 2,
+                    mb: 0.5,
+                    '&:hover': {
+                      backgroundColor: 'action.hover',
+                    }
+                  }}
+                >
+                  <ListItemIcon sx={{ color: 'text.secondary' }}>
+                    {menu.icon}
+                  </ListItemIcon>
+                  <ListItemText primary={menu.label} />
+                  {expandedMenus[menu.key] ? <ExpandLess /> : <ExpandMore />}
+                </ListItemButton>
+                
+                <Collapse in={expandedMenus[menu.key]} timeout="auto" unmountOnExit>
+                  <List component="div" disablePadding>
+                    {menu.items.map((item) => (
+                      <ListItemButton
+                        key={item.key}
+                        onClick={() => handleViewChange(item.key)}
+                        sx={{
+                          pl: 4,
+                          mx: 1,
+                          borderRadius: 2,
+                          mb: 0.5,
+                          backgroundColor: activeView === item.key ? 'action.selected' : 'transparent',
+                          '&:hover': {
+                            backgroundColor: 'action.hover',
+                          }
+                        }}
+                      >
+                        <ListItemIcon sx={{ 
+                          color: activeView === item.key ? 'primary.main' : 'text.secondary',
+                          minWidth: 40 
+                        }}>
+                          {item.icon}
+                        </ListItemIcon>
+                        <ListItemText 
+                          primary={item.label}
+                          primaryTypographyProps={{
+                            fontSize: '0.875rem',
+                            fontWeight: activeView === item.key ? 600 : 400,
+                            color: activeView === item.key ? 'primary.main' : 'text.primary'
+                          }}
+                        />
+                      </ListItemButton>
+                    ))}
+                  </List>
+                </Collapse>
+              </>
+            )}
+          </Box>
+        ))}
+      </List>
+
+      {isLoggedIn && (
+        <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
+          <Button
+            fullWidth
+            variant="outlined"
+            color="error"
+            startIcon={<Logout />}
+            onClick={onLogout}
+            sx={{ mb: 2, textTransform: 'none' }}
+          >
+            გასვლა
+          </Button>
+          
+          <Button
+            fullWidth
+            variant="outlined"
+            startIcon={isDarkMode ? <LightMode /> : <DarkMode />}
+            onClick={toggleDarkMode}
+            sx={{ textTransform: 'none' }}
+          >
+            {isDarkMode ? 'ღია თემა' : 'მუქი თემა'}
+          </Button>
+        </Box>
+      )}
+    </Drawer>
+  );
+
+  return (
+    <>
+      <AppBar 
+        position="sticky" 
+        elevation={0}
+        sx={{
+          bgcolor: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(20px)',
+          borderBottom: 1,
+          borderColor: 'divider',
+          color: 'text.primary'
+        }}
+      >
+        <Container maxWidth="xl">
+          <Toolbar sx={{ px: { xs: 0, sm: 2 } }}>
+            {/* Logo */}
+            <Typography
+              variant="h6"
+              sx={{
+                flexGrow: { xs: 1, md: 0 },
+                fontWeight: 700,
+                color: 'primary.main',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
+                mr: { md: 4 }
+              }}
+            >
+              🏢 logo
+            </Typography>
+
+            {/* Desktop Navigation */}
+            {isLoggedIn && renderDesktopMenu()}
+
+            <Box sx={{ flexGrow: 1 }} />
+
+            {/* Right side actions */}
+            {isLoggedIn ? (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {/* User info - Desktop only */}
+                <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', mr: 2 }}>
+                  <Box sx={{ textAlign: 'right', mr: 1 }}>
+                    <Chip 
+                      label={userRole} 
+                      color="primary" 
+                      size="small" 
+                      sx={{ mb: 0.5, textTransform: 'uppercase', fontWeight: 600 }} 
+                    />
+                    <Typography variant="body2" color="text.secondary">
+                      {userName}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                {/* Theme toggle - Desktop only */}
+                <Tooltip title={isDarkMode ? 'ღია თემაზე გადართვა' : 'მუქ თემაზე გადართვა'}>
+                  <IconButton
+                    onClick={toggleDarkMode}
+                    sx={{ 
+                      display: { xs: 'none', md: 'flex' },
+                      bgcolor: 'action.hover',
+                      '&:hover': {
+                        bgcolor: 'action.selected',
+                        transform: 'translateY(-1px)',
+                      },
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    {isDarkMode ? <LightMode /> : <DarkMode />}
+                  </IconButton>
+                </Tooltip>
+
+                {/* QR Scanner */}
+                <Tooltip title="QR კოდის სკანერი">
+                  <IconButton
+                    onClick={() => setShowQRScanner(true)}
+                    sx={{ 
+                      bgcolor: 'action.hover',
+                      '&:hover': {
+                        bgcolor: 'action.selected',
+                        transform: 'translateY(-1px)',
+                      },
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <QrCodeScanner />
+                  </IconButton>
+                </Tooltip>
+
+                {/* Logout - Desktop only */}
+                <Button
+                  onClick={onLogout}
+                  variant="outlined"
+                  color="error"
+                  startIcon={<Logout />}
+                  sx={{ 
+                    display: { xs: 'none', md: 'flex' },
+                    textTransform: 'none',
+                    borderRadius: 2,
+                    '&:hover': {
+                      transform: 'translateY(-1px)',
+                    },
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  გასვლა
+                </Button>
+
+                {/* Mobile menu button */}
+                <IconButton
+                  onClick={() => setMobileDrawerOpen(true)}
+                  sx={{ 
+                    display: { xs: 'flex', md: 'none' },
+                    bgcolor: 'action.hover',
+                    '&:hover': {
+                      bgcolor: 'action.selected',
+                    }
+                  }}
+                >
+                  <MenuIcon />
+                </IconButton>
+              </Box>
+            ) : (
+              <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                სტუმარი
+              </Typography>
+            )}
+          </Toolbar>
+        </Container>
+      </AppBar>
+
+      {/* Mobile Drawer */}
+      {renderMobileMenu()}
+
+      {/* Modals */}
       {showProfile && (
         <UserProfile onClose={() => setShowProfile(false)} />
       )}
@@ -268,7 +583,7 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
           showNotification={showNotification}
         />
       )}
-    </header>
+    </>
   );
 };
 

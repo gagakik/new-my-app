@@ -1,6 +1,40 @@
 
 import React, { useState, useEffect } from 'react';
-import './PackageManager.css';
+import {
+  Box,
+  Paper,
+  Typography,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Grid,
+  Card,
+  CardContent,
+  CardActions,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Chip,
+  IconButton,
+  Divider,
+  CircularProgress,
+  List,
+  ListItem,
+  ListItemText,
+  Alert
+} from '@mui/material';
+import {
+  Add,
+  Edit,
+  Delete,
+  Close,
+  Save,
+  Cancel
+} from '@mui/icons-material';
 
 const PackageManager = ({ exhibitionId, showNotification }) => {
   const [packages, setPackages] = useState([]);
@@ -167,162 +201,247 @@ const PackageManager = ({ exhibitionId, showNotification }) => {
     }
   };
 
-  if (loading) return <div>იტვირთება...</div>;
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress size={60} />
+        <Typography variant="h6" sx={{ ml: 2 }}>
+          იტვირთება...
+        </Typography>
+      </Box>
+    );
+  }
 
   return (
-    <div className="package-manager">
-      <div className="package-header">
-        <h3>გამოფენის პაკეტები</h3>
-        <button onClick={handleAddPackage} className="add-package-btn">
+    <Paper elevation={3} sx={{ p: 3, m: 2, borderRadius: 2 }}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h5" component="h3" color="primary" fontWeight="bold">
+          გამოფენის პაკეტები
+        </Typography>
+        <Button
+          variant="contained"
+          startIcon={<Add />}
+          onClick={handleAddPackage}
+          sx={{ borderRadius: 2 }}
+        >
           ახალი პაკეტის დამატება
-        </button>
-      </div>
+        </Button>
+      </Box>
 
-      {showForm && (
-        <div className="package-form-overlay">
-          <div className="package-form">
-            <h4>{editingPackage ? 'პაკეტის რედაქტირება' : 'ახალი პაკეტის შექმნა'}</h4>
-            <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label>პაკეტის სახელი</label>
-                <input
-                  type="text"
+      {/* Form Dialog */}
+      <Dialog open={showForm} onClose={() => setShowForm(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Typography variant="h6">
+              {editingPackage ? 'პაკეტის რედაქტირება' : 'ახალი პაკეტის შექმნა'}
+            </Typography>
+            <IconButton onClick={() => setShowForm(false)}>
+              <Close />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+
+        <form onSubmit={handleSubmit}>
+          <DialogContent>
+            <Grid container spacing={3}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="პაკეტის სახელი"
                   value={formData.package_name}
                   onChange={(e) => setFormData(prev => ({ ...prev, package_name: e.target.value }))}
                   required
                 />
-              </div>
+              </Grid>
 
-              <div className="form-group">
-                <label>აღწერა</label>
-                <textarea
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="აღწერა"
+                  multiline
+                  rows={3}
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  rows="3"
                 />
-              </div>
+              </Grid>
 
-              <div className="form-row">
-                <div className="form-group">
-                  <label>ფართობი (კვმ)</label>
-                  <input
-                    type="number"
-                    step="0"
-                    value={formData.fixed_area_sqm}
-                    onChange={(e) => setFormData(prev => ({ ...prev, fixed_area_sqm: e.target.value }))}
-                    required
-                  />
-                </div>
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth
+                  label="ფართობი (კვმ)"
+                  type="number"
+                  inputProps={{ step: 0.01 }}
+                  value={formData.fixed_area_sqm}
+                  onChange={(e) => setFormData(prev => ({ ...prev, fixed_area_sqm: e.target.value }))}
+                  required
+                />
+              </Grid>
 
-                <div className="form-group">
-                  <label>ფიქსირებული ღირებულება (EUR)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={formData.fixed_price}
-                    onChange={(e) => setFormData(prev => ({ ...prev, fixed_price: e.target.value }))}
-                    required
-                  />
-                </div>
-              </div>
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth
+                  label="ფიქსირებული ღირებულება (EUR)"
+                  type="number"
+                  inputProps={{ step: 0.01 }}
+                  value={formData.fixed_price}
+                  onChange={(e) => setFormData(prev => ({ ...prev, fixed_price: e.target.value }))}
+                  required
+                />
+              </Grid>
 
-              <div className="equipment-section">
-                <div className="equipment-header">
-                  <label>შემავალი აღჭურვილობა</label>
-                  <button type="button" onClick={handleEquipmentAdd} className="add-equipment-btn">
-                    + აღჭურვილობის დამატება
-                  </button>
-                </div>
-
-                {formData.equipment_list.map((item, index) => (
-                  <div key={index} className="equipment-row">
-                    <select
-                      value={item.equipment_id}
-                      onChange={(e) => handleEquipmentChange(index, 'equipment_id', e.target.value)}
-                      required
+              <Grid item xs={12}>
+                <Paper variant="outlined" sx={{ p: 2, mt: 2 }}>
+                  <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                    <Typography variant="h6" color="primary">
+                      შემავალი აღჭურვილობა
+                    </Typography>
+                    <Button
+                      variant="outlined"
+                      startIcon={<Add />}
+                      onClick={handleEquipmentAdd}
+                      size="small"
                     >
-                      <option value="">აირჩიეთ აღჭურვილობა</option>
-                      {availableEquipment.map(eq => (
-                        <option key={eq.id} value={eq.id}>
-                          {eq.code_name} (€{eq.price})
-                        </option>
-                      ))}
-                    </select>
+                      აღჭურვილობის დამატება
+                    </Button>
+                  </Box>
 
-                    <input
-                      type="number"
-                      min="1"
-                      value={item.quantity}
-                      onChange={(e) => handleEquipmentChange(index, 'quantity', parseInt(e.target.value))}
-                      placeholder="რაოდენობა"
-                      required
+                  {formData.equipment_list.map((item, index) => (
+                    <Grid container spacing={2} key={index} alignItems="center" sx={{ mb: 2 }}>
+                      <Grid item xs={6}>
+                        <FormControl fullWidth>
+                          <InputLabel>აირჩიეთ აღჭურვილობა</InputLabel>
+                          <Select
+                            value={item.equipment_id}
+                            onChange={(e) => handleEquipmentChange(index, 'equipment_id', e.target.value)}
+                            required
+                          >
+                            {availableEquipment.map(eq => (
+                              <MenuItem key={eq.id} value={eq.id}>
+                                {eq.code_name} (€{eq.price})
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+
+                      <Grid item xs={4}>
+                        <TextField
+                          fullWidth
+                          label="რაოდენობა"
+                          type="number"
+                          inputProps={{ min: 1 }}
+                          value={item.quantity}
+                          onChange={(e) => handleEquipmentChange(index, 'quantity', parseInt(e.target.value))}
+                          required
+                        />
+                      </Grid>
+
+                      <Grid item xs={2}>
+                        <IconButton
+                          color="error"
+                          onClick={() => handleEquipmentRemove(index)}
+                        >
+                          <Delete />
+                        </IconButton>
+                      </Grid>
+                    </Grid>
+                  ))}
+                </Paper>
+              </Grid>
+            </Grid>
+          </DialogContent>
+
+          <DialogActions>
+            <Button onClick={() => setShowForm(false)} startIcon={<Cancel />}>
+              გაუქმება
+            </Button>
+            <Button type="submit" variant="contained" startIcon={<Save />}>
+              {editingPackage ? 'განახლება' : 'შენახვა'}
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+
+      {/* Packages List */}
+      {packages.length === 0 ? (
+        <Alert severity="info" sx={{ mt: 3 }}>
+          პაკეტები არ არის შექმნილი
+        </Alert>
+      ) : (
+        <Grid container spacing={3} sx={{ mt: 2 }}>
+          {packages.map(pkg => (
+            <Grid item xs={12} md={6} lg={4} key={pkg.id}>
+              <Card elevation={2} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <CardContent sx={{ flexGrow: 1 }}>
+                  <Typography variant="h6" component="h4" gutterBottom color="primary">
+                    {pkg.package_name}
+                  </Typography>
+                  
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    {pkg.description}
+                  </Typography>
+
+                  <Box display="flex" gap={2} mb={2}>
+                    <Chip 
+                      label={`${pkg.fixed_area_sqm} კვმ`} 
+                      color="primary" 
+                      variant="outlined" 
+                      size="small"
                     />
+                    <Chip 
+                      label={`€${pkg.fixed_price}`} 
+                      color="success" 
+                      variant="outlined" 
+                      size="small"
+                    />
+                  </Box>
+                  
+                  {pkg.equipment_list && pkg.equipment_list.length > 0 && (
+                    <Box>
+                      <Typography variant="subtitle2" gutterBottom color="primary">
+                        შემავალი აღჭურვილობა:
+                      </Typography>
+                      <List dense>
+                        {pkg.equipment_list.map((eq, idx) => (
+                          <ListItem key={idx} sx={{ px: 0, py: 0.5 }}>
+                            <ListItemText
+                              primary={`${eq.code_name} - ${eq.quantity} ცალი`}
+                              secondary={`€${eq.price} თითოეული`}
+                              primaryTypographyProps={{ variant: 'body2' }}
+                              secondaryTypographyProps={{ variant: 'caption' }}
+                            />
+                          </ListItem>
+                        ))}
+                      </List>
+                    </Box>
+                  )}
+                </CardContent>
 
-                    <button
-                      type="button"
-                      onClick={() => handleEquipmentRemove(index)}
-                      className="remove-equipment-btn"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              <div className="form-actions">
-                <button type="submit" className="save-btn">
-                  {editingPackage ? 'განახლება' : 'შენახვა'}
-                </button>
-                <button type="button" onClick={() => setShowForm(false)} className="cancel-btn">
-                  გაუქმება
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      <div className="packages-list">
-        {packages.length === 0 ? (
-          <p>პაკეტები არ არის შექმნილი</p>
-        ) : (
-          packages.map(pkg => (
-            <div key={pkg.id} className="package-card">
-              <div className="package-info">
-                <h4>{pkg.package_name}</h4>
-                <p>{pkg.description}</p>
-                <div className="package-details">
-                  <span><strong>ფართობი:</strong> {pkg.fixed_area_sqm} კვმ</span>
-                  <span><strong>ღირებულება:</strong> €{pkg.fixed_price}</span>
-                </div>
+                <Divider />
                 
-                {pkg.equipment_list && pkg.equipment_list.length > 0 && (
-                  <div className="package-equipment">
-                    <h5>შემავალი აღჭურვილობა:</h5>
-                    <ul>
-                      {pkg.equipment_list.map((eq, idx) => (
-                        <li key={idx}>
-                          {eq.code_name} - {eq.quantity} ცალი (€{eq.price} თითოეული)
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-
-              <div className="package-actions">
-                <button onClick={() => handleEditPackage(pkg)} className="edit-btn">
-                  რედაქტირება
-                </button>
-                <button onClick={() => handleDeletePackage(pkg.id)} className="delete-btn">
-                  წაშლა
-                </button>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </div>
+                <CardActions>
+                  <Button
+                    size="small"
+                    startIcon={<Edit />}
+                    onClick={() => handleEditPackage(pkg)}
+                  >
+                    რედაქტირება
+                  </Button>
+                  <Button
+                    size="small"
+                    color="error"
+                    startIcon={<Delete />}
+                    onClick={() => handleDeletePackage(pkg.id)}
+                  >
+                    წაშლა
+                  </Button>
+                </CardActions>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      )}
+    </Paper>
   );
 };
 
