@@ -52,7 +52,6 @@ import EventForm from './EventForm';
 import EventParticipants from './EventParticipants';
 import EventCompletion from './EventCompletion';
 import EventFileManager from './EventFileManager';
-import { servicesAPI } from '../services/api';
 
 const EventsList = ({ showNotification, userRole }) => {
   const [events, setEvents] = useState([]);

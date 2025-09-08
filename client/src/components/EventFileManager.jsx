@@ -145,22 +145,7 @@ const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
 
   const handleFileDownload = async (filePath, fileName) => {
     try {
-      const token = localStorage.getItem('token');
-      const cleanPath = filePath.replace(/^\/uploads\//, '');
-      
-      const response = await fetch(`/api/download/${cleanPath}?t=${Date.now()}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Cache-Control': 'no-cache'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const blob = await response.blob();
+      const blob = await filesAPI.getFileBlob(filePath);
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -179,22 +164,7 @@ const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
 
   const handlePreview = async (filePath, fileName) => {
     try {
-      const token = localStorage.getItem('token');
-      const cleanPath = filePath.replace(/^\/uploads\//, '');
-      
-      const response = await fetch(`/api/download/${cleanPath}?t=${Date.now()}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Cache-Control': 'no-cache'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const blob = await response.blob();
+      const blob = await filesAPI.getFileBlob(filePath);
       const url = URL.createObjectURL(blob);
       
       const fileExtension = fileName.split('.').pop().toLowerCase();
@@ -512,21 +482,21 @@ const EventFileManager = ({ event, onClose, showNotification, userRole }) => {
                               </Box>
                             }
                             secondary={
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                                <Typography variant="caption" color="text.secondary">
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                                <Typography variant="caption" color="text.secondary" component="span">
                                   {formatFileSize(file.size)}
                                 </Typography>
-                                <Typography variant="caption" color="text.secondary">
+                                <Typography variant="caption" color="text.secondary" component="span">
                                   <Schedule fontSize="small" sx={{ mr: 0.5, verticalAlign: 'middle' }} />
                                   {formatDate(file.uploaded_at)}
                                 </Typography>
                                 {file.uploaded_by && (
-                                  <Typography variant="caption" color="text.secondary">
+                                  <Typography variant="caption" color="text.secondary" component="span">
                                     <Person fontSize="small" sx={{ mr: 0.5, verticalAlign: 'middle' }} />
                                     {file.uploaded_by}
                                   </Typography>
                                 )}
-                              </div>
+                              </Box>
                             }
                           />
                           <ListItemSecondaryAction>

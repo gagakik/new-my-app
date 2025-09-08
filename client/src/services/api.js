@@ -1,4 +1,6 @@
 
+import axios from 'axios';
+
 // Base API configuration
 const API_BASE_URL = '/api';
 
@@ -11,87 +13,65 @@ const getAuthHeaders = () => {
   };
 };
 
-// Helper function to handle API responses
-const handleResponse = async (response) => {
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-  }
-  return response.json();
-};
+// Create axios instance
+const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 30000,
+});
 
-// Base API instance replacement
+// Request interceptor to add auth headers
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Response interceptor for error handling
+apiClient.interceptors.response.use(
+  (response) => response.data,
+  (error) => {
+    const message = error.response?.data?.message || error.message || 'Network error occurred';
+    throw new Error(message);
+  }
+);
+
+// Base API instance
 const api = {
   get: async (url) => {
-    const response = await fetch(`${API_BASE_URL}${url}`, {
-      method: 'GET',
-      headers: getAuthHeaders(),
-    });
-    return handleResponse(response);
+    return apiClient.get(url);
   },
 
   post: async (url, data) => {
-    const headers = getAuthHeaders();
-    const body = data instanceof FormData ? data : JSON.stringify(data);
-    
-    if (!(data instanceof FormData)) {
-      headers['Content-Type'] = 'application/json';
-    } else {
-      delete headers['Content-Type']; // Let browser set multipart boundary
+    const config = {};
+    if (data instanceof FormData) {
+      config.headers = { 'Content-Type': 'multipart/form-data' };
     }
-
-    const response = await fetch(`${API_BASE_URL}${url}`, {
-      method: 'POST',
-      headers,
-      body,
-    });
-    return handleResponse(response);
+    return apiClient.post(url, data, config);
   },
 
   put: async (url, data) => {
-    const response = await fetch(`${API_BASE_URL}${url}`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(data),
-    });
-    return handleResponse(response);
+    return apiClient.put(url, data);
   },
 
   delete: async (url) => {
-    const response = await fetch(`${API_BASE_URL}${url}`, {
-      method: 'DELETE',
-      headers: getAuthHeaders(),
-    });
-    return handleResponse(response);
+    return apiClient.delete(url);
   }
 };
 
 // Auth API
 export const authAPI = {
   login: async (credentials) => {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(credentials),
-    });
-    return handleResponse(response);
+    return apiClient.post('/auth/login', credentials);
   },
 
   register: async (userData) => {
-    const response = await fetch(`${API_BASE_URL}/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(userData),
-    });
-    return handleResponse(response);
+    return apiClient.post('/auth/register', userData);
   },
 
   logout: async () => {
-    const response = await fetch(`${API_BASE_URL}/auth/logout`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-    });
-    return handleResponse(response);
+    return apiClient.post('/auth/logout');
   },
 
   getProfile: async () => {
@@ -250,31 +230,19 @@ export const statisticsAPI = {
 // Files API
 export const filesAPI = {
   downloadFile: async (fileName) => {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${API_BASE_URL}/download/${fileName}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
+    const response = await apiClient.get(`/download/${fileName}`, {
+      responseType: 'blob'
     });
-    
-    if (!response.ok) {
-      throw new Error('Download failed');
-    }
-    
-    return response.blob();
+    return response;
   },
 
   downloadPlanFile: async (fileName) => {
-    const response = await fetch(`${API_BASE_URL}/download/${fileName}`);
-    
-    if (!response.ok) {
-      throw new Error('Download failed');
-    }
-    
-    const blob = await response.blob();
+    const response = await apiClient.get(`/download/${fileName}`, {
+      responseType: 'blob'
+    });
     
     // Create download link
-    const url = window.URL.createObjectURL(blob);
+    const url = window.URL.createObjectURL(response);
     const link = document.createElement('a');
     link.href = url;
     link.setAttribute('download', fileName);
@@ -285,24 +253,17 @@ export const filesAPI = {
   },
 
   downloadInvoiceFile: async (fileName) => {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${API_BASE_URL}/download/${fileName}?t=${Date.now()}`, {
+    const response = await apiClient.get(`/download/${fileName}?t=${Date.now()}`, {
+      responseType: 'blob',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
         'Expires': '0'
       }
     });
     
-    if (!response.ok) {
-      throw new Error('Download failed');
-    }
-    
-    const blob = await response.blob();
-    
     // Create download link
-    const url = window.URL.createObjectURL(blob);
+    const url = window.URL.createObjectURL(response);
     const link = document.createElement('a');
     link.href = url;
     link.setAttribute('download', fileName);
@@ -313,24 +274,17 @@ export const filesAPI = {
   },
 
   downloadExpenseFile: async (fileName) => {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${API_BASE_URL}/download/${fileName}?t=${Date.now()}`, {
+    const response = await apiClient.get(`/download/${fileName}?t=${Date.now()}`, {
+      responseType: 'blob',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
         'Expires': '0'
       }
     });
     
-    if (!response.ok) {
-      throw new Error('Download failed');
-    }
-    
-    const blob = await response.blob();
-    
     // Create download link
-    const url = window.URL.createObjectURL(blob);
+    const url = window.URL.createObjectURL(response);
     const link = document.createElement('a');
     link.href = url;
     link.setAttribute('download', fileName);
@@ -390,10 +344,29 @@ export const filesAPI = {
     return api.delete(`/events/${eventId}/delete-expense/${fileName}`);
   },
 
-  // Upload plan file
-  uploadPlanFile: async (eventId, formData) => {
-    return api.post(`/events/${eventId}/upload-plan`, formData);
-  },
+  // Get file blob for preview
+  getFileBlob: async (filePath) => {
+    // Clean the path - extract only the filename
+    let fileName = filePath;
+    
+    // If it's a full path, get just the filename
+    if (fileName.includes('/')) {
+      fileName = fileName.split('/').pop();
+    }
+    
+    // If it's a Windows path, get just the filename
+    if (fileName.includes('\\')) {
+      fileName = fileName.split('\\').pop();
+    }
+    
+    const response = await apiClient.get(`/download/${fileName}?t=${Date.now()}`, {
+      responseType: 'blob',
+      headers: {
+        'Cache-Control': 'no-cache'
+      }
+    });
+    return response;
+  }
 };
 
 export default api;
