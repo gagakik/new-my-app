@@ -52,7 +52,7 @@ import EventForm from './EventForm';
 import EventParticipants from './EventParticipants';
 import EventCompletion from './EventCompletion';
 import EventFileManager from './EventFileManager';
-
+import { servicesAPI } from '../services/api';
 
 const EventsList = ({ showNotification, userRole }) => {
   const [events, setEvents] = useState([]);
@@ -434,21 +434,21 @@ const EventsList = ({ showNotification, userRole }) => {
     if (event.is_archived) {
       return { text: 'არქივი', class: 'archived', color: 'default' };
     }
-    
+
     // არააქტიური ივენთი
     if (event.is_active === false || event.is_active === 0) {
       return { text: 'არააქტიური', class: 'inactive', color: 'error' };
     }
-    
+
     // თარიღების შემოწმება
     if (now < startDate) {
       return { text: 'მომავალი', class: 'upcoming', color: 'info' };
     }
-    
+
     if (now > endDate) {
       return { text: 'დასრულებული', class: 'finished', color: 'success' };
     }
-    
+
     // თუ დღეს არის დაწყების და დასასრულის შორის
     return { text: 'მიმდინარე', class: 'active', color: 'warning' };
   };
@@ -545,11 +545,10 @@ const EventsList = ({ showNotification, userRole }) => {
           ძიება და ფილტრაცია
         </Typography>
 
-        <Grid container spacing={2} sx={{ mb: 2 }} display={showArchivedOnly ? 'none' : 'flex'} justifyContent={'center'} alignItems={'center'}>
+        <Grid container spacing={2} sx={{ mb: 2 }}>
           <Grid item xs={12} md={3}>
             <TextField
               fullWidth
-              size='small'
               label="ძიება"
               placeholder="ძიება სახელით..."
               value={searchTerm}
@@ -561,8 +560,8 @@ const EventsList = ({ showNotification, userRole }) => {
             />
           </Grid>
 
-          <Grid item xs={12} md={2} minWidth={160}>
-            <FormControl fullWidth size='small'>
+          <Grid item xs={12} md={2}>
+            <FormControl fullWidth>
               <InputLabel>წელი</InputLabel>
               <Select
                 value={selectedYear}
@@ -578,8 +577,8 @@ const EventsList = ({ showNotification, userRole }) => {
             </FormControl>
           </Grid>
 
-          <Grid item xs={12} md={2} minWidth={160}>
-            <FormControl fullWidth size='small'>
+          <Grid item xs={12} md={2}>
+            <FormControl fullWidth>
               <InputLabel>თვე</InputLabel>
               <Select
                 value={selectedMonth}
@@ -595,14 +594,14 @@ const EventsList = ({ showNotification, userRole }) => {
             </FormControl>
           </Grid>
 
-          <Grid item xs={12} md={2} minWidth={160}>
-            <FormControl fullWidth size='small'>
+          <Grid item xs={12} md={2}>
+            <FormControl fullWidth>
               <InputLabel>სტატუსი</InputLabel>
               <Select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 label="სტატუსი"
-                sx={{ borderRadius: 2, }}
+                sx={{ borderRadius: 2 }}
               >
                 <MenuItem value="">ყველა სტატუსი</MenuItem>
                 <MenuItem value="upcoming">მომავალი</MenuItem>
@@ -617,17 +616,16 @@ const EventsList = ({ showNotification, userRole }) => {
           <Grid item xs={12} md={3}>
             <Stack direction="row" spacing={1}>
               <Button
-                size='medium'
                 variant="outlined"
                 startIcon={<Clear />}
                 onClick={clearFilters}
                 sx={{
                   borderRadius: 2,
-                  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.1)',
-                  color: '#ffffffff',
-                  border: 'none',
+                  borderColor: '#6c757d',
+                  color: '#6c757d',
                   '&:hover': {
                     borderColor: '#5a6268',
+                    backgroundColor: 'rgba(108, 117, 125, 0.04)'
                   }
                 }}
               >
@@ -639,10 +637,10 @@ const EventsList = ({ showNotification, userRole }) => {
                 onClick={toggleSortDirection}
                 sx={{
                   borderRadius: 2,
-                  color: '#ffffffff',
-                  border: 'none',
-                  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.1)',
+                  borderColor: '#667eea',
+                  color: '#667eea',
                   '&:hover': {
+                    borderColor: '#5a6fd8',
                     backgroundColor: 'rgba(102, 126, 234, 0.04)'
                   }
                 }}
@@ -759,11 +757,10 @@ const EventsList = ({ showNotification, userRole }) => {
                   <Box sx={{ display: 'flex', gap: 0.5 }}>
                     <Tooltip title="მონაწილეები">
                       <IconButton
-                        variant="contained"
                         size="small"
                         onClick={() => handleShowParticipants(event)}
                         sx={{
-                          color: '#ffffffff',
+                          color: '#667eea',
                           '&:hover': {
                             backgroundColor: 'rgba(102, 126, 234, 0.1)'
                           }
@@ -778,7 +775,7 @@ const EventsList = ({ showNotification, userRole }) => {
                         size="small"
                         onClick={() => handleShowFiles(event)}
                         sx={{
-                          color: '#ffffffff',
+                          color: '#17a2b8',
                           '&:hover': {
                             backgroundColor: 'rgba(23, 162, 184, 0.1)'
                           }
@@ -799,7 +796,7 @@ const EventsList = ({ showNotification, userRole }) => {
                               size="small"
                               onClick={() => handleEditClick(event)}
                               sx={{
-                                color: '#ffa600ff',
+                                color: '#28a745',
                                 '&:hover': {
                                   backgroundColor: 'rgba(40, 167, 69, 0.1)'
                                 }
@@ -817,7 +814,7 @@ const EventsList = ({ showNotification, userRole }) => {
                                 size="small"
                                 onClick={() => handleCompleteEvent(event)}
                                 sx={{
-                                  color: '#00ff62ff',
+                                  color: '#17a2b8',
                                   '&:hover': {
                                     backgroundColor: 'rgba(23, 162, 184, 0.1)'
                                   }
@@ -831,7 +828,7 @@ const EventsList = ({ showNotification, userRole }) => {
                                 size="small"
                                 onClick={() => handleArchive(event.id)}
                                 sx={{
-                                  color: '#b34708ff',
+                                  color: '#6c757d',
                                   '&:hover': {
                                     backgroundColor: 'rgba(108, 117, 125, 0.1)'
                                   }

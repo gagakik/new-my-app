@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   AppBar,
@@ -18,10 +17,12 @@ import {
   ListItemIcon,
   ListItemText,
   Divider,
+  useTheme,
+  useMediaQuery,
   Collapse,
   Badge,
   Tooltip,
-  Container,
+  Container
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -51,12 +52,11 @@ import NotificationCenter from './NotificationCenter';
 import QRScanner from './QRScanner';
 
 const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewChange, showNotification }) => {
-  
+  const theme = useTheme();
+
   const [anchorEl, setAnchorEl] = useState({});
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState({});
 
@@ -110,9 +110,6 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
       label: 'Dashboard',
       icon: <Dashboard />,
       single: true,
-      sx: {
-        colors: 'primary.main'
-      },
       action: () => handleViewChange('dashboard')
     });
 
@@ -122,9 +119,6 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
         key: 'sales',
         label: 'Sales',
         icon: <Business />,
-        sx: {
-          colors: 'primary.main'
-        },
         items: [
           { key: 'exhibitions', label: 'გამოფენები', icon: <Event /> },
           { key: 'companies', label: 'კომპანიები', icon: <Business /> },
@@ -183,16 +177,15 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
   };
 
   const renderDesktopMenu = () => (
-    <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 1 }} justifyContent={'center'}>
+    <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 1 }}>
       {getRoleBasedMenus().map((menu) => (
-        <Box sx={{display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'center'}}
-          key={menu.key}>
+        <Box key={menu.key}>
           {menu.single ? (
             <Button
               onClick={menu.action}
               startIcon={menu.icon}
               sx={{
-                color: activeView === menu.key ? 'primary.main' : '#fff',
+                color: activeView === menu.key ? 'primary.main' : 'text.primary',
                 fontWeight: activeView === menu.key ? 600 : 400,
                 textTransform: 'none',
                 px: 2,
@@ -214,7 +207,7 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
                 endIcon={<ExpandMore />}
                 startIcon={menu.icon}
                 sx={{
-                  color: '#fff',
+                  color: 'text.primary',
                   textTransform: 'none',
                   px: 2,
                   py: 1,
@@ -264,7 +257,7 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
                     <ListItemIcon sx={{ color: activeView === item.key ? 'primary.main' : 'text.secondary' }}>
                       {item.icon}
                     </ListItemIcon>
-                    <ListItemText 
+                    <ListItemText
                       primary={item.label}
                       primaryTypographyProps={{
                         fontWeight: activeView === item.key ? 600 : 400,
@@ -294,23 +287,23 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
         }
       }}
     >
-      <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+      <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
           <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
-            Expo Georgia
+            🏢 logo
           </Typography>
           <IconButton onClick={() => setMobileDrawerOpen(false)} size="small">
             <CloseIcon />
           </IconButton>
         </Box>
-        
+
         {isLoggedIn && (
           <Box sx={{ textAlign: 'center' }}>
-            <Chip 
-              label={userRole} 
-              color="primary" 
-              size="small" 
-              sx={{ mb: 1, textTransform: 'uppercase', fontWeight: 600 }} 
+            <Chip
+              label={userRole}
+              color="primary"
+              size="small"
+              sx={{ mb: 1, textTransform: 'uppercase', fontWeight: 600 }}
             />
             <Typography variant="body2" color="text.secondary">
               {userName}
@@ -338,7 +331,7 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
                 <ListItemIcon sx={{ color: activeView === menu.key ? 'primary.main' : 'text.secondary' }}>
                   {menu.icon}
                 </ListItemIcon>
-                <ListItemText 
+                <ListItemText
                   primary={menu.label}
                   primaryTypographyProps={{
                     fontWeight: activeView === menu.key ? 600 : 400,
@@ -365,7 +358,7 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
                   <ListItemText primary={menu.label} />
                   {expandedMenus[menu.key] ? <ExpandLess /> : <ExpandMore />}
                 </ListItemButton>
-                
+
                 <Collapse in={expandedMenus[menu.key]} timeout="auto" unmountOnExit>
                   <List component="div" disablePadding>
                     {menu.items.map((item) => (
@@ -383,13 +376,13 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
                           }
                         }}
                       >
-                        <ListItemIcon sx={{ 
+                        <ListItemIcon sx={{
                           color: activeView === item.key ? 'primary.main' : 'text.secondary',
-                          minWidth: 40 
+                          minWidth: 40
                         }}>
                           {item.icon}
                         </ListItemIcon>
-                        <ListItemText 
+                        <ListItemText
                           primary={item.label}
                           primaryTypographyProps={{
                             fontSize: '0.875rem',
@@ -419,7 +412,7 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
           >
             გასვლა
           </Button>
-          
+
           <Button
             fullWidth
             variant="outlined"
@@ -436,8 +429,8 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
 
   return (
     <>
-      <AppBar 
-        position="sticky" 
+      <AppBar
+        position="sticky"
         elevation={0}
         sx={{
           bgcolor: 'rgba(255, 255, 255, 0.95)',
@@ -447,141 +440,136 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
           color: 'text.primary'
         }}
       >
-        <Container maxWidth="xl" display="flex" alignItems="center" justifyContent="space-between">
-          <Toolbar sx={{ px: { xs: 0, sm: 2 } }}>
-            {/* Logo */}
-            <Typography
-              variant="h6"
-              sx={{
-                flexGrow: { xs: 1, md: 0 },
-                fontWeight: 700,
-                color: 'primary.main',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 0.5,
-                mr: { md: 4 }
-              }}
-            >
-              🏢 logo
-            </Typography>
+        <Toolbar>
+          <Container
+          maxWidth="xl"
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            py: 2
+          }}
+        >
+          {/* Logo */}
+          <Typography
+            variant="h6"
+            sx={{
+              flexGrow: { xs: 1, md: 0 },
+              fontWeight: 700,
+              color: 'primary.main',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5,
+              mr: { md: 4 }
+            }}
+          >
+            🏢 logo
+          </Typography>
 
-            {/* Desktop Navigation */}
-            {isLoggedIn && renderDesktopMenu()}
+          {/* Desktop Navigation */}
+          {isLoggedIn && renderDesktopMenu()}
 
-            <Box sx={{ flexGrow: 1 }} />
+          <Box sx={{ flexGrow: 1 }} />
 
-            {/* Right side actions */}
-            {isLoggedIn ? (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                {/* User info - Desktop only */}
-                <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', mr: 2 }}>
-                  <Box sx={{ textAlign: 'right', mr: 1 }}>
-                    <Chip 
-                      label={userRole} 
-                      color="primary" 
-                      size="small" 
-                      sx={{ mb: 0.5, textTransform: 'uppercase', fontWeight: 600 }} 
-                    />
-                    <Typography variant="body2" color="text.secondary">
-                      {userName}
-                    </Typography>
-                  </Box>
+          {/* Right side actions */}
+          {isLoggedIn ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              {/* User info - Desktop only */}
+              <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', mr: 2 }}>
+                <Box sx={{ textAlign: 'right', mr: 1 }}>
+                  <Chip
+                    label={userRole}
+                    color="primary"
+                    size="small"
+                    sx={{ mb: 0.5, textTransform: 'uppercase', fontWeight: 600 }}
+                  />
+                  <Typography variant="body2" color="text.secondary">
+                    {userName}
+                  </Typography>
                 </Box>
+              </Box>
 
-                {/* Theme toggle - Desktop only */}
-                <Tooltip title={isDarkMode ? 'ღია თემაზე გადართვა' : 'მუქ თემაზე გადართვა'}>
-                  <IconButton
-                    onClick={toggleDarkMode}
-                    sx={{ 
-                      display: { xs: 'none', md: 'flex' },
-                      bgcolor: 'action.hover',
-                      '&:hover': {
-                        bgcolor: 'action.selected',
-                        transform: 'translateY(-1px)',
-                      },
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    {isDarkMode ? <LightMode /> : <DarkMode />}
-                  </IconButton>
-                </Tooltip>
-
-                {/* QR Scanner */}
-                <Tooltip title="QR კოდის სკანერი">
-                  <IconButton
-                    onClick={() => setShowQRScanner(true)}
-                    sx={{ 
-                      bgcolor: 'action.hover',
-                      '&:hover': {
-                        bgcolor: 'action.selected',
-                        transform: 'translateY(-1px)',
-                      },
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    <QrCodeScanner />
-                  </IconButton>
-                </Tooltip>
-
-                {/* Logout - Desktop only */}
-                <Button
-                  onClick={onLogout}
-                  variant="outlined"
-                  startIcon={<Logout />}
-                  sx={{ 
+              {/* Theme toggle - Desktop only */}
+              <Tooltip title={isDarkMode ? 'ღია თემაზე გადართვა' : 'მუქ თემაზე გადართვა'}>
+                <IconButton
+                  onClick={toggleDarkMode}
+                  sx={{
                     display: { xs: 'none', md: 'flex' },
-                    textTransform: 'none',
-                    color: '#ffffffff',
-                    px: 2,
-                    py: 1,
-                    borderRadius: 2,
+                    bgcolor: 'action.hover',
                     '&:hover': {
+                      bgcolor: 'action.selected',
                       transform: 'translateY(-1px)',
                     },
                     transition: 'all 0.2s ease'
                   }}
                 >
-                  Logout
-                </Button>
+                  {isDarkMode ? <LightMode /> : <DarkMode />}
+                </IconButton>
+              </Tooltip>
 
-                {/* Mobile menu button */}
+              {/* QR Scanner */}
+              <Tooltip title="QR კოდის სკანერი">
                 <IconButton
-                  onClick={() => setMobileDrawerOpen(true)}
-                  sx={{ 
-                    display: { xs: 'flex', md: 'none' },
+                  onClick={() => setShowQRScanner(true)}
+                  sx={{
                     bgcolor: 'action.hover',
                     '&:hover': {
                       bgcolor: 'action.selected',
-                    }
+                      transform: 'translateY(-1px)',
+                    },
+                    transition: 'all 0.2s ease'
                   }}
                 >
-                  <MenuIcon />
+                  <QrCodeScanner />
                 </IconButton>
-              </Box>
-            ) : (
-              <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                სტუმარი
-              </Typography>
-            )}
-          </Toolbar>
+              </Tooltip>
+
+              {/* Logout - Desktop only */}
+              <Button
+                onClick={onLogout}
+                variant="outlined"
+                color="error"
+                startIcon={<Logout />}
+                sx={{
+                  display: { xs: 'none', md: 'flex' },
+                  textTransform: 'none',
+                  borderRadius: 2,
+                  '&:hover': {
+                    transform: 'translateY(-1px)',
+                  },
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                გასვლა
+              </Button>
+
+              {/* Mobile menu button */}
+              <IconButton
+                onClick={() => setMobileDrawerOpen(true)}
+                sx={{
+                  display: { xs: 'flex', md: 'none' },
+                  bgcolor: 'action.hover',
+                  '&:hover': {
+                    bgcolor: 'action.selected',
+                  }
+                }}
+              >
+                <MenuIcon />
+              </IconButton>
+            </Box>
+          ) : (
+            <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+              სტუმარი
+            </Typography>
+          )}
         </Container>
+        </Toolbar>
       </AppBar>
 
       {/* Mobile Drawer */}
       {renderMobileMenu()}
 
-      {/* Modals */}
-      {showProfile && (
-        <UserProfile onClose={() => setShowProfile(false)} />
-      )}
-
-      {showNotifications && (
-        <NotificationCenter
-          onClose={() => setShowNotifications(false)}
-          showNotification={showNotification}
-        />
-      )}
-
+      {/* QR Scanner Modal */}
       {showQRScanner && (
         <QRScanner
           onClose={() => setShowQRScanner(false)}

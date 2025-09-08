@@ -353,11 +353,11 @@ export const filesAPI = {
   },
 
   uploadInvoiceFile: async (eventId, formData) => {
-    return api.post(`/events/${eventId}/upload-invoices`, formData);
+    return api.post(`/events/${eventId}/upload-invoice`, formData);
   },
 
   uploadExpenseFile: async (eventId, formData) => {
-    return api.post(`/events/${eventId}/upload-expenses`, formData);
+    return api.post(`/events/${eventId}/upload-expense`, formData);
   },
 
   uploadInvoiceFiles: async (eventId, files) => {
@@ -388,6 +388,11 @@ export const filesAPI = {
 
   deleteExpenseFile: async (eventId, fileName) => {
     return api.delete(`/events/${eventId}/delete-expense/${fileName}`);
+  },
+
+  // Upload plan file
+  uploadPlanFile: async (eventId, formData) => {
+    return api.post(`/events/${eventId}/upload-plan`, formData);
   },
 };
 

@@ -219,12 +219,13 @@ const PackageManager = ({ exhibitionId, showNotification }) => {
           გამოფენის პაკეტები
         </Typography>
         <Button
+        size='small'
           variant="contained"
           startIcon={<Add />}
           onClick={handleAddPackage}
           sx={{ borderRadius: 2 }}
         >
-          ახალი პაკეტის დამატება
+          ADD NEW
         </Button>
       </Box>
 
@@ -246,6 +247,8 @@ const PackageManager = ({ exhibitionId, showNotification }) => {
             <Grid container spacing={3}>
               <Grid item xs={12}>
                 <TextField
+                  variant="outlined"
+                  size='small'
                   fullWidth
                   label="პაკეტის სახელი"
                   value={formData.package_name}
@@ -254,19 +257,12 @@ const PackageManager = ({ exhibitionId, showNotification }) => {
                 />
               </Grid>
 
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="აღწერა"
-                  multiline
-                  rows={3}
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                />
-              </Grid>
+
 
               <Grid item xs={6}>
                 <TextField
+                  variant="outlined"
+                  size='small'
                   fullWidth
                   label="ფართობი (კვმ)"
                   type="number"
@@ -276,9 +272,10 @@ const PackageManager = ({ exhibitionId, showNotification }) => {
                   required
                 />
               </Grid>
-
               <Grid item xs={6}>
                 <TextField
+                size='small'
+                  variant="outlined"
                   fullWidth
                   label="ფიქსირებული ღირებულება (EUR)"
                   type="number"
@@ -290,12 +287,27 @@ const PackageManager = ({ exhibitionId, showNotification }) => {
               </Grid>
 
               <Grid item xs={12}>
+                <TextField
+                  variant="outlined"
+                  fullWidth
+                  label="აღწერა"
+                  multiline
+                  rows={3}
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                />
+              </Grid>
+
+              
+
+              <Grid item xs={12}>
                 <Paper variant="outlined" sx={{ p: 2, mt: 2 }}>
-                  <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                  <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} flexDirection={'column'}>
                     <Typography variant="h6" color="primary">
                       შემავალი აღჭურვილობა
                     </Typography>
                     <Button
+                      sx={{ color: '#fff' }}
                       variant="outlined"
                       startIcon={<Add />}
                       onClick={handleEquipmentAdd}
@@ -309,7 +321,7 @@ const PackageManager = ({ exhibitionId, showNotification }) => {
                     <Grid container spacing={2} key={index} alignItems="center" sx={{ mb: 2 }}>
                       <Grid item xs={6}>
                         <FormControl fullWidth>
-                          <InputLabel>აირჩიეთ აღჭურვილობა</InputLabel>
+                          <InputLabel>აირჩიეთ</InputLabel>
                           <Select
                             value={item.equipment_id}
                             onChange={(e) => handleEquipmentChange(index, 'equipment_id', e.target.value)}
@@ -352,8 +364,8 @@ const PackageManager = ({ exhibitionId, showNotification }) => {
           </DialogContent>
 
           <DialogActions>
-            <Button onClick={() => setShowForm(false)} startIcon={<Cancel />}>
-              გაუქმება
+            <Button onClick={() => setShowForm(false)} startIcon={<Cancel />} sx={{ mr: 1, color: '#ffffffff', background: '#ff0000ff' }}>
+              CANCEL
             </Button>
             <Button type="submit" variant="contained" startIcon={<Save />}>
               {editingPackage ? 'განახლება' : 'შენახვა'}
@@ -406,7 +418,6 @@ const PackageManager = ({ exhibitionId, showNotification }) => {
                           <ListItem key={idx} sx={{ px: 0, py: 0.5 }}>
                             <ListItemText
                               primary={`${eq.code_name} - ${eq.quantity} ცალი`}
-                              secondary={`€${eq.price} თითოეული`}
                               primaryTypographyProps={{ variant: 'body2' }}
                               secondaryTypographyProps={{ variant: 'caption' }}
                             />
@@ -421,19 +432,22 @@ const PackageManager = ({ exhibitionId, showNotification }) => {
                 
                 <CardActions>
                   <Button
+                    sx={{ mr: 1, color: '#fff' }}
+                    variant="outlined"
                     size="small"
                     startIcon={<Edit />}
                     onClick={() => handleEditPackage(pkg)}
                   >
-                    რედაქტირება
+                    EDIT
                   </Button>
                   <Button
+                    sx={{ color: '#fff', background: '#ff0000ff' }}
                     size="small"
                     color="error"
                     startIcon={<Delete />}
                     onClick={() => handleDeletePackage(pkg.id)}
                   >
-                    წაშლა
+                    DELETE
                   </Button>
                 </CardActions>
               </Card>

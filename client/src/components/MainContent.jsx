@@ -67,11 +67,11 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
             }
           }}
         >
-          <Box sx={{ position: 'relative', zIndex: 1 }}>
+          <Box sx={{ position: 'relative', zIndex: 1,  minHeight: '50vh' }}>
             <Typography
-              variant="h2"
+              variant="h4"
               sx={{
-                fontWeight: 800,
+                fontWeight: 500,
                 mb: 2,
                 background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
                 backgroundClip: 'text',
@@ -88,20 +88,19 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
                 }
               }}
             >
-              მთავარი დეშბორდი
+              ზოგადი ინფორმაცია
             </Typography>
             <Typography
               variant="h6"
               color="text.secondary"
-              sx={{
-                maxWidth: 600,
-                mx: 'auto',
-                lineHeight: 1.6,
-                opacity: 0.9
-              }}
             >
-              თქვენი ბიზნესის მთავარი მეტრიკები და ანალიტიკა ერთ ადგილას. 
-              აქ თვალს ადევნებთ ყველა მნიშვნელოვან ინფორმაციას.
+              ჭერის სიმაღლე 
+              მე-3 პავილიონი - 410 სმ.
+              მე-4 პავილიონი - 455 სმ.
+              მე-5 პავილიონი - 455 სმ. 
+              მე-6 პავილიონი - 455 სმ. 
+              მე-11 პავილიონი - 600 სმ.
+
             </Typography>
           </Box>
         </Paper>
