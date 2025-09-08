@@ -2160,6 +2160,109 @@ app.get('/api/reports/user-analysis', authenticateToken, async (req, res) => {
   }
 });
 
+// Bookings routes
+app.get('/api/bookings', authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT 
+        b.*,
+        e.exhibition_name,
+        c.company_name,
+        u.username as created_by
+      FROM bookings b
+      LEFT JOIN exhibitions e ON b.exhibition_id = e.id
+      LEFT JOIN companies c ON b.company_id = c.id
+      LEFT JOIN users u ON b.created_by_user_id = u.id
+      ORDER BY b.created_at DESC
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('ჯავშნების მიღების შეცდომა:', error);
+    res.status(500).json({ message: 'ჯავშნების მიღება ვერ მოხერხდა' });
+  }
+});
+
+app.post('/api/bookings', authenticateToken, async (req, res) => {
+  try {
+    const { 
+      exhibition_id, 
+      company_id, 
+      booking_date, 
+      start_time, 
+      end_time, 
+      notes 
+    } = req.body;
+
+    const result = await db.query(
+      `INSERT INTO bookings (
+        exhibition_id, company_id, booking_date, 
+        start_time, end_time, notes, created_by_user_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [exhibition_id, company_id, booking_date, start_time, end_time, notes, req.user.id]
+    );
+
+    res.status(201).json({
+      message: 'ჯავშანი წარმატებით დაემატა',
+      booking: result.rows[0]
+    });
+  } catch (error) {
+    console.error('ჯავშნის დამატების შეცდომა:', error);
+    res.status(500).json({ message: 'ჯავშნის დამატება ვერ მოხერხდა' });
+  }
+});
+
+app.put('/api/bookings/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { 
+      exhibition_id, 
+      company_id, 
+      booking_date, 
+      start_time, 
+      end_time, 
+      notes 
+    } = req.body;
+
+    const result = await db.query(
+      `UPDATE bookings SET 
+        exhibition_id = $1, company_id = $2, 
+        booking_date = $3, start_time = $4, end_time = $5, 
+        notes = $6, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = $7 RETURNING *`,
+      [exhibition_id, company_id, booking_date, start_time, end_time, notes, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'ჯავშანი ვერ მოიძებნა' });
+    }
+
+    res.json({
+      message: 'ჯავშანი წარმატებით განახლდა',
+      booking: result.rows[0]
+    });
+  } catch (error) {
+    console.error('ჯავშნის განახლების შეცდომა:', error);
+    res.status(500).json({ message: 'ჯავშნის განახლება ვერ მოხერხდა' });
+  }
+});
+
+app.delete('/api/bookings/:id', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await db.query('DELETE FROM bookings WHERE id = $1 RETURNING *', [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'ჯავშანი ვერ მოიძებნა' });
+    }
+
+    res.json({ message: 'ჯავშანი წარმატებით წაიშალა' });
+  } catch (error) {
+    console.error('ჯავშნის წაშლის შეცდომა:', error);
+    res.status(500).json({ message: 'ჯავშნის წაშლა ვერ მოხერხდა' });
+  }
+});
+
 // Routes
 const companiesRoutes = require('./routes/companies');
 const equipmentRoutes = require('./routes/equipment');

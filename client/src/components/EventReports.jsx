@@ -42,7 +42,7 @@ import {
   Business
 } from '@mui/icons-material';
 
-const EventReports = ({ onClose, showNotification, userRole }) => {
+const EventReports = ({ showNotification }) => {
   const [reportType, setReportType] = useState('participants');
   const [events, setEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState('');
@@ -181,7 +181,7 @@ const EventReports = ({ onClose, showNotification, userRole }) => {
     link.click();
   };
 
-  const exportToPDF = (data, fileName) => {
+  const exportToPDF = () => {
     showNotification('PDF ექსპორტი მომზადების ეტაპზეა', 'info');
   };
 

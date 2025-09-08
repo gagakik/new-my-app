@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   AppBar,
   Toolbar,
@@ -18,12 +18,10 @@ import {
   ListItemIcon,
   ListItemText,
   Divider,
-  useTheme,
-  useMediaQuery,
   Collapse,
   Badge,
   Tooltip,
-  Container
+  Container,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -52,9 +50,7 @@ import UserProfile from './UserProfile';
 import NotificationCenter from './NotificationCenter';
 import QRScanner from './QRScanner';
 
-const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewChange, unreadCount, showNotification }) => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewChange, showNotification }) => {
   
   const [anchorEl, setAnchorEl] = useState({});
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
@@ -114,6 +110,9 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
       label: 'Dashboard',
       icon: <Dashboard />,
       single: true,
+      sx: {
+        colors: 'primary.main'
+      },
       action: () => handleViewChange('dashboard')
     });
 
@@ -123,6 +122,9 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
         key: 'sales',
         label: 'Sales',
         icon: <Business />,
+        sx: {
+          colors: 'primary.main'
+        },
         items: [
           { key: 'exhibitions', label: 'გამოფენები', icon: <Event /> },
           { key: 'companies', label: 'კომპანიები', icon: <Business /> },
@@ -181,15 +183,16 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
   };
 
   const renderDesktopMenu = () => (
-    <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 1 }}>
+    <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 1 }} justifyContent={'center'}>
       {getRoleBasedMenus().map((menu) => (
-        <Box key={menu.key}>
+        <Box sx={{display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'center'}}
+          key={menu.key}>
           {menu.single ? (
             <Button
               onClick={menu.action}
               startIcon={menu.icon}
               sx={{
-                color: activeView === menu.key ? 'primary.main' : 'text.primary',
+                color: activeView === menu.key ? 'primary.main' : '#fff',
                 fontWeight: activeView === menu.key ? 600 : 400,
                 textTransform: 'none',
                 px: 2,
@@ -211,7 +214,7 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
                 endIcon={<ExpandMore />}
                 startIcon={menu.icon}
                 sx={{
-                  color: 'text.primary',
+                  color: '#fff',
                   textTransform: 'none',
                   px: 2,
                   py: 1,
@@ -291,10 +294,10 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
         }
       }}
     >
-      <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+      <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
           <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
-            🏢 logo
+            Expo Georgia
           </Typography>
           <IconButton onClick={() => setMobileDrawerOpen(false)} size="small">
             <CloseIcon />
@@ -444,7 +447,7 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
           color: 'text.primary'
         }}
       >
-        <Container maxWidth="xl">
+        <Container maxWidth="xl" display="flex" alignItems="center" justifyContent="space-between">
           <Toolbar sx={{ px: { xs: 0, sm: 2 } }}>
             {/* Logo */}
             <Typography
@@ -524,11 +527,13 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
                 <Button
                   onClick={onLogout}
                   variant="outlined"
-                  color="error"
                   startIcon={<Logout />}
                   sx={{ 
                     display: { xs: 'none', md: 'flex' },
                     textTransform: 'none',
+                    color: '#ffffffff',
+                    px: 2,
+                    py: 1,
                     borderRadius: 2,
                     '&:hover': {
                       transform: 'translateY(-1px)',
@@ -536,7 +541,7 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
                     transition: 'all 0.2s ease'
                   }}
                 >
-                  გასვლა
+                  Logout
                 </Button>
 
                 {/* Mobile menu button */}

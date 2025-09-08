@@ -122,55 +122,27 @@ export const usersAPI = {
   },
 };
 
-// Services API
-export const servicesAPI = {
+// Exhibitions API
+export const exhibitionsAPI = {
   getAll: async () => {
-    return api.get('/annual-services');
-  },
-  
-  getExhibitions: async () => {
     return api.get('/exhibitions');
   },
   
   getById: async (id) => {
-    return api.get(`/annual-services/${id}`);
+    return api.get(`/exhibitions/${id}`);
   },
   
-  getDetails: async (id) => {
-    return api.get(`/annual-services/${id}/details`);
+  create: async (exhibitionData) => {
+    return api.post('/exhibitions', exhibitionData);
   },
   
-  create: async (serviceData) => {
-    return api.post('/annual-services', serviceData);
-  },
-  
-  update: async (id, serviceData) => {
-    return api.put(`/annual-services/${id}`, serviceData);
+  update: async (id, exhibitionData) => {
+    return api.put(`/exhibitions/${id}`, exhibitionData);
   },
   
   delete: async (id) => {
-    return api.delete(`/annual-services/${id}`);
-  },
-  
-  archive: async (id) => {
-    return api.put(`/annual-services/${id}/archive`);
-  },
-
-  createEvent: async (eventData) => {
-    return api.post('/annual-services', eventData);
-  },
-
-  updateEvent: async (id, eventData) => {
-    return api.put(`/annual-services/${id}`, eventData);
-  },
-
-  archiveEvent: async (id) => {
-    return api.put(`/annual-services/${id}/archive`);
-  },
-
-  restoreEvent: async (id) => {
-    return api.put(`/annual-services/${id}/restore`);
-  },
+    return api.delete(`/exhibitions/${id}`);
+  }
 };
 
 // Companies API
@@ -241,6 +213,29 @@ export const packagesAPI = {
   },
 };
 
+// Bookings API
+export const bookingsAPI = {
+  getAll: async () => {
+    return api.get('/bookings');
+  },
+  
+  create: async (bookingData) => {
+    return api.post('/bookings', bookingData);
+  },
+  
+  update: async (id, bookingData) => {
+    return api.put(`/bookings/${id}`, bookingData);
+  },
+  
+  delete: async (id) => {
+    return api.delete(`/bookings/${id}`);
+  },
+  
+  updateStatus: async (id, status) => {
+    return api.put(`/bookings/${id}/status`, { status });
+  },
+};
+
 // Statistics API
 export const statisticsAPI = {
   getOverview: async () => {
@@ -290,7 +285,15 @@ export const filesAPI = {
   },
 
   downloadInvoiceFile: async (fileName) => {
-    const response = await fetch(`${API_BASE_URL}/download/${fileName}`);
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE_URL}/download/${fileName}?t=${Date.now()}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    });
     
     if (!response.ok) {
       throw new Error('Download failed');
@@ -310,7 +313,15 @@ export const filesAPI = {
   },
 
   downloadExpenseFile: async (fileName) => {
-    const response = await fetch(`${API_BASE_URL}/download/${fileName}`);
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE_URL}/download/${fileName}?t=${Date.now()}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    });
     
     if (!response.ok) {
       throw new Error('Download failed');

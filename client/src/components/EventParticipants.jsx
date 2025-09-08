@@ -1126,23 +1126,24 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                   onClick={resetFilters}
                   startIcon={<Clear />}
                   size="small"
-                  sx={{ height: '40px' }}
+                  sx={{ height: '40px', color:'#fff' }}
+                  
                 >
                   ფილტრების გასუფთავება
                 </Button>
               </Grid>
             </Grid>
 
-            <Grid container spacing={2}>
+            <Grid container spacing={2} display={'flex'} justifyContent={'center'}>
               <Grid item xs={6} md={2}>
-                <FormControl fullWidth size="small">
+                <FormControl fullWidth size="small" style={{minWidth: 120}} >
                   <InputLabel>სტატუსი</InputLabel>
                   <Select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
                     label="სტატუსი"
                   >
-                    <MenuItem value="">ყველა</MenuItem>
+                    <MenuItem value="" >ყველა</MenuItem>
                     <MenuItem value="მონაწილეობის მოთხოვნა">მოთხოვნა</MenuItem>
                     <MenuItem value="მომლოდინე">მომლოდინე</MenuItem>
                     <MenuItem value="რეგისტრირებული">რეგისტრირებული</MenuItem>
@@ -1152,7 +1153,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                 </FormControl>
               </Grid>
               <Grid item xs={6} md={2}>
-                <FormControl fullWidth size="small">
+                <FormControl fullWidth size="small" style={{minWidth: 120}}>
                   <InputLabel>გადახდა</InputLabel>
                   <Select
                     value={paymentFilter}
@@ -1167,7 +1168,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                 </FormControl>
               </Grid>
               <Grid item xs={6} md={2}>
-                <FormControl fullWidth size="small">
+                <FormControl fullWidth size="small" style={{minWidth: 120}}>
                   <InputLabel>ქვეყანა</InputLabel>
                   <Select
                     value={countryFilter}
@@ -1182,7 +1183,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                 </FormControl>
               </Grid>
               <Grid item xs={6} md={3}>
-                <FormControl fullWidth size="small">
+                <FormControl fullWidth size="small" style={{minWidth: 120}}>
                   <InputLabel>კატეგორია</InputLabel>
                   <Select
                     value={boothCategoryFilter}
@@ -1197,7 +1198,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                 </FormControl>
               </Grid>
               <Grid item xs={6} md={3}>
-                <FormControl fullWidth size="small">
+                <FormControl fullWidth size="small" style={{minWidth: 120}}>
                   <InputLabel>ტიპი</InputLabel>
                   <Select
                     value={boothTypeFilter}
@@ -1645,7 +1646,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                     <>
                       <Grid item xs={6}>
                         <FormControl fullWidth>
-                          <InputLabel>რეგისტრაციის სტატუსი</InputLabel>
+                          <InputLabel>სტატუსი</InputLabel>
                           <Select
                             value={formData.registration_status}
                             onChange={(e) => setFormData({...formData, registration_status: e.target.value})}
@@ -1903,7 +1904,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
               <TableContainer>
                 <Table stickyHeader>
                   <TableHead>
-                    <TableRow sx={{ '& th': { background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', fontWeight: 600 } }}>
+                    <TableRow sx={{ '& th': { background: '#e6e6e6ff', color: '#000000ff', fontWeight: 600 } }}>
                       <TableCell>კომპანია</TableCell>
                       <TableCell align="center">სტენდი</TableCell>
                       <TableCell align="center">კატეგორია</TableCell>

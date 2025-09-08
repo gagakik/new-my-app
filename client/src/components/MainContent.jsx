@@ -105,7 +105,6 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
             </Typography>
           </Box>
         </Paper>
-        <Statistics showNotification={showNotification} userRole={userRole} />
       </Box>
     </Fade>
   );
