@@ -220,8 +220,8 @@ const ExhibitionsList = ({ showNotification, userRole }) => {
                         }}
                       >
                         <TableCell align="center">
-                          <Typography sx={{ fontWeight: 600, color: 'primary.main' }}>
-                            {exhibition.exhibition_name}
+                          <Typography sx={{ fontWeight: 600, color: '#313030ff' }}>
+                            ID-{exhibition.id} {exhibition.exhibition_name}
                           </Typography>
                         </TableCell>
                         <TableCell align="center">{exhibition.manager}</TableCell>
