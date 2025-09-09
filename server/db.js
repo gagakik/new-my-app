@@ -10,7 +10,12 @@ const pool = new Pool({
       : false,
   max: 10,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 5000,
+  acquireTimeoutMillis: 60000,
+  createTimeoutMillis: 30000,
+  destroyTimeoutMillis: 5000,
+  reapIntervalMillis: 1000,
+  createRetryIntervalMillis: 200,
 });
 
 pool.on("connect", () => {
@@ -23,14 +28,13 @@ pool.on("error", (err) => {
 
 // Promise wrapper for database queries
 const query = async (text, params = []) => {
-  console.log("Executing PostgreSQL query:", text, "with params:", params);
-
   try {
     const result = await pool.query(text, params);
-    console.log("PostgreSQL query result:", result.rowCount, "rows affected");
     return result;
   } catch (error) {
-    console.error("PostgreSQL query error:", error);
+    console.error("PostgreSQL query error:", error.message);
+    console.error("Query:", text);
+    console.error("Params:", params);
     throw error;
   }
 };
@@ -57,9 +61,14 @@ const createTables = async () => {
         id SERIAL PRIMARY KEY,
         company_name VARCHAR(255) NOT NULL,
         country VARCHAR(100),
-        identification_code VARCHAR(100),
+        identification_code VARCHAR(100) UNIQUE,
         company_profile TEXT,
+        legal_address TEXT,
+        website VARCHAR(500),
+        comment TEXT,
+        status VARCHAR(50) DEFAULT 'აქტიური',
         selected_exhibitions JSONB DEFAULT '[]',
+        contact_persons JSONB DEFAULT '[]',
         created_by_user_id INTEGER,
         updated_by_user_id INTEGER,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
