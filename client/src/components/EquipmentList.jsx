@@ -30,7 +30,7 @@ import EquipmentForm from './EquipmentForm';
 const EquipmentList = ({ showNotification, userRole }) => {
   const [equipment, setEquipment] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showNewForm, setShowNewForm] = useState(false); // State for showing the new form
@@ -446,7 +446,7 @@ const EquipmentList = ({ showNotification, userRole }) => {
                   {isAuthorizedForManagement && (
                     <TableCell align="center">
                       <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-                        <IconButton
+                        <Button
                           onClick={() => handleEditClick(item)}
                           size="small"
                           sx={{ 
@@ -458,8 +458,8 @@ const EquipmentList = ({ showNotification, userRole }) => {
                           }}
                         >
                           <Edit />
-                        </IconButton>
-                        <IconButton
+                        </Button>
+                        <Button
                           onClick={() => handleDelete(item.id)}
                           size="small"
                           sx={{ 
@@ -471,7 +471,7 @@ const EquipmentList = ({ showNotification, userRole }) => {
                           }}
                         >
                           <Delete />
-                        </IconButton>
+                        </Button>
                       </Box>
                     </TableCell>
                   )}
