@@ -357,8 +357,8 @@ const CompaniesList = ({ showNotification, userRole }) => {
       if (filterIdentificationCode && filterIdentificationCode.trim()) {
         params.append('identification_code', filterIdentificationCode.trim());
       }
-      if (filterExhibition && filterExhibition.trim() && filterExhibition !== 'ყველა') {
-        params.append('exhibition', filterExhibition.trim());
+      if (filterExhibition && filterExhibition !== '' && filterExhibition !== 'ყველა') {
+        params.append('exhibition', filterExhibition.toString());
       }
 
       const queryString = params.toString();
@@ -709,7 +709,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
                 <Select value={filterExhibition} label="გამოფენა" onChange={(e) => setFilterExhibition(e.target.value)}>
                   <MenuItem value="">ყველა გამოფენა</MenuItem>
                   {exhibitions.map(exhibition => (
-                    <MenuItem key={exhibition.id} value={exhibition.id}>
+                    <MenuItem key={exhibition.id} value={exhibition.id.toString()}>
                       {exhibition.exhibition_name}
                     </MenuItem>
                   ))}
