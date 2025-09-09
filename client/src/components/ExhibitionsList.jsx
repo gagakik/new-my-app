@@ -247,30 +247,33 @@ const ExhibitionsList = ({ showNotification, userRole }) => {
                           <TableCell align="center">
                             <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
                               <Tooltip title="რედაქტირება">
-                                <IconButton
+                                <Button
+                                variant="contained"
                                   size="small"
                                   onClick={() => handleEditClick(exhibition)}
                                   color="primary"
                                   sx={{ 
                                     backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                                    color: '#fff',
                                     '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.2)' }
                                   }}
                                 >
                                   <Edit fontSize="small" />
-                                </IconButton>
+                                </Button>
                               </Tooltip>
                               <Tooltip title="წაშლა">
-                                <IconButton
+                                <Button
                                   size="small"
                                   onClick={() => handleDelete(exhibition.id)}
                                   color="error"
                                   sx={{ 
-                                    backgroundColor: 'rgba(244, 67, 54, 0.1)',
-                                    '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.2)' }
+                                    color: '#fff',
+                                    background: 'rgba(139, 18, 9, 1)',
+                                    '&:hover': { background: 'rgba(244, 67, 54, 0.2)', color: 'rgba(139, 18, 9, 1)'}
                                   }}
                                 >
                                   <Delete fontSize="small" />
-                                </IconButton>
+                                </Button>
                               </Tooltip>
                             </Box>
                           </TableCell>

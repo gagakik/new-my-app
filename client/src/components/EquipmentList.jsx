@@ -184,7 +184,7 @@ const EquipmentList = ({ showNotification, userRole }) => {
           textAlign: 'center',
           fontWeight: 600,
           mb: 4,
-          textShadow: '0 2px 4px rgba(0,0,0,0.3)'
+          textShadow: '0 2px 4px rgba(156, 156, 156, 0.3)'
         }}>
           აღჭურვილობის სია
         </Typography>
@@ -221,7 +221,7 @@ const EquipmentList = ({ showNotification, userRole }) => {
               }}
               sx={{
                 backgroundColor: 'white',
-                color: 'primary.main',
+                color: '#fff',
                 borderRadius: 25,
                 px: 4,
                 py: 1.5,
@@ -448,9 +448,9 @@ const EquipmentList = ({ showNotification, userRole }) => {
                       <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
                         <IconButton
                           onClick={() => handleEditClick(item)}
-                          color="#e0c112ff"
                           size="small"
                           sx={{ 
+                            color: '#fff',
                             '&:hover': { 
                               backgroundColor: 'primary.main',
                               color: 'white'
@@ -461,12 +461,12 @@ const EquipmentList = ({ showNotification, userRole }) => {
                         </IconButton>
                         <IconButton
                           onClick={() => handleDelete(item.id)}
-                          color="error"
                           size="small"
                           sx={{ 
+                            color: '#fff',
+                            background: '#990000ff',
                             '&:hover': { 
-                              backgroundColor: 'error.main',
-                              color: 'white'
+                              color: '#990000ff'
                             }
                           }}
                         >

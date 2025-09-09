@@ -241,7 +241,7 @@ const SpacesList = ({ showNotification, userRole }) => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {spaces.map((space, index) => (
+                  {spaces.map((space) => (
                     <TableRow 
                       key={space.id}
                       sx={{ 
@@ -298,11 +298,11 @@ const SpacesList = ({ showNotification, userRole }) => {
                       <TableCell>
                         {isAuthorizedForManagement && (
                           <Box sx={{ display: 'flex', gap: 1 }}>
-                            <IconButton
+                            <Button
                               size="small"
                               onClick={() => handleEditClick(space)}
                               sx={{
-                                color: '#28a745',
+                                color: '#ffffffff',
                                 '&:hover': {
                                   backgroundColor: 'rgba(40, 167, 69, 0.1)',
                                   transform: 'scale(1.1)'
@@ -311,12 +311,13 @@ const SpacesList = ({ showNotification, userRole }) => {
                               }}
                             >
                               <Edit fontSize="small" />
-                            </IconButton>
-                            <IconButton
+                            </Button>
+                            <Button
                               size="small"
                               onClick={() => handleDelete(space.id)}
                               sx={{
-                                color: '#dc3545',
+                                color: '#ffffffff',
+                                background: 'rgba(220, 53, 69, 1)',
                                 '&:hover': {
                                   backgroundColor: 'rgba(220, 53, 69, 0.1)',
                                   transform: 'scale(1.1)'
@@ -325,7 +326,7 @@ const SpacesList = ({ showNotification, userRole }) => {
                               }}
                             >
                               <Delete fontSize="small" />
-                            </IconButton>
+                            </Button>
                           </Box>
                         )}
                       </TableCell>

@@ -654,7 +654,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
                                 size="small"
                                 variant="contained"
                                 onClick={() => handleDelete(company.id)}
-                                sx={{ minWidth: 'auto', px: 1, color:'#d32f2f'}}
+                                sx={{ minWidth: 'auto', px: 1, color:'#ffffffff', background: '#990000ff',}}
                               >
                                 <Delete fontSize="small" />
                               </Button>

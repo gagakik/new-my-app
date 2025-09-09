@@ -27,7 +27,7 @@ import {
   FormControlLabel,
   CircularProgress,
   Stack,
-  Badge
+  Badge,
 } from '@mui/material';
 import {
   Add,
@@ -536,17 +536,21 @@ const EventsList = ({ showNotification, userRole }) => {
           mb: 3,
           borderRadius: 3,
           background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
-          border: '1px solid rgba(102, 126, 234, 0.1)'
+          border: '1px solid rgba(102, 126, 234, 0.1)',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: '0 4px 12px rgba(102, 126, 234, 0.1)'
         }}
       >
         <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Search sx={{ color: '#667eea' }} />
+          <Search sx={{ color: '#667eea', mr: 1, }} />
           ძიება და ფილტრაცია
         </Typography>
 
-        <Grid container spacing={2} sx={{ mb: 2 }}>
+        <Grid container spacing={2} sx={{ mb: 2 }} size='small'>
           <Grid item xs={12} md={3}>
             <TextField
+              size='small'
               fullWidth
               label="ძიება"
               placeholder="ძიება სახელით..."
@@ -560,7 +564,7 @@ const EventsList = ({ showNotification, userRole }) => {
           </Grid>
 
           <Grid item xs={12} md={2}>
-            <FormControl fullWidth>
+            <FormControl fullWidth sx={{minWidth: 120}} size='small'>
               <InputLabel>წელი</InputLabel>
               <Select
                 value={selectedYear}
@@ -577,7 +581,7 @@ const EventsList = ({ showNotification, userRole }) => {
           </Grid>
 
           <Grid item xs={12} md={2}>
-            <FormControl fullWidth>
+            <FormControl fullWidth sx={{minWidth: 120}} size='small'>
               <InputLabel>თვე</InputLabel>
               <Select
                 value={selectedMonth}
@@ -594,8 +598,8 @@ const EventsList = ({ showNotification, userRole }) => {
           </Grid>
 
           <Grid item xs={12} md={2}>
-            <FormControl fullWidth>
-              <InputLabel>სტატუსი</InputLabel>
+            <FormControl fullWidth sx={{minWidth: 120}} size='small'>
+              <InputLabel >სტატუსი</InputLabel>
               <Select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
@@ -612,16 +616,17 @@ const EventsList = ({ showNotification, userRole }) => {
             </FormControl>
           </Grid>
 
-          <Grid item xs={12} md={3}>
+          <Grid item xs={12} md={3} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
             <Stack direction="row" spacing={1}>
               <Button
+                size='large'
                 variant="outlined"
                 startIcon={<Clear />}
                 onClick={clearFilters}
                 sx={{
                   borderRadius: 2,
-                  borderColor: '#6c757d',
-                  color: '#6c757d',
+                  border: 'none',
+                  color: '#ffffffff',
                   '&:hover': {
                     borderColor: '#5a6268',
                     backgroundColor: 'rgba(108, 117, 125, 0.04)'
@@ -631,13 +636,14 @@ const EventsList = ({ showNotification, userRole }) => {
                 გასუფთავება
               </Button>
               <Button
+                size='large'
                 variant="outlined"
                 startIcon={<Sort />}
                 onClick={toggleSortDirection}
                 sx={{
                   borderRadius: 2,
-                  borderColor: '#667eea',
-                  color: '#667eea',
+                  border: 'none',
+                  color: '#ffffffff',
                   '&:hover': {
                     borderColor: '#5a6fd8',
                     backgroundColor: 'rgba(102, 126, 234, 0.04)'
@@ -759,7 +765,8 @@ const EventsList = ({ showNotification, userRole }) => {
                         size="small"
                         onClick={() => handleShowParticipants(event)}
                         sx={{
-                          color: '#667eea',
+                          color: '#ffffffff',
+                          background: '#1e7cff',
                           '&:hover': {
                             backgroundColor: 'rgba(102, 126, 234, 0.1)'
                           }
@@ -774,7 +781,8 @@ const EventsList = ({ showNotification, userRole }) => {
                         size="small"
                         onClick={() => handleShowFiles(event)}
                         sx={{
-                          color: '#17a2b8',
+                          color: '#ffffffff',
+                          background: 'rgba(212, 133, 13, 1)',
                           '&:hover': {
                             backgroundColor: 'rgba(23, 162, 184, 0.1)'
                           }
@@ -795,7 +803,7 @@ const EventsList = ({ showNotification, userRole }) => {
                               size="small"
                               onClick={() => handleEditClick(event)}
                               sx={{
-                                color: '#28a745',
+                                color: '#ffffffff',
                                 '&:hover': {
                                   backgroundColor: 'rgba(40, 167, 69, 0.1)'
                                 }
@@ -813,7 +821,8 @@ const EventsList = ({ showNotification, userRole }) => {
                                 size="small"
                                 onClick={() => handleCompleteEvent(event)}
                                 sx={{
-                                  color: '#17a2b8',
+                                  color: '#ffffffff',
+                                  background: 'rgba(23, 162, 184, 1)',
                                   '&:hover': {
                                     backgroundColor: 'rgba(23, 162, 184, 0.1)'
                                   }
@@ -827,7 +836,8 @@ const EventsList = ({ showNotification, userRole }) => {
                                 size="small"
                                 onClick={() => handleArchive(event.id)}
                                 sx={{
-                                  color: '#6c757d',
+                                  color: '#ffffffff',
+                                  background: 'rgba(108, 117, 125, 1)',
                                   '&:hover': {
                                     backgroundColor: 'rgba(108, 117, 125, 0.1)'
                                   }
@@ -845,7 +855,7 @@ const EventsList = ({ showNotification, userRole }) => {
                               size="small"
                               onClick={() => handleRestore(event.id)}
                               sx={{
-                                color: '#28a745',
+                                color: '#ffffffff',
                                 '&:hover': {
                                   backgroundColor: 'rgba(40, 167, 69, 0.1)'
                                 }
@@ -862,7 +872,8 @@ const EventsList = ({ showNotification, userRole }) => {
                               size="small"
                               onClick={() => handleDelete(event.id)}
                               sx={{
-                                color: '#dc3545',
+                                color: '#ffffffff',
+                                background: 'rgba(220, 53, 69, 1)',
                                 '&:hover': {
                                   backgroundColor: 'rgba(220, 53, 69, 0.1)'
                                 }

@@ -1300,10 +1300,10 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                   </Grid>
 
                   {/* სტენდის ინფორმაცია */}
-                  <Grid item xs={12}>
-                    <Accordion defaultExpanded>
-                      <AccordionSummary expandIcon={<ExpandMore />}>
-                        <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Grid item xs={12} >
+                    <Accordion defaultExpanded >
+                      <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 3, marginBottom: 2 }}>
+                        <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1}}>
                           <LocationOn />
                           სტენდის ინფორმაცია
                         </Typography>
@@ -1402,7 +1402,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                   {registrationType === 'package' && (
                     <Grid item xs={12}>
                       <Accordion>
-                        <AccordionSummary expandIcon={<ExpandMore />}>
+                        <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 3, marginBottom: 2 }}>
                           <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Inventory2 />
                             პაკეტების არჩევა
@@ -1506,7 +1506,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                   {/* აღჭურვილობა */}
                   <Grid item xs={12}>
                     <Accordion>
-                      <AccordionSummary expandIcon={<ExpandMore />}>
+                      <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 3, marginBottom: 2 }}>
                         <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Build />
                           {registrationType === 'package'
@@ -1679,7 +1679,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                   {/* გადახდის ინფორმაცია */}
                   <Grid item xs={12}>
                     <Accordion>
-                      <AccordionSummary expandIcon={<ExpandMore />}>
+                      <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 3, marginBottom: 2 }}>
                         <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Euro />
                           გადახდის ინფორმაცია
@@ -1766,7 +1766,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                   {/* დოკუმენტები */}
                   <Grid item xs={12}>
                     <Accordion>
-                      <AccordionSummary expandIcon={<ExpandMore />}>
+                      <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 3, marginBottom: 2 }}>
                         <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <AttachFile />
                           დოკუმენტების მიმაგრება
@@ -2036,7 +2036,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                                   size="small"
                                   onClick={() => showCompanyDetailsModal(participant)}
                                   disabled={loadingCompanyDetails}
-                                  sx={{ color: '#8b5cf6' }}
+                                  sx={{ color: '#ffffffff' }}
                                 >
                                   <Business fontSize="small" />
                                 </IconButton>
@@ -2045,7 +2045,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                                 <IconButton
                                   size="small"
                                   onClick={() => handleGenerateInvoice(participant)}
-                                  sx={{ color: '#f59e0b' }}
+                                  sx={{ color: '#ffffffff' }}
                                 >
                                   <Receipt fontSize="small" />
                                 </IconButton>
@@ -2073,7 +2073,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                                     <IconButton
                                       size="small"
                                       onClick={() => handleEdit(participant)}
-                                      sx={{ color: '#3b82f6' }}
+                                      sx={{ color: '#ffffffff' }}
                                     >
                                       <Edit fontSize="small" />
                                     </IconButton>
@@ -2082,7 +2082,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                                     <IconButton
                                       size="small"
                                       onClick={() => handleDelete(participant.id)}
-                                      sx={{ color: '#ef4444' }}
+                                      sx={{ color: '#ffffffff', background: 'rgba(220, 53, 69, 1)' }}
                                     >
                                       <Delete fontSize="small" />
                                     </IconButton>
@@ -2123,22 +2123,22 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
             </IconButton>
           </Box>
         </DialogTitle>
-        <DialogContent sx={{ p: 3 }}>
+        <DialogContent sx={{ p: 3}}>
           {selectedCompanyForDetails && (
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
+            <Grid container spacing={3} display={'flex'} alignItems={'flex-start'}>
+              <Grid item xs={12} display={'flex'} alignItems={'start-end'} justifyContent={'center'} flexDirection={'column'}>
                 <Typography variant="h6" gutterBottom>ძირითადი ინფორმაცია</Typography>
-                <Grid container spacing={2}>
-                  <Grid item xs={6}>
+                <Grid container spacing={2} display={'flex'} alignItems={'start-end'  } justifyContent={'center'} flexDirection={'column'}>
+                  <Grid item xs={6} borderBottom={1} borderColor={'#b8ceebff'} pb={1} mb={2}>
                     <Typography><strong>კომპანიის დასახელება:</strong> {selectedCompanyForDetails.company_name}</Typography>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid item xs={6} borderBottom={1} borderColor={'#b8ceebff'} pb={1} mb={2}>
                     <Typography><strong>საიდენტიფიკაციო კოდი:</strong> {selectedCompanyForDetails.identification_code}</Typography>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid item xs={6} borderBottom={1} borderColor={'#b8ceebff'} pb={1} mb={2}>
                     <Typography><strong>ქვეყანა:</strong> {selectedCompanyForDetails.country}</Typography>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid item xs={6} borderBottom={1} borderColor={'#b8ceebff'} pb={1} mb={2}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Typography><strong>სტატუსი:</strong></Typography>
                       <Chip
@@ -2148,13 +2148,13 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                       />
                     </Box>
                   </Grid>
-                  <Grid item xs={12}>
+                  <Grid item xs={12} borderBottom={1} borderColor={'#b8ceebff'} pb={1} mb={2}>
                     <Typography><strong>კომპანიის პროფილი:</strong> {selectedCompanyForDetails.company_profile || 'არ არის მითითებული'}</Typography>
                   </Grid>
-                  <Grid item xs={12}>
+                  <Grid item xs={12} borderBottom={1} borderColor={'#b8ceebff'} pb={1} mb={2}>
                     <Typography><strong>იურიდიული მისამართი:</strong> {selectedCompanyForDetails.legal_address || 'არ არის მითითებული'}</Typography>
                   </Grid>
-                  <Grid item xs={12}>
+                  <Grid item xs={12} borderBottom={1} borderColor={'#b8ceebff'} pb={1} mb={2}>
                     <Typography>
                       <strong>ვებგვერდი:</strong>
                       {selectedCompanyForDetails.website ? (
@@ -2177,7 +2177,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
               </Grid>
 
               {selectedCompanyForDetails.comment && (
-                <Grid item xs={12}>
+                <Grid item xs={12} borderBottom={1} borderColor={'#b8ceebff'} pb={1} mb={2}>
                   <Divider sx={{ my: 2 }} />
                   <Typography variant="h6" gutterBottom>კომენტარი</Typography>
                   <Alert severity="info">
