@@ -323,10 +323,28 @@ const CompaniesList = ({ showNotification, userRole }) => {
           background: 'linear-gradient(45deg, #667eea, #764ba2)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
-          mb: 4
+          mb: 2
         }}>
           კომპანიების ბაზა
         </Typography>
+        
+        <Box sx={{ textAlign: 'center', mb: 4 }}>
+          <Chip 
+            label={`ჯამურ რაოდენობა: ${companies.length}`}
+            color="primary"
+            variant="outlined"
+            sx={{ 
+              fontSize: '1rem',
+              fontWeight: 'bold',
+              px: 2,
+              py: 1,
+              height: 'auto',
+              borderRadius: '20px',
+              backgroundColor: 'rgba(102, 126, 234, 0.08)',
+              borderColor: '#667eea'
+            }}
+          />
+        </Box>
 
         {/* ფილტრები */}
         <Paper elevation={1} sx={{ p: 3, mb: 3, backgroundColor: 'rgba(0,0,0,0.02)' }}>
