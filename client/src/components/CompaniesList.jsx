@@ -402,7 +402,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
                 <Select value={filterExhibition} label="გამოფენა" onChange={(e) => setFilterExhibition(e.target.value)}>
                   <MenuItem value="">ყველა გამოფენა</MenuItem>
                   {exhibitions.map(exhibition => (
-                    <MenuItem key={exhibition.id} value={exhibition.exhibition_name}>
+                    <MenuItem key={exhibition.id} value={exhibition.id}>
                       {exhibition.exhibition_name}
                     </MenuItem>
                   ))}

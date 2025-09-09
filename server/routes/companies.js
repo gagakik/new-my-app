@@ -24,7 +24,7 @@ function authenticateToken(req, res, next) {
 // GET: ყველა კომპანიის მიღება
 router.get('/', authenticateToken, async (req, res) => {
     try {
-        const { searchTerm, country, profile, status, identification_code } = req.query;
+        const { searchTerm, country, profile, status, identification_code, exhibition } = req.query;
         
         let query = `
             SELECT 
@@ -73,6 +73,27 @@ router.get('/', authenticateToken, async (req, res) => {
             paramCount++;
             query += ` AND c.identification_code LIKE $${paramCount}`;
             queryParams.push(`%${identification_code}%`);
+        }
+        
+        // ფილტრი გამოფენის მიხედვით
+        if (exhibition) {
+            console.log('Filtering by exhibition ID:', exhibition);
+            const exhibitionId = parseInt(exhibition);
+            
+            if (!isNaN(exhibitionId)) {
+                // PostgreSQL-ისთვის ვიყენებთ jsonb ოპერატორს @> JSON მასივში ელემენტის მოსაძებნად
+                paramCount++;
+                query += ` AND c.selected_exhibitions @> $${paramCount}`;
+                queryParams.push(JSON.stringify([exhibitionId]));
+                
+                console.log('Updated paramCount:', paramCount);
+                console.log('Query params:', queryParams);
+            } else {
+                console.log('Invalid exhibition ID:', exhibition);
+                // თუ არასწორი ID არის, ვერაფერი არ გამოვიდეს
+                paramCount++;
+                query += ` AND 1=0`;
+            }
         }
         
         query += ` ORDER BY c.created_at DESC`;

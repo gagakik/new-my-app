@@ -77,6 +77,7 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
         setImportResult(null);
         showNotification(`ფაილი არჩეულია: ${selectedFile.name}`, 'info');
       } else {
+        showNotification('მხოლოდ Excel ფაილები (.xlsx, .xls) ნებადართულია', 'error');
         console.error('არასწორი ფაილის ტიპი:', selectedFile.type, 'გაფართოება:', fileExtension);
         showNotification(
           `მხოლოდ Excel ფაილები (.xlsx, .xls) ნებადართულია. თქვენი ფაილი: ${selectedFile.type || 'უცნობი ტიპი'}`,

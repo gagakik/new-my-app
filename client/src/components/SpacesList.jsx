@@ -241,7 +241,7 @@ const SpacesList = ({ showNotification, userRole }) => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {spaces.map((space) => (
+                  {spaces.map((space, index) => (
                     <TableRow 
                       key={space.id}
                       sx={{ 
