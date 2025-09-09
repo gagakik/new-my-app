@@ -55,6 +55,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
   const [filterProfile, setFilterProfile] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterIdentificationCode, setFilterIdentificationCode] = useState('');
+  const [filterExhibition, setFilterExhibition] = useState('');
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [showImport, setShowImport] = useState(false);
   const [exhibitions, setExhibitions] = useState([]);
@@ -99,6 +100,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
       if (filterProfile) url += `profile=${filterProfile}&`;
       if (filterStatus) url += `status=${filterStatus}&`;
       if (filterIdentificationCode) url += `identification_code=${filterIdentificationCode}&`;
+      if (filterExhibition) url += `exhibition=${filterExhibition}&`;
 
       const response = await fetch(url, { headers });
       if (!response.ok) {
@@ -116,7 +118,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, filterCountry, filterProfile, filterStatus, filterIdentificationCode, showNotification]);
+  }, [searchTerm, filterCountry, filterProfile, filterStatus, filterIdentificationCode, filterExhibition, showNotification]);
 
   useEffect(() => {
     fetchCompanies();
@@ -393,6 +395,19 @@ const CompaniesList = ({ showNotification, userRole }) => {
                 value={filterIdentificationCode}
                 onChange={(e) => setFilterIdentificationCode(e.target.value)}
               />
+            </Grid>
+            <Grid item xs={12} sm={6} md={2}>
+              <FormControl sx={{ m: 1, minWidth: 120 }} fullWidth size="small">
+                <InputLabel>გამოფენა</InputLabel>
+                <Select value={filterExhibition} label="გამოფენა" onChange={(e) => setFilterExhibition(e.target.value)}>
+                  <MenuItem value="">ყველა გამოფენა</MenuItem>
+                  {exhibitions.map(exhibition => (
+                    <MenuItem key={exhibition.id} value={exhibition.exhibition_name}>
+                      {exhibition.exhibition_name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Grid>
             <Grid item xs={12} sm={6} md={2}>
               <Button
