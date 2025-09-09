@@ -4,7 +4,7 @@ const path = require('path');
 const XLSX = require('xlsx');
 const db = require('./db');
 
-async function importCompaniesFromExcel(filePath) {
+async function importCompaniesFromExcel(filePath, userId = null) {
     try {
         console.log('კომპანიების იმპორტის დაწყება...');
         
@@ -17,6 +17,30 @@ async function importCompaniesFromExcel(filePath) {
         const companiesData = XLSX.utils.sheet_to_json(worksheet);
         
         console.log(`მოიძებნა ${companiesData.length} კომპანია`);
+        
+        // თუ userId არ არის მოწოდებული, ვეცდებით პირველი ადმინის მოძებნას
+        let validUserId = userId;
+        if (!validUserId) {
+            try {
+                const userResult = await db.query('SELECT id FROM users WHERE role = $1 LIMIT 1', ['admin']);
+                if (userResult.rows.length > 0) {
+                    validUserId = userResult.rows[0].id;
+                } else {
+                    // თუ ადმინი არ მოიძებნა, ვამატებთ დეფოლტ ადმინს
+                    console.log('არ მოიძებნა ადმინი, შექმნა დეფოლტ ადმინის...');
+                    const createAdminResult = await db.query(`
+                        INSERT INTO users (username, email, password_hash, role, is_active) 
+                        VALUES ($1, $2, $3, $4, $5) 
+                        ON CONFLICT (email) DO UPDATE SET role = 'admin'
+                        RETURNING id
+                    `, ['admin', 'admin@example.com', 'temp_hash', 'admin', true]);
+                    validUserId = createAdminResult.rows[0].id;
+                }
+            } catch (userError) {
+                console.error('მომხმარებლის მოძებნის შეცდომა:', userError);
+                validUserId = 1; // ფოლბექ
+            }
+        }
         
         let successCount = 0;
         let errorCount = 0;
@@ -56,8 +80,13 @@ async function importCompaniesFromExcel(filePath) {
                 }
                 
                 // ვალიდაცია
-                if (!companyData.company_name || !companyData.identification_code) {
-                    throw new Error(`ხაზი ${i + 2}: საჭიროა კომპანიის დასახელება და საიდენტიფიკაციო კოდი`);
+                if (!companyData.company_name) {
+                    throw new Error(`ხაზი ${i + 2}: საჭიროა კომპანიის დასახელება`);
+                }
+                
+                // თუ იდენტიფიკაციო კოდი არ არის, შექმნათ უნიკალური კოდი
+                if (!companyData.identification_code) {
+                    companyData.identification_code = `AUTO_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
                 }
                 
                 // მონაცემთა ბაზაში ჩასმა
@@ -89,7 +118,7 @@ async function importCompaniesFromExcel(filePath) {
                     companyData.comment,
                     JSON.stringify(contactPersons),
                     JSON.stringify([]),
-                    1 // default user id
+                    validUserId
                 ]);
                 
                 successCount++;

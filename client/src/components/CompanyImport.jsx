@@ -46,16 +46,42 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
+      console.log('ფაილის არჩევა:', {
+        name: selectedFile.name,
+        size: selectedFile.size,
+        type: selectedFile.type,
+        lastModified: new Date(selectedFile.lastModified).toLocaleString()
+      });
+
       const allowedTypes = [
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'application/vnd.ms-excel'
       ];
       
-      if (allowedTypes.includes(selectedFile.type)) {
+      // ზომის შემოწმება
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (selectedFile.size > maxSize) {
+        console.error('ფაილი ძალიან დიდია:', selectedFile.size, 'ბაიტი, მაქსიმუმ:', maxSize);
+        showNotification(`ფაილი ძალიან დიდია (${(selectedFile.size / 1024 / 1024).toFixed(2)}MB). მაქსიმალური ზომა 5MB.`, 'error');
+        e.target.value = '';
+        return;
+      }
+      
+      // ტიპის შემოწმება
+      const fileExtension = selectedFile.name.toLowerCase().split('.').pop();
+      const allowedExtensions = ['xlsx', 'xls'];
+      
+      if (allowedTypes.includes(selectedFile.type) || allowedExtensions.includes(fileExtension)) {
+        console.log('ფაილი მოწონებულია:', selectedFile.name);
         setFile(selectedFile);
         setImportResult(null);
+        showNotification(`ფაილი არჩეულია: ${selectedFile.name}`, 'info');
       } else {
-        showNotification('მხოლოდ Excel ფაილები (.xlsx, .xls) ნებადართულია', 'error');
+        console.error('არასწორი ფაილის ტიპი:', selectedFile.type, 'გაფართოება:', fileExtension);
+        showNotification(
+          `მხოლოდ Excel ფაილები (.xlsx, .xls) ნებადართულია. თქვენი ფაილი: ${selectedFile.type || 'უცნობი ტიპი'}`,
+          'error'
+        );
         e.target.value = '';
       }
     }
@@ -126,14 +152,21 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
       return;
     }
 
+    console.log('იმპორტის დაწყება:', file.name, 'ზომა:', file.size, 'ტიპი:', file.type);
     setImporting(true);
     setImportResult(null);
 
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        showNotification('ავტორიზაციის ტოკენი არ მოიძებნა. გთხოვთ, ხელახლა შეხვიდეთ სისტემაში.', 'error');
+        return;
+      }
+
       const formData = new FormData();
       formData.append('excelFile', file);
 
+      console.log('მოთხოვნის გაგზავნა სერვერზე...');
       const response = await fetch('/api/import/companies', {
         method: 'POST',
         headers: {
@@ -142,22 +175,70 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
         body: formData
       });
 
-      const result = await response.json();
+      console.log('სერვერის პასუხი:', response.status, response.statusText);
+
+      let result;
+      try {
+        result = await response.json();
+        console.log('იმპორტის შედეგი:', result);
+      } catch (parseError) {
+        console.error('JSON პარსინგის შეცდომა:', parseError);
+        throw new Error('სერვერისგან არასწორი პასუხი მოვიდა');
+      }
 
       if (response.ok) {
         setImportResult(result);
-        showNotification(
-          `იმპორტი დასრულდა: ${result.imported}/${result.total} კომპანია დამატებულია`,
-          'success'
-        );
+        
+        if (result.errors > 0) {
+          showNotification(
+            `იმპორტი დასრულდა ნაწილობრივ: ${result.imported}/${result.total} კომპანია დამატებულია, ${result.errors} შეცდომით`,
+            'warning'
+          );
+        } else {
+          showNotification(
+            `იმპორტი წარმატებით დასრულდა: ${result.imported}/${result.total} კომპანია დამატებულია`,
+            'success'
+          );
+        }
+        
         if (onImportComplete) {
           onImportComplete();
         }
       } else {
-        throw new Error(result.error || 'იმპორტის შეცდომა');
+        // სტატუს კოდის მიხედვით კონკრეტული შეტყობინებები
+        let errorMessage = result.error || 'იმპორტის შეცდომა';
+        
+        switch (response.status) {
+          case 401:
+            errorMessage = 'ავტორიზაციის შეცდომა. გთხოვთ, ხელახლა შეხვიდეთ სისტემაში.';
+            break;
+          case 403:
+            errorMessage = 'თქვენ არ გაქვთ ამ ოპერაციის შესრულების უფლება.';
+            break;
+          case 413:
+            errorMessage = 'ფაილი ძალიან დიდია. მაქსიმალური ზომა 5MB.';
+            break;
+          case 415:
+            errorMessage = 'არასწორი ფაილის ფორმატი. მხოლოდ Excel ფაილები (.xlsx, .xls) ნებადართულია.';
+            break;
+          case 500:
+            errorMessage = 'სერვერის შიდა შეცდომა. სცადეთ მოგვიანებით.';
+            break;
+        }
+        
+        console.error('იმპორტის შეცდომა:', response.status, errorMessage, result);
+        throw new Error(errorMessage);
       }
     } catch (error) {
-      showNotification(`შეცდომა: ${error.message}`, 'error');
+      console.error('იმპორტის პროცესის შეცდომა:', error);
+      
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        showNotification('სერვერთან კავშირის შეცდომა. შეამოწმეთ ინტერნეტ კავშირი.', 'error');
+      } else if (error.message.includes('413')) {
+        showNotification('ფაილი ძალიან დიდია. მაქსიმალური ზომა 5MB.', 'error');
+      } else {
+        showNotification(`შეცდომა: ${error.message}`, 'error');
+      }
     } finally {
       setImporting(false);
     }
@@ -384,18 +465,29 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
               {importResult.errorDetails && importResult.errorDetails.length > 0 && (
                 <Alert severity="error" sx={{ mt: 2 }}>
                   <Typography variant="subtitle2" gutterBottom>
-                    შეცდომების დეტალები:
+                    შეცდომების დეტალები ({importResult.errorDetails.length}):
                   </Typography>
-                  <List dense>
+                  <List dense sx={{ maxHeight: 200, overflowY: 'auto' }}>
                     {importResult.errorDetails.map((error, index) => (
-                      <ListItem key={index} sx={{ py: 0.5 }}>
-                        <ListItemIcon>
+                      <ListItem key={index} sx={{ py: 0.5, alignItems: 'flex-start' }}>
+                        <ListItemIcon sx={{ minWidth: 36 }}>
                           <Error color="error" />
                         </ListItemIcon>
-                        <ListItemText primary={error} />
+                        <ListItemText 
+                          primary={error}
+                          sx={{ 
+                            '& .MuiListItemText-primary': { 
+                              fontSize: '0.875rem',
+                              wordBreak: 'break-word'
+                            }
+                          }}
+                        />
                       </ListItem>
                     ))}
                   </List>
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                    💡 რჩევა: შეამოწმეთ შაბლონის სწორი შევსება და საჭირო ველის (კომპანიის დასახელება) არსებობა
+                  </Typography>
                 </Alert>
               )}
             </CardContent>
@@ -477,8 +569,8 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
           <List>
             <ListItem>
               <ListItemText 
-                primary="საჭირო ველები: კომპანიის დასახელება და საიდენტიფიკაციო კოდი"
-                secondary="ეს ველები აუცილებლად უნდა იყოს შევსებული"
+                primary="საჭირო ველი: კომპანიის დასახელება"
+                secondary="ეს ველი აუცილებლად უნდა იყოს შევსებული. საიდენტიფიკაციო კოდი თუ არ მიუთითოთ, ავტომატურად შეიქმნება."
               />
             </ListItem>
             <ListItem>
