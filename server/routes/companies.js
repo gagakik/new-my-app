@@ -25,7 +25,7 @@ function authenticateToken(req, res, next) {
 router.get('/', authenticateToken, async (req, res) => {
     try {
         const { searchTerm, country, profile, status, identification_code, exhibition } = req.query;
-        
+
         let query = `
             SELECT 
                 c.*,
@@ -36,56 +36,56 @@ router.get('/', authenticateToken, async (req, res) => {
             LEFT JOIN users u2 ON c.updated_by_user_id = u2.id
             WHERE 1=1
         `;
-        
+
         const queryParams = [];
         let paramCount = 0;
-        
+
         // ძებნა კომპანიის სახელით
         if (searchTerm) {
             paramCount++;
             query += ` AND LOWER(c.company_name) LIKE LOWER($${paramCount})`;
             queryParams.push(`%${searchTerm}%`);
         }
-        
+
         // ფილტრი ქვეყნის მიხედვით
-        if (country) {
+        if (country && country.trim() && country.trim() !== 'All Countries') {
             paramCount++;
-            query += ` AND c.country = $${paramCount}`;
-            queryParams.push(country);
+            query += ` AND LOWER(c.country) = LOWER($${paramCount})`;
+            queryParams.push(country.trim());
         }
-        
+
         // ფილტრი პროფილის მიხედვით
         if (profile) {
             paramCount++;
             query += ` AND LOWER(c.company_profile) LIKE LOWER($${paramCount})`;
             queryParams.push(`%${profile}%`);
         }
-        
+
         // ფილტრი სტატუსის მიხედვით
         if (status) {
             paramCount++;
             query += ` AND c.status = $${paramCount}`;
             queryParams.push(status);
         }
-        
+
         // ფილტრი საიდენტიფიკაციო კოდის მიხედვით
         if (identification_code) {
             paramCount++;
             query += ` AND c.identification_code LIKE $${paramCount}`;
             queryParams.push(`%${identification_code}%`);
         }
-        
+
         // ფილტრი გამოფენის მიხედვით
         if (exhibition) {
             console.log('Filtering by exhibition ID:', exhibition);
             const exhibitionId = parseInt(exhibition);
-            
+
             if (!isNaN(exhibitionId)) {
                 // PostgreSQL-ისთვის ვიყენებთ jsonb ოპერატორს @> JSON მასივში ელემენტის მოსაძებნად
                 paramCount++;
                 query += ` AND c.selected_exhibitions @> $${paramCount}`;
                 queryParams.push(JSON.stringify([exhibitionId]));
-                
+
                 console.log('Updated paramCount:', paramCount);
                 console.log('Query params:', queryParams);
             } else {
@@ -95,9 +95,9 @@ router.get('/', authenticateToken, async (req, res) => {
                 query += ` AND 1=0`;
             }
         }
-        
+
         query += ` ORDER BY c.created_at DESC`;
-        
+
         const result = await db.query(query, queryParams);
 
         // Parse contact_persons and selected_exhibitions JSON for each company
@@ -157,7 +157,13 @@ router.get('/', authenticateToken, async (req, res) => {
         res.json(companies);
     } catch (error) {
         console.error('კომპანიების მიღების შეცდომა:', error);
-        res.status(500).json({ message: 'სერვერის შეცდომა' });
+        console.error('Query:', query);
+        console.error('Query params:', queryParams);
+        console.error('Request query:', req.query);
+        res.status(500).json({ 
+            message: 'სერვერის შეცდომა',
+            error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        });
     }
 });
 
@@ -413,13 +419,13 @@ router.put('/:id', authenticateToken, async (req, res) => {
         }
 
         const company = result.rows[0];
-        
+
         // PostgreSQL returns JSON data as parsed objects, not strings
         // Handle contact_persons
         if (!company.contact_persons || !Array.isArray(company.contact_persons)) {
             company.contact_persons = [];
         }
-        
+
         // Handle selected_exhibitions  
         if (!company.selected_exhibitions || !Array.isArray(company.selected_exhibitions)) {
             company.selected_exhibitions = [];
