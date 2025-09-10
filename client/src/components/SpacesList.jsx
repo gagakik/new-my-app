@@ -298,35 +298,40 @@ const SpacesList = ({ showNotification, userRole }) => {
                       <TableCell>
                         {isAuthorizedForManagement && (
                           <Box sx={{ display: 'flex', gap: 1 }}>
-                            <Button
+                            <IconButton
                               size="small"
                               onClick={() => handleEditClick(space)}
-                              sx={{
-                                color: '#ffffffff',
-                                '&:hover': {
-                                  backgroundColor: 'rgba(40, 167, 69, 0.1)',
-                                  transform: 'scale(1.1)'
-                                },
-                                transition: 'all 0.2s ease'
-                              }}
+                                  sx={{
+                                        background: '#ffffffff',
+                                        color: '#000000ff',
+                                        textTransform: 'none',
+                                        boxShadow: '0 0 5px #745ba7',
+                                        px: 1,
+                                        py: 1,
+                                        borderRadius: 2,
+                                        '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   } ,
+                                        transition: 'all 0.2s ease'
+                                      }}
                             >
                               <Edit fontSize="small" />
-                            </Button>
-                            <Button
+                            </IconButton>
+                            <IconButton
                               size="small"
                               onClick={() => handleDelete(space.id)}
                               sx={{
-                                color: '#ffffffff',
-                                background: 'rgba(220, 53, 69, 1)',
-                                '&:hover': {
-                                  backgroundColor: 'rgba(220, 53, 69, 0.1)',
-                                  transform: 'scale(1.1)'
-                                },
-                                transition: 'all 0.2s ease'
-                              }}
+                                        background: '#ffffffff',
+                                        color: '#000000ff',
+                                        textTransform: 'none',
+                                        boxShadow: '0 0 5px #745ba7',
+                                        px: 1,
+                                        py: 1,
+                                        borderRadius: 2,
+                                        '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#ff0000ff'   } ,
+                                        transition: 'all 0.2s ease'
+                                      }}
                             >
                               <Delete fontSize="small" />
-                            </Button>
+                            </IconButton>
                           </Box>
                         )}
                       </TableCell>

@@ -42,27 +42,59 @@ function requireAdmin(req, res, next) {
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         const uploadDir = path.join(__dirname, "../uploads/import");
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
+        console.log('Upload directory path:', uploadDir);
+        
+        try {
+            // Create directory with recursive option and set permissions
+            if (!fs.existsSync(uploadDir)) {
+                fs.mkdirSync(uploadDir, { recursive: true, mode: 0o755 });
+                console.log('Upload directory created successfully:', uploadDir);
+            } else {
+                console.log('Upload directory already exists:', uploadDir);
+            }
+            
+            // Check if directory is writable
+            fs.accessSync(uploadDir, fs.constants.W_OK);
+            console.log('Directory is writable');
+            
+            cb(null, uploadDir);
+        } catch (error) {
+            console.error('Error creating/accessing upload directory:', error);
+            cb(error);
         }
-        cb(null, uploadDir);
     },
     filename: function (req, file, cb) {
-        cb(
-            null,
-            `companies-${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(file.originalname)}`,
-        );
+        const timestamp = Date.now();
+        const randomNum = Math.round(Math.random() * 1e9);
+        const ext = path.extname(file.originalname);
+        const filename = `companies-${timestamp}-${randomNum}${ext}`;
+        console.log('Generated filename:', filename);
+        cb(null, filename);
     },
 });
 
 const upload = multer({
     storage: storage,
     fileFilter: function (req, file, cb) {
+        console.log('File filter check:', {
+            originalname: file.originalname,
+            mimetype: file.mimetype,
+            size: file.size
+        });
+        
         const allowedTypes = [".xlsx", ".xls"];
+        const allowedMimes = [
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/vnd.ms-excel"
+        ];
+        
         const ext = path.extname(file.originalname).toLowerCase();
-        if (allowedTypes.includes(ext)) {
+        
+        if (allowedTypes.includes(ext) || allowedMimes.includes(file.mimetype)) {
+            console.log('File accepted:', file.originalname);
             cb(null, true);
         } else {
+            console.log('File rejected:', file.originalname, 'Type:', file.mimetype, 'Ext:', ext);
             cb(new Error("მხოლოდ Excel ფაილები (.xlsx, .xls) ნებადართულია"));
         }
     },
@@ -78,45 +110,101 @@ router.post(
     requireAdmin,
     upload.single("excelFile"),
     async (req, res) => {
+        let filePath = null;
+        
         try {
+            console.log('Request received:', {
+                hasFile: !!req.file,
+                body: req.body,
+                headers: req.headers['content-type']
+            });
+            
             if (!req.file) {
-                return res
-                    .status(400)
-                    .json({ error: "Excel ფაილი არ არის ატვირთული" });
+                console.error('No file received in request');
+                return res.status(400).json({ 
+                    error: "Excel ფაილი არ არის ატვირთული",
+                    details: "მულტერმა ფაილი ვერ დაამუშავა"
+                });
             }
 
-            const filePath = req.file.path;
+            filePath = req.file.path;
+            console.log('File received successfully:', {
+                filePath,
+                originalName: req.file.originalname,
+                mimetype: req.file.mimetype,
+                size: req.file.size,
+                fieldname: req.file.fieldname
+            });
 
-            // Run import
-            const result = await importCompaniesFromExcel(filePath, req.user.userId);
-
-            // Clean up uploaded file
-            try {
-                fs.unlinkSync(filePath);
-            } catch (error) {
-                console.error("Error deleting uploaded file:", error);
+            // Verify file exists and is readable
+            if (!fs.existsSync(filePath)) {
+                throw new Error(`ფაილი ვერ მოიძებნა მითითებულ მისამართზე: ${filePath}`);
             }
+
+            const fileStats = fs.statSync(filePath);
+            console.log('File stats:', {
+                size: fileStats.size,
+                isFile: fileStats.isFile(),
+                permissions: fileStats.mode.toString(8)
+            });
+
+            if (fileStats.size === 0) {
+                throw new Error('ატვირთული ფაილი ცარიელია');
+            }
+
+            console.log('Starting import process for user:', req.user.id);
+
+            // Import companies from Excel
+            const { importCompaniesFromExcel } = require('../import-companies');
+            const result = await importCompaniesFromExcel(filePath, req.user.id);
+
+            console.log('Import completed:', result);
 
             if (result.success) {
                 res.json({
-                    message: "იმპორტი წარმატებით დასრულდა",
-                    total: result.total,
+                    message: `წარმატებით იმპორტირდა ${result.imported} კომპანია ${result.total}-დან`,
                     imported: result.imported,
+                    total: result.total,
                     errors: result.errors,
-                    errorDetails: result.errorDetails,
+                    errorDetails: result.errorDetails
                 });
             } else {
-                res.status(500).json({
-                    error: "იმპორტის შეცდომა",
-                    details: result.error,
+                res.status(400).json({
+                    error: 'იმპორტი ვერ განხორციელდა',
+                    details: result.error
                 });
             }
         } catch (error) {
-            console.error("Import endpoint error:", error);
-            res.status(500).json({
-                error: "სერვერის შეცდომა",
-                details: error.message,
+            console.error('Import process error:', error);
+
+            let errorMessage = 'იმპორტის შეცდომა';
+            let statusCode = 500;
+
+            if (error.message.includes('ENOENT')) {
+                errorMessage = 'ფაილი ვერ მოიძებნა ან წაიშალა';
+                statusCode = 400;
+            } else if (error.message.includes('EACCES')) {
+                errorMessage = 'ფაილზე წვდომის უფლება არ არის';
+                statusCode = 403;
+            } else if (error.message.includes('ცარიელია')) {
+                errorMessage = error.message;
+                statusCode = 400;
+            }
+
+            res.status(statusCode).json({
+                error: errorMessage,
+                details: error.message
             });
+        } finally {
+            // Clean up uploaded file in finally block
+            if (filePath && fs.existsSync(filePath)) {
+                try {
+                    fs.unlinkSync(filePath);
+                    console.log('File cleanup successful:', filePath);
+                } catch (cleanupError) {
+                    console.warn('File cleanup failed:', cleanupError.message);
+                }
+            }
         }
     },
 );
@@ -133,47 +221,33 @@ router.get(
             // Create template data with multiple examples and instructions
             const templateData = [
                 {
-                    "კომპანიის დასახელება": "მაგალითი კომპანია 1 (საჭირო)",
-                    ქვეყანა: "საქართველო",
-                    პროფილი: "IT კომპანია",
-                    "საიდენტიფიკაციო კოდი": "123456789 (საჭირო)",
+                    "კომპანიის დასახელება": "ტექნოლოგიური შპს",
+                    "ქვეყანა": "საქართველო",
+                    "პროფილი": "ინფორმაციული ტექნოლოგიები",
+                    "საიდენტიფიკაციო კოდი": "123456789",
                     "იურიდიული მისამართი": "თბილისი, საქართველო",
-                    ვებსაიტი: "https://example.ge",
-                    სტატუსი: "აქტიური",
-                    კომენტარი: "ტესტ კომენტარი",
-                    "საკონტაქტო პირი": "გიორგი გიორგაძე",
-                    პოზიცია: "დირექტორი",
-                    ტელეფონი: "+995555123456",
-                    "ელ-ფოსტა": "contact@example.ge",
+                    "ვებსაიტი": "https://techcompany.ge",
+                    "სტატუსი": "აქტიური",
+                    "კომენტარი": "ტესტ კომპანია",
+                    "საკონტაქტო პირი": "ნიკოლოზ გაბუნია",
+                    "პოზიცია": "დირექტორი",
+                    "ტელეფონი": "+995555123456",
+                    "ელ-ფოსტა": "info@techcompany.ge"
                 },
                 {
-                    "კომპანიის დასახელება": "ABC Technology Ltd (საჭირო)",
-                    ქვეყანა: "გერმანია",
-                    პროფილი: "სონსორული ტექნოლოგიები",
-                    "საიდენტიფიკაციო კოდი": "987654321 (საჭირო)",
-                    "იურიდიული მისამართი": "ბერლინი, გერმანია",
-                    ვებსაიტი: "www.abctech.de",
-                    სტატუსი: "აქტიური",
-                    კომენტარი: "მნიშვნელოვანი პარტნიორი",
-                    "საკონტაქტო პირი": "Hans Mueller",
-                    პოზიცია: "CEO",
-                    ტელეფონი: "+49-30-12345678",
-                    "ელ-ფოსტა": "hans.mueller@abctech.de",
-                },
-                {
-                    "კომპანიის დასახელება": "Global Solutions Inc (საჭირო)",
-                    ქვეყანა: "აშშ",
-                    პროფილი: "კონსულტინგი",
-                    "საიდენტიფიკაციო კოდი": "456789123 (საჭირო)",
+                    "კომპანიის დასახელება": "გლობალური სოლუშენები",
+                    "ქვეყანა": "აშშ",
+                    "პროფილი": "კონსულტინგი",
+                    "საიდენტიფიკაციო კოდი": "456789123",
                     "იურიდიული მისამართი": "ნიუ-იორკი, აშშ",
-                    ვებსაიტი: "",
-                    სტატუსი: "პასიური",
-                    კომენტარი: "",
+                    "ვებსაიტი": "https://globalsolutions.com",
+                    "სტატუსი": "აქტიური",
+                    "კომენტარი": "კონსალტინგის კომპანია",
                     "საკონტაქტო პირი": "John Smith",
-                    პოზიცია: "Manager",
-                    ტელეფონი: "",
-                    "ელ-ფოსტა": "john@globalsolutions.com",
-                },
+                    "პოზიცია": "Manager",
+                    "ტელეფონი": "+1555123456",
+                    "ელ-ფოსტა": "john@globalsolutions.com"
+                }
             ];
 
             // Create workbook

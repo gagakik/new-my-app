@@ -247,33 +247,44 @@ const ExhibitionsList = ({ showNotification, userRole }) => {
                           <TableCell align="center">
                             <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
                               <Tooltip title="რედაქტირება">
-                                <Button
+                                <IconButton
                                 variant="contained"
                                   size="small"
                                   onClick={() => handleEditClick(exhibition)}
-                                  color="primary"
-                                  sx={{ 
-                                    backgroundColor: 'rgba(25, 118, 210, 0.1)',
-                                    color: '#fff',
-                                    '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.2)' }
-                                  }}
+                                  sx={{
+                                        background: '#ffffffff',
+                                        color: '#000000ff',
+                                        textTransform: 'none',
+                                        boxShadow: '0 0 5px #745ba7',
+                                        px: 1,
+                                        py: 1,
+                                        borderRadius: 2,
+                                        '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   } ,
+                                        transition: 'all 0.2s ease'
+                                      }}
                                 >
                                   <Edit fontSize="small" />
-                                </Button>
+                                </IconButton>
                               </Tooltip>
                               <Tooltip title="წაშლა">
-                                <Button
+                                <IconButton
                                   size="small"
                                   onClick={() => handleDelete(exhibition.id)}
                                   color="error"
-                                  sx={{ 
-                                    color: '#fff',
-                                    background: 'rgba(139, 18, 9, 1)',
-                                    '&:hover': { background: 'rgba(244, 67, 54, 0.2)', color: 'rgba(139, 18, 9, 1)'}
+                              sx={{
+                                    background: '#ffffffff',
+                                    color: '#000000ff',
+                                    textTransform: 'none',
+                                    boxShadow: '0 0 5px #745ba7', 
+                                    px: 1,
+                                    py: 1,
+                                    borderRadius: 2,
+                                    '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#ff0000ff'} ,
+                                    transition: 'all 0.2s ease'
                                   }}
                                 >
                                   <Delete fontSize="small" />
-                                </Button>
+                                </IconButton>
                               </Tooltip>
                             </Box>
                           </TableCell>

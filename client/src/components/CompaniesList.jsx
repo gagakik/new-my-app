@@ -913,19 +913,8 @@ const CompaniesList = ({ showNotification, userRole }) => {
                                 variant="outlined"
                                 onClick={() => handleEditExhibitions(company)}
                                 startIcon={<Edit />}
-                                sx={{ 
-                                  maxWidth: 'fit-content', 
-                                  mt: 1,
-                                  fontSize: '0.7rem',
-                                  width: '100%',
-                                  height: '28px',
-                                  borderColor: '#1976d2',
-                                  color: '#ffffffff',
-                                  '&:hover': {
-                                    backgroundColor: 'rgba(124, 154, 184, 1)',
-                                    borderColor: '#bccee2ff'
-                                  }
-                                }}
+                                sx={{ minWidth: 'auto',px:2,
+                                color:'#000000ff', background: '#ffffffff',boxShadow: '0 0 5px #745ba7',borderRadius:'15px', '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   }   }}
                               >
                             EDIT
                               </Button>
@@ -961,25 +950,44 @@ const CompaniesList = ({ showNotification, userRole }) => {
                         <TableCell>
                           <Box sx={{ display: 'flex', gap: 2, alignItems: "center", justifyContent: "center" }}>
                             <Tooltip title="რედაქტირება">
-                              <Button
+                              <IconButton
                                 size="small"
                                 variant="contained"
                                 onClick={() => handleEditClick(company)}
-                                color="primary"
-                                sx={{ minWidth: 'auto', px: 1 }}
+                                                                 sx={{
+                                        background: '#ffffffff',
+                                        color: '#000000ff',
+                                        textTransform: 'none',
+                                        boxShadow: '0 0 5px #745ba7',
+                                        px: 1,
+                                        py: 1,
+                                        borderRadius: 2,
+                                        '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   } ,
+                                        transition: 'all 0.2s ease'
+                                      }}
                               >
                                 <Edit fontSize="small" />
-                              </Button>
+                              </IconButton>
                             </Tooltip>
                             <Tooltip title="წაშლა">
-                              <Button
+                              <IconButton
                                 size="small"
                                 variant="contained"
                                 onClick={() => handleDelete(company.id)}
-                                sx={{ minWidth: 'auto', px: 1, color:'#ffffffff', background: '#990000ff',}}
+                                                                  sx={{
+                                        background: '#ffffffff',
+                                        color: '#000000ff',
+                                        textTransform: 'none',
+                                        boxShadow: '0 0 5px #745ba7',
+                                        px: 1,
+                                        py: 1,
+                                        borderRadius: 2,
+                                        '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#ff0000ff'   } ,
+                                        transition: 'all 0.2s ease'
+                                      }}
                               >
                                 <Delete fontSize="small" />
-                              </Button>
+                              </IconButton>
                             </Tooltip>
                           </Box>
                         </TableCell>

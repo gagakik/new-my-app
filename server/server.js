@@ -12,6 +12,37 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+console.log('Environment check:', {
+  NODE_ENV: process.env.NODE_ENV,
+  JWT_SECRET: process.env.JWT_SECRET ? 'Set' : 'Not set',
+  PORT: PORT
+});
+
+// Create necessary directories
+const createDirectories = () => {
+  const directories = [
+    path.join(__dirname, 'uploads'),
+    path.join(__dirname, 'uploads/import'),
+    path.join(__dirname, 'uploads/participants')
+  ];
+
+  directories.forEach(dir => {
+    try {
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true, mode: 0o755 });
+        console.log(`Directory created: ${dir}`);
+      } else {
+        console.log(`Directory exists: ${dir}`);
+      }
+    } catch (error) {
+      console.error(`Error creating directory ${dir}:`, error);
+    }
+  });
+};
+
+// Call directory creation
+createDirectories();
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -70,6 +101,8 @@ const storage = multer.diskStorage({
     // Check if it's a participant file upload based on the route
     if (req.route && req.route.path && req.route.path.includes('participants')) {
       uploadPath = path.join(__dirname, 'uploads', 'participants');
+    } else if (req.route && req.route.path && req.route.path.includes('import')) {
+      uploadPath = path.join(__dirname, 'uploads', 'import');
     }
 
     if (!fs.existsSync(uploadPath)) {
@@ -115,11 +148,9 @@ app.get('/api/download/:filename', authenticateToken, (req, res) => {
 
   // Handle different path formats
   let actualPath = fullPath;
-  
-  // If file doesn't exist at direct path, try with folder structure
+
+  // If file doesn't exist at direct path, try to find the file in uploads directory recursively
   if (!fs.existsSync(fullPath)) {
-    // Try to find the file in uploads directory recursively
-    const uploadDir = path.join(__dirname, 'uploads');
     const findFile = (dir, targetFile) => {
       const files = fs.readdirSync(dir, { withFileTypes: true });
       for (const file of files) {
@@ -133,8 +164,8 @@ app.get('/api/download/:filename', authenticateToken, (req, res) => {
       }
       return null;
     };
-    
-    actualPath = findFile(uploadDir, filename);
+
+    actualPath = findFile(path.join(__dirname, 'uploads'), filename);
     if (!actualPath) {
       return res.status(404).json({ message: 'ფაილი ვერ მოიძებნა' });
     }
@@ -1734,16 +1765,16 @@ app.delete('/api/annual-services/:id', authenticateToken, authorizeRoles('admin'
 // Get event files
 app.get('/api/events/:id/files', authenticateToken, async (req, res) => {
   const eventId = req.params.id;
-  
+
   try {
     const result = await db.query('SELECT * FROM annual_services WHERE id = $1', [eventId]);
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'ივენთი ვერ მოიძებნა' });
     }
-    
+
     const event = result.rows[0];
-    
+
     res.json({
       planFile: event.plan_file_path,
       invoiceFiles: event.invoice_files || [],
@@ -1765,7 +1796,7 @@ app.post('/api/events/:id/upload-plan', authenticateToken, authorizeRoles('admin
     }
 
     const filePath = req.file.path.replace(/\\/g, '/');
-    
+
     await db.query(`
       UPDATE annual_services 
       SET plan_file_path = $1, plan_uploaded_by = $2, updated_at = CURRENT_TIMESTAMP
@@ -1790,11 +1821,11 @@ app.post('/api/events/:id/upload-invoice', authenticateToken, authorizeRoles('ad
 
     const filePath = req.file.path.replace(/\\/g, '/');
     const fileName = req.body.file_name || req.file.originalname;
-    
+
     // Get current invoice files
     const result = await db.query('SELECT invoice_files FROM annual_services WHERE id = $1', [eventId]);
     const currentFiles = result.rows[0]?.invoice_files || [];
-    
+
     // Add new file
     const newFile = {
       name: fileName,
@@ -1803,9 +1834,9 @@ app.post('/api/events/:id/upload-invoice', authenticateToken, authorizeRoles('ad
       uploaded_at: new Date().toISOString(),
       uploaded_by: req.user.username
     };
-    
+
     const updatedFiles = [...currentFiles, newFile];
-    
+
     await db.query(`
       UPDATE annual_services 
       SET invoice_files = $1, updated_at = CURRENT_TIMESTAMP
@@ -1830,11 +1861,11 @@ app.post('/api/events/:id/upload-expense', authenticateToken, authorizeRoles('ad
 
     const filePath = req.file.path.replace(/\\/g, '/');
     const fileName = req.body.file_name || req.file.originalname;
-    
+
     // Get current expense files
     const result = await db.query('SELECT expense_files FROM annual_services WHERE id = $1', [eventId]);
     const currentFiles = result.rows[0]?.expense_files || [];
-    
+
     // Add new file
     const newFile = {
       name: fileName,
@@ -1843,9 +1874,9 @@ app.post('/api/events/:id/upload-expense', authenticateToken, authorizeRoles('ad
       uploaded_at: new Date().toISOString(),
       uploaded_by: req.user.username
     };
-    
+
     const updatedFiles = [...currentFiles, newFile];
-    
+
     await db.query(`
       UPDATE annual_services 
       SET expense_files = $1, updated_at = CURRENT_TIMESTAMP
@@ -1886,10 +1917,10 @@ app.delete('/api/events/:id/delete-invoice/:fileName', authenticateToken, author
     // Get current invoice files
     const result = await db.query('SELECT invoice_files FROM annual_services WHERE id = $1', [eventId]);
     const currentFiles = result.rows[0]?.invoice_files || [];
-    
+
     // Remove the file
     const updatedFiles = currentFiles.filter(file => file.name !== fileName);
-    
+
     await db.query(`
       UPDATE annual_services 
       SET invoice_files = $1, updated_at = CURRENT_TIMESTAMP
@@ -1912,10 +1943,10 @@ app.delete('/api/events/:id/delete-expense/:fileName', authenticateToken, author
     // Get current expense files
     const result = await db.query('SELECT expense_files FROM annual_services WHERE id = $1', [eventId]);
     const currentFiles = result.rows[0]?.expense_files || [];
-    
+
     // Remove the file
     const updatedFiles = currentFiles.filter(file => file.name !== fileName);
-    
+
     await db.query(`
       UPDATE annual_services 
       SET expense_files = $1, updated_at = CURRENT_TIMESTAMP
@@ -2312,9 +2343,22 @@ app.post('/api/cleanup/image-urls', authenticateToken, authorizeRoles('admin'), 
 });
 
 // Start server
-const HOST = process.env.HOST || '0.0.0.0';
-app.listen(PORT, HOST, () => {
-  console.log(`სერვერი მუშაობს ${HOST}:${PORT}`);
+const initializeAndTestDB = async () => {
+  try {
+    // Initialize database tables
+    await db.initializeDatabase();
+
+    // Test connection
+    const result = await db.query('SELECT COUNT(*) FROM companies');
+    console.log('ბაზასთან კავშირი წარმატებულია, კომპანიების რაოდენობა:', result.rows[0].count);
+  } catch (error) {
+    console.error('DB Error:', error);
+  }
+};
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`სერვერი გაშვებულია პორტზე ${PORT}`);
+  initializeAndTestDB();
 });
 
 

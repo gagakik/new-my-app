@@ -18,7 +18,6 @@ import EventsList from './EventsList';
 import BookingsList from './BookingsList';
 import Statistics from './Statistics';
 import EventReports from './EventReports';
-import UserProfile from './UserProfile';
 import Header from './Header';
 
 const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
@@ -102,6 +101,7 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
               მე-11 პავილიონი - 600 სმ.
 
             </Typography>
+            <Statistics/>
           </Box>
         </Paper>
       </Box>

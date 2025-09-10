@@ -18,7 +18,6 @@ import {
   ListItemText,
   Divider,
   useTheme,
-  useMediaQuery,
   Collapse,
   Badge,
   Tooltip,
@@ -187,41 +186,37 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
               size='small'
               onClick={menu.action}
               startIcon={menu.icon}
-              sx={{
-                background: 'linear-gradient(135deg, #667eea 0%, #1e7cff 100%)',
-                color: activeView === menu.key ? '#091c44ff' : '#fff',
-                fontWeight: activeView === menu.key ? 600 : 400,
-                textTransform: 'none',
-                px: 2,
-                py: 1,
-                borderRadius: 2,
-                '&:hover': {
-                  backgroundColor: 'action.hover',
-                  transform: 'translateY(-1px)',
-                },
-                transition: 'all 0.2s ease'
-              }}
+                sx={{
+                  background: '#ffffffff',
+                  color: '#000000ff',
+                  textTransform: 'none',
+                  boxShadow: '0 0 5px #745ba7',
+                  px: 2,
+                  py: 1,
+                  borderRadius: 2,
+                  '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   } ,
+                  transition: 'all 0.2s ease'
+                }}
             >
               {menu.label}
             </Button>
           ) : (
             <>
+           
               <Button
                 onClick={(e) => handleMenuOpen(e, menu.key)}
                 size='small'
                 endIcon={<ExpandMore />}
                 startIcon={menu.icon}
                 sx={{
-                  background: 'linear-gradient(135deg, #667eea 0%, #1e7cff 100%)',
-                  color: '#fff',
+                  background: '#ffffffff',
+                  color: '#000000ff',
                   textTransform: 'none',
+                  boxShadow: '0 0 5px #745ba7',
                   px: 2,
                   py: 1,
                   borderRadius: 2,
-                  '&:hover': {
-                    backgroundColor: 'action.hover',
-                    transform: 'translateY(-1px)',
-                  },
+                  '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   } ,
                   transition: 'all 0.2s ease'
                 }}
               >
@@ -299,7 +294,7 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
           <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
             🏢 logo
           </Typography>
-          <IconButton onClick={() => setMobileDrawerOpen(false)} size="small">
+          <IconButton onClick={() => setMobileDrawerOpen(false)} size="small" >
             <CloseIcon />
           </IconButton>
         </Box>
@@ -426,7 +421,8 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
             variant="outlined"
             startIcon={isDarkMode ? <LightMode /> : <DarkMode />}
             onClick={toggleDarkMode}
-            sx={{ textTransform: 'none' }}
+            sx={{ minWidth: 'auto',px:2,
+                                color:'#000000ff', background: '#ffffffff',boxShadow: '0 0 5px #745ba7',borderRadius:'15px', '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   }   }}
           >
             {isDarkMode ? 'ღია თემა' : 'მუქი თემა'}
           </Button>
@@ -440,13 +436,8 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
       <AppBar
         position="sticky"
         elevation={0}
-        sx={{
-          bgcolor: 'rgba(255, 255, 255, 0.95)',
-          backdropFilter: 'blur(20px)',
-          borderBottom: 1,
-          borderColor: 'divider',
-          color: 'text.primary'
-        }}
+        sx={{ minWidth: 'auto',px:2,
+                                color:'#000000ff', background: '#ffffffff',boxShadow: '0 0 5px #745ba7',borderRadius:'15px', '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   }   }}
       >
         <Toolbar>
           <Container
@@ -502,16 +493,17 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
                 <IconButton
                   size='small'
                   onClick={toggleDarkMode}
-                  sx={{
-                    color:'#f3cf2fff',
-                    display: { xs: 'none', md: 'flex' },
-                    bgcolor: 'action.hover',
-                    '&:hover': {
-                      bgcolor: 'action.selected',
-                      transform: 'translateY(-1px)',
-                    },
-                    transition: 'all 0.2s ease'
-                  }}
+                                                      sx={{
+                                        background: '#ffffffff',
+                                        color: '#000000ff',
+                                        textTransform: 'none',
+                                        boxShadow: '0 0 5px #745ba7',
+                                        px: 1,
+                                        py: 1,
+                                        borderRadius: 2,
+                                        '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   } ,
+                                        transition: 'all 0.5s ease'
+                                      }}
                 >
                   {isDarkMode ? <LightMode /> : <DarkMode />}
                 </IconButton>
@@ -522,16 +514,17 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
                 <IconButton
                   size='small'
                   onClick={() => setShowQRScanner(true)}
-                  sx={{
-                    color:'#fff',
-                    display: { xs: 'none', md: 'flex' },
-                    bgcolor: 'action.hover',
-                    '&:hover': {
-                      bgcolor: 'action.selected',
-                      transform: 'translateY(-1px)',
-                    },
-                    transition: 'all 0.2s ease'
-                  }}
+                                                      sx={{
+                                        background: '#ffffffff',
+                                        color: '#000000ff',
+                                        textTransform: 'none',
+                                        boxShadow: '0 0 5px #745ba7',
+                                        px: 1,
+                                        py: 1,
+                                        borderRadius: 2,
+                                        '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   } ,
+                                        transition: 'all 0.5s ease'
+                                      }}
                 >
                   <QrCodeScanner />
                 </IconButton>
@@ -543,18 +536,17 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
                 variant="outlined"
                 size='small'
                 startIcon={<Logout />}
-                sx={{
-                  background: '#464444ff',
-                  color: '#fff',
-                  border: 'none',
-                  display: { xs: 'none', md: 'flex' },
-                  textTransform: 'none',
-                  borderRadius: 2,
-                  '&:hover': {
-                    transform: 'translateY(-1px)',
-                  },
-                  transition: 'all 0.2s ease'
-                }}
+                                    sx={{
+                                        background: '#ffffffff',
+                                        color: '#000000ff',
+                                        textTransform: 'none',
+                                        boxShadow: '0 0 5px #745ba7',
+                                        px: 1,
+                                        py: 1,
+                                        borderRadius: 2,
+                                        '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   } ,
+                                        transition: 'all 0.5s ease'
+                                      }}
               >
                 EXIT
               </Button>

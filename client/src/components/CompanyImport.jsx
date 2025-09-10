@@ -167,7 +167,14 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
       const formData = new FormData();
       formData.append('excelFile', file);
 
-      console.log('მოთხოვნის გაგზავნა სერვერზე...');
+      console.log('მოთხოვნის გაგზავნა სერვერზე...', {
+        url: '/api/import/companies',
+        method: 'POST',
+        fileSize: file.size,
+        fileName: file.name,
+        hasToken: !!token
+      });
+      
       const response = await fetch('/api/import/companies', {
         method: 'POST',
         headers: {
@@ -176,7 +183,11 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
         body: formData
       });
 
-      console.log('სერვერის პასუხი:', response.status, response.statusText);
+      console.log('სერვერის პასუხი:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
+      });
 
       let result;
       try {
