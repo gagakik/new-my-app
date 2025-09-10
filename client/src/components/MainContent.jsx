@@ -19,6 +19,7 @@ import BookingsList from './BookingsList';
 import Statistics from './Statistics';
 import EventReports from './EventReports';
 import Header from './Header';
+import CalendarPage from '../pages/CalendarPage.jsx';
 
 const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
   const [activeSection, setActiveSection] = useState('dashboard');
@@ -101,7 +102,7 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
               მე-11 პავილიონი - 600 სმ.
 
             </Typography>
-            <Statistics/>
+            <CalendarPage/>
           </Box>
         </Paper>
       </Box>
