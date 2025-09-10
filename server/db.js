@@ -120,7 +120,7 @@ const createTables = async () => {
       )
     `);
 
-    // Annual Services table
+    // Annual Services table with proper DATE columns
     await query(`
       CREATE TABLE IF NOT EXISTS annual_services (
         id SERIAL PRIMARY KEY,
@@ -146,6 +146,8 @@ const createTables = async () => {
         files_updated_at TIMESTAMP
       )
     `);
+    
+    console.log("DATE columns verified for annual_services table");
 
     // Service Spaces table
     await query(`

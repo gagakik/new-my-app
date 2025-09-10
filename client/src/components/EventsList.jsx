@@ -179,15 +179,33 @@ const EventsList = ({ showNotification, userRole }) => {
 
     if (selectedYear) {
       filtered = filtered.filter(event => {
-        const eventYear = new Date(event.start_date).getFullYear();
-        return eventYear.toString() === selectedYear;
+        const startYear = new Date(event.start_date).getFullYear();
+        const endYear = new Date(event.end_date).getFullYear();
+        const year = parseInt(selectedYear);
+        
+        // ივენთი მოიცავს შერჩეულ წელს თუ იწყება ან მთავრდება იმ წელს
+        return startYear === year || endYear === year || (startYear < year && endYear > year);
       });
     }
 
     if (selectedMonth) {
       filtered = filtered.filter(event => {
-        const eventMonth = new Date(event.start_date).getMonth() + 1;
-        return eventMonth.toString() === selectedMonth;
+        const startDate = new Date(event.start_date);
+        const endDate = new Date(event.end_date);
+        const month = parseInt(selectedMonth);
+        
+        const startMonth = startDate.getMonth() + 1;
+        const endMonth = endDate.getMonth() + 1;
+        const startYear = startDate.getFullYear();
+        const endYear = endDate.getFullYear();
+        
+        // ივენთი მოიცავს შერჩეულ თვეს
+        if (startYear === endYear) {
+          return month >= startMonth && month <= endMonth;
+        } else {
+          // მრავალწლიანი ივენთისთვის
+          return (startMonth <= month) || (endMonth >= month);
+        }
       });
     }
 
@@ -410,7 +428,19 @@ const EventsList = ({ showNotification, userRole }) => {
   }
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('ka-GE');
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return dateString; // თუ თარიღი არასწორია
+      return date.toLocaleDateString('ka-GE', {
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric'
+      });
+    } catch (error) {
+      console.error('თარიღის ფორმატირების შეცდომა:', error);
+      return dateString;
+    }
   };
 
   const formatTime = (timeString) => {
@@ -426,8 +456,14 @@ const EventsList = ({ showNotification, userRole }) => {
 
   const getStatusBadge = (event) => {
     const now = new Date();
+    now.setHours(0, 0, 0, 0); // დღის დასაწყისზე გადაყვანა
+    
+    // თარიღების სწორად დამუშავება
     const startDate = new Date(event.start_date);
+    startDate.setHours(0, 0, 0, 0);
+    
     const endDate = new Date(event.end_date);
+    endDate.setHours(23, 59, 59, 999);
 
     // არქივი ყველაზე მაღალი პრიორიტეტის სტატუსია
     if (event.is_archived) {
@@ -802,12 +838,15 @@ const EventsList = ({ showNotification, userRole }) => {
                             <IconButton
                               size="small"
                               onClick={() => handleEditClick(event)}
-                              sx={{
-                                color: '#ffffffff',
-                                '&:hover': {
-                                  backgroundColor: 'rgba(40, 167, 69, 0.1)'
-                                }
-                              }}
+                                     sx={{
+                                        background: '#ffffffff',
+                                        color: '#000000ff',
+                                        textTransform: 'none',
+                                        boxShadow: '0 0 5px #745ba7',
+                                        borderRadius: 2,
+                                        '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   } ,
+                                        transition: 'all 0.2s ease'
+                                      }}
                             >
                               <Edit fontSize="small" />
                             </IconButton>
@@ -820,13 +859,15 @@ const EventsList = ({ showNotification, userRole }) => {
                               <IconButton
                                 size="small"
                                 onClick={() => handleCompleteEvent(event)}
-                                sx={{
-                                  color: '#ffffffff',
-                                  background: 'rgba(23, 162, 184, 1)',
-                                  '&:hover': {
-                                    backgroundColor: 'rgba(23, 162, 184, 0.1)'
-                                  }
-                                }}
+                                            sx={{
+                                        background: '#ffffffff',
+                                        color: '#000000ff',
+                                        textTransform: 'none',
+                                        boxShadow: '0 0 5px #745ba7',
+                                        borderRadius: 2,
+                                        '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   } ,
+                                        transition: 'all 0.2s ease'
+                                      }}
                               >
                                 <CheckCircle fontSize="small" />
                               </IconButton>
@@ -835,13 +876,15 @@ const EventsList = ({ showNotification, userRole }) => {
                               <IconButton
                                 size="small"
                                 onClick={() => handleArchive(event.id)}
-                                sx={{
-                                  color: '#ffffffff',
-                                  background: 'rgba(108, 117, 125, 1)',
-                                  '&:hover': {
-                                    backgroundColor: 'rgba(108, 117, 125, 0.1)'
-                                  }
-                                }}
+                                                                    sx={{
+                                        background: '#ffffffff',
+                                        color: '#000000ff',
+                                        textTransform: 'none',
+                                        boxShadow: '0 0 5px #745ba7',
+                                        borderRadius: 2,
+                                        '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   } ,
+                                        transition: 'all 0.2s ease'
+                                      }}
                               >
                                 <Archive fontSize="small" />
                               </IconButton>
@@ -854,12 +897,15 @@ const EventsList = ({ showNotification, userRole }) => {
                             <IconButton
                               size="small"
                               onClick={() => handleRestore(event.id)}
-                              sx={{
-                                color: '#ffffffff',
-                                '&:hover': {
-                                  backgroundColor: 'rgba(40, 167, 69, 0.1)'
-                                }
-                              }}
+                                                                  sx={{
+                                        background: '#ffffffff',
+                                        color: '#000000ff',
+                                        textTransform: 'none',
+                                        boxShadow: '0 0 5px #745ba7',
+                                        borderRadius: 2,
+                                        '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   } ,
+                                        transition: 'all 0.2s ease'
+                                      }}
                             >
                               <Restore fontSize="small" />
                             </IconButton>
@@ -871,13 +917,15 @@ const EventsList = ({ showNotification, userRole }) => {
                             <IconButton
                               size="small"
                               onClick={() => handleDelete(event.id)}
-                              sx={{
-                                color: '#ffffffff',
-                                background: 'rgba(220, 53, 69, 1)',
-                                '&:hover': {
-                                  backgroundColor: 'rgba(220, 53, 69, 0.1)'
-                                }
-                              }}
+                                    sx={{
+                                        background: '#ffffffff',
+                                        color: '#000000ff',
+                                        textTransform: 'none',
+                                        boxShadow: '0 0 5px #745ba7',
+                                        borderRadius: 2,
+                                        '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#ff0000ff'   } ,
+                                        transition: 'all 0.2s ease'
+                                      }}
                             >
                               <Delete fontSize="small" />
                             </IconButton>

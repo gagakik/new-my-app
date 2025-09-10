@@ -4,6 +4,7 @@ import AuthPage from './components/AuthPage';
 import MainContent from './components/MainContent';
 import Notification from './components/Notification';
 import './index.css';
+import './calendar-custom.css';
 
 // Error Boundary Component
 class ErrorBoundary extends React.Component {

@@ -641,6 +641,8 @@ app.get('/api/events', authenticateToken, async (req, res) => {
         a.year_selection,
         a.start_date,
         a.end_date,
+        a.start_time,
+        a.end_time,
         a.service_type,
         a.is_active,
         a.is_archived,
@@ -653,10 +655,39 @@ app.get('/api/events', authenticateToken, async (req, res) => {
       FROM annual_services a
       LEFT JOIN service_spaces ss ON a.id = ss.service_id
       LEFT JOIN exhibitions e ON a.exhibition_id = e.id
-      GROUP BY a.id, a.service_name, a.description, a.year_selection, a.start_date, a.end_date, a.service_type, a.is_active, a.is_archived, a.created_at, a.updated_at, a.created_by_user_id, a.exhibition_id, e.exhibition_name
+      GROUP BY a.id, a.service_name, a.description, a.year_selection, a.start_date, a.end_date, a.start_time, a.end_time, a.service_type, a.is_active, a.is_archived, a.created_at, a.updated_at, a.created_by_user_id, a.exhibition_id, e.exhibition_name
       ORDER BY a.created_at DESC
     `);
-    res.json(result.rows);
+    
+    // თარიღების ფორმატირება ყველა ივენთისთვის
+    const formatDateResponse = (date) => {
+      if (!date) return null;
+      
+      if (date instanceof Date) {
+        const year = date.getUTCFullYear();
+        const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(date.getUTCDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+      
+      if (typeof date === 'string' && date.includes('T')) {
+        return date.split('T')[0];
+      }
+      
+      if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        return date;
+      }
+      
+      return date;
+    };
+
+    const formattedEvents = result.rows.map(event => ({
+      ...event,
+      start_date: formatDateResponse(event.start_date),
+      end_date: formatDateResponse(event.end_date)
+    }));
+
+    res.json(formattedEvents);
   } catch (error) {
     console.error('ივენთების მიღების შეცდომა:', error);
     res.status(500).json({ message: 'ივენთების მიღება ვერ მოხერხდა' });
@@ -674,6 +705,8 @@ app.get('/api/events/:id', authenticateToken, async (req, res) => {
         a.year_selection,
         a.start_date,
         a.end_date,
+        a.start_time,
+        a.end_time,
         a.service_type,
         a.is_active,
         a.is_archived,
@@ -691,7 +724,49 @@ app.get('/api/events/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ message: 'ივენთი ვერ მოიძებნა' });
     }
 
-    res.json(result.rows[0]);
+    const event = result.rows[0];
+    
+    // Standardized date formatting - same as used in details endpoint
+    const formatDateConsistent = (date) => {
+      if (!date) return null;
+      
+      // If it's already a string in YYYY-MM-DD format, return as is
+      if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        return date;
+      }
+      
+      // If it's an ISO string, extract date part only
+      if (typeof date === 'string' && date.includes('T')) {
+        return date.split('T')[0];
+      }
+      
+      // If it's a Date object, format without timezone conversion
+      if (date instanceof Date) {
+        // Get the year, month, day in local timezone (not UTC)
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+      
+      return date;
+    };
+
+    const formattedEvent = {
+      ...event,
+      start_date: formatDateConsistent(event.start_date),
+      end_date: formatDateConsistent(event.end_date)
+    };
+
+    console.log('Sending event data:', {
+      id: formattedEvent.id,
+      start_date: formattedEvent.start_date,
+      end_date: formattedEvent.end_date,
+      originalStartDate: event.start_date,
+      originalEndDate: event.end_date
+    });
+
+    res.json(formattedEvent);
   } catch (error) {
     console.error('ივენთის მიღების შეცდომა:', error);
     res.status(500).json({ message: 'ივენთის მიღება ვერ მოხერხდა' });
@@ -1452,6 +1527,38 @@ app.get('/api/annual-services/:id/details', authenticateToken, async (req, res) 
 
     const service = serviceResult.rows[0];
 
+    // Standardized date formatting - always return YYYY-MM-DD format without timezone conversion
+    const formatDateConsistent = (date) => {
+      if (!date) return null;
+      
+      // If it's already a string in YYYY-MM-DD format, return as is
+      if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        return date;
+      }
+      
+      // If it's an ISO string, extract date part only
+      if (typeof date === 'string' && date.includes('T')) {
+        return date.split('T')[0];
+      }
+      
+      // If it's a Date object, format without timezone conversion
+      if (date instanceof Date) {
+        // Get the year, month, day in local timezone (not UTC)
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+      
+      return date;
+    };
+
+    // Apply consistent date formatting
+    service.start_date = formatDateConsistent(service.start_date);
+    service.end_date = formatDateConsistent(service.end_date);
+
+    console.log(`Formatted dates for edit: start_date=${service.start_date}, end_date=${service.end_date}`);
+
     // Get associated spaces
     const spacesResult = await db.query(`
       SELECT s.* 
@@ -1480,17 +1587,18 @@ app.get('/api/annual-services/:id/details', authenticateToken, async (req, res) 
   }
 });
 
-app.post('/api/annual-services', authenticateToken, authorizeRoles('admin', 'manager', 'sales', 'marketing'), async (req, res) => {
+// Create new annual service
+app.post('/api/annual-services', authenticateToken, async (req, res) => {
   try {
-    const { 
-      service_name, 
-      description, 
-      year_selection, 
-      start_date, 
-      end_date, 
+    const {
+      service_name,
+      description,
+      year_selection,
+      start_date,
+      end_date,
       start_time,
       end_time,
-      service_type = 'გამოფენა',
+      service_type,
       is_active = true,
       exhibition_id,
       space_ids = [],
@@ -1502,13 +1610,43 @@ app.post('/api/annual-services', authenticateToken, authorizeRoles('admin', 'man
       service_name, exhibition_id, space_ids, selected_spaces, selected_companies
     });
 
+    // Validate required fields
+    if (!service_name || !start_date || !end_date) {
+      return res.status(400).json({ message: 'სავალდებულო ველები არ არის შევსებული' });
+    }
+
+    // თარიღების სწორი ფორმატირება
+    const formatDateForDB = (dateString) => {
+      if (!dateString) return null;
+
+      // თუ უკვე YYYY-MM-DD ფორმატშია
+      if (typeof dateString === 'string' && dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        return dateString;
+      }
+
+      // თუ სხვა ფორმატში მოდის, ვცდილობთ კონვერტაციას
+      try {
+        const date = new Date(dateString);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      } catch (e) {
+        console.error('Date formatting error:', e);
+        return dateString;
+      }
+    };
+
+    const formattedStartDate = formatDateForDB(start_date);
+    const formattedEndDate = formatDateForDB(end_date);
+
     const result = await db.query(
       `INSERT INTO annual_services (
         service_name, description, year_selection, start_date, end_date, 
         start_time, end_time, service_type, is_active, exhibition_id, created_by_user_id
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
       [
-        service_name, description, year_selection, start_date, end_date,
+        service_name, description, year_selection, formattedStartDate, formattedEndDate,
         start_time, end_time, service_type, is_active, exhibition_id, req.user.id
       ]
     );
@@ -1564,9 +1702,16 @@ app.post('/api/annual-services', authenticateToken, authorizeRoles('admin', 'man
       }
     }
 
+    // Format response dates
+    const responseData = {
+      ...service,
+      start_date: service.start_date ? service.start_date.toISOString().split('T')[0] : null,
+      end_date: service.end_date ? service.end_date.toISOString().split('T')[0] : null
+    };
+
     res.status(201).json({
       message: 'სერვისი წარმატებით დაემატა',
-      service,
+      service: responseData,
       registeredCompanies
     });
   } catch (error) {
@@ -1575,15 +1720,15 @@ app.post('/api/annual-services', authenticateToken, authorizeRoles('admin', 'man
   }
 });
 
-app.put('/api/annual-services/:id', authenticateToken, authorizeRoles('admin', 'manager', 'sales', 'marketing'), async (req, res) => {
+app.put('/api/annual-services/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { 
-      service_name, 
-      description, 
-      year_selection, 
-      start_date, 
-      end_date, 
+    const {
+      service_name,
+      description,
+      year_selection,
+      start_date,
+      end_date,
       start_time,
       end_time,
       service_type,
@@ -1597,6 +1742,38 @@ app.put('/api/annual-services/:id', authenticateToken, authorizeRoles('admin', '
       id, service_name, exhibition_id, space_ids, selected_spaces
     });
 
+    // Validate required fields
+    if (!service_name || !start_date || !end_date) {
+      return res.status(400).json({ message: 'სავალდებულო ველები არ არის შევსებული' });
+    }
+
+    // თარიღების სწორი ფორმატირება - timezone პრობლემის გადასაჭრელად
+    const formatDateForDB = (dateString) => {
+      if (!dateString) return null;
+
+      console.log('Formatting date for DB:', dateString);
+
+      // თუ უკვე YYYY-MM-DD ფორმატშია
+      if (typeof dateString === 'string' && dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        console.log('Date already in DB format:', dateString);
+        return dateString;
+      }
+
+      // თუ ISO ფორმატია, T-მდე ნაწილი
+      if (typeof dateString === 'string' && dateString.includes('T')) {
+        const datePart = dateString.split('T')[0];
+        console.log('Extracted date part for DB:', datePart);
+        return datePart;
+      }
+
+      // სხვა შემთხვევებში - არავითარი Date კონვერტაცია timezone-ის გამო
+      console.warn('Unexpected date format for DB:', dateString);
+      return dateString;
+    };
+
+    const formattedStartDate = formatDateForDB(start_date);
+    const formattedEndDate = formatDateForDB(end_date);
+
     const result = await db.query(
       `UPDATE annual_services SET 
         service_name = $1, description = $2, year_selection = $3, 
@@ -1604,7 +1781,7 @@ app.put('/api/annual-services/:id', authenticateToken, authorizeRoles('admin', '
         service_type = $8, is_active = $9, exhibition_id = $10, updated_at = CURRENT_TIMESTAMP 
       WHERE id = $11 RETURNING *`,
       [
-        service_name, description, year_selection, start_date, end_date,
+        service_name, description, year_selection, formattedStartDate, formattedEndDate,
         start_time, end_time, service_type, is_active, exhibition_id, id
       ]
     );
@@ -1634,9 +1811,41 @@ app.put('/api/annual-services/:id', authenticateToken, authorizeRoles('admin', '
       }
     }
 
+    // Format response dates to ensure clean YYYY-MM-DD format and avoid timezone issues
+    const formatDateForResponse = (date) => {
+      if (!date) return null;
+      
+      // თუ უკვე string-ია და სწორ ფორმატშია
+      if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        return date;
+      }
+      
+      // თუ ISO string-ია
+      if (typeof date === 'string' && date.includes('T')) {
+        return date.split('T')[0];
+      }
+      
+      // თუ Date object-ია, კალენდარული თარიღის დაბრუნება timezone-ის გარეშე
+      if (date instanceof Date) {
+        // დავრწმუნდეთ, რომ გამოვიყენებთ ადგილობრივ კალენდარულ თარიღს
+        const localYear = date.getFullYear();
+        const localMonth = String(date.getMonth() + 1).padStart(2, '0');
+        const localDay = String(date.getDate()).padStart(2, '0');
+        return `${localYear}-${localMonth}-${localDay}`;
+      }
+      
+      return date;
+    };
+
+    const responseData = {
+      ...service,
+      start_date: formatDateForResponse(service.start_date),
+      end_date: formatDateForResponse(service.end_date)
+    };
+
     res.json({
       message: 'სერვისი წარმატებით განახლდა',
-      service
+      service: responseData
     });
   } catch (error) {
     console.error('სერვისის განახლების შეცდომა:', error);
@@ -1811,185 +2020,6 @@ app.post('/api/events/:id/upload-plan', authenticateToken, authorizeRoles('admin
 });
 
 // Upload single invoice file
-app.post('/api/events/:id/upload-invoice', authenticateToken, authorizeRoles('admin', 'manager', 'sales', 'marketing'), upload.single('invoice_file'), async (req, res) => {
-  const eventId = req.params.id;
-
-  try {
-    if (!req.file) {
-      return res.status(400).json({ message: 'ფაილი არ არის ატვირთული' });
-    }
-
-    const filePath = req.file.path.replace(/\\/g, '/');
-    const fileName = req.body.file_name || req.file.originalname;
-
-    // Get current invoice files
-    const result = await db.query('SELECT invoice_files FROM annual_services WHERE id = $1', [eventId]);
-    const currentFiles = result.rows[0]?.invoice_files || [];
-
-    // Add new file
-    const newFile = {
-      name: fileName,
-      path: filePath,
-      size: req.file.size,
-      uploaded_at: new Date().toISOString(),
-      uploaded_by: req.user.username
-    };
-
-    const updatedFiles = [...currentFiles, newFile];
-
-    await db.query(`
-      UPDATE annual_services 
-      SET invoice_files = $1, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $2
-    `, [JSON.stringify(updatedFiles), eventId]);
-
-    res.json({ message: 'ინვოისის ფაილი წარმატებით აიტვირთა' });
-  } catch (error) {
-    console.error('ინვოისის ფაილის ატვირთვის შეცდომა:', error);
-    res.status(500).json({ message: 'ინვოისის ფაილის ატვირთვა ვერ მოხერხდა' });
-  }
-});
-
-// Upload single expense file
-app.post('/api/events/:id/upload-expense', authenticateToken, authorizeRoles('admin', 'manager', 'sales', 'marketing'), upload.single('expense_file'), async (req, res) => {
-  const eventId = req.params.id;
-
-  try {
-    if (!req.file) {
-      return res.status(400).json({ message: 'ფაილი არ არის ატვირთული' });
-    }
-
-    const filePath = req.file.path.replace(/\\/g, '/');
-    const fileName = req.body.file_name || req.file.originalname;
-
-    // Get current expense files
-    const result = await db.query('SELECT expense_files FROM annual_services WHERE id = $1', [eventId]);
-    const currentFiles = result.rows[0]?.expense_files || [];
-
-    // Add new file
-    const newFile = {
-      name: fileName,
-      path: filePath,
-      size: req.file.size,
-      uploaded_at: new Date().toISOString(),
-      uploaded_by: req.user.username
-    };
-
-    const updatedFiles = [...currentFiles, newFile];
-
-    await db.query(`
-      UPDATE annual_services 
-      SET expense_files = $1, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $2
-    `, [JSON.stringify(updatedFiles), eventId]);
-
-    res.json({ message: 'ხარჯის ფაილი წარმატებით აიტვირთა' });
-  } catch (error) {
-    console.error('ხარჯის ფაილის ატვირთვის შეცდომა:', error);
-    res.status(500).json({ message: 'ხარჯის ფაილის ატვირთვა ვერ მოხერხდა' });
-  }
-});
-
-// Delete plan file
-app.delete('/api/events/:id/delete-plan', authenticateToken, authorizeRoles('admin', 'manager', 'sales', 'marketing'), async (req, res) => {
-  const eventId = req.params.id;
-
-  try {
-    await db.query(`
-      UPDATE annual_services 
-      SET plan_file_path = NULL, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $1
-    `, [eventId]);
-
-    res.json({ message: 'გეგმის ფაილი წარმატებით წაიშალა' });
-  } catch (error) {
-    console.error('გეგმის ფაილის წაშლის შეცდომა:', error);
-    res.status(500).json({ message: 'გეგმის ფაილის წაშლა ვერ მოხერხდა' });
-  }
-});
-
-// Delete invoice file
-app.delete('/api/events/:id/delete-invoice/:fileName', authenticateToken, authorizeRoles('admin', 'manager', 'sales', 'marketing'), async (req, res) => {
-  const eventId = req.params.id;
-  const fileName = req.params.fileName;
-
-  try {
-    // Get current invoice files
-    const result = await db.query('SELECT invoice_files FROM annual_services WHERE id = $1', [eventId]);
-    const currentFiles = result.rows[0]?.invoice_files || [];
-
-    // Remove the file
-    const updatedFiles = currentFiles.filter(file => file.name !== fileName);
-
-    await db.query(`
-      UPDATE annual_services 
-      SET invoice_files = $1, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $2
-    `, [JSON.stringify(updatedFiles), eventId]);
-
-    res.json({ message: 'ინვოისის ფაილი წარმატებით წაიშალა' });
-  } catch (error) {
-    console.error('ინვოისის ფაილის წაშლის შეცდომა:', error);
-    res.status(500).json({ message: 'ინვოისის ფაილის წაშლა ვერ მოხერხდა' });
-  }
-});
-
-// Delete expense file
-app.delete('/api/events/:id/delete-expense/:fileName', authenticateToken, authorizeRoles('admin', 'manager', 'sales', 'marketing'), async (req, res) => {
-  const eventId = req.params.id;
-  const fileName = req.params.fileName;
-
-  try {
-    // Get current expense files
-    const result = await db.query('SELECT expense_files FROM annual_services WHERE id = $1', [eventId]);
-    const currentFiles = result.rows[0]?.expense_files || [];
-
-    // Remove the file
-    const updatedFiles = currentFiles.filter(file => file.name !== fileName);
-
-    await db.query(`
-      UPDATE annual_services 
-      SET expense_files = $1, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $2
-    `, [JSON.stringify(updatedFiles), eventId]);
-
-    res.json({ message: 'ხარჯის ფაილი წარმატებით წაიშალა' });
-  } catch (error) {
-    console.error('ხარჯის ფაილის წაშლის შეცდომა:', error);
-    res.status(500).json({ message: 'ხარჯის ფაილის წაშლა ვერ მოხერხდა' });
-  }
-});
-
-app.post('/api/events/:id/upload-plan', authenticateToken, authorizeRoles('admin', 'manager', 'sales', 'marketing'), upload.single('plan_file'), async (req, res) => {
-  try {
-    const { id: eventId } = req.params;
-
-    if (!req.file) {
-      return res.status(400).json({ message: 'ფაილი არ არის ატვირთული' });
-    }
-
-    const filePath = req.file.path.replace(/\\/g, '/');
-    const relativePath = filePath.replace(path.join(__dirname, 'uploads').replace(/\\/g, '/'), '');
-
-    // Get username for plan_uploaded_by field
-    const userResult = await db.query('SELECT username FROM users WHERE id = $1', [req.user.id]);
-    const username = userResult.rows[0]?.username || 'Unknown';
-
-    await db.query(
-      'UPDATE annual_services SET plan_file_path = $1, plan_uploaded_by = $2, plan_updated_at = CURRENT_TIMESTAMP WHERE id = $3',
-      [relativePath, username, eventId]
-    );
-
-    res.json({ 
-      message: 'გეგმის ფაილი წარმატებით ატვირთულია',
-      filePath: relativePath
-    });
-  } catch (error) {
-    console.error('Plan file upload error:', error);
-    res.status(500).json({ message: 'ფაილის ატვირთვისას მოხდა შეცდომა' });
-  }
-});
-
 app.post('/api/events/:id/upload-invoice', authenticateToken, upload.single('invoice_file'), async (req, res) => {
   try {
     const { id } = req.params;
@@ -2097,11 +2127,11 @@ app.post('/api/events/:id/upload-expense', authenticateToken, authorizeRoles('ad
     );
 
     res.json({
-      message: 'ხარჯების ფაილი წარმატებით ატვირთულია',
+      message: 'ხარჯის ფაილი წარმატებით აიტვირთა',
       file: newFile
     });
   } catch (error) {
-    console.error('ხარჯების ფაილის ატვირთვის შეცდომა:', error);
+    console.error('ხარჯის ფაილის ატვირთვის შეცდომა:', error);
     res.status(500).json({ message: 'ფაილის ატვირთვა ვერ მოხერხდა' });
   }
 });
@@ -2181,9 +2211,9 @@ app.delete('/api/events/:id/delete-expense/:fileName', authenticateToken, author
       [JSON.stringify(expenseFiles), id]
     );
 
-    res.json({ message: 'ხარჯების ფაილი წარმატებით წაიშალა' });
+    res.json({ message: 'ხარჯის ფაილი წარმატებით წაიშალა' });
   } catch (error) {
-    console.error('ხარჯების ფაილის წაშლის შეცდომა:', error);
+    console.error('ხარჯის ფაილის წაშლის შეცდომა:', error);
     res.status(500).json({ message: 'ფაილის წაშლა ვერ მოხერხდა' });
   }
 });

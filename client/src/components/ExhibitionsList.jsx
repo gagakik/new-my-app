@@ -208,7 +208,8 @@ const ExhibitionsList = ({ showNotification, userRole }) => {
                       {isAuthorizedForManagement && <TableCell align="center"><strong>მოქმედებები</strong></TableCell>}
                     </TableRow>
                   </TableHead>
-                  <TableBody>
+                  <TableBody
+                    sx={{ backgroundColor: 'rgba(102, 126, 234, 0.02)' }}>
                     {exhibitions.map((exhibition, index) => (
                       <TableRow 
                         key={exhibition.id}
