@@ -2540,3 +2540,33 @@ app.use('/api/import', importRoutes);
 app.use('/api/statistics', statisticsRoutes);
 app.use('/api/packages', authenticateToken, packagesRoutes);
 app.use('/api/reports', reportsRoutes);
+
+// Multer error handling middleware
+app.use((error, req, res, next) => {
+    if (error instanceof multer.MulterError) {
+        console.error('Multer error:', error);
+        if (error.code === 'LIMIT_FILE_SIZE') {
+            return res.status(413).json({
+                error: 'ფაილი ძალიან დიდია',
+                details: 'მაქსიმალური ზომა 5MB'
+            });
+        }
+        if (error.code === 'LIMIT_FILE_COUNT') {
+            return res.status(400).json({
+                error: 'ძალიან ბევრი ფაილი',
+                details: 'მხოლოდ ერთი ფაილის ატვირთვა შესაძლებელია'
+            });
+        }
+        if (error.code === 'LIMIT_UNEXPECTED_FILE') {
+            return res.status(400).json({
+                error: 'მოულოდნელი ფაილის ველი',
+                details: 'გამოიყენეთ "excelFile" ველის სახელი'
+            });
+        }
+        return res.status(400).json({
+            error: 'ფაილის ატვირთვის შეცდომა',
+            details: error.message
+        });
+    }
+    next(error);
+});

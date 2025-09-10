@@ -557,7 +557,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
             <Typography paragraph><strong>კომენტარი:</strong> {selectedCompany.comment}</Typography>
             <Typography paragraph><strong>სტატუსი:</strong> {selectedCompany.status}</Typography>
 
-            <Box sx={{ mt: 3, p: 2, backgroundColor: 'rgba(102, 126, 234, 0.05)', borderRadius: 1, borderLeft: 3, borderColor: '#667eea' }}>
+            <Box sx={{ mt: 3, p: 2, backgroundColor: 'rgba(102, 126, 234, 0.05)', borderRadius: 2, border: 2, borderColor: '#667eea' }}>
               <Typography color="text.secondary" fontStyle="italic">
                 <strong>შექმნის ინფორმაცია:</strong> {new Date(selectedCompany.created_at).toLocaleDateString()}
                 {selectedCompany.created_by_username && ` - ${selectedCompany.created_by_username}`}
@@ -628,7 +628,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </Grid>
-            <Grid item xs={12} sm={6} md={2}>
+            <Grid item xs={12} sm={6} md={2} width={140}>
               <Autocomplete
                 fullWidth
                 size="small"
@@ -739,10 +739,8 @@ const CompaniesList = ({ showNotification, userRole }) => {
               size='small'
               startIcon={<Add />}
               onClick={() => setEditingId(0)}
-              sx={{ 
-                background: 'linear-gradient(135deg, #4299e1 0%, #3182ce 100%)',
-                '&:hover': { background: 'linear-gradient(135deg, #3182ce 0%, #2c5282 100%)' }
-              }}
+              sx={{ px:1, py:0.4, fontSize:'0.7rem', textTransform: 'none',
+              color:'#000000ff', background: '#ffffffff',boxShadow: '0 0 5px #745ba7',borderRadius:'5px', '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   }   }}
             >
               ახალი კომპანიის დამატება
             </Button>
@@ -864,13 +862,25 @@ const CompaniesList = ({ showNotification, userRole }) => {
                           }
                         }}
                       >
-                        <TableCell>
-                          <Typography align="center"
-                            sx={{ cursor: 'pointer', fontWeight: 600, color: 'primary.main' }}
+                        <TableCell align="center" sx={{ maxWidth: '200px', wordBreak: 'break-word' }}>
+                          <Button align="center"
+                          variant="body2"
+                                    size="small"
+                                    sx={{
+                                        background: '#ffffffff',
+                                        color: '#000000ff',
+                                        textTransform: 'none',
+                                        boxShadow: '0 0 5px #745ba7',
+                                        px: 1,
+                                        py: 1,
+                                        borderRadius: 2,
+                                        '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   } ,
+                                        transition: 'all 0.2s ease'
+                                      }}
                             onClick={() => handleViewDetails(company)}
                           >
                             {company.company_name}
-                          </Typography>
+                          </Button>
                         </TableCell>
                         <TableCell align="center">{company.country}</TableCell>
                         <TableCell align="center">{company.identification_code}</TableCell>
@@ -910,11 +920,11 @@ const CompaniesList = ({ showNotification, userRole }) => {
                             {isAuthorizedForManagement && (
                               <Button
                                 size="small"
-                                variant="outlined"
+                                
                                 onClick={() => handleEditExhibitions(company)}
                                 startIcon={<Edit />}
-                                sx={{ minWidth: 'auto',px:2,
-                                color:'#000000ff', background: '#ffffffff',boxShadow: '0 0 5px #745ba7',borderRadius:'15px', '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   }   }}
+                                sx={{ px:1, py:0.4, fontSize:'0.7rem', textTransform: 'none',
+                                color:'#000000ff', background: '#ffffffff',boxShadow: '0 0 5px #745ba7',borderRadius:'5px', '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   }   }}
                               >
                             EDIT
                               </Button>

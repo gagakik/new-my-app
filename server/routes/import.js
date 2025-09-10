@@ -42,33 +42,59 @@ function requireAdmin(req, res, next) {
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         const uploadDir = path.join(__dirname, "../uploads/import");
+        console.log('=== MULTER DESTINATION ===');
         console.log('Upload directory path:', uploadDir);
+        console.log('Current working directory:', process.cwd());
+        console.log('__dirname:', __dirname);
+        console.log('File being processed:', file.originalname);
         
         try {
-            // Create directory with recursive option and set permissions
+            // Ensure directory exists
             if (!fs.existsSync(uploadDir)) {
                 fs.mkdirSync(uploadDir, { recursive: true, mode: 0o755 });
-                console.log('Upload directory created successfully:', uploadDir);
-            } else {
-                console.log('Upload directory already exists:', uploadDir);
+                console.log('Upload directory created:', uploadDir);
             }
             
-            // Check if directory is writable
-            fs.accessSync(uploadDir, fs.constants.W_OK);
-            console.log('Directory is writable');
+            // Verify directory permissions
+            const stats = fs.statSync(uploadDir);
+            console.log('Directory stats:', {
+                exists: true,
+                isDirectory: stats.isDirectory(),
+                permissions: stats.mode.toString(8),
+                size: stats.size
+            });
             
+            // Test write access
+            const testFile = path.join(uploadDir, `write-test-${Date.now()}.tmp`);
+            try {
+                fs.writeFileSync(testFile, 'write test');
+                fs.unlinkSync(testFile);
+                console.log('✅ Write access confirmed');
+            } catch (writeError) {
+                console.error('❌ Write access failed:', writeError);
+                return cb(writeError);
+            }
+            
+            console.log('✅ Destination set successfully:', uploadDir);
             cb(null, uploadDir);
         } catch (error) {
-            console.error('Error creating/accessing upload directory:', error);
+            console.error('❌ Destination setup failed:', error);
             cb(error);
         }
     },
     filename: function (req, file, cb) {
         const timestamp = Date.now();
         const randomNum = Math.round(Math.random() * 1e9);
-        const ext = path.extname(file.originalname);
+        const ext = path.extname(file.originalname).toLowerCase();
         const filename = `companies-${timestamp}-${randomNum}${ext}`;
+        
+        console.log('=== MULTER FILENAME ===');
+        console.log('Original filename:', file.originalname);
         console.log('Generated filename:', filename);
+        console.log('Extension:', ext);
+        console.log('File mimetype:', file.mimetype);
+        console.log('File fieldname:', file.fieldname);
+        
         cb(null, filename);
     },
 });
@@ -76,31 +102,48 @@ const storage = multer.diskStorage({
 const upload = multer({
     storage: storage,
     fileFilter: function (req, file, cb) {
-        console.log('File filter check:', {
+        console.log('=== MULTER FILE FILTER ===');
+        console.log('Filtering file:', {
             originalname: file.originalname,
             mimetype: file.mimetype,
-            size: file.size
+            fieldname: file.fieldname,
+            encoding: file.encoding,
+            size: file.size || 'unknown'
         });
         
-        const allowedTypes = [".xlsx", ".xls"];
-        const allowedMimes = [
+        const allowedExtensions = [".xlsx", ".xls"];
+        const allowedMimeTypes = [
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             "application/vnd.ms-excel"
         ];
         
-        const ext = path.extname(file.originalname).toLowerCase();
+        const fileExtension = path.extname(file.originalname).toLowerCase();
         
-        if (allowedTypes.includes(ext) || allowedMimes.includes(file.mimetype)) {
-            console.log('File accepted:', file.originalname);
+        const isValidExtension = allowedExtensions.includes(fileExtension);
+        const isValidMimeType = allowedMimeTypes.includes(file.mimetype);
+        
+        console.log('File validation:', {
+            extension: fileExtension,
+            isValidExtension,
+            mimetype: file.mimetype,
+            isValidMimeType,
+            willAccept: isValidExtension || isValidMimeType
+        });
+        
+        if (isValidExtension || isValidMimeType) {
+            console.log('✅ File accepted:', file.originalname);
             cb(null, true);
         } else {
-            console.log('File rejected:', file.originalname, 'Type:', file.mimetype, 'Ext:', ext);
-            cb(new Error("მხოლოდ Excel ფაილები (.xlsx, .xls) ნებადართულია"));
+            const errorMsg = `არასწორი ფაილის ფორმატი. მოსალოდნელია: ${allowedExtensions.join(', ')}`;
+            console.log('❌ File rejected:', errorMsg);
+            cb(new Error(errorMsg), false);
         }
     },
     limits: {
-        fileSize: 5 * 1024 * 1024, // 5MB limit
-    },
+        fileSize: 10 * 1024 * 1024, // 10MB limit (increased)
+        files: 1,
+        fieldSize: 2 * 1024 * 1024 // 2MB for form fields
+    }
 });
 
 // POST: Import companies from Excel file
@@ -108,57 +151,72 @@ router.post(
     "/companies",
     authenticateToken,
     requireAdmin,
+    (req, res, next) => {
+        console.log('=== PRE-MULTER REQUEST ===');
+        console.log('Content-Type:', req.headers['content-type']);
+        console.log('Content-Length:', req.headers['content-length']);
+        console.log('Request method:', req.method);
+        console.log('Request URL:', req.url);
+        next();
+    },
     upload.single("excelFile"),
     async (req, res) => {
         let filePath = null;
+        let tempFileCreated = false;
         
         try {
-            console.log('Request received:', {
-                hasFile: !!req.file,
-                body: req.body,
-                headers: req.headers['content-type']
-            });
+            console.log('=== POST-MULTER REQUEST ===');
+            console.log('Multer processed request');
+            console.log('req.file exists:', !!req.file);
+            console.log('req.body:', req.body);
             
-            if (!req.file) {
-                console.error('No file received in request');
-                return res.status(400).json({ 
+            if (req.file) {
+                console.log('File details:', {
+                    originalname: req.file.originalname,
+                    filename: req.file.filename,
+                    mimetype: req.file.mimetype,
+                    size: req.file.size,
+                    destination: req.file.destination,
+                    path: req.file.path,
+                    fieldname: req.file.fieldname
+                });
+                
+                filePath = req.file.path;
+                tempFileCreated = true;
+                
+                // Verify file was actually written
+                if (fs.existsSync(filePath)) {
+                    const stats = fs.statSync(filePath);
+                    console.log('✅ File saved successfully:', {
+                        path: filePath,
+                        size: stats.size,
+                        isFile: stats.isFile()
+                    });
+                } else {
+                    console.error('❌ File not found after multer processing:', filePath);
+                    throw new Error('ფაილი ვერ შეინახა სერვერზე');
+                }
+            } else {
+                console.error('❌ No file received from multer');
+                console.log('Request headers:', req.headers);
+                return res.status(400).json({
                     error: "Excel ფაილი არ არის ატვირთული",
                     details: "მულტერმა ფაილი ვერ დაამუშავა"
                 });
             }
 
-            filePath = req.file.path;
-            console.log('File received successfully:', {
-                filePath,
-                originalName: req.file.originalname,
-                mimetype: req.file.mimetype,
-                size: req.file.size,
-                fieldname: req.file.fieldname
-            });
-
-            // Verify file exists and is readable
-            if (!fs.existsSync(filePath)) {
-                throw new Error(`ფაილი ვერ მოიძებნა მითითებულ მისამართზე: ${filePath}`);
-            }
-
-            const fileStats = fs.statSync(filePath);
-            console.log('File stats:', {
-                size: fileStats.size,
-                isFile: fileStats.isFile(),
-                permissions: fileStats.mode.toString(8)
-            });
-
-            if (fileStats.size === 0) {
-                throw new Error('ატვირთული ფაილი ცარიელია');
-            }
-
-            console.log('Starting import process for user:', req.user.id);
-
+            console.log('🔄 Starting import process...');
+            
             // Import companies from Excel
             const { importCompaniesFromExcel } = require('../import-companies');
             const result = await importCompaniesFromExcel(filePath, req.user.id);
 
-            console.log('Import completed:', result);
+            console.log('✅ Import completed:', {
+                success: result.success,
+                imported: result.imported,
+                total: result.total,
+                errors: result.errors
+            });
 
             if (result.success) {
                 res.json({
@@ -174,16 +232,18 @@ router.post(
                     details: result.error
                 });
             }
+
         } catch (error) {
-            console.error('Import process error:', error);
+            console.error('❌ Import process error:', error);
+            console.error('Error stack:', error.stack);
 
             let errorMessage = 'იმპორტის შეცდომა';
             let statusCode = 500;
 
-            if (error.message.includes('ENOENT')) {
-                errorMessage = 'ფაილი ვერ მოიძებნა ან წაიშალა';
+            if (error.code === 'ENOENT') {
+                errorMessage = 'ფაილი ვერ მოიძებნა';
                 statusCode = 400;
-            } else if (error.message.includes('EACCES')) {
+            } else if (error.code === 'EACCES') {
                 errorMessage = 'ფაილზე წვდომის უფლება არ არის';
                 statusCode = 403;
             } else if (error.message.includes('ცარიელია')) {
@@ -195,18 +255,19 @@ router.post(
                 error: errorMessage,
                 details: error.message
             });
+
         } finally {
-            // Clean up uploaded file in finally block
-            if (filePath && fs.existsSync(filePath)) {
+            // Clean up uploaded file
+            if (tempFileCreated && filePath && fs.existsSync(filePath)) {
                 try {
                     fs.unlinkSync(filePath);
-                    console.log('File cleanup successful:', filePath);
+                    console.log('🗑️ Temporary file cleaned up:', filePath);
                 } catch (cleanupError) {
-                    console.warn('File cleanup failed:', cleanupError.message);
+                    console.warn('⚠️ File cleanup failed:', cleanupError.message);
                 }
             }
         }
-    },
+    }
 );
 
 // GET: Download template Excel file
