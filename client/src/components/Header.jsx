@@ -44,7 +44,8 @@ import {
   ExpandLess,
   ExpandMore,
   AccountCircle,
-  Notifications
+  Notifications,
+  Construction
 } from '@mui/icons-material';
 import UserProfile from './UserProfile';
 import NotificationCenter from './NotificationCenter';
@@ -137,7 +138,8 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
         label: 'Operation',
         icon: <Build />,
         items: [
-          { key: 'equipment', label: 'აღჭურვილობა', icon: <Build /> }
+          { key: 'equipment', label: 'აღჭურვილობა', icon: <Build /> },
+          { key: 'operationdashboard', label: 'სტენდების მართვა', icon: <Construction /> }
         ]
       });
     }

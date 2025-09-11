@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   Box,
@@ -20,6 +19,7 @@ import Statistics from './Statistics';
 import EventReports from './EventReports';
 import Header from './Header';
 import CalendarPage from '../pages/CalendarPage.jsx';
+import OperationPage from '../pages/OperationPage.jsx';
 
 const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
   const [activeSection, setActiveSection] = useState('dashboard');
@@ -94,11 +94,11 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
               variant="h6"
               color="text.secondary"
             >
-              ჭერის სიმაღლე 
+              ჭერის სიმაღლე
               მე-3 პავილიონი - 410 სმ.
               მე-4 პავილიონი - 455 სმ.
-              მე-5 პავილიონი - 455 სმ. 
-              მე-6 პავილიონი - 455 სმ. 
+              მე-5 პავილიონი - 455 სმ.
+              მე-6 პავილიონი - 455 სმ.
               მე-11 პავილიონი - 600 სმ.
 
             </Typography>
@@ -199,7 +199,7 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
             background: alpha(theme.palette.error.main, 0.05)
           }}
         >
-          <Typography variant="h6" color="error.main" gutterBottom>
+          <Typography variant="h5" color="error.main" gutterBottom>
             ⚠️ შეცდომა
           </Typography>
           <Typography color="text.secondary">
@@ -226,9 +226,18 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
         return <BookingsList showNotification={showNotification} userRole={userRole} />;
       case 'statistics':
         return <Statistics showNotification={showNotification} userRole={userRole} />;
+      case 'eventReports':
+        return <EventReports showNotification={showNotification} userRole={userRole} />;
+      case 'operationdashboard':
+        return <OperationPage showNotification={showNotification} userRole={userRole} />;
+      case 'finance':
+        return renderFinancePage();
+      case 'marketing':
+        return renderMarketingPage();
       case 'users':
         return userRole === 'admin' ? (
-          <UserManagement showNotification={showNotification} userRole={userRole} />
+          <UserManagement showN
+          otification={showNotification} userRole={userRole} />
         ) : (
           <Paper
             elevation={2}
@@ -248,32 +257,6 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
             </Typography>
           </Paper>
         );
-      case 'eventReports':
-        return userRole === 'admin' ? (
-          <EventReports showNotification={showNotification} userRole={userRole} />
-        ) : (
-          <Paper
-            elevation={2}
-            sx={{
-              p: 4,
-              textAlign: 'center',
-              border: `1px solid ${theme.palette.error.main}`,
-              borderRadius: 3,
-              background: alpha(theme.palette.error.main, 0.05)
-            }}
-          >
-            <Typography variant="h5" color="error.main" gutterBottom>
-              🚫 წვდომა აკრძალულია
-            </Typography>
-            <Typography color="text.secondary">
-              ამ სექციაში შესვლის უფლება მხოლოდ ადმინისტრატორს აქვს
-            </Typography>
-          </Paper>
-        );
-      case 'finance':
-        return renderFinanceSection();
-      case 'marketing':
-        return renderMarketingSection();
       default:
         return renderDashboard();
     }
@@ -307,7 +290,7 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
         onViewChange={handleSectionChange}
         showNotification={showNotification}
       />
-      
+
       <Container
         maxWidth="xl"
         sx={{
