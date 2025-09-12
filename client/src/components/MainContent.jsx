@@ -18,8 +18,8 @@ import BookingsList from './BookingsList';
 import Statistics from './Statistics';
 import EventReports from './EventReports';
 import Header from './Header';
-import CalendarPage from '../pages/CalendarPage.jsx';
 import OperationPage from '../pages/OperationPage.jsx';
+import CalendarPage from '../pages/CalendarPage.jsx';
 
 const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
   const [activeSection, setActiveSection] = useState('dashboard');
@@ -33,7 +33,8 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
       setError(null);
       console.log('Changing to section:', section);
       setActiveSection(section);
-    } catch (err) {
+    } catch (error) {
+      console.error('Section change error:', error);
       setError('Section change failed');
       showNotification('სექციის ცვლილება ვერ მოხერხდა', 'error');
     } finally {
@@ -100,9 +101,7 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
               მე-5 პავილიონი - 455 სმ.
               მე-6 პავილიონი - 455 სმ.
               მე-11 პავილიონი - 600 სმ.
-
             </Typography>
-            <CalendarPage/>
           </Box>
         </Paper>
       </Box>
@@ -230,14 +229,15 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
         return <EventReports showNotification={showNotification} userRole={userRole} />;
       case 'operationdashboard':
         return <OperationPage showNotification={showNotification} userRole={userRole} />;
+      case 'calendar':
+        return <CalendarPage showNotification={showNotification} userRole={userRole} />;
       case 'finance':
-        return renderFinancePage();
+        return renderFinanceSection();
       case 'marketing':
-        return renderMarketingPage();
+        return renderMarketingSection();
       case 'users':
         return userRole === 'admin' ? (
-          <UserManagement showN
-          otification={showNotification} userRole={userRole} />
+          <UserManagement showNotification={showNotification} userRole={userRole} />
         ) : (
           <Paper
             elevation={2}

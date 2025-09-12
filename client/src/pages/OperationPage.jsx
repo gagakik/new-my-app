@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Container,
   Paper,
@@ -86,6 +86,7 @@ const OperationPage = ({ showNotification, userRole }) => {
   });
   const [designFiles, setDesignFiles] = useState([]);
   const [designDescription, setDesignDescription] = useState('');
+  const [error, setError] = useState(null);
 
   const standStatuses = [
     { value: 'დაგეგმილი', color: '#2196f3', icon: <Assignment /> },
@@ -97,18 +98,7 @@ const OperationPage = ({ showNotification, userRole }) => {
     { value: 'გადაუდებელი ყურადღება', color: '#f44336', icon: <Warning /> }
   ];
 
-  useEffect(() => {
-    fetchEvents();
-    fetchEquipment();
-  }, []);
-
-  useEffect(() => {
-    if (selectedEvent) {
-      fetchStands(selectedEvent.id);
-    }
-  }, [selectedEvent]);
-
-  const fetchEvents = async () => {
+  const fetchEvents = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch('/api/annual-services', {
@@ -125,17 +115,20 @@ const OperationPage = ({ showNotification, userRole }) => {
         });
         setEvents(activeAndUpcomingEvents);
       } else {
+        setError('ივენთების ჩატვირთვის შეცდომა');
         showNotification('ივენთების მიღება ვერ მოხერხდა', 'error');
       }
     } catch (error) {
-      console.error('ივენთების მიღების შეცდომა:', error);
+      console.error('Error fetching events:', error);
+      setError('სერვერთან კავშირის შეცდომა');
       showNotification('შეცდომა მონაცემების ჩატვირთვისას', 'error');
     } finally {
       setLoading(false);
     }
-  };
+  }, [showNotification]);
 
-  const fetchStands = async (eventId) => {
+
+  const fetchStands = useCallback(async (eventId) => {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`/api/events/${eventId}/stands`, {
@@ -154,12 +147,13 @@ const OperationPage = ({ showNotification, userRole }) => {
         showNotification('სტენდების მიღება ვერ მოხერხდა', 'error');
       }
     } catch (error) {
-      console.error('სტენდების მიღების შეცდომა:', error);
+      console.error('Error fetching stands:', error);
+      setLoading(false);
       showNotification('შეცდომა სტენდების ჩატვირთვისას', 'error');
     }
-  };
+  }, [showNotification]);
 
-  const fetchEquipment = async () => {
+  const fetchEquipment = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch('/api/equipment', {
@@ -173,7 +167,18 @@ const OperationPage = ({ showNotification, userRole }) => {
     } catch (error) {
       console.error('აღჭურვილობის მიღების შეცდომა:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchEvents();
+    fetchEquipment();
+  }, [fetchEvents, fetchEquipment]);
+
+  useEffect(() => {
+    if (selectedEvent) {
+      fetchStands(selectedEvent.id);
+    }
+  }, [selectedEvent, fetchStands]);
 
   const handleStandSubmit = async (e) => {
     e.preventDefault();
@@ -238,14 +243,14 @@ const OperationPage = ({ showNotification, userRole }) => {
 
     try {
       const token = localStorage.getItem('token');
-      const formData = new FormData();
+      const uploadFormData = new FormData();
 
       designFiles.forEach((file, index) => {
-        formData.append('design_files', file);
+        uploadFormData.append('design_files', file);
       });
 
       if (designDescription) {
-        formData.append('description', designDescription);
+        uploadFormData.append('description', designDescription);
       }
 
       const response = await fetch(`/api/events/${selectedEvent.id}/stands/${selectedStand.id}/design`, {
@@ -253,7 +258,7 @@ const OperationPage = ({ showNotification, userRole }) => {
         headers: {
           'Authorization': `Bearer ${token}`
         },
-        body: formData
+        body: uploadFormData
       });
 
       if (response.ok) {
@@ -286,8 +291,8 @@ const OperationPage = ({ showNotification, userRole }) => {
       } else {
         showNotification('ფაილის წაშლა ვერ მოხერხდა', 'error');
       }
-    } catch (error) {
-      console.error('შეცდომა:', error);
+    } catch (ERROR) {
+      console.error('შეცდომა:', ERROR);
       showNotification('შეცდომა ქსელურ მოთხოვნაში', 'error');
     }
   };
@@ -448,7 +453,7 @@ const OperationPage = ({ showNotification, userRole }) => {
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       {/* Header */}
-      <Paper elevation={2} sx={{ p: 3, mb: 3, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+      <Paper elevation={2} sx={{ p: 3, mb: 3, background: 'linear-gradient(135deg, #667eeaa 0%, #764ba2 100%)', color: 'white' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
           <IconButton
             onClick={() => {

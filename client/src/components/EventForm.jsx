@@ -1,1096 +1,840 @@
-import React, { useState, useEffect, useCallback } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import {
-  Box,
-  Typography,
-  Button,
-  Card,
-  CardContent,
-  CardActions,
-  Grid,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Chip,
-  IconButton,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Paper,
-  Container,
-  Divider,
-  Alert,
-  Tooltip,
-  Switch,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Button,
+  Typography,
+  Grid,
+  Box,
+  Checkbox,
   FormControlLabel,
-  CircularProgress,
-  Stack,
-  Badge,
+  FormGroup,
+  IconButton,
+  Paper,
+  Alert,
+  Chip,
+  Stack
 } from '@mui/material';
-import {
-  Add,
-  Edit,
-  Delete,
-  Archive,
-  Restore,
-  Group,
-  FolderOpen,
-  CheckCircle,
-  Search,
-  Clear,
-  Sort,
-  Event as EventIcon,
-  Business,
-  LocationOn,
-  CalendarToday,
-  Assessment,
-  Close
-} from '@mui/icons-material';
-import EventForm from './EventForm';
-import EventParticipants from './EventParticipants';
-import EventCompletion from './EventCompletion';
-import EventFileManager from './EventFileManager';
+import { Close, Event, Business, LocationOn, Info } from '@mui/icons-material';
 
-const EventsList = ({ showNotification, userRole }) => {
-  const [events, setEvents] = useState([]);
-  const [filteredEvents, setFilteredEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [editingId, setEditingId] = useState(null);
-  const [selectedEvent, setSelectedEvent] = useState(null);
-  const [showDetails, setShowDetails] = useState(false);
-  const [showParticipants, setShowParticipants] = useState(false);
-  const [showEventCompletion, setShowEventCompletion] = useState(false);
-  const [selectedEventForCompletion, setSelectedEventForCompletion] = useState(null);
-  const [showFileManager, setShowFileManager] = useState(false);
-  const [selectedEventForFiles, setSelectedEventForFiles] = useState(null);
+const EventForm = ({ eventToEdit, onEventUpdated, showNotification }) => {
+  console.log('EventForm rendered with eventToEdit:', eventToEdit);
+  console.log('EventForm isEditing:', !!eventToEdit);
+  const [serviceName, setServiceName] = useState('');
+  const [description, setDescription] = useState('');
+  const [yearSelection, setYearSelection] = useState(new Date().getFullYear());
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
+  const [serviceType, setServiceType] = useState('ივენთი');
+  const [selectedSpaces, setSelectedSpaces] = useState([]);
+  const [availableSpaces, setAvailableSpaces] = useState([]);
+  const [selectedExhibitions, setSelectedExhibitions] = useState([]);
+  const [availableExhibitions, setAvailableExhibitions] = useState([]);
+  const [selectedExhibitionId, setSelectedExhibitionId] = useState('');
+  const [availableCompanies, setAvailableCompanies] = useState([]);
+  const isEditing = !!eventToEdit;
 
-  // ფილტრებისა და ძიების სტეიტები
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedYear, setSelectedYear] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [showArchivedOnly, setShowArchivedOnly] = useState(false);
-  const [sortDirection, setSortDirection] = useState('desc');
+  // Fetch available spaces and exhibitions
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const headers = token ? { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        } : {};
 
-  const isAuthorizedForManagement =
-    userRole === 'admin' ||
-    userRole === 'sales' ||
-    userRole === 'marketing';
+        // Fetch spaces
+        const spacesResponse = await fetch('/api/spaces', { headers });
+        if (spacesResponse.ok) {
+          const spaces = await spacesResponse.json();
+          setAvailableSpaces(spaces);
+        } else {
+          console.error('სივრცეების მიღება ვერ მოხერხდა:', spacesResponse.status);
+        }
 
-  const isAuthorizedForDeletion = userRole === 'admin';
+        // Fetch exhibitions
+        const exhibitionsResponse = await fetch('/api/exhibitions', { headers });
+        if (exhibitionsResponse.ok) {
+          const exhibitions = await exhibitionsResponse.json();
+          setAvailableExhibitions(exhibitions);
+        } else {
+          console.error('გამოფენების მიღება ვერ მოხერხდა:', exhibitionsResponse.status);
+        }
+      } catch (error) {
+        console.error('შეცდომა მონაცემების მიღებისას:', error);
+      }
+    };
+    fetchData();
+  }, []);
 
-  const fetchEvents = useCallback(async () => {
+  // Fetch companies when exhibition is selected
+  const fetchCompaniesByExhibition = async (exhibitionId, preserveSelection = false, isEditMode = false) => {
+    if (!exhibitionId) {
+      setAvailableCompanies([]);
+      if (!preserveSelection) {
+        // selectedCompanies removed
+      }
+      return;
+    }
+
     try {
       const token = localStorage.getItem('token');
-
-      if (!token) {
-        throw new Error('ავტორიზაცია საჭიროა ივენთების ნახვისთვის');
-      }
-
-      const headers = {
+      const headers = { 
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       };
 
-      console.log('Fetching events from /api/annual-services');
-      const response = await fetch('/api/annual-services', { headers });
+      const response = await fetch(`/api/companies`, { headers });
+      if (response.ok) {
+        const companies = await response.json();
+        console.log('ყველა კომპანია:', companies.length);
 
-      if (!response.ok) {
-        console.error('Events API failed with status:', response.status);
+        const filteredCompanies = companies.filter(company => {
+          console.log(`კომპანია ${company.company_name}:`, company.selected_exhibitions);
+          return company.selected_exhibitions && 
+                 Array.isArray(company.selected_exhibitions) && 
+                 company.selected_exhibitions.includes(parseInt(exhibitionId));
+        });
 
-        if (response.status === 401 || response.status === 403) {
-          throw new Error('არ გაქვთ ივენთების ნახვის უფლება');
+        console.log(`გამოფენა ${exhibitionId}-ის კომპანიები:`, filteredCompanies.length);
+        setAvailableCompanies(filteredCompanies);
+
+        // ავტო-არჩევა მხოლოდ ახალი ივენთისთვის
+        if (!preserveSelection && !isEditMode) {
+          // Auto-selection logic removed with selectedCompanies state
         }
+      }
+    } catch (error) {
+      console.error('შეცდომა კომპანიების მიღებისას:', error);
+    }
+  };
 
-        if (response.status === 500) {
-          console.log('Server error, trying fallback to annual-services');
-          try {
-            const fallbackResponse = await fetch('/api/annual-services', { headers });
+  // რედაქტირების მონაცემების დაყენება
+  useEffect(() => {
+    const loadEditingData = async () => {
+      if (isEditing && eventToEdit) {
+        console.log('რედაქტირების მონაცემები:', eventToEdit);
+        console.log('Original start_date:', eventToEdit.start_date);
+        console.log('Original end_date:', eventToEdit.end_date);
+        
+        // ვნახოთ რა თარიღები მივაღწიეთ ფორმატირების შემდეგ
+        const testStartDate = eventToEdit.start_date ? eventToEdit.start_date.split('T')[0] : '';
+        const testEndDate = eventToEdit.end_date ? eventToEdit.end_date.split('T')[0] : '';
+        console.log('Formatted start_date:', testStartDate);
+        console.log('Formatted end_date:', testEndDate);
 
-            if (!fallbackResponse.ok) {
-              throw new Error('ბექენდ სერვისები მიუწვდომელია');
-            }
+        setServiceName(eventToEdit.service_name || '');
+        setDescription(eventToEdit.description || '');
+        setYearSelection(eventToEdit.year_selection || new Date().getFullYear());
+        
+        console.log('Raw dates from eventToEdit:', {
+          start_date: eventToEdit.start_date,
+          end_date: eventToEdit.end_date,
+          dateType_start: typeof eventToEdit.start_date,
+          dateType_end: typeof eventToEdit.end_date
+        });
+        
+        // თარიღების სწორი ფორმატირება - timezone-ის პრობლემის სრული თავიდან აცილება
+        const formatDateForInput = (dateString) => {
+          if (!dateString) return '';
+          
+          console.log('Formatting date for input:', dateString);
+          
+          // თუ უკვე YYYY-MM-DD ფორმატშია, მისი გამოყენება
+          if (typeof dateString === 'string' && dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            console.log('Date already in YYYY-MM-DD format:', dateString);
+            return dateString.trim();
+          }
+          
+          // თუ ISO string-ია, T-მდე ნაწილის აღება
+          if (typeof dateString === 'string' && dateString.includes('T')) {
+            const datePart = dateString.split('T')[0].trim();
+            console.log('Extracted date from ISO:', datePart);
+            return datePart;
+          }
+          
+          // სხვა შემთხვევაში - string-ის სახით დაბრუნება
+          console.log('Using date string as-is:', dateString);
+          return String(dateString).trim();
+        };
 
-            const data = await fallbackResponse.json();
-            console.log('Fallback data received:', data.length, 'services');
-            setEvents(data || []);
-            return;
-          } catch (fallbackError) {
-            console.error('Fallback also failed:', fallbackError);
-            throw new Error('სერვისი დროებით მიუწვდომელია');
+        const formattedStartDate = formatDateForInput(eventToEdit.start_date);
+        const formattedEndDate = formatDateForInput(eventToEdit.end_date);
+        
+        console.log('Setting start date to:', formattedStartDate);
+        console.log('Setting end date to:', formattedEndDate);
+        
+        setStartDate(formattedStartDate);
+        setEndDate(formattedEndDate);
+        setStartTime(eventToEdit.start_time || '');
+        setEndTime(eventToEdit.end_time || '');
+        setServiceType(eventToEdit.service_type || 'ივენთი');
+
+        // გამოფენის ID-ის სწორად დაყენება
+        console.log('eventToEdit.exhibition_id:', eventToEdit.exhibition_id);
+        console.log('eventToEdit.exhibition_name:', eventToEdit.exhibition_name);
+        
+        const exhibitionId = eventToEdit.exhibition_id ? eventToEdit.exhibition_id.toString() : '';
+        setSelectedExhibitionId(exhibitionId);
+        console.log('დაყენებული გამოფენის ID:', exhibitionId);
+        
+        // თუ exhibition_id არის null მაგრამ exhibition_name არსებობს, ვეძებთ ID-ს
+        if (!exhibitionId && eventToEdit.exhibition_name && availableExhibitions.length > 0) {
+          const foundExhibition = availableExhibitions.find(ex => 
+            ex.exhibition_name === eventToEdit.exhibition_name
+          );
+          if (foundExhibition) {
+            console.log('ნაპოვნი გამოფენა სახელით:', foundExhibition);
+            setSelectedExhibitionId(foundExhibition.id.toString());
           }
         }
 
-        throw new Error(`სერვერის შეცდომა: ${response.status}`);
-      }
+        // სივრცეების მოძებნა და დაყენება
+        try {
+          console.log('სივრცეების ჩატვირთვის მცდელობა ივენთისთვის:', eventToEdit.id);
+          console.log('eventToEdit object keys:', Object.keys(eventToEdit));
+          console.log('Full eventToEdit object:', eventToEdit);
+          
+          const token = localStorage.getItem('token');
+          
+          // ჯერ ვცდილობთ details endpoint-ს
+          const spacesResponse = await fetch(`/api/annual-services/${eventToEdit.id}/details`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
 
-      const contentType = response.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("სერვერმა არასწორი ფორმატი დააბრუნა");
+          console.log('Spaces response status:', spacesResponse.status);
+
+          if (spacesResponse.ok) {
+            const serviceDetails = await spacesResponse.json();
+            console.log('Service details received full object:', serviceDetails);
+            console.log('serviceDetails.spaces:', serviceDetails.spaces);
+            console.log('serviceDetails type:', typeof serviceDetails);
+            
+            if (serviceDetails.spaces && Array.isArray(serviceDetails.spaces) && serviceDetails.spaces.length > 0) {
+              const spaceIds = serviceDetails.spaces.map(s => s.id);
+              setSelectedSpaces(spaceIds);
+              console.log('ჩატვირთული სივრცეები details-იდან:', spaceIds);
+            } else {
+              console.log('Details API-მ სივრცეები ვერ მოგვცა, ვცდილობთ ალტერნატიულ გზებს');
+              await tryAlternativeSpaceLoading();
+            }
+          } else {
+            console.log('Details API ვერ მუშაობს (status:', spacesResponse.status, '), ვცდილობთ ალტერნატიულ გზას');
+            await tryAlternativeSpaceLoading();
+          }
+        } catch (error) {
+          console.error('სივრცეების ჩატვირთვის შეცდომა:', error);
+          await tryAlternativeSpaceLoading();
+        }
+
+        // ალტერნატიული მეთოდები სივრცეების ჩატვირთვისთვის
+        async function tryAlternativeSpaceLoading() {
+          console.log('ალტერნატიული მეთოდების ცდა...');
+          console.log('ყველა ველი eventToEdit ობიექტში:');
+          
+          // ყველა შესაძლო ველის დეტალური შემოწმება
+          Object.keys(eventToEdit).forEach(key => {
+            if (key.toLowerCase().includes('space')) {
+              console.log(`${key}:`, eventToEdit[key]);
+            }
+          });
+          
+          let spacesArray = [];
+          
+          // შევამოწმოთ ყველა შესაძლო ველი
+          const possibleSpaceFields = [
+            'selected_spaces', 
+            'space_ids', 
+            'spaces', 
+            'space_id', 
+            'spaceIds',
+            'selectedSpaces'
+          ];
+          
+          for (const field of possibleSpaceFields) {
+            if (eventToEdit[field] && spacesArray.length === 0) {
+              try {
+                console.log(`ვამოწმებთ ველს: ${field}:`, eventToEdit[field]);
+                
+                if (Array.isArray(eventToEdit[field])) {
+                  spacesArray = eventToEdit[field].map(s => typeof s === 'object' ? s.id : s);
+                } else if (typeof eventToEdit[field] === 'string') {
+                  spacesArray = JSON.parse(eventToEdit[field]);
+                } else if (typeof eventToEdit[field] === 'number') {
+                  spacesArray = [eventToEdit[field]];
+                }
+                
+                if (spacesArray.length > 0) {
+                  console.log(`სივრცეები მოიძებნა ველში ${field}:`, spacesArray);
+                  break;
+                }
+              } catch (e) {
+                console.log(`ველის ${field} parse შეცდომა:`, e);
+              }
+            }
+          }
+          
+          // მეთოდი 2: service_spaces table-ის პირდაპირ შემოწმება
+          if (spacesArray.length === 0) {
+            try {
+              console.log('ვეძებთ service_spaces table-ში...');
+              const token = localStorage.getItem('token');
+              
+              // ვცდილობთ სხვადასხვა endpoint-ებს
+              const possibleEndpoints = [
+                `/api/annual-services/${eventToEdit.id}/spaces`,
+                `/api/service-spaces/${eventToEdit.id}`,
+                `/api/services/${eventToEdit.id}/spaces`
+              ];
+              
+              for (const endpoint of possibleEndpoints) {
+                try {
+                  console.log(`ვცდილობთ endpoint: ${endpoint}`);
+                  const spacesLinkResponse = await fetch(endpoint, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                  });
+                  
+                  if (spacesLinkResponse.ok) {
+                    const spacesData = await spacesLinkResponse.json();
+                    console.log(`${endpoint} response:`, spacesData);
+                    
+                    if (Array.isArray(spacesData) && spacesData.length > 0) {
+                      spacesArray = spacesData.map(s => s.space_id || s.id);
+                      console.log(`სივრცეები ${endpoint}-იდან:`, spacesArray);
+                      break;
+                    }
+                  }
+                } catch (e) {
+                  console.log(`${endpoint} შეცდომა:`, e);
+                }
+              }
+            } catch (e) {
+              console.log('service_spaces endpoints შეცდომა:', e);
+            }
+          }
+          
+          // მეთოდი 3: spaces_count ველის გამოყენება
+          if (spacesArray.length === 0 && eventToEdit.spaces_count && eventToEdit.spaces_count !== '0') {
+            console.log('spaces_count ველი მიუთითებს სივრცეების არსებობაზე:', eventToEdit.spaces_count);
+            
+            // ვცდილობთ ყველა სივრცის ჩატვირთვას და ნახვას რომელია დაკავშირებული
+            try {
+              const token = localStorage.getItem('token');
+              const allSpacesResponse = await fetch('/api/spaces', {
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+              
+              if (allSpacesResponse.ok) {
+                const allSpaces = await allSpacesResponse.json();
+                console.log('ყველა ხელმისაწვდომი სივრცე:', allSpaces);
+                
+                // გავაკეთოთ SQL query პირდაპირ service_spaces table-ზე
+                const serviceSpacesQuery = await fetch(`/api/service-spaces/query`, {
+                  method: 'POST',
+                  headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({ service_id: eventToEdit.id })
+                });
+                
+                if (serviceSpacesQuery.ok) {
+                  const serviceSpaces = await serviceSpacesQuery.json();
+                  console.log('service_spaces SQL query შედეგი:', serviceSpaces);
+                  
+                  if (Array.isArray(serviceSpaces) && serviceSpaces.length > 0) {
+                    spacesArray = serviceSpaces.map(s => s.space_id);
+                    console.log('სივრცეები SQL query-დან:', spacesArray);
+                  }
+                }
+              }
+            } catch (e) {
+              console.log('spaces_count მეთოდის შეცდომა:', e);
+            }
+          }
+          
+          // მეთოდი 4: JSON ველების შემოწმება
+          if (spacesArray.length === 0) {
+            console.log('შევამოწმოთ JSON ფორმატის ველები...');
+            
+            // ყველა string ველი რომელშიც შეიძლება JSON იყოს
+            Object.keys(eventToEdit).forEach(key => {
+              if (typeof eventToEdit[key] === 'string' && eventToEdit[key].includes('[')) {
+                try {
+                  const parsed = JSON.parse(eventToEdit[key]);
+                  if (Array.isArray(parsed) && parsed.length > 0) {
+                    console.log(`JSON ველი ${key} შეიცავს array:`, parsed);
+                    if (spacesArray.length === 0) {
+                      spacesArray = parsed;
+                    }
+                  }
+                } catch (e) {
+                  // არაა JSON
+                }
+              }
+            });
+          }
+          
+          setSelectedSpaces(spacesArray);
+          console.log('საბოლოო სივრცეები:', spacesArray);
+        }
+
+        // გამოფენების დაყენება
+        const exhibitionsArray = exhibitionId ? [parseInt(exhibitionId)] : [];
+        setSelectedExhibitions(exhibitionsArray);
+
+        // კომპანიების ჩატვირთვა თუ გამოფენა არჩეულია
+        if (exhibitionId && availableExhibitions.length > 0) {
+          console.log('კომპანიების ჩატვირთვა რედაქტირებისას, გამოფენის ID:', exhibitionId);
+          await fetchCompaniesByExhibition(exhibitionId, true, true);
+        }
+
+        
+      }
+    };
+
+    if (availableExhibitions.length > 0) {
+      loadEditingData();
+    }
+  }, [eventToEdit, isEditing, availableExhibitions]);
+
+  // ცალკე useEffect-ი ცარიელი ფორმისთვის
+  useEffect(() => {
+    if (!isEditing) {
+      // ცარიელი ფორმისთვის
+      setServiceName('');
+      setDescription('');
+      setYearSelection(new Date().getFullYear());
+      setStartDate('');
+      setEndDate('');
+      setStartTime('');
+      setEndTime('');
+      setServiceType('ივენთი');
+      setSelectedSpaces([]);
+      setSelectedExhibitions([]);
+      setSelectedExhibitionId('');
+      setAvailableCompanies([]);
+    }
+  }, [isEditing]);
+
+  const handleSpaceToggle = (spaceId) => {
+    setSelectedSpaces(prev => 
+      prev.includes(spaceId) 
+        ? prev.filter(id => id !== spaceId)
+        : [...prev, spaceId]
+    );
+  };
+
+  const handleExhibitionSelect = (exhibitionId) => {
+    console.log('გამოფენის არჩევა:', exhibitionId, 'რედაქტირების რეჟიმი:', isEditing);
+    setSelectedExhibitionId(exhibitionId);
+    setSelectedExhibitions(exhibitionId ? [parseInt(exhibitionId)] : []);
+
+    // კომპანიების ჩატვირთვა
+    if (exhibitionId) {
+      // რედაქტირების დროს არ ვაფსებთ არჩეულ კომპანიებს
+      fetchCompaniesByExhibition(exhibitionId, isEditing, isEditing);
+    } else {
+      setAvailableCompanies([]);
+    }
+  };
+
+  
+
+  const handleSubmit = async () => {
+
+    // თარიღებისა და დროის ვალიდაცია
+    if (!startDate || !endDate) {
+      showNotification('გთხოვთ აირჩიოთ დაწყებისა და დასრულების თარიღები', 'error');
+      return;
+    }
+
+    const startDateTime = new Date(`${startDate}T${startTime || '00:00'}`);
+    const endDateTime = new Date(`${endDate}T${endTime || '23:59'}`);
+
+    if (endDateTime <= startDateTime) {
+      showNotification('დასრულების თარიღი და დრო უნდა იყოს დაწყების შემდეგ', 'error');
+      return;
+    }
+
+    // მომავალი თარიღის შემოწმება (ნებაყოფლობითი)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (startDateTime < today && !isEditing) {
+      const confirm = window.confirm('იწყება წარსულ თარიღში. გსურთ გაგრძელება?');
+      if (!confirm) return;
+    }
+
+    const method = isEditing ? 'PUT' : 'POST';
+    const url = isEditing
+      ? `/api/annual-services/${eventToEdit.id}`
+      : '/api/annual-services';
+
+    try {
+      const token = localStorage.getItem('token');
+
+      // Prepare data with proper formatting
+      const requestData = {
+        service_name: serviceName,
+        description,
+        year_selection: parseInt(yearSelection),
+        start_date: startDate,
+        end_date: endDate,
+        start_time: startTime || null,
+        end_time: endTime || null,
+        service_type: serviceType,
+        is_active: true,
+        selected_spaces: selectedSpaces,
+        space_ids: selectedSpaces, // Add this for backend compatibility
+        selected_exhibitions: selectedExhibitions,
+        exhibition_id: selectedExhibitionId ? parseInt(selectedExhibitionId) : null,
+        selected_companies: availableCompanies.map(company => company.id) // ყველა ხელმისაწვდომი კომპანია
+      };
+
+      console.log('Sending event data:', requestData);
+      console.log('Selected spaces:', selectedSpaces);
+      console.log('Available companies to register:', availableCompanies.length);
+
+      const response = await fetch(url, {
+        method,
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(requestData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'ოპერაცია ვერ შესრულდა');
       }
 
       const data = await response.json();
-      console.log('Events data received:', data.length, 'events');
-      setEvents(data || []);
-    } catch (err) {
-      console.error('Error fetching events:', err);
-      setError(err.message);
-      showNotification(`შეცდომა ივენთების ჩატვირთვისას: ${err.message}`, 'error');
-      setEvents([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [showNotification]);
+      showNotification(data.message, 'success');
 
-  useEffect(() => {
-    fetchEvents();
-  }, [fetchEvents]);
-
-  useEffect(() => {
-    if (events.length > 0) {
-      let sorted = [...events];
-      if (sortDirection === 'desc') {
-        sorted.sort((a, b) => new Date(b.start_date) - new Date(a.start_date));
-      } else {
-        sorted.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
-      }
-      setEvents(sorted);
-    }
-  }, [sortDirection]);
-
-  useEffect(() => {
-    let filtered = [...events];
-
-    if (showArchivedOnly) {
-      filtered = filtered.filter(event => event.is_archived);
-    } else {
-      filtered = filtered.filter(event => !event.is_archived);
-    }
-
-    if (searchTerm) {
-      filtered = filtered.filter(event =>
-        event.service_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        event.description?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    if (selectedYear) {
-      filtered = filtered.filter(event => {
-        const startYear = new Date(event.start_date).getFullYear();
-        const endYear = new Date(event.end_date).getFullYear();
-        const year = parseInt(selectedYear);
-
-        // ივენთი მოიცავს შერჩეულ წელს თუ იწყება ან მთავრდება იმ წელს
-        return startYear === year || endYear === year || (startYear < year && endYear > year);
-      });
-    }
-
-    if (selectedMonth) {
-      filtered = filtered.filter(event => {
-        const startDate = new Date(event.start_date);
-        const endDate = new Date(event.end_date);
-        const month = parseInt(selectedMonth);
-
-        const startMonth = startDate.getMonth() + 1;
-        const endMonth = endDate.getMonth() + 1;
-        const startYear = startDate.getFullYear();
-        const endYear = endDate.getFullYear();
-
-        // ივენთი მოიცავს შერჩეულ თვეს
-        if (startYear === endYear) {
-          return month >= startMonth && month <= endMonth;
-        } else {
-          // მრავალწლიანი ივენთისთვის
-          return (startMonth <= month) || (endMonth >= month);
-        }
-      });
-    }
-
-    if (statusFilter) {
-      filtered = filtered.filter(event => {
-        const status = getStatusBadge(event);
-        return status.class === statusFilter;
-      });
-    }
-
-    if (sortDirection === 'desc') {
-      filtered.sort((a, b) => new Date(b.start_date) - new Date(a.start_date));
-    } else {
-      filtered.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
-    }
-
-    setFilteredEvents(filtered);
-  }, [events, searchTerm, selectedYear, selectedMonth, statusFilter, showArchivedOnly, sortDirection]);
-
-  useEffect(() => {
-    if (!showArchivedOnly) {
-      // შეგვიძლია აქ დავამატოთ კონკრეტული ფილტრების გასუფთავება
-    }
-  }, [showArchivedOnly]);
-
-  const getAvailableYears = () => {
-    const years = events.map(event => new Date(event.start_date).getFullYear());
-    return [...new Set(years)].sort((a, b) => b - a);
-  };
-
-  const months = [
-    { value: '1', label: 'იანვარი' },
-    { value: '2', label: 'თებერვალი' },
-    { value: '3', label: 'მარტი' },
-    { value: '4', label: 'აპრილი' },
-    { value: '5', label: 'მაისი' },
-    { value: '6', label: 'ივნისი' },
-    { value: '7', label: 'ივლისი' },
-    { value: '8', label: 'აგვისტო' },
-    { value: '9', label: 'სექტემბერი' },
-    { value: '10', label: 'ოქტომბერი' },
-    { value: '11', label: 'ნოემბერი' },
-    { value: '12', label: 'დეკემბერი' }
-  ];
-
-  const clearFilters = () => {
-    setSearchTerm('');
-    setSelectedYear('');
-    setSelectedMonth('');
-    setStatusFilter('');
-  };
-
-  const handleDelete = async (id) => {
-    const isConfirmed = window.confirm('ნამდვილად გსურთ ამ ივენთის წაშლა? ეს მოიცავს ყველა დაკავშირებულ მონაწილეს და მონაცემს.');
-    if (!isConfirmed) return;
-
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        showNotification('ავტორიზაციის ტოკენი არ მოიძებნა. გთხოვთ, შეხვიდეთ სისტემაში.', 'error');
-        return;
+      // თუ კომპანიები ავტომატურად რეგისტრირდნენ
+      if (!isEditing && data.registeredCompanies > 0) {
+        showNotification(`${data.registeredCompanies} კომპანია ავტომატურად დარეგისტრირდა მომლოდინე სტატუსით`, 'info');
       }
 
-      console.log(`Attempting to delete event with ID: ${id}`);
-
-      const response = await fetch(`/api/events/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      console.log('Delete response status:', response.status);
-
-      if (response.ok) {
-        const result = await response.json();
-        showNotification('ივენთი წარმატებით წაიშალა!', 'success');
-        setEvents(prevEvents => prevEvents.filter((event) => event.id !== id));
-        fetchEvents();
-      } else {
-        const contentType = response.headers.get("content-type");
-        let errorMessage = 'წაშლა ვერ მოხერხდა';
-
-        if (contentType && contentType.includes("application/json")) {
-          try {
-            const errorData = await response.json();
-            errorMessage = errorData.message || errorMessage;
-          } catch (jsonError) {
-            console.error('Error parsing JSON error response:', jsonError);
-            errorMessage = `სერვერის შეცდომა (${response.status})`;
-          }
-        } else {
-          const errorText = await response.text();
-          console.error('Non-JSON error response:', errorText);
-          errorMessage = `სერვერის შეცდომა (${response.status})`;
-        }
-
-        console.error('Delete failed:', { status: response.status, message: errorMessage });
-        showNotification(errorMessage, 'error');
-      }
+      onEventUpdated(); // ფორმის გასუფთავება და სიის განახლება
     } catch (error) {
-      console.error('შეცდომა წაშლისას:', error);
-      showNotification('დაფიქსირდა შეცდომა სერვერთან კავშირისას.', 'error');
+      console.error('Event submission error:', error);
+      showNotification(`შეცდომა: ${error.message}`, 'error');
     }
   };
 
-  const handleEditClick = (event) => {
-    setEditingId(event.id);
-  };
-
-  const handleEventUpdated = () => {
-    setEditingId(null);
-    fetchEvents();
-  };
-
-  const handleArchive = async (id) => {
-    const isConfirmed = window.confirm('ნამდვილად გსურთ ამ ივენთის არქივში გადატანა?');
-    if (!isConfirmed) return;
-
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/annual-services/${id}/archive`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        showNotification('ივენთი წარმატებით არქივში გადაიტანა!', 'success');
-        fetchEvents();
-      } else {
-        const errorData = await response.json();
-        showNotification(`არქივში გადატანა ვერ მოხერხდა: ${errorData.message}`, 'error');
-      }
-    } catch (er) {
-      showNotification('დაფიქსირდა შეცდომა სერვერთან კავშირისას.', 'error');
+  const generateYearOptions = () => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let i = currentYear - 5; i <= currentYear + 10; i++) {
+      years.push(i);
     }
-  };
-
-  const handleRestore = async (id) => {
-    const isConfirmed = window.confirm('ნამდვილად გსურთ ამ ივენთის არქივიდან აღდგენა?');
-    if (!isConfirmed) return;
-
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/annual-services/${id}/restore`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        showNotification('ივენთი წარმატებით აღდგა არქივიდან!', 'success');
-        fetchEvents();
-      } else {
-        const errorData = await response.json();
-        showNotification(`არქივიდან აღდგენა ვერ მოხერხდა: ${errorData.message}`, 'error');
-      }
-    } catch (error) {
-      showNotification('დაფიქსირდა შეცდომა სერვერთან კავშირისას.', 'error');
-    }
-  };
-
-  const viewEventDetails = async (event) => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/annual-services/${event.id}/details`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        const details = await response.json();
-        setSelectedEvent(details);
-        setShowDetails(true);
-      } else {
-        showNotification('ივენთის დეტალების მიღება ვერ მოხერხდა', 'error');
-      }
-    } catch (error) {
-      showNotification('შეცდომა ივენთის დეტალების ჩატვირთვისას', 'error');
-    }
-  };
-
-  const handleShowParticipants = (event) => {
-    setSelectedEvent(event);
-    setShowParticipants(true);
-  };
-
-  const handleShowFiles = (event) => {
-    setSelectedEventForFiles(event);
-    setShowFileManager(true);
-  };
-
-  const handleCompleteEvent = (event) => {
-    setSelectedEventForCompletion(event);
-    setShowEventCompletion(true);
-  };
-
-  const handleCompletionSuccess = (report) => {
-    showNotification('ივენთი წარმატებით დასრულდა!', 'success');
-    fetchEvents();
-  };
-
-  if (loading) {
-    return (
-      <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
-        <CircularProgress size={60} />
-      </Container>
-    );
-  }
-
-  if (error) {
-    return (
-      <Container sx={{ mt: 4 }}>
-        <Alert severity="error">შეცდომა: {error}</Alert>
-      </Container>
-    );
-  }
-
-  const formatDate = (dateString) => {
-    if (!dateString) return '';
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return dateString; // თუ თარიღი არასწორია
-      return date.toLocaleDateString('ka-GE', {
-        year: 'numeric',
-        month: 'numeric',
-        day: 'numeric'
-      });
-    } catch (error) {
-      console.error('თარიღის ფორმატირების შეცდომა:', error);
-      return dateString;
-    }
-  };
-
-  const formatTime = (timeString) => {
-    if (!timeString) return '';
-    return timeString.slice(0, 5);
-  };
-
-  // Format date and time for display - avoiding timezone issues completely
-  const formatDateTime = (date, time) => {
-    if (!date) return 'არ არის მითითებული';
-
-    try {
-      let dateString = date;
-
-      // Convert any format to YYYY-MM-DD string first
-      if (date instanceof Date) {
-        // Get local date components without timezone conversion
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        dateString = `${year}-${month}-${day}`;
-      } else if (typeof date === 'string' && date.includes('T')) {
-        // Extract date part from ISO string
-        dateString = date.split('T')[0];
-      }
-
-      // Now format the YYYY-MM-DD string to DD/MM/YYYY
-      if (typeof dateString === 'string' && dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        const [year, month, day] = dateString.split('-');
-        const formattedDate = `${day}/${month}/${year}`;
-        return time ? `${formattedDate} ${time}` : formattedDate;
-      }
-
-      return dateString;
-    } catch (error) {
-      console.error('Date formatting error:', error);
-      return 'თარიღის ფორმატირების შეცდომა';
-    }
-  };
-
-  const getStatusBadge = (event) => {
-    const now = new Date();
-    now.setHours(0, 0, 0, 0); // დღის დასაწყისზე გადაყვანა
-
-    // თარიღების სწორად დამუშავება
-    const startDate = new Date(event.start_date);
-    startDate.setHours(0, 0, 0, 0);
-
-    const endDate = new Date(event.end_date);
-    endDate.setHours(23, 59, 59, 999);
-
-    // არქივი ყველაზე მაღალი პრიორიტეტის სტატუსია
-    if (event.is_archived) {
-      return { text: 'არქივი', class: 'archived', color: 'default' };
-    }
-
-    // არააქტიური ივენთი
-    if (event.is_active === false || event.is_active === 0) {
-      return { text: 'არააქტიური', class: 'inactive', color: 'error' };
-    }
-
-    // თარიღების შემოწმება
-    if (now < startDate) {
-      return { text: 'მომავალი', class: 'upcoming', color: 'info' };
-    }
-
-    if (now > endDate) {
-      return { text: 'დასრულებული', class: 'finished', color: 'success' };
-    }
-
-    // თუ დღეს არის დაწყების და დასასრულის შორის
-    return { text: 'მიმდინარე', class: 'active', color: 'warning' };
-  };
-
-  const toggleSortDirection = () => {
-    setSortDirection(prevDirection => (prevDirection === 'desc' ? 'asc' : 'desc'));
+    return years;
   };
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 3, mb: 3 }}>
-      {/* Header Section */}
-      <Box sx={{ mb: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, flexWrap: 'wrap', gap: 2 }}>
-          <Typography
-            variant="h4"
-            sx={{
-              fontWeight: 600,
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1
-            }}
-          >
-            <EventIcon sx={{ color: '#667eea' }} />
-            {showArchivedOnly ? 'არქივი' : 'ივენთები'}
-          </Typography>
-
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={showArchivedOnly}
-                  onChange={(e) => setShowArchivedOnly(e.target.checked)}
-                  sx={{
-                    '& .MuiSwitch-switchBase.Mui-checked': {
-                      color: '#667eea'
-                    },
-                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                      backgroundColor: '#667eea'
-                    }
-                  }}
-                />
-              }
-              label={showArchivedOnly ? 'აქტიური ივენთების ნახვა' : 'არქივის ნახვა'}
-            />
-
-            {isAuthorizedForManagement && !showArchivedOnly && (
-              <Button
-                variant="contained"
-                startIcon={<Add />}
-                onClick={() => setEditingId(0)}
-                sx={{
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  borderRadius: 2,
-                  px: 3,
-                  '&:hover': {
-                    background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
-                    transform: 'translateY(-1px)',
-                    boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)'
-                  }
-                }}
-              >
-                ივენთის დამატება
-              </Button>
-            )}
-          </Box>
-        </Box>
-      </Box>
-
-      {editingId !== null && isAuthorizedForManagement && (
-         <EventForm
-            eventToEdit={events.find(e => e.id === editingId)}
-            onEventUpdated={handleEventUpdated}
-            showNotification={showNotification}
-         />
-      )}
-
-      {/* Filters Section */}
-      <Paper
-        elevation={2}
-        sx={{
-          p: 3,
-          mb: 3,
+    <Dialog 
+      open={true} 
+      onClose={() => onEventUpdated()}
+      maxWidth="md"
+      fullWidth
+      sx={{
+        '& .MuiDialog-paper': {
           borderRadius: 3,
-          background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
-          border: '1px solid rgba(102, 126, 234, 0.1)',
+          boxShadow: '0 24px 48px rgba(0, 0, 0, 0.2)',
+          background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)'
+        }
+      }}
+    >
+      <DialogTitle 
+        sx={{ 
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 4px 12px rgba(102, 126, 234, 0.1)'
+          justifyContent: 'space-between',
+          fontWeight: 600,
+          fontSize: '1.25rem'
         }}
       >
-        <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Search sx={{ color: '#667eea', mr: 1, }} />
-          ძიება და ფილტრაცია
-        </Typography>
-
-        <Grid container spacing={2} sx={{ mb: 2 }} size='small'>
-          <Grid item xs={12} md={3}>
-            <TextField
-              size='small'
-              fullWidth
-              label="ძიება"
-              placeholder="ძიება სახელით..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              InputProps={{
-                startAdornment: <Search sx={{ mr: 1, color: 'text.secondary' }} />,
-                sx: { borderRadius: 2 }
-              }}
-            />
-          </Grid>
-
-          <Grid item xs={12} md={2}>
-            <FormControl fullWidth sx={{minWidth: 120}} size='small'>
-              <InputLabel>წელი</InputLabel>
-              <Select
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(e.target.value)}
-                label="წელი"
-                sx={{ borderRadius: 2 }}
-              >
-                <MenuItem value="">ყველა წელი</MenuItem>
-                {getAvailableYears().map(year => (
-                  <MenuItem key={year} value={year}>{year}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-
-          <Grid item xs={12} md={2}>
-            <FormControl fullWidth sx={{minWidth: 120}} size='small'>
-              <InputLabel>თვე</InputLabel>
-              <Select
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value)}
-                label="თვე"
-                sx={{ borderRadius: 2 }}
-              >
-                <MenuItem value="">ყველა თვე</MenuItem>
-                {months.map(month => (
-                  <MenuItem key={month.value} value={month.value}>{month.label}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-
-          <Grid item xs={12} md={2}>
-            <FormControl fullWidth sx={{minWidth: 120}} size='small'>
-              <InputLabel >სტატუსი</InputLabel>
-              <Select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                label="სტატუსი"
-                sx={{ borderRadius: 2 }}
-              >
-                <MenuItem value="">ყველა სტატუსი</MenuItem>
-                <MenuItem value="upcoming">მომავალი</MenuItem>
-                <MenuItem value="active">მიმდინარე</MenuItem>
-                <MenuItem value="finished">დასრულებული</MenuItem>
-                <MenuItem value="archived">არქივი</MenuItem>
-                <MenuItem value="inactive">არააქტიური</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-
-          <Grid item xs={12} md={3} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-            <Stack direction="row" spacing={1}>
-              <Button
-                size='large'
-                variant="outlined"
-                startIcon={<Clear />}
-                onClick={clearFilters}
-                sx={{
-                  borderRadius: 2,
-                  border: 'none',
-                  color: '#ffffffff',
-                  '&:hover': {
-                    borderColor: '#5a6268',
-                    backgroundColor: 'rgba(108, 117, 125, 0.04)'
-                  }
-                }}
-              >
-                გასუფთავება
-              </Button>
-              <Button
-                size='large'
-                variant="outlined"
-                startIcon={<Sort />}
-                onClick={toggleSortDirection}
-                sx={{
-                  borderRadius: 2,
-                  border: 'none',
-                  color: '#ffffffff',
-                  '&:hover': {
-                    borderColor: '#5a6fd8',
-                    backgroundColor: 'rgba(102, 126, 234, 0.04)'
-                  }
-                }}
-              >
-                {sortDirection === 'desc' ? 'ახალი → ძველი' : 'ძველი → ახალი'}
-              </Button>
-            </Stack>
-          </Grid>
-        </Grid>
-
-        <Alert
-          severity="info"
-          sx={{
-            borderRadius: 2,
-            backgroundColor: '#e3f2fd',
-            border: '1px solid #90caf9'
-          }}
-        >
-          <Typography variant="body2">
-            <strong>ნაპოვნია:</strong> {filteredEvents.length} {showArchivedOnly ? 'არქივული' : 'აქტიური'} ივენთი
-          </Typography>
-        </Alert>
-      </Paper>
-
-      {/* Events Grid */}
-      {filteredEvents.length === 0 ? (
-        <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3 }}>
-          <EventIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-          <Typography variant="h6" color="text.secondary">
-            {showArchivedOnly
-              ? 'არქივში ივენთები არ მოიძებნა.'
-              : (events.length === 0 ? 'ივენთები არ მოიძებნა.' : 'ფილტრების შესაბამისი ივენთები არ მოიძებნა.')}
-          </Typography>
-        </Paper>
-      ) : (
-        <Grid container spacing={3}>
-          {filteredEvents.map((event) => {
-            const status = getStatusBadge(event);
-            return (
-              <Grid size={{ xs: 12, md: 6, lg: 4 }} key={event.id}>
-                <Card
-                elevation={3}
-                sx={{
-                  height: '100%',
-                  borderRadius: 3,
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)'
-                  },
-                  border: '1px solid rgba(102, 126, 234, 0.1)',
-                  background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)'
-                }}
-              >
-                <CardContent sx={{ pb: 2 }}>
-                  {/* Event Header */}
-                  <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
-                    <Typography
-                      variant="h6"
-                      sx={{
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        color: '#667eea',
-                        '&:hover': {
-                          textDecoration: 'underline'
-                        },
-                        flex: 1,
-                        mr: 1,
-                        lineHeight: 1.3
-                      }}
-                      onClick={() => viewEventDetails(event)}
-                    >
-                      {event.service_name}
-                    </Typography>
-                    <Chip
-                      label={status.text}
-                      color={status.color}
-                      size="small"
-                      sx={{ borderRadius: 2, fontWeight: 500 }}
-                    />
-                  </Box>
-
-                  {/* Event Details */}
-                  <Stack spacing={1} sx={{ mb: 2 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <CalendarToday sx={{ fontSize: 16, color: 'text.secondary' }} />
-                      <Typography variant="body2" color="text.secondary">
-                        <strong>დაწყება:</strong> {formatDateTime(event.start_date, event.start_time)}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <CalendarToday sx={{ fontSize: 16, color: 'text.secondary' }} />
-                      <Typography variant="body2" color="text.secondary">
-                        <strong>დასრულება:</strong> {formatDateTime(event.end_date, event.end_time)}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <LocationOn sx={{ fontSize: 16, color: 'text.secondary' }} />
-                      <Typography variant="body2" color="text.secondary">
-                        <strong>სივრცეები:</strong> {event.spaces_count || 0}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Business sx={{ fontSize: 16, color: 'text.secondary' }} />
-                      <Typography variant="body2" color="text.secondary">
-                        <strong>ტიპი:</strong> {event.service_type}
-                      </Typography>
-                    </Box>
-                  </Stack>
-                </CardContent>
-
-                {/* Action Buttons */}
-                <CardActions sx={{ px: 2, pb: 2, pt: 0, justifyContent: 'space-between' }}>
-                  <Box sx={{ display: 'flex', gap: 0.5 }}>
-                    <Tooltip title="მონაწილეები">
-                      <IconButton
-                        size="small"
-                        onClick={() => handleShowParticipants(event)}
-                        sx={{
-                          color: '#ffffffff',
-                          background: '#1e7cff',
-                          '&:hover': {
-                            backgroundColor: 'rgba(102, 126, 234, 0.1)'
-                          }
-                        }}
-                      >
-                        <Group fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-
-                    <Tooltip title="ფაილების მართვა">
-                      <IconButton
-                        size="small"
-                        onClick={() => handleShowFiles(event)}
-                        sx={{
-                          color: '#ffffffff',
-                          background: 'rgba(212, 133, 13, 1)',
-                          '&:hover': {
-                            backgroundColor: 'rgba(23, 162, 184, 0.1)'
-                          }
-                        }}
-                      >
-                        <FolderOpen fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
-
-                  <Box sx={{ display: 'flex', gap: 0.5 }}>
-
-                  {isAuthorizedForManagement && (
-                      <>
-                        {!showArchivedOnly && (
-                          <Tooltip title="რედაქტირება">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleEditClick(event)}
-                              sx={{
-                                color: '#ffffffff',
-                                '&:hover': {
-                                  backgroundColor: 'rgba(40, 167, 69, 0.1)'
-                                }
-                              }}
-                            >
-                              <Edit fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-
-                        {status.class === 'finished' && !event.is_archived && (
-                          <>
-                            <Tooltip title="ივენთის დასრულება">
-                              <IconButton
-                                size="small"
-                                onClick={() => handleCompleteEvent(event)}
-                                sx={{
-                                  color: '#ffffffff',
-                                  background: 'rgba(23, 162, 184, 1)',
-                                  '&:hover': {
-                                    backgroundColor: 'rgba(23, 162, 184, 0.1)'
-                                  }
-                                }}
-                              >
-                                <CheckCircle fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="არქივში გადატანა">
-                              <IconButton
-                                size="small"
-                                onClick={() => handleArchive(event.id)}
-                                sx={{
-                                  color: '#ffffffff',
-                                  background: 'rgba(108, 117, 125, 1)',
-                                  '&:hover': {
-                                    backgroundColor: 'rgba(108, 117, 125, 0.1)'
-                                  }
-                                }}
-                              >
-                                <Archive fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          </>
-                        )}
-
-                        {showArchivedOnly && event.is_archived && (
-                          <Tooltip title="არქივიდან აღდგენა">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleRestore(event.id)}
-                              sx={{
-                                color: '#ffffffff',
-                                '&:hover': {
-                                  backgroundColor: 'rgba(40, 167, 69, 0.1)'
-                                }
-                              }}
-                            >
-                              <Restore fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-
-                        {isAuthorizedForDeletion && (
-                          <Tooltip title="წაშლა">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleDelete(event.id)}
-                              sx={{
-                                color: '#ffffffff',
-                                background: 'rgba(220, 53, 69, 1)',
-                                '&:hover': {
-                                  backgroundColor: 'rgba(220, 53, 69, 0.1)'
-                                }
-                              }}
-                            >
-                              <Delete fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                      </>
-                    )}
-                  </Box>
-                </CardActions>
-              </Card>
-            </Grid>
-            );
-          })}
-        </Grid>
-      )}
-
-      {/* Event Details Modal */}
-      {showDetails && selectedEvent && (
-        <Dialog
-          open={showDetails}
-          onClose={() => setShowDetails(false)}
-          maxWidth="md"
-          fullWidth
-          sx={{
-            '& .MuiDialog-paper': {
-              borderRadius: 3,
-              boxShadow: '0 24px 48px rgba(0, 0, 0, 0.2)'
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Event />
+          {isEditing ? 'ივენთის რედაქტირება' : 'ახალი ივენთის დამატება'}
+        </Box>
+        <IconButton 
+          onClick={() => onEventUpdated()}
+          sx={{ 
+            color: 'white',
+            '&:hover': {
+              backgroundColor: 'rgba(255, 255, 255, 0.1)'
             }
           }}
         >
-          <DialogTitle
-            sx={{
-              background: 'linear-gradient(135deg, #667ee 0%, #764ba2 100%)',
-              color: 'white',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <EventIcon />
-              {selectedEvent.service_name}
-            </Box>
-            <IconButton
-              onClick={() => setShowDetails(false)}
-              sx={{ color: 'white' }}
-            >
-              <Close />
-            </IconButton>
-          </DialogTitle>
-          <DialogContent sx={{ p: 3 }}>
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                <Typography variant="h6" sx={{ mb: 1 }}>აღწერა</Typography>
-                <Typography variant="body1" sx={{ mb: 2 }}>{selectedEvent.description}</Typography>
-              </Grid>
+          <Close />
+        </IconButton>
+      </DialogTitle>
 
-              <Grid item xs={6}>
-                <Typography variant="subtitle2" color="text.secondary">წელი</Typography>
-                <Typography variant="body1">{selectedEvent.year_selection}</Typography>
-              </Grid>
-
-              <Grid item xs={6}>
-                <Typography variant="subtitle2" color="text.secondary">ტიპი</Typography>
-                <Typography variant="body1">{selectedEvent.service_type}</Typography>
-              </Grid>
-
-              <Grid item xs={12}>
-                <Typography variant="subtitle2" color="text.secondary">თარიღები</Typography>
-                <Typography variant="body1">
-                  {formatDateTime(selectedEvent.start_date, selectedEvent.start_time)} - {formatDateTime(selectedEvent.end_date, selectedEvent.end_time)}
-                </Typography>
-              </Grid>
-
-              {selectedEvent.spaces && selectedEvent.spaces.length > 0 && (
-                <Grid item xs={12}>
-                  <Typography variant="h6" sx={{ mb: 2 }}>გამოყენებული სივრცეები</Typography>
-                  <Stack spacing={1}>
-                    {selectedEvent.spaces.map(space => (
-                      <Paper key={space.id} sx={{ p: 2, borderRadius: 2, bgcolor: 'grey.50' }}>
-                        <Typography variant="body1">
-                          {space.building_name} - {space.category}
-                          {space.area_sqm && ` (${space.area_sqm} მ²)`}
-                        </Typography>
-                      </Paper>
-                    ))}
-                  </Stack>
-                </Grid>
-              )}
-
-              {selectedEvent.bookings && selectedEvent.bookings.length > 0 && (
-                <Grid item xs={12}>
-                  <Typography variant="h6" sx={{ mb: 2 }}>მონაწილე კომპანიები ({selectedEvent.bookings.length})</Typography>
-                  <Stack spacing={1}>
-                    {selectedEvent.bookings.map(booking => (
-                      <Paper key={booking.id} sx={{ p: 2, borderRadius: 2, bgcolor: 'grey.50' }}>
-                        <Typography variant="body1">
-                          {booking.company_name} - <Chip label={booking.status} size="small" />
-                        </Typography>
-                      </Paper>
-                    ))}
-                  </Stack>
-                </Grid>
-              )}
+      <DialogContent sx={{ p: 3, maxHeight: '70vh', overflowY: 'auto' }}>
+        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+          <Grid container spacing={3} display={'flex'} alignItems="center" justifyContent="center" flexDirection={'column'}>
+            <Grid container item spacing={1} xs={12} md={12} alignItems="center" justifyContent="center" flexDirection={'row'} margin={2}>
+             <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="ივენთის სახელი"
+                value={serviceName}
+                onChange={(e) => setServiceName(e.target.value)}
+                required
+                variant="outlined"
+                InputProps={{
+                  sx: {
+                    borderRadius: 2,
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#667eea'
+                    }
+                  }
+                }}
+              />
             </Grid>
-          </DialogContent>
-        </Dialog>
-      )}
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth required>
+                <InputLabel>წელი</InputLabel>
+                <Select
+                  value={yearSelection}
+                  onChange={(e) => setYearSelection(parseInt(e.target.value))}
+                  label="წელი"
+                  sx={{ borderRadius: 2 }}
+                >
+                  {generateYearOptions().map(year => (
+                    <MenuItem key={year} value={year}>{year}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+             <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="დაწყების თარიღი"
+                  type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                required
+                InputLabelProps={{ shrink: true }}
+                InputProps={{ sx: { borderRadius: 2 } }}
+              />
+            </Grid>
 
-      {/* Participants Modal */}
-      {showParticipants && selectedEvent && (
-        <EventParticipants
-          eventId={selectedEvent.id}
-          eventName={selectedEvent.service_name}
-          onClose={() => {
-            setShowParticipants(false);
-            setSelectedEvent(null);
-          }}
-          showNotification={showNotification}
-          userRole={userRole}
-        />
-      )}
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="დასრულების თარიღი"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                required
+                InputLabelProps={{ shrink: true }}
+                InputProps={{ sx: { borderRadius: 2 } }}
+              />
+            </Grid>
+            </Grid>
 
-      {/* Event Completion Modal */}
-      {showEventCompletion && selectedEventForCompletion && (
-        <EventCompletion
-          eventId={selectedEventForCompletion.id}
-          eventName={selectedEventForCompletion.name}
-          onClose={() => {
-            setShowEventCompletion(false);
-            setSelectedEventForCompletion(null);
-          }}
-          onSuccess={handleCompletionSuccess}
-        />
-      )}
+          <Grid container item spacing={1} xs={12} md={12} alignItems="center" justifyContent="center" flexDirection={'row'} margin={1}>
+<Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="დაწყების საათი"
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                InputProps={{ sx: { borderRadius: 2 } }}
+              />
+            </Grid>
 
-      {/* File Manager Modal */}
-      {showFileManager && selectedEventForFiles && (
-        <EventFileManager
-          event={selectedEventForFiles}
-          onClose={() => {
-            setShowFileManager(false);
-            setSelectedEventForFiles(null);
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="დასრულების საათი"
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                InputProps={{ sx: { borderRadius: 2 } }}
+              />
+            </Grid>
+             <Grid item xs={12} md={6} minWidth={200} margin={1}>
+              <FormControl fullWidth required>
+                <InputLabel>ივენთის ტიპი</InputLabel>
+                <Select
+                  value={serviceType}
+                  onChange={(e) => setServiceType(e.target.value)}
+                  label="ივენთის ტიპი"
+                  sx={{ borderRadius: 2 }}
+                >
+                  <MenuItem value="ივენთი">ივენთი</MenuItem>
+                  <MenuItem value="გამოფენა">გამოფენა</MenuItem>
+                  <MenuItem value="კონფერენცია">კონფერენცია</MenuItem>
+                  <MenuItem value="გაქირავება">გაქირავება</MenuItem>
+                  <MenuItem value="ფესტივალი">ფესტივალი</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12} md={6} minWidth={200} margin={1}>
+              <FormControl fullWidth>
+                <InputLabel>გამოფენის არჩევა</InputLabel>
+                <Select
+                  value={selectedExhibitionId}
+                  onChange={(e) => handleExhibitionSelect(e.target.value)}
+                  label="გამოფენის არჩევა"
+                  sx={{ borderRadius: 2 }}
+                >
+                  <MenuItem value="">აირჩიეთ გამოფენა</MenuItem>
+                  {availableExhibitions.map(exhibition => (
+                    <MenuItem key={exhibition.id} value={exhibition.id}>
+                      {exhibition.exhibition_name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+
+            <Grid item xs={12} width={'100%'} margin={1}>
+              <TextField
+                fullWidth
+                label="აღწერა"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                required
+                multiline
+                rows={3}
+                variant="outlined"
+                InputProps={{
+                  sx: {
+                    borderRadius: 2,
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#667eea'
+                    }
+                  }
+                }}
+              />
+            </Grid>
+
+            {selectedExhibitionId && (
+              <Grid item xs={12}>
+                <Alert 
+                  severity="info" 
+                  sx={{ 
+                    borderRadius: 2,
+                    backgroundColor: '#e3f2fd',
+                    border: '1px solid #90caf9'
+                  }}
+                  icon={<Business />}
+                >
+                  <Typography sx={{ fontWeight: 500 }}>
+                    ამ გამოფენას რეგისტრირებული აქვს <strong>{availableCompanies.length} კომპანია</strong>, 
+                    რომლებიც ავტომატურად დაემატება მონაწილეობის მოთხოვნის სტატუსით.
+                  </Typography>
+                  <Typography variant="caption" sx={{ display: 'block', mt: 1, fontStyle: 'italic' }}>
+                    მონაწილეების სია და სტატუსების მართვა შესაძლებელია ივენთის შექმნის შემდეგ.
+                  </Typography>
+                </Alert>
+              </Grid>
+            )}
+
+            <Grid item xs={12}>
+              <Paper 
+                sx={{ 
+                  p: 2, 
+                  borderRadius: 2,
+                  border: '1px solid #e0e0e0',
+                  backgroundColor: '#fafafa'
+                }}
+              >
+                <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <LocationOn sx={{ color: '#667eea' }} />
+                  სივრცეების არჩევა
+                </Typography>
+                <FormGroup sx={{ maxHeight: 200, overflowY: 'auto' }}>
+                  {availableSpaces.map(space => (
+                    <FormControlLabel
+                      key={space.id}
+                      control={
+                        <Checkbox
+                          checked={selectedSpaces.includes(space.id)}
+                          onChange={() => handleSpaceToggle(space.id)}
+                          sx={{
+                            color: '#667eea',
+                            '&.Mui-checked': {
+                              color: '#667eea'
+                            }
+                          }}
+                        />
+                      }
+                      label={`${space.building_name} - ${space.category}`}
+                    />
+                  ))}
+                </FormGroup>
+              </Paper>
+            </Grid>
+          </Grid>
+        </Box>
+      </DialogContent>
+
+      <DialogActions sx={{ px: 3, pb: 3, pt: 1 }}>
+        <Button 
+          size='medium'
+          onClick={() => onEventUpdated()}
+          variant="outlined"
+          type="button"
+          sx={{
+            border:  'none',
+            color: '#ffffffff',
+            borderRadius: 2,
+            '&:hover': {
+              borderColor: '#5a6268',
+              backgroundColor: 'rgba(108, 117, 125, 0.04)'
+            }
           }}
-          showNotification={showNotification}
-          userRole={userRole}
-        />
-      )}
-    </Container>
+        >
+          გაუქმება
+        </Button>
+        <Button 
+          type="submit"
+          size='medium'
+          onClick={handleSubmit}
+          variant="contained"
+          sx={{
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            borderRadius: 2,
+            px: 3,
+            '&:hover': {
+              background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+              transform: 'translateY(-1px)',
+              boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)'
+            }
+          }}
+        >
+          {isEditing ? 'განახლება' : 'დამატება'}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 };
 
-export default EventsList;
+export default EventForm;

@@ -143,23 +143,13 @@ const EventsList = ({ showNotification, userRole }) => {
     } finally {
       setLoading(false);
     }
-  }, [showNotification]);
+  }, []); // Remove showNotification from dependencies to prevent infinite calls
 
   useEffect(() => {
     fetchEvents();
   }, [fetchEvents]);
 
-  useEffect(() => {
-    if (events.length > 0) {
-      let sorted = [...events];
-      if (sortDirection === 'desc') {
-        sorted.sort((a, b) => new Date(b.start_date) - new Date(a.start_date));
-      } else {
-        sorted.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
-      }
-      setEvents(sorted);
-    }
-  }, [sortDirection]);
+  // Remove this useEffect as it causes infinite loops by modifying events which triggers itself
 
   useEffect(() => {
     let filtered = [...events];
@@ -182,7 +172,7 @@ const EventsList = ({ showNotification, userRole }) => {
         const startYear = new Date(event.start_date).getFullYear();
         const endYear = new Date(event.end_date).getFullYear();
         const year = parseInt(selectedYear);
-        
+
         // ივენთი მოიცავს შერჩეულ წელს თუ იწყება ან მთავრდება იმ წელს
         return startYear === year || endYear === year || (startYear < year && endYear > year);
       });
@@ -193,12 +183,12 @@ const EventsList = ({ showNotification, userRole }) => {
         const startDate = new Date(event.start_date);
         const endDate = new Date(event.end_date);
         const month = parseInt(selectedMonth);
-        
+
         const startMonth = startDate.getMonth() + 1;
         const endMonth = endDate.getMonth() + 1;
         const startYear = startDate.getFullYear();
         const endYear = endDate.getFullYear();
-        
+
         // ივენთი მოიცავს შერჩეულ თვეს
         if (startYear === endYear) {
           return month >= startMonth && month <= endMonth;
@@ -216,6 +206,7 @@ const EventsList = ({ showNotification, userRole }) => {
       });
     }
 
+    // Apply sorting directly here instead of separate useEffect
     if (sortDirection === 'desc') {
       filtered.sort((a, b) => new Date(b.start_date) - new Date(a.start_date));
     } else {
@@ -282,7 +273,6 @@ const EventsList = ({ showNotification, userRole }) => {
       console.log('Delete response status:', response.status);
 
       if (response.ok) {
-        const result = await response.json();
         showNotification('ივენთი წარმატებით წაიშალა!', 'success');
         setEvents(prevEvents => prevEvents.filter((event) => event.id !== id));
         fetchEvents();
@@ -314,10 +304,14 @@ const EventsList = ({ showNotification, userRole }) => {
   };
 
   const handleEditClick = (event) => {
+    console.log('Edit button clicked for event:', event);
+    console.log('Setting editingId to:', event.id);
+    console.log('Current editingId:', editingId);
     setEditingId(event.id);
   };
 
   const handleEventUpdated = () => {
+    console.log('Event updated, closing form');
     setEditingId(null);
     fetchEvents();
   };
@@ -342,7 +336,8 @@ const EventsList = ({ showNotification, userRole }) => {
         const errorData = await response.json();
         showNotification(`არქივში გადატანა ვერ მოხერხდა: ${errorData.message}`, 'error');
       }
-    } catch (er) {
+    } catch (error) {
+      console.error('Archive error:', error);
       showNotification('დაფიქსირდა შეცდომა სერვერთან კავშირისას.', 'error');
     }
   };
@@ -368,6 +363,7 @@ const EventsList = ({ showNotification, userRole }) => {
         showNotification(`არქივიდან აღდგენა ვერ მოხერხდა: ${errorData.message}`, 'error');
       }
     } catch (error) {
+      console.error('Restore error:', error);
       showNotification('დაფიქსირდა შეცდომა სერვერთან კავშირისას.', 'error');
     }
   };
@@ -387,6 +383,7 @@ const EventsList = ({ showNotification, userRole }) => {
         showNotification('ივენთის დეტალების მიღება ვერ მოხერხდა', 'error');
       }
     } catch (error) {
+      console.error('Error loading event details:', error);
       showNotification('შეცდომა ივენთის დეტალების ჩატვირთვისას', 'error');
     }
   };
@@ -406,7 +403,7 @@ const EventsList = ({ showNotification, userRole }) => {
     setShowEventCompletion(true);
   };
 
-  const handleCompletionSuccess = (report) => {
+  const handleCompletionSuccess = () => {
     showNotification('ივენთი წარმატებით დასრულდა!', 'success');
     fetchEvents();
   };
@@ -427,41 +424,51 @@ const EventsList = ({ showNotification, userRole }) => {
     );
   }
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '';
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return dateString; // თუ თარიღი არასწორია
-      return date.toLocaleDateString('ka-GE', {
-        year: 'numeric',
-        month: 'numeric',
-        day: 'numeric'
-      });
-    } catch (error) {
-      console.error('თარიღის ფორმატირების შეცდომა:', error);
-      return dateString;
-    }
-  };
+  
 
-  const formatTime = (timeString) => {
-    if (!timeString) return '';
-    return timeString.slice(0, 5);
-  };
+  
 
+  // Format date and time for display - avoiding timezone issues completely
   const formatDateTime = (date, time) => {
-    const formattedDate = formatDate(date);
-    const formattedTime = formatTime(time);
-    return formattedTime ? `${formattedDate} ${formattedTime}` : formattedDate;
+    if (!date) return 'არ არის მითითებული';
+
+    try {
+      let dateString = date;
+
+      // Convert any format to YYYY-MM-DD string first
+      if (date instanceof Date) {
+        // Get local date components without timezone conversion
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        dateString = `${year}-${month}-${day}`;
+      } else if (typeof date === 'string' && date.includes('T')) {
+        // Extract date part from ISO string
+        dateString = date.split('T')[0];
+      }
+
+      // Now format the YYYY-MM-DD string to DD/MM/YYYY
+      if (typeof dateString === 'string' && dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const [year, month, day] = dateString.split('-');
+        const formattedDate = `${day}/${month}/${year}`;
+        return time ? `${formattedDate} ${time}` : formattedDate;
+      }
+
+      return dateString;
+    } catch (error) {
+      console.error('Date formatting error:', error);
+      return 'თარიღის ფორმატირების შეცდომა';
+    }
   };
 
   const getStatusBadge = (event) => {
     const now = new Date();
     now.setHours(0, 0, 0, 0); // დღის დასაწყისზე გადაყვანა
-    
+
     // თარიღების სწორად დამუშავება
     const startDate = new Date(event.start_date);
     startDate.setHours(0, 0, 0, 0);
-    
+
     const endDate = new Date(event.end_date);
     endDate.setHours(23, 59, 59, 999);
 
@@ -558,7 +565,7 @@ const EventsList = ({ showNotification, userRole }) => {
 
       {editingId !== null && isAuthorizedForManagement && (
          <EventForm
-            eventToEdit={events.find(e => e.id === editingId)}
+            eventToEdit={editingId === 0 ? null : events.find(e => e.id === editingId)}
             onEventUpdated={handleEventUpdated}
             showNotification={showNotification}
          />
@@ -838,15 +845,13 @@ const EventsList = ({ showNotification, userRole }) => {
                             <IconButton
                               size="small"
                               onClick={() => handleEditClick(event)}
-                                     sx={{
-                                        background: '#ffffffff',
-                                        color: '#000000ff',
-                                        textTransform: 'none',
-                                        boxShadow: '0 0 5px #745ba7',
-                                        borderRadius: 2,
-                                        '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   } ,
-                                        transition: 'all 0.2s ease'
-                                      }}
+                              sx={{
+                                color: '#ffffffff',
+                                background: 'rgba(40, 167, 69, 1)',
+                                '&:hover': {
+                                  backgroundColor: 'rgba(40, 167, 69, 0.8)'
+                                }
+                              }}
                             >
                               <Edit fontSize="small" />
                             </IconButton>
@@ -859,15 +864,13 @@ const EventsList = ({ showNotification, userRole }) => {
                               <IconButton
                                 size="small"
                                 onClick={() => handleCompleteEvent(event)}
-                                            sx={{
-                                        background: '#ffffffff',
-                                        color: '#000000ff',
-                                        textTransform: 'none',
-                                        boxShadow: '0 0 5px #745ba7',
-                                        borderRadius: 2,
-                                        '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   } ,
-                                        transition: 'all 0.2s ease'
-                                      }}
+                                sx={{
+                                  color: '#ffffffff',
+                                  background: 'rgba(23, 162, 184, 1)',
+                                  '&:hover': {
+                                    backgroundColor: 'rgba(23, 162, 184, 0.1)'
+                                  }
+                                }}
                               >
                                 <CheckCircle fontSize="small" />
                               </IconButton>
@@ -876,15 +879,13 @@ const EventsList = ({ showNotification, userRole }) => {
                               <IconButton
                                 size="small"
                                 onClick={() => handleArchive(event.id)}
-                                                                    sx={{
-                                        background: '#ffffffff',
-                                        color: '#000000ff',
-                                        textTransform: 'none',
-                                        boxShadow: '0 0 5px #745ba7',
-                                        borderRadius: 2,
-                                        '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   } ,
-                                        transition: 'all 0.2s ease'
-                                      }}
+                                sx={{
+                                  color: '#ffffffff',
+                                  background: 'rgba(108, 117, 125, 1)',
+                                  '&:hover': {
+                                    backgroundColor: 'rgba(108, 117, 125, 0.1)'
+                                  }
+                                }}
                               >
                                 <Archive fontSize="small" />
                               </IconButton>
@@ -897,15 +898,12 @@ const EventsList = ({ showNotification, userRole }) => {
                             <IconButton
                               size="small"
                               onClick={() => handleRestore(event.id)}
-                                                                  sx={{
-                                        background: '#ffffffff',
-                                        color: '#000000ff',
-                                        textTransform: 'none',
-                                        boxShadow: '0 0 5px #745ba7',
-                                        borderRadius: 2,
-                                        '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   } ,
-                                        transition: 'all 0.2s ease'
-                                      }}
+                              sx={{
+                                color: '#ffffffff',
+                                '&:hover': {
+                                  backgroundColor: 'rgba(40, 167, 69, 0.1)'
+                                }
+                              }}
                             >
                               <Restore fontSize="small" />
                             </IconButton>
@@ -917,15 +915,13 @@ const EventsList = ({ showNotification, userRole }) => {
                             <IconButton
                               size="small"
                               onClick={() => handleDelete(event.id)}
-                                    sx={{
-                                        background: '#ffffffff',
-                                        color: '#000000ff',
-                                        textTransform: 'none',
-                                        boxShadow: '0 0 5px #745ba7',
-                                        borderRadius: 2,
-                                        '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#ff0000ff'   } ,
-                                        transition: 'all 0.2s ease'
-                                      }}
+                              sx={{
+                                color: '#ffffffff',
+                                background: 'rgba(220, 53, 69, 1)',
+                                '&:hover': {
+                                  backgroundColor: 'rgba(220, 53, 69, 0.1)'
+                                }
+                              }}
                             >
                               <Delete fontSize="small" />
                             </IconButton>

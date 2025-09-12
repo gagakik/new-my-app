@@ -47,8 +47,6 @@ import {
   Notifications,
   Construction
 } from '@mui/icons-material';
-import UserProfile from './UserProfile';
-import NotificationCenter from './NotificationCenter';
 import QRScanner from './QRScanner';
 
 const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewChange, showNotification }) => {
@@ -111,6 +109,15 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
       icon: <Dashboard />,
       single: true,
       action: () => handleViewChange('dashboard')
+    });
+
+    // Calendar (for all users)
+    menus.push({
+      key: 'calendar',
+      label: 'Calendar',
+      icon: <CalendarToday />,
+      single: true,
+      action: () => handleViewChange('calendar')
     });
 
     // Sales role
