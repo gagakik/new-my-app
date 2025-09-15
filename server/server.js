@@ -31,6 +31,16 @@ const createDirectories = () => {
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true, mode: 0o755 });
         console.log(`Directory created: ${dir}`);
+        
+        // Test write access
+        const testFile = path.join(dir, `test-${Date.now()}.tmp`);
+        try {
+          fs.writeFileSync(testFile, 'test');
+          fs.unlinkSync(testFile);
+          console.log(`✅ Write access confirmed for: ${dir}`);
+        } catch (writeError) {
+          console.error(`❌ Write access failed for ${dir}:`, writeError);
+        }
       } else {
         console.log(`Directory exists: ${dir}`);
       }
@@ -658,26 +668,26 @@ app.get('/api/events', authenticateToken, async (req, res) => {
       GROUP BY a.id, a.service_name, a.description, a.year_selection, a.start_date, a.end_date, a.start_time, a.end_time, a.service_type, a.is_active, a.is_archived, a.created_at, a.updated_at, a.created_by_user_id, a.exhibition_id, e.exhibition_name
       ORDER BY a.created_at DESC
     `);
-    
+
     // თარიღების ფორმატირება ყველა ივენთისთვის
     const formatDateResponse = (date) => {
       if (!date) return null;
-      
+
       if (date instanceof Date) {
         const year = date.getUTCFullYear();
         const month = String(date.getUTCMonth() + 1).padStart(2, '0');
         const day = String(date.getUTCDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
       }
-      
+
       if (typeof date === 'string' && date.includes('T')) {
         return date.split('T')[0];
       }
-      
+
       if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
         return date;
       }
-      
+
       return date;
     };
 
@@ -725,21 +735,21 @@ app.get('/api/events/:id', authenticateToken, async (req, res) => {
     }
 
     const event = result.rows[0];
-    
+
     // Standardized date formatting - same as used in details endpoint
     const formatDateConsistent = (date) => {
       if (!date) return null;
-      
+
       // If it's already a string in YYYY-MM-DD format, return as is
       if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
         return date;
       }
-      
+
       // If it's an ISO string, extract date part only
       if (typeof date === 'string' && date.includes('T')) {
         return date.split('T')[0];
       }
-      
+
       // If it's a Date object, format without timezone conversion
       if (date instanceof Date) {
         // Get the year, month, day in local timezone (not UTC)
@@ -748,7 +758,7 @@ app.get('/api/events/:id', authenticateToken, async (req, res) => {
         const day = String(date.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
       }
-      
+
       return date;
     };
 
@@ -1530,17 +1540,17 @@ app.get('/api/annual-services/:id/details', authenticateToken, async (req, res) 
     // Standardized date formatting - always return YYYY-MM-DD format without timezone conversion
     const formatDateConsistent = (date) => {
       if (!date) return null;
-      
+
       // If it's already a string in YYYY-MM-DD format, return as is
       if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
         return date;
       }
-      
+
       // If it's an ISO string, extract date part only
       if (typeof date === 'string' && date.includes('T')) {
         return date.split('T')[0];
       }
-      
+
       // If it's a Date object, format without timezone conversion
       if (date instanceof Date) {
         // Get the year, month, day in local timezone (not UTC)
@@ -1549,7 +1559,7 @@ app.get('/api/annual-services/:id/details', authenticateToken, async (req, res) 
         const day = String(date.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
       }
-      
+
       return date;
     };
 
@@ -1814,17 +1824,17 @@ app.put('/api/annual-services/:id', authenticateToken, async (req, res) => {
     // Format response dates to ensure clean YYYY-MM-DD format and avoid timezone issues
     const formatDateForResponse = (date) => {
       if (!date) return null;
-      
+
       // თუ უკვე string-ია და სწორ ფორმატშია
       if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
         return date;
       }
-      
+
       // თუ ISO string-ია
       if (typeof date === 'string' && date.includes('T')) {
         return date.split('T')[0];
       }
-      
+
       // თუ Date object-ია, კალენდარული თარიღის დაბრუნება timezone-ის გარეშე
       if (date instanceof Date) {
         // დავრწმუნდეთ, რომ გამოვიყენებთ ადგილობრივ კალენდარულ თარიღს
@@ -1833,7 +1843,7 @@ app.put('/api/annual-services/:id', authenticateToken, async (req, res) => {
         const localDay = String(date.getDate()).padStart(2, '0');
         return `${localYear}-${localMonth}-${localDay}`;
       }
-      
+
       return date;
     };
 
@@ -2563,6 +2573,7 @@ const importRoutes = require('./routes/import');
 const statisticsRoutes = require('./routes/statistics');
 const packagesRoutes = require('./routes/packages');
 const reportsRoutes = require('./routes/reports');
+const standsRoutes = require('./routes/stands');
 
 app.use('/api/companies', companiesRoutes);
 app.use('/api/equipment', equipmentRoutes);
@@ -2570,6 +2581,8 @@ app.use('/api/import', importRoutes);
 app.use('/api/statistics', statisticsRoutes);
 app.use('/api/packages', authenticateToken, packagesRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/stands', standsRoutes);
+
 
 // Multer error handling middleware
 app.use((error, req, res, next) => {

@@ -89,40 +89,51 @@ async function importCompaniesFromExcel(filePath, userId = null) {
             console.log(`დამუშავება რიგი ${i + 1}:`, Object.keys(row));
             
             try {
-                // ველების მაპინგი - ყველა შესაძლო ველის სახელის შემოწმება
+                // ველების მაპინგი - ზუსტად შაბლონის თანმიმდევრობით
                 const companyData = {
-                    company_name: row['კომპანიის დასახელება'] || row['company_name'] || row['კომპანია'] || '',
-                    country: row['ქვეყანა'] || row['country'] || row['ქვეყანა/Country'] || '',
-                    company_profile: row['პროფილი'] || row['company_profile'] || row['კომპანიის პროფილი'] || '',
-                    identification_code: row['საიდენტიფიკაციო კოდი'] || row['identification_code'] || row['საიდ. კოდი'] || '',
-                    legal_address: row['იურიდიული მისამართი'] || row['legal_address'] || row['მისამართი'] || '',
-                    website: row['ვებსაიტი'] || row['website'] || row['ვებგვერდი'] || '',
-                    status: row['სტატუსი'] || row['status'] || 'აქტიური',
-                    comment: row['კომენტარი'] || row['comment'] || row['შენიშვნა'] || ''
+                    company_name: (row['კომპანიის დასახელება'] || row['company_name'] || '').toString().trim(),
+                    country: (row['ქვეყანა'] || row['country'] || '').toString().trim(),
+                    company_profile: (row['პროფილი'] || row['company_profile'] || '').toString().trim(),
+                    identification_code: (row['საიდენტიფიკაციო კოდი'] || row['identification_code'] || '').toString().trim(),
+                    legal_address: (row['იურიდიული მისამართი'] || row['legal_address'] || '').toString().trim(),
+                    website: (row['ვებსაიტი'] || row['website'] || '').toString().trim(),
+                    status: (row['სტატუსი'] || row['status'] || 'აქტიური').toString().trim(),
+                    comment: (row['კომენტარი'] || row['comment'] || '').toString().trim()
                 };
 
-                // საკონტაქტო პირის ინფორმაცია
+                // მონაწილე გამოფენების დამუშავება (ზუსტად შაბლონის ველიდან)
+                const exhibitionsStr = (row['მონაწილე გამოფენები'] || row['selected_exhibitions'] || '').toString().trim();
+                let selectedExhibitions = [];
+                if (exhibitionsStr) {
+                    // კომებით გაყოფილი ID-ების დამუშავება
+                    const exhibitionIds = exhibitionsStr.split(',')
+                        .map(id => id.trim())
+                        .filter(id => id !== '')
+                        .map(id => parseInt(id))
+                        .filter(id => !isNaN(id) && id > 0);
+                    selectedExhibitions = exhibitionIds;
+                    console.log(`რიგი ${i + 1}: მონაწილე გამოფენები:`, selectedExhibitions);
+                }
+
+                // საკონტაქტო პირის ინფორმაცია (ზუსტად შაბლონის ველებიდან)
                 const contactPerson = {
-                    name: row['საკონტაქტო პირი'] || row['contact_person'] || row['კონტაქტი'] || '',
-                    position: row['პოზიცია'] || row['position'] || row['თანამდებობა'] || '',
-                    phone: row['ტელეფონი'] || row['phone'] || row['ტელ.'] || '',
-                    email: row['ელ-ფოსტა'] || row['email'] || row['მეილი'] || ''
+                    name: (row['საკონტაქტო პირი'] || row['contact_person'] || '').toString().trim(),
+                    position: (row['პოზიცია'] || row['position'] || '').toString().trim(),
+                    phone: (row['ტელეფონი'] || row['phone'] || '').toString().trim(),
+                    email: (row['ელ-ფოსტა'] || row['email'] || '').toString().trim()
                 };
 
-                // შევამოწმოთ სავალდებულო ველები
-                if (!companyData.company_name || companyData.company_name.trim() === '') {
-                    const errorMsg = `რიგი ${i + 1}: კომპანიის დასახელება ცარიელია`;
+                // მხოლოდ კომპანიის დასახელება არის სავალდებულო
+                if (!companyData.company_name) {
+                    const errorMsg = `რიგი ${i + 1}: კომპანიის დასახელება ცარიელია (სავალდებულო ველი)`;
                     errors.push(errorMsg);
                     errorDetails.push({ row: i + 1, error: errorMsg, data: row });
                     errorCount++;
                     continue;
                 }
 
-                // თუ საიდენტიფიკაციო კოდი არ არის მოცემული, შევქმნათ ავტომატურად
-                if (!companyData.identification_code || companyData.identification_code.trim() === '') {
-                    companyData.identification_code = `AUTO_${Date.now()}_${i}`;
-                    console.log(`ავტომატურად შექმნილი კოდი: ${companyData.identification_code}`);
-                }
+                // საიდენტიფიკაციო კოდი ცარიელი რჩება, თუ შაბლონში ცარიელია
+                // ავტომატური კოდის შექმნა არ ხდება
 
                 // საკონტაქტო პირების მასივი
                 let contactPersons = [];
@@ -133,40 +144,67 @@ async function importCompaniesFromExcel(filePath, userId = null) {
                 console.log('მონაცემები რიგიდან:', row);
                 console.log('კომპანიის მონაცემები:', companyData);
                 console.log('საკონტაქტო პირი:', contactPerson);
+                console.log('მონაწილე გამოფენები:', selectedExhibitions);
 
                 // ბაზაში ჩასმა
-                const result = await db.query(`
-                    INSERT INTO companies (
-                        company_name, country, company_profile, identification_code,
-                        legal_address, website, status, comment, contact_persons,
-                        selected_exhibitions, created_by_user_id, created_at, updated_at
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                    ON CONFLICT (identification_code) DO UPDATE SET
-                        company_name = EXCLUDED.company_name,
-                        country = EXCLUDED.country,
-                        company_profile = EXCLUDED.company_profile,
-                        legal_address = EXCLUDED.legal_address,
-                        website = EXCLUDED.website,
-                        status = EXCLUDED.status,
-                        comment = EXCLUDED.comment,
-                        contact_persons = EXCLUDED.contact_persons,
-                        selected_exhibitions = EXCLUDED.selected_exhibitions,
-                        updated_by_user_id = $11,
-                        updated_at = CURRENT_TIMESTAMP
-                    RETURNING id
-                `, [
-                    companyData.company_name,
-                    companyData.country,
-                    companyData.company_profile,
-                    companyData.identification_code,
-                    companyData.legal_address,
-                    companyData.website,
-                    companyData.status,
-                    companyData.comment,
-                    JSON.stringify(contactPersons),
-                    JSON.stringify([]), // selected_exhibitions
-                    validUserId
-                ]);
+                let result;
+                if (companyData.identification_code) {
+                    // თუ საიდენტიფიკაციო კოდი არსებობს, გამოვიყენოთ ON CONFLICT
+                    result = await db.query(`
+                        INSERT INTO companies (
+                            company_name, country, company_profile, identification_code,
+                            legal_address, website, status, comment, contact_persons,
+                            selected_exhibitions, created_by_user_id, created_at, updated_at
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                        ON CONFLICT (identification_code) DO UPDATE SET
+                            company_name = EXCLUDED.company_name,
+                            country = EXCLUDED.country,
+                            company_profile = EXCLUDED.company_profile,
+                            legal_address = EXCLUDED.legal_address,
+                            website = EXCLUDED.website,
+                            status = EXCLUDED.status,
+                            comment = EXCLUDED.comment,
+                            contact_persons = EXCLUDED.contact_persons,
+                            selected_exhibitions = EXCLUDED.selected_exhibitions,
+                            updated_by_user_id = $11,
+                            updated_at = CURRENT_TIMESTAMP
+                        RETURNING id
+                    `, [
+                        companyData.company_name,
+                        companyData.country,
+                        companyData.company_profile,
+                        companyData.identification_code,
+                        companyData.legal_address,
+                        companyData.website,
+                        companyData.status,
+                        companyData.comment,
+                        JSON.stringify(contactPersons),
+                        JSON.stringify(selectedExhibitions),
+                        validUserId
+                    ]);
+                } else {
+                    // თუ საიდენტიფიკაციო კოდი ცარიელია, უბრალოდ ჩავსვათ (ცარიელი კოდით)
+                    result = await db.query(`
+                        INSERT INTO companies (
+                            company_name, country, company_profile, identification_code,
+                            legal_address, website, status, comment, contact_persons,
+                            selected_exhibitions, created_by_user_id, created_at, updated_at
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                        RETURNING id
+                    `, [
+                        companyData.company_name,
+                        companyData.country || null,
+                        companyData.company_profile || null,
+                        companyData.identification_code || null,
+                        companyData.legal_address || null,
+                        companyData.website || null,
+                        companyData.status || null,
+                        companyData.comment || null,
+                        JSON.stringify(contactPersons) || null,
+                        JSON.stringify(selectedExhibitions) || null,
+                        validUserId || null
+                    ]);
+                }
 
                 console.log(`წარმატებით დამატებულია კომპანია: ${companyData.company_name} (ID: ${result.rows[0].id})`);
                 successCount++;

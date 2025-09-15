@@ -1,9 +1,11 @@
+
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 const jwt = require("jsonwebtoken");
+const db = require("../db");
 const { importCompaniesFromExcel } = require("../import-companies");
 
 // Authentication middleware
@@ -38,111 +40,73 @@ function requireAdmin(req, res, next) {
     next();
 }
 
-// Configure multer for file upload
+// Simple multer configuration
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         const uploadDir = path.join(__dirname, "../uploads/import");
-        console.log('=== MULTER DESTINATION ===');
-        console.log('Upload directory path:', uploadDir);
-        console.log('Current working directory:', process.cwd());
-        console.log('__dirname:', __dirname);
-        console.log('File being processed:', file.originalname);
         
+        console.log('=== File Upload Debug ===');
+        console.log('__dirname:', __dirname);
+        console.log('uploadDir:', uploadDir);
+        console.log('Directory exists:', fs.existsSync(uploadDir));
+
+        // Ensure directory exists with proper permissions
         try {
-            // Ensure directory exists
             if (!fs.existsSync(uploadDir)) {
+                console.log('Creating upload directory:', uploadDir);
                 fs.mkdirSync(uploadDir, { recursive: true, mode: 0o755 });
-                console.log('Upload directory created:', uploadDir);
+                console.log('Upload directory created successfully');
             }
             
-            // Verify directory permissions
-            const stats = fs.statSync(uploadDir);
-            console.log('Directory stats:', {
-                exists: true,
-                isDirectory: stats.isDirectory(),
-                permissions: stats.mode.toString(8),
-                size: stats.size
-            });
-            
-            // Test write access
-            const testFile = path.join(uploadDir, `write-test-${Date.now()}.tmp`);
+            // Test write permissions
+            const testFile = path.join(uploadDir, `test-${Date.now()}.tmp`);
             try {
-                fs.writeFileSync(testFile, 'write test');
+                fs.writeFileSync(testFile, 'test');
                 fs.unlinkSync(testFile);
-                console.log('✅ Write access confirmed');
+                console.log('✅ Write permissions confirmed for:', uploadDir);
             } catch (writeError) {
-                console.error('❌ Write access failed:', writeError);
-                return cb(writeError);
+                console.error('❌ Write permission test failed:', writeError);
             }
-            
-            console.log('✅ Destination set successfully:', uploadDir);
+
+            console.log('Final upload directory:', uploadDir);
             cb(null, uploadDir);
-        } catch (error) {
-            console.error('❌ Destination setup failed:', error);
-            cb(error);
+        } catch (dirError) {
+            console.error('Directory creation error:', dirError);
+            cb(dirError, null);
         }
     },
     filename: function (req, file, cb) {
         const timestamp = Date.now();
-        const randomNum = Math.round(Math.random() * 1e9);
         const ext = path.extname(file.originalname).toLowerCase();
-        const filename = `companies-${timestamp}-${randomNum}${ext}`;
-        
-        console.log('=== MULTER FILENAME ===');
-        console.log('Original filename:', file.originalname);
+        const filename = `companies-${timestamp}${ext}`;
         console.log('Generated filename:', filename);
-        console.log('Extension:', ext);
+        console.log('Original filename:', file.originalname);
         console.log('File mimetype:', file.mimetype);
-        console.log('File fieldname:', file.fieldname);
-        
+        console.log('File size:', file.size);
         cb(null, filename);
-    },
+    }
 });
 
 const upload = multer({
     storage: storage,
     fileFilter: function (req, file, cb) {
-        console.log('=== MULTER FILE FILTER ===');
-        console.log('Filtering file:', {
-            originalname: file.originalname,
-            mimetype: file.mimetype,
-            fieldname: file.fieldname,
-            encoding: file.encoding,
-            size: file.size || 'unknown'
-        });
-        
-        const allowedExtensions = [".xlsx", ".xls"];
-        const allowedMimeTypes = [
+        const allowedTypes = [
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             "application/vnd.ms-excel"
         ];
-        
+        const allowedExtensions = [".xlsx", ".xls"];
         const fileExtension = path.extname(file.originalname).toLowerCase();
-        
-        const isValidExtension = allowedExtensions.includes(fileExtension);
-        const isValidMimeType = allowedMimeTypes.includes(file.mimetype);
-        
-        console.log('File validation:', {
-            extension: fileExtension,
-            isValidExtension,
-            mimetype: file.mimetype,
-            isValidMimeType,
-            willAccept: isValidExtension || isValidMimeType
-        });
-        
-        if (isValidExtension || isValidMimeType) {
+
+        if (allowedTypes.includes(file.mimetype) || allowedExtensions.includes(fileExtension)) {
             console.log('✅ File accepted:', file.originalname);
             cb(null, true);
         } else {
-            const errorMsg = `არასწორი ფაილის ფორმატი. მოსალოდნელია: ${allowedExtensions.join(', ')}`;
-            console.log('❌ File rejected:', errorMsg);
-            cb(new Error(errorMsg), false);
+            console.log('❌ File rejected:', file.originalname);
+            cb(new Error('მხოლოდ Excel ფაილები (.xlsx, .xls) ნებადართულია'), false);
         }
     },
     limits: {
-        fileSize: 10 * 1024 * 1024, // 10MB limit (increased)
-        files: 1,
-        fieldSize: 2 * 1024 * 1024 // 2MB for form fields
+        fileSize: 5 * 1024 * 1024 // 5MB limit
     }
 });
 
@@ -152,66 +116,92 @@ router.post(
     authenticateToken,
     requireAdmin,
     (req, res, next) => {
-        console.log('=== PRE-MULTER REQUEST ===');
+        console.log('=== Before multer processing ===');
         console.log('Content-Type:', req.headers['content-type']);
         console.log('Content-Length:', req.headers['content-length']);
+        console.log('Authorization header exists:', !!req.headers['authorization']);
         console.log('Request method:', req.method);
         console.log('Request URL:', req.url);
         next();
     },
-    upload.single("excelFile"),
+    (req, res, next) => {
+        console.log('=== Multer processing start ===');
+        const multerHandler = upload.single("excelFile");
+        multerHandler(req, res, (err) => {
+            console.log('=== Multer processing result ===');
+            if (err) {
+                console.error('Multer error:', err);
+                if (err.code === 'LIMIT_FILE_SIZE') {
+                    return res.status(413).json({ error: 'ფაილი ძალიან დიდია (მაქსიმუმ 5MB)' });
+                }
+                return res.status(400).json({ error: err.message });
+            }
+            console.log('File after multer:', req.file ? 'Present' : 'Missing');
+            if (req.file) {
+                console.log('File info:', {
+                    originalname: req.file.originalname,
+                    filename: req.file.filename,
+                    size: req.file.size,
+                    mimetype: req.file.mimetype,
+                    path: req.file.path
+                });
+            }
+            next();
+        });
+    },
     async (req, res) => {
         let filePath = null;
-        let tempFileCreated = false;
-        
+
         try {
-            console.log('=== POST-MULTER REQUEST ===');
-            console.log('Multer processed request');
-            console.log('req.file exists:', !!req.file);
-            console.log('req.body:', req.body);
+            console.log('=== Import request received ===');
+            console.log('Request headers keys:', Object.keys(req.headers));
+            console.log('Request body keys:', Object.keys(req.body));
+            console.log('Multer file info:', req.file ? 'File present' : 'No file');
+            console.log('Request files:', req.files);
             
             if (req.file) {
                 console.log('File details:', {
                     originalname: req.file.originalname,
                     filename: req.file.filename,
-                    mimetype: req.file.mimetype,
                     size: req.file.size,
-                    destination: req.file.destination,
+                    mimetype: req.file.mimetype,
                     path: req.file.path,
-                    fieldname: req.file.fieldname
-                });
-                
-                filePath = req.file.path;
-                tempFileCreated = true;
-                
-                // Verify file was actually written
-                if (fs.existsSync(filePath)) {
-                    const stats = fs.statSync(filePath);
-                    console.log('✅ File saved successfully:', {
-                        path: filePath,
-                        size: stats.size,
-                        isFile: stats.isFile()
-                    });
-                } else {
-                    console.error('❌ File not found after multer processing:', filePath);
-                    throw new Error('ფაილი ვერ შეინახა სერვერზე');
-                }
-            } else {
-                console.error('❌ No file received from multer');
-                console.log('Request headers:', req.headers);
-                return res.status(400).json({
-                    error: "Excel ფაილი არ არის ატვირთული",
-                    details: "მულტერმა ფაილი ვერ დაამუშავა"
+                    destination: req.file.destination
                 });
             }
 
-            console.log('🔄 Starting import process...');
-            
+            if (!req.file) {
+                console.error('No file received in request');
+                console.log('This might be due to:');
+                console.log('1. File size too large');
+                console.log('2. Wrong field name (should be "excelFile")');
+                console.log('3. File type not allowed');
+                console.log('4. Multer configuration issue');
+                return res.status(400).json({
+                    error: "Excel ფაილი არ არის ატვირთული"
+                });
+            }
+
+            console.log('File received:', {
+                originalname: req.file.originalname,
+                filename: req.file.filename,
+                size: req.file.size,
+                path: req.file.path
+            });
+
+            filePath = req.file.path;
+
+            // Verify file exists
+            if (!fs.existsSync(filePath)) {
+                throw new Error('ფაილი ვერ შეინახა სერვერზე');
+            }
+
+            console.log('Starting import process...');
+
             // Import companies from Excel
-            const { importCompaniesFromExcel } = require('../import-companies');
             const result = await importCompaniesFromExcel(filePath, req.user.id);
 
-            console.log('✅ Import completed:', {
+            console.log('Import completed:', {
                 success: result.success,
                 imported: result.imported,
                 total: result.total,
@@ -234,8 +224,7 @@ router.post(
             }
 
         } catch (error) {
-            console.error('❌ Import process error:', error);
-            console.error('Error stack:', error.stack);
+            console.error('Import error:', error);
 
             let errorMessage = 'იმპორტის შეცდომა';
             let statusCode = 500;
@@ -243,9 +232,6 @@ router.post(
             if (error.code === 'ENOENT') {
                 errorMessage = 'ფაილი ვერ მოიძებნა';
                 statusCode = 400;
-            } else if (error.code === 'EACCES') {
-                errorMessage = 'ფაილზე წვდომის უფლება არ არის';
-                statusCode = 403;
             } else if (error.message.includes('ცარიელია')) {
                 errorMessage = error.message;
                 statusCode = 400;
@@ -258,17 +244,45 @@ router.post(
 
         } finally {
             // Clean up uploaded file
-            if (tempFileCreated && filePath && fs.existsSync(filePath)) {
+            if (filePath && fs.existsSync(filePath)) {
                 try {
                     fs.unlinkSync(filePath);
-                    console.log('🗑️ Temporary file cleaned up:', filePath);
+                    console.log('Temporary file cleaned up');
                 } catch (cleanupError) {
-                    console.warn('⚠️ File cleanup failed:', cleanupError.message);
+                    console.warn('File cleanup failed:', cleanupError.message);
                 }
             }
         }
     }
 );
+
+// Test upload endpoint for debugging
+router.post('/test-upload', authenticateToken, requireAdmin, upload.single('testFile'), (req, res) => {
+    console.log('=== Test upload endpoint hit ===');
+    console.log('File received:', req.file);
+    console.log('Body:', req.body);
+
+    if (req.file) {
+        // Clean up test file immediately
+        try {
+            fs.unlinkSync(req.file.path);
+        } catch (e) {
+            console.warn('Could not delete test file:', e.message);
+        }
+
+        res.json({ 
+            success: true, 
+            message: 'Upload test successful',
+            fileInfo: {
+                originalname: req.file.originalname,
+                size: req.file.size,
+                mimetype: req.file.mimetype
+            }
+        });
+    } else {
+        res.status(400).json({ error: 'No file received in test upload' });
+    }
+});
 
 // GET: Download template Excel file
 router.get(
@@ -283,38 +297,65 @@ router.get(
             const templateData = [
                 {
                     "კომპანიის დასახელება": "ტექნოლოგიური შპს",
+                    "ქვეყანა": "",
+                    "პროფილი": "",
+                    "საიდენტიფიკაციო კოდი": "",
+                    "იურიდიული მისამართი": "",
+                    "ვებსაიტი": "",
+                    "სტატუსი": "",
+                    "კომენტარი": "",
+                    "საკონტაქტო პირი": "",
+                    "პოზიცია": "",
+                    "ტელეფონი": "",
+                    "ელ-ფოსტა": "",
+                    "მონაწილე გამოფენები": ""
+                },
+                {
+                    "კომპანიის დასახელება": "მაგალითი კომპანია 1",
                     "ქვეყანა": "საქართველო",
                     "პროფილი": "ინფორმაციული ტექნოლოგიები",
                     "საიდენტიფიკაციო კოდი": "123456789",
                     "იურიდიული მისამართი": "თბილისი, საქართველო",
-                    "ვებსაიტი": "https://techcompany.ge",
+                    "ვებსაიტი": "https://example.ge",
                     "სტატუსი": "აქტიური",
                     "კომენტარი": "ტესტ კომპანია",
                     "საკონტაქტო პირი": "ნიკოლოზ გაბუნია",
                     "პოზიცია": "დირექტორი",
                     "ტელეფონი": "+995555123456",
-                    "ელ-ფოსტა": "info@techcompany.ge"
+                    "ელ-ფოსტა": "info@example.ge",
+                    "მონაწილე გამოფენები": "1,2,3"
                 },
                 {
-                    "კომპანიის დასახელება": "გლობალური სოლუშენები",
+                    "კომპანიის დასახელება": "მაგალითი კომპანია 2",
                     "ქვეყანა": "აშშ",
                     "პროფილი": "კონსულტინგი",
-                    "საიდენტიფიკაციო კოდი": "456789123",
-                    "იურიდიული მისამართი": "ნიუ-იორკი, აშშ",
-                    "ვებსაიტი": "https://globalsolutions.com",
-                    "სტატუსი": "აქტიური",
-                    "კომენტარი": "კონსალტინგის კომპანია",
-                    "საკონტაქტო პირი": "John Smith",
-                    "პოზიცია": "Manager",
-                    "ტელეფონი": "+1555123456",
-                    "ელ-ფოსტა": "john@globalsolutions.com"
+                    "საიდენტიფიკაციო კოდი": "",
+                    "იურიდიული მისამართი": "",
+                    "ვებსაიტი": "",
+                    "სტატუსი": "",
+                    "კომენტარი": "",
+                    "საკონტაქტო პირი": "",
+                    "პოზიცია": "",
+                    "ტელეფონი": "",
+                    "ელ-ფოსტა": "",
+                    "მონაწილე გამოფენები": "1,4"
                 }
             ];
 
-            // Create workbook
+            // Create workbook with instructions
             const worksheet = XLSX.utils.json_to_sheet(templateData);
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "კომპანიები");
+
+            // Add instructions as comments/notes in the first row
+            if (worksheet['A1']) {
+                worksheet['A1'].c = [{
+                    a: "ინსტრუქცია",
+                    t: "მხოლოდ 'კომპანიის დასახელება' არის სავალდებულო ველი. " +
+                       "დანარჩენი ველები შეიძლება იყოს ცარიელი. " +
+                       "მონაწილე გამოფენები - კომებით გაყოფილი ID-ების ჩამონათვალი (მაგ: 1,2,3)"
+                }];
+            }
 
             // Set column widths
             const colWidths = [
@@ -330,6 +371,7 @@ router.get(
                 { wch: 15 }, // პოზიცია
                 { wch: 15 }, // ტელეფონი
                 { wch: 25 }, // ელ-ფოსტა
+                { wch: 20 }, // მონაწილე გამოფენები
             ];
             worksheet["!cols"] = colWidths;
 
@@ -397,6 +439,17 @@ router.get("/companies/export", authenticateToken, async (req, res) => {
             const primaryContact =
                 contactPersons.length > 0 ? contactPersons[0] : {};
 
+            // მონაწილე გამოფენების ID-ების სტრინგად გადაქცევა
+            let selectedExhibitionsStr = "";
+            try {
+                const exhibitions = typeof company.selected_exhibitions === "string" 
+                    ? JSON.parse(company.selected_exhibitions) 
+                    : company.selected_exhibitions || [];
+                selectedExhibitionsStr = exhibitions.join(",");
+            } catch (e) {
+                selectedExhibitionsStr = "";
+            }
+
             return {
                 "კომპანიის დასახელება": company.company_name || "",
                 ქვეყანა: company.country || "",
@@ -410,9 +463,7 @@ router.get("/companies/export", authenticateToken, async (req, res) => {
                 პოზიცია: primaryContact.position || "",
                 ტელეფონი: primaryContact.phone || "",
                 "ელ-ფოსტა": primaryContact.email || "",
-                "შექმნის თარიღი": company.created_at
-                    ? new Date(company.created_at).toLocaleDateString("ka-GE")
-                    : "",
+                "მონაწილე გამოფენები": selectedExhibitionsStr
             };
         });
 
@@ -435,7 +486,7 @@ router.get("/companies/export", authenticateToken, async (req, res) => {
             { wch: 15 }, // პოზიცია
             { wch: 15 }, // ტელეფონი
             { wch: 25 }, // ელ-ფოსტა
-            { wch: 15 }, // შექმნის თარიღი
+            { wch: 20 }, // მონაწილე გამოფენები
         ];
         worksheet["!cols"] = colWidths;
 

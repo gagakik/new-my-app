@@ -45,6 +45,8 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
+    console.log('File input changed:', selectedFile);
+    
     if (selectedFile) {
       console.log('ფაილის არჩევა:', {
         name: selectedFile.name,
@@ -63,6 +65,7 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
       if (selectedFile.size > maxSize) {
         console.error('ფაილი ძალიან დიდია:', selectedFile.size, 'ბაიტი, მაქსიმუმ:', maxSize);
         showNotification(`ფაილი ძალიან დიდია (${(selectedFile.size / 1024 / 1024).toFixed(2)}MB). მაქსიმალური ზომა 5MB.`, 'error');
+        setFile(null);
         e.target.value = '';
         return;
       }
@@ -72,19 +75,23 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
       const allowedExtensions = ['xlsx', 'xls'];
       
       if (allowedTypes.includes(selectedFile.type) || allowedExtensions.includes(fileExtension)) {
-        console.log('ფაილი მოწონებულია:', selectedFile.name);
+        console.log('ფაილი მოწონებულია და დაყენებულია:', selectedFile.name);
+        console.log('Button should be enabled now');
         setFile(selectedFile);
         setImportResult(null);
         showNotification(`ფაილი არჩეულია: ${selectedFile.name}`, 'info');
       } else {
-        showNotification('მხოლოდ Excel ფაილები (.xlsx, .xls) ნებადართულია', 'error');
         console.error('არასწორი ფაილის ტიპი:', selectedFile.type, 'გაფართოება:', fileExtension);
         showNotification(
           `მხოლოდ Excel ფაილები (.xlsx, .xls) ნებადართულია. თქვენი ფაილი: ${selectedFile.type || 'უცნობი ტიპი'}`,
           'error'
         );
+        setFile(null);
         e.target.value = '';
       }
+    } else {
+      console.log('No file selected, clearing state');
+      setFile(null);
     }
   };
 
@@ -186,15 +193,18 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
       console.log('სერვერის პასუხი:', {
         status: response.status,
         statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries())
+        ok: response.ok
       });
 
       let result;
-      try {
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType && contentType.includes('application/json')) {
         result = await response.json();
         console.log('იმპორტის შედეგი:', result);
-      } catch (parseError) {
-        console.error('JSON პარსინგის შეცდომა:', parseError);
+      } else {
+        const textResponse = await response.text();
+        console.error('არა-JSON პასუხი:', textResponse);
         throw new Error('სერვერისგან არასწორი პასუხი მოვიდა');
       }
 
@@ -393,14 +403,21 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
             variant="contained"
             size="large"
             startIcon={importing ? null : <CloudUpload />}
-            onClick={handleImport}
+            onClick={() => {
+              console.log('Import button clicked:', {
+                file: file,
+                fileName: file ? file.name : 'no file',
+                importing: importing
+              });
+              handleImport();
+            }}
             disabled={!file || importing}
             sx={{ 
               mr: 2,
               minWidth: 150,
-              background: 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)',
+              background: (!file || importing) ? '#ccc' : 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)',
               '&:hover': { 
-                background: 'linear-gradient(135deg, #45a049 0%, #3d8b40 100%)' 
+                background: (!file || importing) ? '#ccc' : 'linear-gradient(135deg, #45a049 0%, #3d8b40 100%)' 
               },
               '&:disabled': {
                 background: '#ccc'
