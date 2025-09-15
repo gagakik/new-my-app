@@ -22,15 +22,23 @@ console.log('Environment check:', {
 const createDirectories = () => {
   const directories = [
     path.join(__dirname, 'uploads'),
-    path.join(__dirname, 'uploads/import'),
-    path.join(__dirname, 'uploads/participants')
+    path.join(__dirname, 'uploads', 'import'),
+    path.join(__dirname, 'uploads', 'participants')
   ];
 
   directories.forEach(dir => {
     try {
       if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true, mode: 0o755 });
+        fs.mkdirSync(dir, { recursive: true });
         console.log(`Directory created: ${dir}`);
+        
+        // Set permissions after creation (Unix/Linux only)
+        try {
+          fs.chmodSync(dir, 0o755);
+          console.log(`Permissions set for: ${dir}`);
+        } catch (chmodError) {
+          console.log(`chmod not supported: ${chmodError.message}`);
+        }
         
         // Test write access
         const testFile = path.join(dir, `test-${Date.now()}.tmp`);
@@ -40,12 +48,38 @@ const createDirectories = () => {
           console.log(`✅ Write access confirmed for: ${dir}`);
         } catch (writeError) {
           console.error(`❌ Write access failed for ${dir}:`, writeError);
+          // Try to fix permissions
+          try {
+            fs.chmodSync(dir, 0o777);
+            console.log(`Fixed permissions for: ${dir}`);
+          } catch (fixError) {
+            console.error(`Could not fix permissions for ${dir}:`, fixError);
+          }
         }
       } else {
         console.log(`Directory exists: ${dir}`);
+        // Verify write access even if directory exists
+        const testFile = path.join(dir, `test-${Date.now()}.tmp`);
+        try {
+          fs.writeFileSync(testFile, 'test');
+          fs.unlinkSync(testFile);
+          console.log(`✅ Write access verified for existing: ${dir}`);
+        } catch (writeError) {
+          console.error(`❌ Write access failed for existing ${dir}:`, writeError);
+        }
       }
     } catch (error) {
-      console.error(`Error creating directory ${dir}:`, error);
+      console.error(`Error with directory ${dir}:`, error);
+      // Try alternative approach
+      try {
+        const altDir = path.resolve(__dirname, dir.split(path.sep).pop());
+        if (!fs.existsSync(altDir)) {
+          fs.mkdirSync(altDir, { recursive: true });
+          console.log(`Alternative directory created: ${altDir}`);
+        }
+      } catch (altError) {
+        console.error(`Alternative approach failed for ${dir}:`, altError);
+      }
     }
   });
 };

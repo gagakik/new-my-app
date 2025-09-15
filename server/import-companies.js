@@ -9,7 +9,32 @@ async function importCompaniesFromExcel(filePath, userId = null) {
         
         // შევამოწმოთ ფაილის არსებობა
         if (!fs.existsSync(filePath)) {
-            throw new Error(`ფაილი ვერ მოიძებნა: ${filePath}`);
+            console.error('File does not exist at path:', filePath);
+            console.error('Current working directory:', process.cwd());
+            console.error('__dirname:', __dirname);
+            
+            // Try alternative paths
+            const alternativePaths = [
+                path.resolve(filePath),
+                path.join(__dirname, 'uploads', 'import', path.basename(filePath)),
+                path.join(__dirname, '..', 'uploads', 'import', path.basename(filePath)),
+                path.join(process.cwd(), 'uploads', 'import', path.basename(filePath))
+            ];
+            
+            let foundPath = null;
+            for (const altPath of alternativePaths) {
+                if (fs.existsSync(altPath)) {
+                    foundPath = altPath;
+                    console.log('Found file at alternative path:', altPath);
+                    break;
+                }
+            }
+            
+            if (!foundPath) {
+                throw new Error(`ფაილი ვერ მოიძებნა არც ერთ ლოკაციაზე: ${filePath}`);
+            }
+            
+            filePath = foundPath;
         }
 
         // შევამოწმოთ ბაზის კავშირი და ცხრილის არსებობა

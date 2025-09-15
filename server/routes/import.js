@@ -54,8 +54,15 @@ const storage = multer.diskStorage({
         try {
             if (!fs.existsSync(uploadDir)) {
                 console.log('Creating upload directory:', uploadDir);
-                fs.mkdirSync(uploadDir, { recursive: true, mode: 0o755 });
+                fs.mkdirSync(uploadDir, { recursive: true });
                 console.log('Upload directory created successfully');
+                
+                // Set permissions after creation (Unix/Linux)
+                try {
+                    fs.chmodSync(uploadDir, 0o755);
+                } catch (chmodError) {
+                    console.log('chmod not supported on this system:', chmodError.message);
+                }
             }
             
             // Test write permissions
@@ -66,13 +73,30 @@ const storage = multer.diskStorage({
                 console.log('✅ Write permissions confirmed for:', uploadDir);
             } catch (writeError) {
                 console.error('❌ Write permission test failed:', writeError);
+                // Try to create with different approach
+                try {
+                    const alternateDir = path.resolve(__dirname, "..", "uploads", "import");
+                    if (!fs.existsSync(alternateDir)) {
+                        fs.mkdirSync(alternateDir, { recursive: true });
+                    }
+                    const testFile2 = path.join(alternateDir, `test-${Date.now()}.tmp`);
+                    fs.writeFileSync(testFile2, 'test');
+                    fs.unlinkSync(testFile2);
+                    console.log('✅ Alternate directory works:', alternateDir);
+                    return cb(null, alternateDir);
+                } catch (altError) {
+                    console.error('❌ Alternate approach also failed:', altError);
+                }
             }
 
             console.log('Final upload directory:', uploadDir);
             cb(null, uploadDir);
         } catch (dirError) {
             console.error('Directory creation error:', dirError);
-            cb(dirError, null);
+            // Fallback to parent uploads directory
+            const fallbackDir = path.join(__dirname, "../uploads");
+            console.log('Using fallback directory:', fallbackDir);
+            cb(null, fallbackDir);
         }
     },
     filename: function (req, file, cb) {
