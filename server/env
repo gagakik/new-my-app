@@ -8,7 +8,7 @@ DB_DATABASE=my_app_db
 JWT_SECRET=YOUR_SECRET_KEY
 
 # Local PostgreSQL Database Configuration
-DATABASE_URL=postgresql://postgres@localhost:5432/exhibition_management
+DATABASE_URL=postgresql://postgres:Sami4xuti@localhost:5432/my_app_db
 
 # JWT Secret - შეცვალეთ უსაფრთხო secret-ით
 JWT_SECRET=YOUR_SECRET_KEY
