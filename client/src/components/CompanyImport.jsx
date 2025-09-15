@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   Container,
@@ -22,7 +21,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  IconButton
+  IconButton,
+  ListItemSecondaryAction
 } from '@mui/material';
 import {
   CloudUpload,
@@ -34,63 +34,80 @@ import {
   Info,
   Close,
   Description,
-  Assignment
+  Assignment,
+  History,
+  Visibility
 } from '@mui/icons-material';
+import { companiesAPI } from '../services/api';
+
+// Vite uses import.meta.env instead of process.env
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 const CompanyImport = ({ showNotification, onImportComplete }) => {
   const [file, setFile] = useState(null);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState(null);
   const [showInstructions, setShowInstructions] = useState(false);
+  const [importHistory, setImportHistory] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
-    console.log('File input changed:', selectedFile);
-    
-    if (selectedFile) {
-      console.log('ფაილის არჩევა:', {
-        name: selectedFile.name,
-        size: selectedFile.size,
-        type: selectedFile.type,
-        lastModified: new Date(selectedFile.lastModified).toLocaleString()
-      });
 
+    console.log('📁 File selection event:', {
+      filePresent: !!selectedFile,
+      fileName: selectedFile?.name,
+      fileSize: selectedFile?.size,
+      fileType: selectedFile?.type,
+      fileLastModified: selectedFile?.lastModified
+    });
+
+    if (selectedFile) {
       const allowedTypes = [
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'application/vnd.ms-excel'
+        'application/vnd.ms-excel',
+        'application/octet-stream' // ზოგჯერ ამ ტიპად მოდის
       ];
-      
-      // ზომის შემოწმება
-      const maxSize = 5 * 1024 * 1024; // 5MB
+
+      // ზომის შემოწმება - ვზრდით 10MB-მდე
+      const maxSize = 10 * 1024 * 1024; // 10MB
       if (selectedFile.size > maxSize) {
-        console.error('ფაილი ძალიან დიდია:', selectedFile.size, 'ბაიტი, მაქსიმუმ:', maxSize);
-        showNotification(`ფაილი ძალიან დიდია (${(selectedFile.size / 1024 / 1024).toFixed(2)}MB). მაქსიმალური ზომა 5MB.`, 'error');
+        console.log('❌ File too large:', selectedFile.size);
+        showNotification(`ფაილი ძალიან დიდია (${(selectedFile.size / 1024 / 1024).toFixed(2)}MB). მაქსიმალური ზომა 10MB.`, 'error');
         setFile(null);
         e.target.value = '';
         return;
       }
-      
-      // ტიპის შემოწმება
+
+      // გაფართოების შემოწმება (უფრო მნიშვნელოვანი ვიდრე MIME ტიპი)
       const fileExtension = selectedFile.name.toLowerCase().split('.').pop();
       const allowedExtensions = ['xlsx', 'xls'];
-      
-      if (allowedTypes.includes(selectedFile.type) || allowedExtensions.includes(fileExtension)) {
-        console.log('ფაილი მოწონებულია და დაყენებულია:', selectedFile.name);
-        console.log('Button should be enabled now');
+      const isValidExtension = allowedExtensions.includes(fileExtension);
+      const isValidType = allowedTypes.includes(selectedFile.type);
+
+      console.log('📁 File validation:', {
+        extension: fileExtension,
+        isValidExtension,
+        mimeType: selectedFile.type,
+        isValidType
+      });
+
+      if (isValidExtension || isValidType) {
         setFile(selectedFile);
         setImportResult(null);
+        console.log('✅ File accepted:', selectedFile.name);
         showNotification(`ფაილი არჩეულია: ${selectedFile.name}`, 'info');
       } else {
-        console.error('არასწორი ფაილის ტიპი:', selectedFile.type, 'გაფართოება:', fileExtension);
+        console.log('❌ File rejected - invalid type/extension');
         showNotification(
-          `მხოლოდ Excel ფაილები (.xlsx, .xls) ნებადართულია. თქვენი ფაილი: ${selectedFile.type || 'უცნობი ტიპი'}`,
+          `მხოლოდ Excel ფაილები (.xlsx, .xls) ნებადართულია. თქვენი ფაილი: ${selectedFile.name} (${selectedFile.type || 'უცნობი ტიპი'})`,
           'error'
         );
         setFile(null);
         e.target.value = '';
       }
     } else {
-      console.log('No file selected, clearing state');
+      console.log('📁 No file selected');
       setFile(null);
     }
   };
@@ -155,113 +172,168 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
   };
 
   const handleImport = async () => {
-    if (!file) {
-      showNotification('გთხოვთ აირჩიოთ ფაილი', 'error');
+    console.log('🚀🚀🚀 HANDLE IMPORT CALLED 🚀🚀🚀');
+    console.log('🚀 Timestamp:', new Date().toISOString());
+    console.log('🚀 Current state:', { file, importing });
+
+    // Check authentication first
+    const token = localStorage.getItem('token');
+    console.log('🔑 Auth check:', {
+      hasToken: !!token,
+      tokenLength: token?.length,
+      tokenStart: token?.substring(0, 20) + '...'
+    });
+
+    if (!token) {
+      console.error('❌ No authentication token found');
+      showNotification('ავტორიზაციის ტოკენი არ მოიძებნა. გთხოვთ, ხელახლა შეხვიდეთ სისტემაში.', 'error');
       return;
     }
 
-    console.log('იმპორტის დაწყება:', file.name, 'ზომა:', file.size, 'ტიპი:', file.type);
+    console.log('🚀 File object details:', {
+      name: file?.name,
+      size: file?.size,
+      type: file?.type,
+      lastModified: file?.lastModified,
+      instanceof_File: file instanceof File,
+      instanceof_Blob: file instanceof Blob
+    });
+
+    // Test if file is readable
+    try {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        console.log('✅ File is readable, first 100 bytes:', e.target.result.slice(0, 100));
+      };
+      reader.onerror = (e) => {
+        console.error('❌ File read error:', e);
+      };
+      reader.readAsArrayBuffer(file.slice(0, 100));
+    } catch (fileTestError) {
+      console.error('❌ File test error:', fileTestError);
+    }
+
+    // Validate file before proceeding
+    if (!(file instanceof File)) {
+      console.error('❌ Selected file is not a File object:', typeof file);
+      showNotification('მონიშნული ფაილი არასწორია. გთხოვთ ხელახლა აირჩიოთ.', 'error');
+      return;
+    }
+
+    if (file.size === 0) {
+      console.error('❌ Selected file is empty');
+      showNotification('მონიშნული ფაილი ცარიელია.', 'error');
+      return;
+    }
+
+    console.log('🔒 Setting importing state to true...');
     setImporting(true);
     setImportResult(null);
 
+    console.log('📊 Import process started at:', new Date().toLocaleTimeString());
+
+    const formData = new FormData();
+    formData.append('excelFile', file);
+
+    console.log('📋 FormData prepared:');
+    console.log('📋 FormData has excelFile:', formData.has('excelFile'));
+    console.log('📋 FormData entries:');
+    for (let [key, value] of formData.entries()) {
+      console.log(`📋   ${key}:`, value);
+      if (value instanceof File) {
+        console.log(`📋     File name: ${value.name}, size: ${value.size}, type: ${value.type}`);
+      }
+    }
+
+    // Test FormData creation
+    const testBlob = new Blob(['test'], { type: 'text/plain' });
+    const testFormData = new FormData();
+    testFormData.append('test', testBlob, 'test.txt');
+    console.log('🧪 Test FormData works:', testFormData.has('test'));
+
+    // Log request details before sending
+    console.log('🌐 About to send request to:', `${API_BASE_URL}/api/import/companies`);
+    console.log('🌐 Request headers will include:', {
+      'Authorization': `Bearer ${token.substring(0, 20)}...`
+    });
+    console.log('🌐 FormData size estimate:', file.size, 'bytes');
+
+
+    // Use the API service
+    console.log('🌐 Calling companiesAPI.import()...');
+    console.log('🌐 File being sent:', {
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      lastModified: file.lastModified
+    });
+
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        showNotification('ავტორიზაციის ტოკენი არ მოიძებნა. გთხოვთ, ხელახლა შეხვიდეთ სისტემაში.', 'error');
-        return;
+      const response = await companiesAPI.import(file);
+
+      console.log('✅✅✅ IMPORT SUCCESSFUL ✅✅✅');
+      console.log('✅ Response:', response);
+      console.log('📊 Import process completed at:', new Date().toLocaleTimeString());
+
+      setImportResult(response);
+
+      if (response.errors && response.errors > 0) {
+        showNotification(
+          `იმპორტი დასრულდა ნაწილობრივ: ${response.imported}/${response.total} კომპანია დამატებულია, ${response.errors} შეცდომით`,
+          'warning'
+        );
+      } else {
+        showNotification(
+          `იმპორტი წარმატებით დასრულდა: ${response.imported}/${response.total} კომპანია დამატებულია`,
+          'success'
+        );
       }
 
-      const formData = new FormData();
-      formData.append('excelFile', file);
-
-      console.log('მოთხოვნის გაგზავნა სერვერზე...', {
-        url: '/api/import/companies',
-        method: 'POST',
-        fileSize: file.size,
-        fileName: file.name,
-        hasToken: !!token
-      });
-      
-      const response = await fetch('/api/import/companies', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      });
-
-      console.log('სერვერის პასუხი:', {
-        status: response.status,
-        statusText: response.statusText,
-        ok: response.ok
-      });
-
-      let result;
-      const contentType = response.headers.get('content-type');
-      
-      if (contentType && contentType.includes('application/json')) {
-        result = await response.json();
-        console.log('იმპორტის შედეგი:', result);
-      } else {
-        const textResponse = await response.text();
-        console.error('არა-JSON პასუხი:', textResponse);
-        throw new Error('სერვერისგან არასწორი პასუხი მოვიდა');
-      }
-
-      if (response.ok) {
-        setImportResult(result);
-        
-        if (result.errors > 0) {
-          showNotification(
-            `იმპორტი დასრულდა ნაწილობრივ: ${result.imported}/${result.total} კომპანია დამატებულია, ${result.errors} შეცდომით`,
-            'warning'
-          );
-        } else {
-          showNotification(
-            `იმპორტი წარმატებით დასრულდა: ${result.imported}/${result.total} კომპანია დამატებულია`,
-            'success'
-          );
-        }
-        
-        if (onImportComplete) {
-          onImportComplete();
-        }
-      } else {
-        // სტატუს კოდის მიხედვით კონკრეტული შეტყობინებები
-        let errorMessage = result.error || 'იმპორტის შეცდომა';
-        
-        switch (response.status) {
-          case 401:
-            errorMessage = 'ავტორიზაციის შეცდომა. გთხოვთ, ხელახლა შეხვიდეთ სისტემაში.';
-            break;
-          case 403:
-            errorMessage = 'თქვენ არ გაქვთ ამ ოპერაციის შესრულების უფლება.';
-            break;
-          case 413:
-            errorMessage = 'ფაილი ძალიან დიდია. მაქსიმალური ზომა 5MB.';
-            break;
-          case 415:
-            errorMessage = 'არასწორი ფაილის ფორმატი. მხოლოდ Excel ფაილები (.xlsx, .xls) ნებადართულია.';
-            break;
-          case 500:
-            errorMessage = 'სერვერის შიდა შეცდომა. სცადეთ მოგვიანებით.';
-            break;
-        }
-        
-        console.error('იმპორტის შეცდომა:', response.status, errorMessage, result);
-        throw new Error(errorMessage);
+      if (onImportComplete) {
+        console.log('🔄 Calling onImportComplete callback...');
+        onImportComplete();
       }
     } catch (error) {
-      console.error('იმპორტის პროცესის შეცდომა:', error);
-      
-      if (error.name === 'TypeError' && error.message.includes('fetch')) {
-        showNotification('სერვერთან კავშირის შეცდომა. შეამოწმეთ ინტერნეტ კავშირი.', 'error');
-      } else if (error.message.includes('413')) {
-        showNotification('ფაილი ძალიან დიდია. მაქსიმალური ზომა 5MB.', 'error');
+      console.error('❌❌❌ IMPORT PROCESS ERROR ❌❌❌');
+      console.error('❌ Error object:', error);
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Error name:', error.name);
+      console.error('❌ Error stack:', error.stack);
+      console.error('❌ Error constructor:', error.constructor.name);
+
+      if (error.response) {
+        console.error('❌ HTTP Response Error:');
+        console.error('  Status:', error.response.status);
+        console.error('  Status Text:', error.response.statusText);
+        console.error('  Data:', error.response.data);
+        console.error('  Headers:', error.response.headers);
       } else {
-        showNotification(`შეცდომა: ${error.message}`, 'error');
+        console.error('❌ No response object in error');
       }
+
+      // Network error detection
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        console.error('❌ Detected network/fetch error');
+      }
+      if (error.message.includes('NetworkError')) {
+        console.error('❌ Detected NetworkError');
+      }
+
+      let errorMessage = 'უცნობი შეცდომა დაფიქსირდა';
+
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        errorMessage = 'სერვერთან კავშირის შეცდომა. შეამოწმეთ ინტერნეტ კავშირი.';
+      } else if (error.message?.includes('413') || error.response?.status === 413) {
+        errorMessage = 'ფაილი ძალიან დიდია. მაქსიმალური ზომა 10MB.';
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      showNotification(`შეცდომა: ${errorMessage}`, 'error');
     } finally {
+      console.log('🔄 Import process finished, setting importing to false');
       setImporting(false);
     }
   };
@@ -272,12 +344,33 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
     document.getElementById('fileInput').value = '';
   };
 
+  const fetchImportHistory = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/import/files', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setImportHistory(result.files);
+      } else {
+        showNotification('იმპორტის ისტორიის ჩამოტვირთვა ვერ მოხერხდა', 'error');
+      }
+    } catch (error) {
+      console.error('Import history error:', error);
+      showNotification('იმპორტის ისტორიის ჩამოტვირთვა ვერ მოხერხდა', 'error');
+    }
+  };
+
   return (
     <Container maxWidth="lg" sx={{ py: 4 }} >
-      <Paper 
-        elevation={3} 
-        sx={{ 
-          p: 4, 
+      <Paper
+        elevation={3}
+        sx={{
+          p: 4,
           borderRadius: 3,
           background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
           display: 'flex',
@@ -287,10 +380,10 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
         }}
       >
         <Box textAlign="center" mb={4}>
-          <Typography 
-            variant="h4" 
-            gutterBottom 
-            sx={{ 
+          <Typography
+            variant="h4"
+            gutterBottom
+            sx={{
               color: 'primary.main',
               fontWeight: 600,
               mb: 1
@@ -319,11 +412,11 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
                   variant="contained"
                   startIcon={<Download />}
                   onClick={downloadTemplate}
-                  sx={{ 
+                  sx={{
                     mr: 1,
                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    '&:hover': { 
-                      background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)' 
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)'
                     }
                   }}
                 >
@@ -333,10 +426,10 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
                   variant="contained"
                   startIcon={<FileUpload />}
                   onClick={exportCompanies}
-                  sx={{ 
+                  sx={{
                     background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-                    '&:hover': { 
-                      background: 'linear-gradient(135deg, #e788f5 0%, #f04556 100%)' 
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #e788f5 0%, #f04556 100%)'
                     }
                   }}
                 >
@@ -347,9 +440,9 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
           </Grid>
 
           <Grid item xs={12} md={6}>
-            <Card 
-              elevation={2} 
-              sx={{ 
+            <Card
+              elevation={2}
+              sx={{
                 height: '100%',
                 border: file ? '2px solid #4caf50' : '2px dashed #ccc',
                 backgroundColor: file ? '#f8fff8' : 'inherit'
@@ -404,20 +497,19 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
             size="large"
             startIcon={importing ? null : <CloudUpload />}
             onClick={() => {
-              console.log('Import button clicked:', {
-                file: file,
-                fileName: file ? file.name : 'no file',
-                importing: importing
-              });
+              console.log('🔥 IMPORT BUTTON CLICKED!');
+              console.log('🔥 Button state:', { file: !!file, importing, disabled: !file || importing });
+              console.log('🔥 File at click time:', file);
+              console.log('🔥 Calling handleImport...');
               handleImport();
             }}
             disabled={!file || importing}
-            sx={{ 
+            sx={{
               mr: 2,
               minWidth: 150,
               background: (!file || importing) ? '#ccc' : 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)',
-              '&:hover': { 
-                background: (!file || importing) ? '#ccc' : 'linear-gradient(135deg, #45a049 0%, #3d8b40 100%)' 
+              '&:hover': {
+                background: (!file || importing) ? '#ccc' : 'linear-gradient(135deg, #45a049 0%, #3d8b40 100%)'
               },
               '&:disabled': {
                 background: '#ccc'
@@ -426,7 +518,25 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
           >
             {importing ? 'იმპორტირდება...' : 'იმპორტი'}
           </Button>
-          
+
+          {process.env.NODE_ENV === 'development' && file && (
+            <Button
+              variant="outlined"
+              color="secondary"
+              size="small"
+              onClick={() => {
+                console.log('🧪 DIRECT TEST BUTTON CLICKED');
+                console.log('🧪 Current file:', file);
+                console.log('🧪 Calling handleImport directly...');
+                handleImport();
+              }}
+              disabled={importing}
+              sx={{ mr: 2 }}
+            >
+              🧪 Test Import
+            </Button>
+          )}
+
           {file && (
             <Button
               variant="outlined"
@@ -451,7 +561,7 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
               <Typography variant="h6" gutterBottom color="primary">
                 იმპორტის შედეგები
               </Typography>
-              
+
               <Grid container spacing={2} mb={2}>
                 <Grid item xs={12} sm={4}>
                   <Card variant="outlined">
@@ -502,10 +612,10 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
                         <ListItemIcon sx={{ minWidth: 36 }}>
                           <Error color="error" />
                         </ListItemIcon>
-                        <ListItemText 
+                        <ListItemText
                           primary={error}
-                          sx={{ 
-                            '& .MuiListItemText-primary': { 
+                          sx={{
+                            '& .MuiListItemText-primary': {
                               fontSize: '0.875rem',
                               wordBreak: 'break-word'
                             }
@@ -523,13 +633,23 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
           </Card>
         )}
 
-        <Box textAlign="center">
+        <Box textAlign="center" sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
           <Button
             variant="outlined"
             startIcon={<Info />}
             onClick={() => setShowInstructions(true)}
           >
             ინსტრუქციების ნახვა
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<History />}
+            onClick={() => {
+              fetchImportHistory();
+              setShowHistory(true);
+            }}
+          >
+            იმპორტის ისტორია
           </Button>
         </Box>
       </Paper>
@@ -541,7 +661,7 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle sx={{ 
+        <DialogTitle sx={{
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           color: 'white',
           display: 'flex',
@@ -558,7 +678,7 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
             <Close />
           </IconButton>
         </DialogTitle>
-        
+
         <DialogContent sx={{ p: 3 }}>
           <Typography variant="h6" gutterBottom color="primary">
             ნაბიჯები:
@@ -597,34 +717,126 @@ const CompanyImport = ({ showNotification, onImportComplete }) => {
           </Typography>
           <List>
             <ListItem>
-              <ListItemText 
+              <ListItemText
                 primary="საჭირო ველი: კომპანიის დასახელება"
                 secondary="ეს ველი აუცილებლად უნდა იყოს შევსებული. საიდენტიფიკაციო კოდი თუ არ მიუთითოთ, ავტომატურად შეიქმნება."
               />
             </ListItem>
             <ListItem>
-              <ListItemText 
+              <ListItemText
                 primary="სტატუსი: მხოლოდ 'აქტიური' ან 'პასიური'"
                 secondary="სხვა მნიშვნელობები არ იქნება მიღებული"
               />
             </ListItem>
             <ListItem>
-              <ListItemText 
+              <ListItemText
                 primary="ვებსაიტი: მიუთითეთ სრული URL (http:// ან https://)"
                 secondary="მაგალითად: https://example.com"
               />
             </ListItem>
             <ListItem>
-              <ListItemText 
+              <ListItemText
                 primary="მაქსიმალური ფაილის ზომა: 5MB"
                 secondary="უფრო დიდი ფაილები არ იქნება დამუშავებული"
               />
             </ListItem>
           </List>
         </DialogContent>
-        
+
         <DialogActions>
           <Button onClick={() => setShowInstructions(false)}>
+            დახურვა
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Import History Dialog */}
+      <Dialog
+        open={showHistory}
+        onClose={() => setShowHistory(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle sx={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <Typography variant="h6">
+            იმპორტის ისტორია
+          </Typography>
+          <IconButton
+            onClick={() => setShowHistory(false)}
+            sx={{ color: 'white' }}
+          >
+            <Close />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent sx={{ p: 3 }}>
+          {importHistory.length > 0 ? (
+            <List>
+              {importHistory.map((historyFile, index) => (
+                <ListItem key={index} sx={{ border: '1px solid #e0e0e0', borderRadius: 2, mb: 2 }}>
+                  <ListItemIcon>
+                    <Description color="primary" />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={
+                      <Typography variant="subtitle1" fontWeight="bold">
+                        {historyFile.original_name}
+                      </Typography>
+                    }
+                    secondary={
+                      <Box>
+                        <Typography variant="body2" color="text.secondary">
+                          ატვირთვის თარიღი: {new Date(historyFile.uploaded_at).toLocaleString('ka-GE')}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          ატვირთა: {historyFile.uploaded_by_username}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          სტატუსი: {historyFile.import_status}
+                        </Typography>
+                        {historyFile.import_completed_at && (
+                          <Typography variant="body2" color="text.secondary">
+                            დასრულდა: {new Date(historyFile.import_completed_at).toLocaleString('ka-GE')}
+                          </Typography>
+                        )}
+                        <Typography variant="body2" color="success.main">
+                          იმპორტირდა: {historyFile.imported_count} / {historyFile.total_count}
+                        </Typography>
+                        {historyFile.error_count > 0 && (
+                          <Typography variant="body2" color="error.main">
+                            შეცდომები: {historyFile.error_count}
+                          </Typography>
+                        )}
+                      </Box>
+                    }
+                  />
+                  <ListItemSecondaryAction>
+                    <Button
+                      startIcon={<Visibility />}
+                      onClick={() => window.open(historyFile.file_path, '_blank')}
+                      size="small"
+                    >
+                      ნახვა
+                    </Button>
+                  </ListItemSecondaryAction>
+                </ListItem>
+              ))}
+            </List>
+          ) : (
+            <Alert severity="info">
+              იმპორტის ისტორია ცარიელია
+            </Alert>
+          )}
+        </DialogContent>
+
+        <DialogActions>
+          <Button onClick={() => setShowHistory(false)}>
             დახურვა
           </Button>
         </DialogActions>

@@ -1,40 +1,55 @@
-
 const XLSX = require('xlsx');
 const fs = require('fs');
+const path = require('path');
 const db = require('./db');
 
 async function importCompaniesFromExcel(filePath, userId = null) {
     try {
         console.log('კომპანიების იმპორტის დაწყება...', { filePath, userId });
-        
+
         // შევამოწმოთ ფაილის არსებობა
         if (!fs.existsSync(filePath)) {
-            console.error('File does not exist at path:', filePath);
-            console.error('Current working directory:', process.cwd());
-            console.error('__dirname:', __dirname);
-            
+            console.error('❌ File does not exist at path:', filePath);
+            console.error('❌ Current working directory:', process.cwd());
+            console.error('❌ __dirname:', __dirname);
+
+            // List files in the expected directory
+            const expectedDir = path.dirname(filePath);
+            if (fs.existsSync(expectedDir)) {
+                console.log('📁 Files in expected directory:', fs.readdirSync(expectedDir));
+            } else {
+                console.log('❌ Expected directory does not exist:', expectedDir);
+            }
+
             // Try alternative paths
             const alternativePaths = [
                 path.resolve(filePath),
                 path.join(__dirname, 'uploads', 'import', path.basename(filePath)),
                 path.join(__dirname, '..', 'uploads', 'import', path.basename(filePath)),
+                path.join(process.cwd(), 'server', 'uploads', 'import', path.basename(filePath)),
                 path.join(process.cwd(), 'uploads', 'import', path.basename(filePath))
             ];
-            
+
             let foundPath = null;
+            console.log('🔍 Searching in alternative paths:');
             for (const altPath of alternativePaths) {
+                console.log('  Checking:', altPath);
                 if (fs.existsSync(altPath)) {
                     foundPath = altPath;
-                    console.log('Found file at alternative path:', altPath);
+                    console.log('✅ Found file at alternative path:', altPath);
                     break;
                 }
             }
-            
+
             if (!foundPath) {
-                throw new Error(`ფაილი ვერ მოიძებნა არც ერთ ლოკაციაზე: ${filePath}`);
+                console.error('❌ File not found in any of the following locations:');
+                alternativePaths.forEach(p => console.error('  -', p));
+                throw new Error(`ფაილი ვერ მოიძებნა არც ერთ ლოკაციაზე. ორიგინალური გზა: ${filePath}`);
             }
-            
+
             filePath = foundPath;
+        } else {
+            console.log('✅ File exists at original path:', filePath);
         }
 
         // შევამოწმოთ ბაზის კავშირი და ცხრილის არსებობა
@@ -44,7 +59,7 @@ async function importCompaniesFromExcel(filePath, userId = null) {
                 WHERE table_name = 'companies' AND table_schema = 'public'
             `);
             console.log('Companies table exists:', tableCheck.rows[0].count > 0);
-            
+
             if (tableCheck.rows[0].count === 0) {
                 throw new Error('Companies ცხრილი არ არსებობს ბაზაში');
             }
@@ -57,24 +72,24 @@ async function importCompaniesFromExcel(filePath, userId = null) {
         const workbook = XLSX.readFile(filePath);
         const sheetName = workbook.SheetNames[0]; // პირველი sheet
         const worksheet = workbook.Sheets[sheetName];
-        
+
         console.log('Available sheets:', workbook.SheetNames);
         console.log('Using sheet:', sheetName);
-        
+
         // JSON-ად კონვერტაცია
         const companiesData = XLSX.utils.sheet_to_json(worksheet);
-        
+
         console.log(`მოიძებნა ${companiesData.length} კომპანია`);
         console.log('First 2 rows sample:', JSON.stringify(companiesData.slice(0, 2), null, 2));
-        
+
         if (companiesData.length > 0) {
             console.log('Available columns:', Object.keys(companiesData[0]));
         }
-        
+
         if (companiesData.length === 0) {
             throw new Error('ექსელის ფაილში არ არის მონაცემები');
         }
-        
+
         // თუ userId არ არის მოწოდებული, ვეცდებით პირველი ადმინის მოძებნას
         let validUserId = userId;
         if (!validUserId) {
@@ -103,20 +118,33 @@ async function importCompaniesFromExcel(filePath, userId = null) {
                 validUserId = 1; // ფოლბექ
             }
         }
-        
+
         let successCount = 0;
         let errorCount = 0;
         const errors = [];
         const errorDetails = [];
-        
+
+        console.log('🔄 Starting to process companies from Excel...');
+
         for (let i = 0; i < companiesData.length; i++) {
             const row = companiesData[i];
-            console.log(`დამუშავება რიგი ${i + 1}:`, Object.keys(row));
-            
+            console.log(`📋 Processing row ${i + 1}/${companiesData.length}:`, Object.keys(row));
+
+            // კომპანიის სახელი სავალდებულოა
+            const companyName = (row['კომპანიის დასახელება'] || row['company_name'] || '').toString().trim();
+            if (!companyName) {
+                errorCount++;
+                errorDetails.push(`რიგი ${i + 1}: კომპანიის დასახელება სავალდებულოა`);
+                console.log(`❌ Row ${i + 1}: Missing company name, skipping...`);
+                continue;
+            }
+
+            console.log(`✅ Row ${i + 1}: Processing company "${companyName}"`);
+
             try {
                 // ველების მაპინგი - ზუსტად შაბლონის თანმიმდევრობით
                 const companyData = {
-                    company_name: (row['კომპანიის დასახელება'] || row['company_name'] || '').toString().trim(),
+                    company_name: companyName,
                     country: (row['ქვეყანა'] || row['country'] || '').toString().trim(),
                     company_profile: (row['პროფილი'] || row['company_profile'] || '').toString().trim(),
                     identification_code: (row['საიდენტიფიკაციო კოდი'] || row['identification_code'] || '').toString().trim(),
@@ -137,7 +165,7 @@ async function importCompaniesFromExcel(filePath, userId = null) {
                         .map(id => parseInt(id))
                         .filter(id => !isNaN(id) && id > 0);
                     selectedExhibitions = exhibitionIds;
-                    console.log(`რიგი ${i + 1}: მონაწილე გამოფენები:`, selectedExhibitions);
+                    console.log(`Row ${i + 1}: Participant exhibitions found:`, selectedExhibitions);
                 }
 
                 // საკონტაქტო პირის ინფორმაცია (ზუსტად შაბლონის ველებიდან)
@@ -166,15 +194,16 @@ async function importCompaniesFromExcel(filePath, userId = null) {
                     contactPersons.push(contactPerson);
                 }
 
-                console.log('მონაცემები რიგიდან:', row);
-                console.log('კომპანიის მონაცემები:', companyData);
-                console.log('საკონტაქტო პირი:', contactPerson);
-                console.log('მონაწილე გამოფენები:', selectedExhibitions);
+                console.log('Raw data from row:', row);
+                console.log('Company data to be inserted:', companyData);
+                console.log('Contact person data:', contactPerson);
+                console.log('Selected exhibitions:', selectedExhibitions);
 
                 // ბაზაში ჩასმა
                 let result;
                 if (companyData.identification_code) {
                     // თუ საიდენტიფიკაციო კოდი არსებობს, გამოვიყენოთ ON CONFLICT
+                    console.log(`Row ${i + 1}: Inserting/updating company with identification code: ${companyData.identification_code}`);
                     result = await db.query(`
                         INSERT INTO companies (
                             company_name, country, company_profile, identification_code,
@@ -209,6 +238,7 @@ async function importCompaniesFromExcel(filePath, userId = null) {
                     ]);
                 } else {
                     // თუ საიდენტიფიკაციო კოდი ცარიელია, უბრალოდ ჩავსვათ (ცარიელი კოდით)
+                    console.log(`Row ${i + 1}: Inserting company without identification code: "${companyName}"`);
                     result = await db.query(`
                         INSERT INTO companies (
                             company_name, country, company_profile, identification_code,
@@ -231,19 +261,18 @@ async function importCompaniesFromExcel(filePath, userId = null) {
                     ]);
                 }
 
-                console.log(`წარმატებით დამატებულია კომპანია: ${companyData.company_name} (ID: ${result.rows[0].id})`);
                 successCount++;
-
-            } catch (rowError) {
-                console.error(`შეცდომა რიგზე ${i + 1}:`, rowError);
-                const errorMsg = `რიგი ${i + 1}: ${rowError.message}`;
+                console.log(`✅ Row ${i + 1}: Company "${companyName}" successfully imported/updated (ID: ${result.rows[0]?.id})`);
+            } catch (dbError) {
+                console.error(`❌ Error processing row ${i + 1} for company "${companyName}":`, dbError);
+                const errorMsg = `რიგი ${i + 1}: ${dbError.message}`;
                 errors.push(errorMsg);
-                errorDetails.push({ row: i + 1, error: rowError.message, data: row });
+                errorDetails.push({ row: i + 1, error: dbError.message, data: row });
                 errorCount++;
             }
         }
 
-        console.log(`იმპორტი დასრულდა. წარმატებული: ${successCount}, შეცდომები: ${errorCount}`);
+        console.log(`Total companies processed: ${companiesData.length}. Success: ${successCount}, Errors: ${errorCount}`);
 
         return {
             success: true,
@@ -255,7 +284,7 @@ async function importCompaniesFromExcel(filePath, userId = null) {
         };
 
     } catch (error) {
-        console.error('იმპორტის ზოგადი შეცდომა:', error);
+        console.error('General import error:', error);
         return {
             success: false,
             error: error.message,

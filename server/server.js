@@ -18,7 +18,7 @@ console.log('Environment check:', {
   PORT: PORT
 });
 
-// Create necessary directories
+// Create necessary directories with comprehensive verification
 const createDirectories = () => {
   const directories = [
     path.join(__dirname, 'uploads'),
@@ -28,59 +28,84 @@ const createDirectories = () => {
 
   directories.forEach(dir => {
     try {
+      console.log(`\n📁 Processing directory: ${dir}`);
+      console.log(`📍 Absolute path: ${path.resolve(dir)}`);
+
       if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-        console.log(`Directory created: ${dir}`);
-        
-        // Set permissions after creation (Unix/Linux only)
-        try {
-          fs.chmodSync(dir, 0o755);
-          console.log(`Permissions set for: ${dir}`);
-        } catch (chmodError) {
-          console.log(`chmod not supported: ${chmodError.message}`);
-        }
-        
-        // Test write access
-        const testFile = path.join(dir, `test-${Date.now()}.tmp`);
-        try {
-          fs.writeFileSync(testFile, 'test');
-          fs.unlinkSync(testFile);
-          console.log(`✅ Write access confirmed for: ${dir}`);
-        } catch (writeError) {
-          console.error(`❌ Write access failed for ${dir}:`, writeError);
-          // Try to fix permissions
-          try {
-            fs.chmodSync(dir, 0o777);
-            console.log(`Fixed permissions for: ${dir}`);
-          } catch (fixError) {
-            console.error(`Could not fix permissions for ${dir}:`, fixError);
-          }
-        }
+        console.log(`📁 Creating directory...`);
+        fs.mkdirSync(dir, { recursive: true, mode: 0o755 });
+        console.log(`✅ Directory created: ${dir}`);
       } else {
-        console.log(`Directory exists: ${dir}`);
-        // Verify write access even if directory exists
-        const testFile = path.join(dir, `test-${Date.now()}.tmp`);
-        try {
-          fs.writeFileSync(testFile, 'test');
-          fs.unlinkSync(testFile);
-          console.log(`✅ Write access verified for existing: ${dir}`);
-        } catch (writeError) {
-          console.error(`❌ Write access failed for existing ${dir}:`, writeError);
-        }
+        console.log(`✅ Directory already exists: ${dir}`);
       }
-    } catch (error) {
-      console.error(`Error with directory ${dir}:`, error);
-      // Try alternative approach
+
+      // Verify directory was created and is accessible
+      const dirStats = fs.statSync(dir);
+      console.log(`📊 Directory stats:`, {
+        isDirectory: dirStats.isDirectory(),
+        mode: dirStats.mode.toString(8),
+        created: dirStats.birthtime
+      });
+
+      // Test write access with detailed logging
+      const testFileName = `test-write-${Date.now()}-${Math.floor(Math.random() * 1000)}.tmp`;
+      const testFile = path.join(dir, testFileName);
+
       try {
-        const altDir = path.resolve(__dirname, dir.split(path.sep).pop());
-        if (!fs.existsSync(altDir)) {
-          fs.mkdirSync(altDir, { recursive: true });
-          console.log(`Alternative directory created: ${altDir}`);
+        console.log(`🧪 Testing write access with file: ${testFile}`);
+        fs.writeFileSync(testFile, 'test write access');
+
+        // Verify file was written
+        if (fs.existsSync(testFile)) {
+          const testStats = fs.statSync(testFile);
+          console.log(`✅ Test file created successfully, size: ${testStats.size} bytes`);
+
+          // Clean up test file
+          fs.unlinkSync(testFile);
+          console.log(`🧹 Test file cleaned up`);
+        } else {
+          throw new Error('Test file was not created even though writeFileSync did not throw');
         }
-      } catch (altError) {
-        console.error(`Alternative approach failed for ${dir}:`, altError);
+
+        console.log(`✅ Write access confirmed for: ${dir}`);
+      } catch (writeError) {
+        console.error(`❌ Write access test failed for ${dir}:`, writeError.message);
+        console.error(`❌ Error code:`, writeError.code);
+
+        // Try to fix permissions
+        try {
+          console.log(`🔧 Attempting to fix permissions...`);
+          fs.chmodSync(dir, 0o777);
+
+          // Retry write test
+          fs.writeFileSync(testFile, 'retry test');
+          fs.unlinkSync(testFile);
+          console.log(`✅ Fixed permissions and confirmed write access for: ${dir}`);
+        } catch (fixError) {
+          console.error(`❌ Could not fix permissions for ${dir}:`, fixError.message);
+          console.error(`❌ This may cause file upload issues`);
+        }
       }
+
+      // List directory contents for verification
+      try {
+        const contents = fs.readdirSync(dir);
+        console.log(`📋 Directory contents (${contents.length} items):`, contents.slice(0, 5).join(', ') + (contents.length > 5 ? '...' : ''));
+      } catch (listError) {
+        console.error(`❌ Could not list directory contents:`, listError.message);
+      }
+
+    } catch (error) {
+      console.error(`❌ Error setting up directory ${dir}:`, error.message);
+      console.error(`❌ Error code:`, error.code);
+      console.error(`❌ Error stack:`, error.stack);
     }
+  });
+
+  console.log(`\n📁 Directory setup complete. Summary:`);
+  directories.forEach(dir => {
+    const exists = fs.existsSync(dir);
+    console.log(`  ${exists ? '✅' : '❌'} ${dir} - ${exists ? 'exists' : 'missing'}`);
   });
 };
 
@@ -89,8 +114,28 @@ createDirectories();
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+// Middleware for parsing JSON
+app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Request monitoring middleware
+app.use((req, res, next) => {
+  if (req.path.includes('/api/')) {
+    console.log(`🌐 API Request: ${req.method} ${req.originalUrl}`);
+    console.log(`🌐 Headers:`, Object.keys(req.headers).reduce((acc, key) => {
+      if (!key.toLowerCase().includes('authorization')) {
+        acc[key] = req.headers[key];
+      }
+      return acc;
+    }, {}));
+    console.log(`🌐 Content-Type: ${req.get('Content-Type')}`);
+    if (req.files) {
+      console.log(`🌐 Files:`, Object.keys(req.files));
+    }
+  }
+  next();
+});
+
 
 // Token verification middleware
 const authenticateToken = (req, res, next) => {
@@ -122,6 +167,21 @@ const authorizeRoles = (...roles) => {
 
 // Static file serving for uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Root route for development
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Expo Georgia API Server',
+    version: '1.0.0',
+    environment: process.env.NODE_ENV || 'development',
+    endpoints: {
+      companies: '/api/companies',
+      events: '/api/events',
+      equipment: '/api/equipment',
+      import: '/api/import'
+    }
+  });
+});
 
 // Serve client build files in production
 if (process.env.NODE_ENV === 'production') {
@@ -230,7 +290,7 @@ app.get('/api/download/:filename', authenticateToken, (req, res) => {
   res.sendFile(actualPath);
 });
 
-// Auth routes - Fixed endpoints to match frontend
+// Auth routes
 app.post('/api/register', async (req, res) => {
   try {
     console.log('Registration request received:', { body: req.body });
@@ -284,7 +344,7 @@ app.post('/api/register', async (req, res) => {
     console.error('Registration error:', error);
     console.error('Error details:', error.message);
     console.error('Error stack:', error.stack);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'სერვერის შეცდომა',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -346,14 +406,28 @@ app.post('/api/login', async (req, res) => {
 });
 
 // Companies routes - using separate router
-const companiesRouter = require('./routes/companies');
-app.use('/api/companies', companiesRouter);
+// Import routes
+console.log('🔧 Registering routes...');
+app.use('/api/companies', require('./routes/companies'));
+console.log('✅ Companies route registered');
+app.use('/api/equipment', require('./routes/equipment'));
+console.log('✅ Equipment route registered');
+app.use('/api/packages', require('./routes/packages'));
+console.log('✅ Packages route registered');
+app.use('/api/reports', require('./routes/reports'));
+console.log('✅ Reports route registered');
+app.use('/api/statistics', require('./routes/statistics'));
+console.log('✅ Statistics route registered');
+app.use('/api/stands', require('./routes/stands'));
+console.log('✅ Stands route registered');
+app.use('/api/import', require('./routes/import'));
+console.log('✅ Import route registered at /api/import');
 
 // Equipment routes
 app.get('/api/equipment', authenticateToken, async (req, res) => {
   try {
     const result = await db.query(`
-      SELECT 
+      SELECT
         e.*,
         u1.username as created_by,
         u2.username as updated_by
@@ -472,7 +546,7 @@ app.get('/api/equipment/availability/:eventId', authenticateToken, async (req, r
     const { eventId } = req.params;
 
     const query = `
-      SELECT 
+      SELECT
         e.id,
         e.code_name,
         e.quantity,
@@ -502,7 +576,7 @@ app.get('/api/equipment/availability/:eventId', authenticateToken, async (req, r
 app.get('/api/spaces', authenticateToken, async (req, res) => {
   try {
     const result = await db.query(`
-      SELECT 
+      SELECT
         s.*,
         u1.username as created_by,
         u2.username as updated_by
@@ -582,7 +656,7 @@ app.delete('/api/spaces/:id', authenticateToken, authorizeRoles('admin', 'manage
 app.get('/api/exhibitions', authenticateToken, async (req, res) => {
   try {
     const result = await db.query(`
-      SELECT 
+      SELECT
         e.*,
         u1.username as created_by,
         u2.username as updated_by
@@ -678,7 +752,7 @@ app.delete('/api/exhibitions/:id', authenticateToken, authorizeRoles('admin', 'm
 app.get('/api/events', authenticateToken, async (req, res) => {
   try {
     const result = await db.query(`
-      SELECT 
+      SELECT
         a.id,
         a.service_name,
         a.description,
@@ -742,7 +816,7 @@ app.get('/api/events/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const result = await db.query(`
-      SELECT 
+      SELECT
         a.id,
         a.service_name,
         a.description,
@@ -760,7 +834,7 @@ app.get('/api/events/:id', authenticateToken, async (req, res) => {
         a.exhibition_id,
         e.exhibition_name
       FROM annual_services a
-      LEFT JOIN exhibitions e ON a.exhibition_id = e.id 
+      LEFT JOIN exhibitions e ON a.exhibition_id = e.id
       WHERE a.id = $1
     `, [id]);
 
@@ -819,12 +893,12 @@ app.get('/api/events/:id', authenticateToken, async (req, res) => {
 
 app.post('/api/events', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res) => {
   try {
-    const { 
-      exhibition_id, 
-      service_name, 
-      description, 
-      start_date, 
-      end_date, 
+    const {
+      exhibition_id,
+      service_name,
+      description,
+      start_date,
+      end_date,
       start_time,
       end_time,
       service_type = 'ივენთი',
@@ -833,15 +907,15 @@ app.post('/api/events', authenticateToken, authorizeRoles('admin', 'manager'), a
 
     const result = await db.query(
       `INSERT INTO annual_services (
-        exhibition_id, service_name, description, start_date, end_date, 
+        exhibition_id, service_name, description, start_date, end_date,
         start_time, end_time, service_type, year_selection, created_by_user_id
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
       [
-        exhibition_id, 
-        service_name, 
-        description, 
-        start_date, 
-        end_date, 
+        exhibition_id,
+        service_name,
+        description,
+        start_date,
+        end_date,
         start_time,
         end_time,
         service_type,
@@ -860,12 +934,12 @@ app.post('/api/events', authenticateToken, authorizeRoles('admin', 'manager'), a
 app.put('/api/events/:id', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res) => {
   try {
     const { id } = req.params;
-    const { 
-      exhibition_id, 
-      service_name, 
-      description, 
-      start_date, 
-      end_date, 
+    const {
+      exhibition_id,
+      service_name,
+      description,
+      start_date,
+      end_date,
       start_time,
       end_time,
       service_type,
@@ -873,10 +947,10 @@ app.put('/api/events/:id', authenticateToken, authorizeRoles('admin', 'manager')
     } = req.body;
 
     const result = await db.query(
-      `UPDATE annual_services SET 
-        exhibition_id = $1, service_name = $2, description = $3, 
+      `UPDATE annual_services SET
+        exhibition_id = $1, service_name = $2, description = $3,
         start_date = $4, end_date = $5, start_time = $6, end_time = $7,
-        service_type = $8, year_selection = $9, updated_at = CURRENT_TIMESTAMP 
+        service_type = $8, year_selection = $9, updated_at = CURRENT_TIMESTAMP
       WHERE id = $10 RETURNING *`,
       [exhibition_id, service_name, description, start_date, end_date, start_time, end_time, service_type, year_selection, id]
     );
@@ -915,7 +989,7 @@ app.get('/api/events/:eventId/participants', authenticateToken, async (req, res)
 
   try {
     const query = `
-      SELECT 
+      SELECT
         ep.*,
         c.company_name,
         c.country,
@@ -952,18 +1026,18 @@ app.get('/api/events/:eventId/participants', authenticateToken, async (req, res)
 });
 
 // Event Participants Management
-app.post('/api/events/:eventId/participants', 
-  authenticateToken, 
-  authorizeRoles('admin', 'manager', 'sales', 'marketing'), 
+app.post('/api/events/:eventId/participants',
+  authenticateToken,
+  authorizeRoles('admin', 'manager', 'sales', 'marketing'),
   participantUpload.fields([
     { name: 'invoice_file', maxCount: 1 },
     { name: 'contract_file', maxCount: 1 },
     { name: 'handover_file', maxCount: 1 }
-  ]), 
+  ]),
   async (req, res) => {
     try {
       const { eventId } = req.params;
-      const { 
+      const {
         company_id,
         booth_size,
         booth_number,
@@ -999,7 +1073,7 @@ app.post('/api/events/:eventId/participants',
 
       // Insert participant
       const participantResult = await db.query(
-        `INSERT INTO event_participants 
+        `INSERT INTO event_participants
          (event_id, company_id, booth_size, booth_number, payment_amount, payment_status, registration_status, notes, created_by_user_id, invoice_file_path, contract_file_path, handover_file_path, package_id, registration_type)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
         [eventId, company_id, booth_size, booth_number, payment_amount, payment_status, registration_status, notes, req.user.id, invoice_file_path, contract_file_path, handover_file_path, package_id || null, registration_type || 'individual']
@@ -1016,8 +1090,8 @@ app.post('/api/events/:eventId/participants',
           let packageEquipment = [];
           if (registration_type === 'package' && package_id) {
             const packageResult = await db.query(`
-              SELECT pe.equipment_id, pe.quantity 
-              FROM package_equipment pe 
+              SELECT pe.equipment_id, pe.quantity
+              FROM package_equipment pe
               WHERE pe.package_id = $1
             `, [package_id]);
             packageEquipment = packageResult.rows;
@@ -1025,7 +1099,7 @@ app.post('/api/events/:eventId/participants',
 
           for (const booking of bookings) {
             // Check if this equipment is from package
-            const isFromPackage = packageEquipment.some(pe => 
+            const isFromPackage = packageEquipment.some(pe =>
               pe.equipment_id === booking.equipment_id && pe.quantity >= booking.quantity
             );
 
@@ -1054,7 +1128,7 @@ app.post('/api/events/:eventId/participants',
       console.error('მონაწილის დამატების შეცდომა:', error);
       console.error('Error details:', error.message);
       console.error('Error stack:', error.stack);
-      res.status(500).json({ 
+      res.status(500).json({
         message: 'მონაწილის დამატება ვერ მოხერხდა',
         error: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
@@ -1062,26 +1136,26 @@ app.post('/api/events/:eventId/participants',
   }
 );
 
-app.put('/api/events/:eventId/participants/:participantId', 
-  authenticateToken, 
-  authorizeRoles('admin', 'manager', 'sales', 'marketing'), 
+app.put('/api/events/:eventId/participants/:participantId',
+  authenticateToken,
+  authorizeRoles('admin', 'manager', 'sales', 'marketing'),
   participantUpload.fields([
     { name: 'invoice_file', maxCount: 1 },
     { name: 'contract_file', maxCount: 1 },
     { name: 'handover_file', maxCount: 1 }
-  ]), 
+  ]),
   async (req, res) => {
     try {
       const { eventId, participantId } = req.params;
       console.log('Update participant request:', { eventId, participantId });
       console.log('Request body:', req.body);
 
-      const { 
-        company_id, 
-        registration_status, 
-        payment_status, 
-        booth_number, 
-        booth_size, 
+      const {
+        company_id,
+        registration_status,
+        payment_status,
+        booth_number,
+        booth_size,
         notes,
         contact_person,
         contact_position,
@@ -1131,7 +1205,7 @@ app.put('/api/events/:eventId/participants/:participantId',
       // Add columns to database if they don't exist
       try {
         await db.query(`
-          ALTER TABLE event_participants 
+          ALTER TABLE event_participants
           ADD COLUMN IF NOT EXISTS contact_person VARCHAR(255),
           ADD COLUMN IF NOT EXISTS contact_position VARCHAR(255),
           ADD COLUMN IF NOT EXISTS contact_email VARCHAR(255),
@@ -1149,21 +1223,21 @@ app.put('/api/events/:eventId/participants/:participantId',
 
       // Update participant with all required fields
       const result = await db.query(`
-        UPDATE event_participants 
-        SET company_id = $1, registration_status = $2, payment_status = $3, 
+        UPDATE event_participants
+        SET company_id = $1, registration_status = $2, payment_status = $3,
             booth_number = $4, booth_size = $5, notes = $6,
             contact_person = $7, contact_position = $8, contact_email = $9, contact_phone = $10,
             payment_amount = $11, payment_due_date = $12, payment_method = $13,
             invoice_number = $14, invoice_file = $15, contract_file = $16,
             handover_file = $17, booth_category = $18, booth_type = $19, updated_at = CURRENT_TIMESTAMP
-        WHERE id = $20 AND event_id = $21 
+        WHERE id = $20 AND event_id = $21
         RETURNING *
       `, [
-        company_id || current.company_id, 
-        registration_status || current.registration_status, 
-        payment_status || current.payment_status, 
-        booth_number || current.booth_number, 
-        booth_size || current.booth_size, 
+        company_id || current.company_id,
+        registration_status || current.registration_status,
+        payment_status || current.payment_status,
+        booth_number || current.booth_number,
+        booth_size || current.booth_size,
         notes || current.notes,
         contact_person || current.contact_person,
         contact_position || current.contact_position,
@@ -1198,9 +1272,9 @@ app.put('/api/events/:eventId/participants/:participantId',
               await db.query(
                 'INSERT INTO equipment_bookings (participant_id, equipment_id, quantity, unit_price, total_price, created_by) VALUES ($1, $2, $3, $4, $5, $6)',
                 [
-                  participantId, 
-                  booking.equipment_id, 
-                  parseInt(booking.quantity), 
+                  participantId,
+                  booking.equipment_id,
+                  parseInt(booking.quantity),
                   parseFloat(booking.unit_price),
                   parseFloat(booking.quantity) * parseFloat(booking.unit_price),
                   req.user.id
@@ -1223,7 +1297,7 @@ app.put('/api/events/:eventId/participants/:participantId',
       console.error('მონაწილის განახლების შეცდომა:', error);
       console.error('Error details:', error.message);
       console.error('Error stack:', error.stack);
-      res.status(500).json({ 
+      res.status(500).json({
         message: 'მონაწილის განახლება ვერ მოხერხდა',
         error: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
@@ -1261,7 +1335,7 @@ app.get('/api/participants/:participantId/equipment-bookings', authenticateToken
     const { participantId } = req.params;
 
     const result = await db.query(`
-      SELECT 
+      SELECT
         eb.*,
         e.code_name as equipment_name,
         e.code_name,
@@ -1289,7 +1363,7 @@ app.post('/api/events/:eventId/complete', authenticateToken, authorizeRoles('adm
 
     // First, get all participants and their data
     const participants = await db.query(`
-      SELECT 
+      SELECT
         ep.*,
         c.company_name,
         c.country,
@@ -1303,7 +1377,7 @@ app.post('/api/events/:eventId/complete', authenticateToken, authorizeRoles('adm
     for (const participant of participants.rows) {
       // Get equipment bookings for this participant
       const equipmentBookings = await db.query(`
-        SELECT 
+        SELECT
           eb.*,
           e.name as equipment_name,
           e.code_name as equipment_code_name
@@ -1315,8 +1389,8 @@ app.post('/api/events/:eventId/complete', authenticateToken, authorizeRoles('adm
       // Insert into event_completion table
       await db.query(`
         INSERT INTO event_completion (
-          event_id, 
-          participant_id, 
+          event_id,
+          participant_id,
           company_id,
           company_name,
           registration_status,
@@ -1374,7 +1448,7 @@ app.post('/api/events/:eventId/complete', authenticateToken, authorizeRoles('adm
       [eventId]
     );
 
-    res.json({ 
+    res.json({
       message: 'ივენთი წარმატებით დასრულდა და მონაცემები შენახულია',
       participantsCount: participants.rows.length
     });
@@ -1390,8 +1464,8 @@ app.get('/api/events/:eventId/completion', authenticateToken, async (req, res) =
     const { eventId } = req.params;
 
     const result = await db.query(`
-      SELECT * FROM event_completion 
-      WHERE event_id = $1 
+      SELECT * FROM event_completion
+      WHERE event_id = $1
       ORDER BY completion_date DESC
     `, [eventId]);
 
@@ -1449,12 +1523,12 @@ app.get('/api/user/profile', authenticateToken, async (req, res) => {
 app.get('/api/users', authenticateToken, authorizeRoles('admin'), async (req, res) => {
   try {
     const result = await db.query(`
-      SELECT 
-        id, 
-        username, 
+      SELECT
+        id,
+        username,
         role,
         COALESCE(created_at, CURRENT_TIMESTAMP) as created_at
-      FROM users 
+      FROM users
       ORDER BY COALESCE(created_at, CURRENT_TIMESTAMP) DESC
     `);
     res.json(result.rows);
@@ -1511,7 +1585,7 @@ app.delete('/api/users/:id', authenticateToken, authorizeRoles('admin'), async (
 app.get('/api/annual-services', authenticateToken, async (req, res) => {
   try {
     const result = await db.query(`
-      SELECT 
+      SELECT
         as_main.*,
         COUNT(DISTINCT ss.space_id) as spaces_count,
         e.exhibition_name
@@ -1532,7 +1606,7 @@ app.get('/api/annual-services/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const result = await db.query(`
-      SELECT 
+      SELECT
         as_main.*,
         e.exhibition_name
       FROM annual_services as_main
@@ -1557,7 +1631,7 @@ app.get('/api/annual-services/:id/details', authenticateToken, async (req, res) 
 
     // Get service details
     const serviceResult = await db.query(`
-      SELECT 
+      SELECT
         as_main.*,
         e.exhibition_name
       FROM annual_services as_main
@@ -1605,7 +1679,7 @@ app.get('/api/annual-services/:id/details', authenticateToken, async (req, res) 
 
     // Get associated spaces
     const spacesResult = await db.query(`
-      SELECT s.* 
+      SELECT s.*
       FROM spaces s
       JOIN service_spaces ss ON s.id = ss.space_id
       WHERE ss.service_id = $1
@@ -1613,7 +1687,7 @@ app.get('/api/annual-services/:id/details', authenticateToken, async (req, res) 
 
     // Get participants/bookings
     const bookingsResult = await db.query(`
-      SELECT 
+      SELECT
         ep.*,
         c.company_name
       FROM event_participants ep
@@ -1686,7 +1760,7 @@ app.post('/api/annual-services', authenticateToken, async (req, res) => {
 
     const result = await db.query(
       `INSERT INTO annual_services (
-        service_name, description, year_selection, start_date, end_date, 
+        service_name, description, year_selection, start_date, end_date,
         start_time, end_time, service_type, is_active, exhibition_id, created_by_user_id
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
       [
@@ -1730,7 +1804,7 @@ app.post('/api/annual-services', authenticateToken, async (req, res) => {
           if (existingParticipant.rows.length === 0) {
             await db.query(
               `INSERT INTO event_participants (
-                event_id, company_id, registration_status, payment_status, 
+                event_id, company_id, registration_status, payment_status,
                 registration_date, created_by_user_id
               ) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, $5)`,
               [service.id, companyId, 'მონაწილეობის მოთხოვნა', 'მომლოდინე', req.user.id]
@@ -1795,8 +1869,6 @@ app.put('/api/annual-services/:id', authenticateToken, async (req, res) => {
     const formatDateForDB = (dateString) => {
       if (!dateString) return null;
 
-      console.log('Formatting date for DB:', dateString);
-
       // თუ უკვე YYYY-MM-DD ფორმატშია
       if (typeof dateString === 'string' && dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
         console.log('Date already in DB format:', dateString);
@@ -1819,10 +1891,10 @@ app.put('/api/annual-services/:id', authenticateToken, async (req, res) => {
     const formattedEndDate = formatDateForDB(end_date);
 
     const result = await db.query(
-      `UPDATE annual_services SET 
-        service_name = $1, description = $2, year_selection = $3, 
+      `UPDATE annual_services SET
+        service_name = $1, description = $2, year_selection = $3,
         start_date = $4, end_date = $5, start_time = $6, end_time = $7,
-        service_type = $8, is_active = $9, exhibition_id = $10, updated_at = CURRENT_TIMESTAMP 
+        service_type = $8, is_active = $9, exhibition_id = $10, updated_at = CURRENT_TIMESTAMP
       WHERE id = $11 RETURNING *`,
       [
         service_name, description, year_selection, formattedStartDate, formattedEndDate,
@@ -1910,7 +1982,7 @@ app.put('/api/annual-services/:id/archive', authenticateToken, authorizeRoles('a
       return res.status(404).json({ message: 'სერვისი ვერ მოიძებნა' });
     }
 
-    res.json({ 
+    res.json({
       message: 'სერვისი წარმატებით არქივში გადაიტანა',
       service: result.rows[0]
     });
@@ -1934,7 +2006,7 @@ app.put('/api/annual-services/:id/restore', authenticateToken, authorizeRoles('a
       return res.status(404).json({ message: 'სერვისი ვერ მოიძებნა' });
     }
 
-    res.json({ 
+    res.json({
       message: 'სერვისი წარმატებით აღდგა არქივიდან',
       service: result.rows[0]
     });
@@ -1961,14 +2033,14 @@ app.delete('/api/annual-services/:id', authenticateToken, authorizeRoles('admin'
     try {
       // 1. Delete participant selected equipment first
       await db.query(`
-        DELETE FROM participant_selected_equipment 
+        DELETE FROM participant_selected_equipment
         WHERE participant_id IN (SELECT id FROM event_participants WHERE event_id = $1)
       `, [id]);
       console.log('Deleted participant selected equipment');
 
       // 2. Delete equipment bookings
       await db.query(`
-        DELETE FROM equipment_bookings 
+        DELETE FROM equipment_bookings
         WHERE participant_id IN (SELECT id FROM event_participants WHERE event_id = $1)
       `, [id]);
       console.log('Deleted equipment bookings');
@@ -1997,8 +2069,8 @@ app.delete('/api/annual-services/:id', authenticateToken, authorizeRoles('admin'
 
       // More specific error handling
       if (deleteError.code === '23503') {
-        return res.status(400).json({ 
-          message: 'სერვისის წაშლა შეუძლებელია, რადგან მასთან დაკავშირებული მონაცემები არსებობს' 
+        return res.status(400).json({
+          message: 'სერვისის წაშლა შეუძლებელია, რადგან მასთან დაკავშირებული მონაცემები არსებობს'
         });
       }
 
@@ -2008,7 +2080,7 @@ app.delete('/api/annual-services/:id', authenticateToken, authorizeRoles('admin'
     console.error('Annual service deletion error:', error);
     console.error('Error details:', error.message);
     console.error('Error stack:', error.stack);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'სერვისის წაშლა ვერ მოხერხდა',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -2051,7 +2123,7 @@ app.post('/api/events/:id/upload-plan', authenticateToken, authorizeRoles('admin
     const filePath = req.file.path.replace(/\\/g, '/');
 
     await db.query(`
-      UPDATE annual_services 
+      UPDATE annual_services
       SET plan_file_path = $1, plan_uploaded_by = $2, updated_at = CURRENT_TIMESTAMP
       WHERE id = $3
     `, [filePath, req.user.username, eventId]);
@@ -2113,7 +2185,7 @@ app.post('/api/events/:id/upload-invoice', authenticateToken, upload.single('inv
     );
 
     res.json({
-      message: 'ინვოისის ფაილი წარმატებით ატვირთულია',
+      message: 'ინვოისის ფაილი წარმატებით აიტვირთა',
       file: newFile
     });
   } catch (error) {
@@ -2334,7 +2406,7 @@ app.delete('/api/events/:id/delete-plan', authenticateToken, authorizeRoles('adm
     console.error('გეგმის ფაილის წაშლის შეცდომა:', error);
     console.error('Error details:', error.message);
     console.error('Error stack:', error.stack);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'ფაილის წაშლა ვერ მოხერხდა',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -2348,7 +2420,7 @@ app.post('/api/cleanup/image-urls', authenticateToken, authorizeRoles('admin'), 
 
     // აღჭურვილობის ცხრილში URL-ების გასწორება
     const equipmentResult = await db.query(`
-      SELECT id, image_url FROM equipment 
+      SELECT id, image_url FROM equipment
       WHERE image_url LIKE 'http://0.0.0.0:5000/uploads/%'
     `);
 
@@ -2367,8 +2439,8 @@ app.post('/api/cleanup/image-urls', authenticateToken, authorizeRoles('admin'), 
 
     // event_participants ცხრილში ფაილების URL-ების გასწორება
     const participantsResult = await db.query(`
-      SELECT id, invoice_file_path, contract_file_path, handover_file_path 
-      FROM event_participants 
+      SELECT id, invoice_file_path, contract_file_path, handover_file_path
+      FROM event_participants
       WHERE invoice_file_path LIKE 'http://0.0.0.0:5000/uploads/%'
          OR contract_file_path LIKE 'http://0.0.0.0:5000/uploads/%'
          OR handover_file_path LIKE 'http://0.0.0.0:5000/uploads/%'
@@ -2440,7 +2512,7 @@ app.listen(PORT, '0.0.0.0', () => {
 app.get('/api/reports/user-companies', authenticateToken, async (req, res) => {
   try {
     const result = await db.query(`
-      SELECT 
+      SELECT
         u.username,
         COUNT(c.id) as companies_count,
         MAX(u2.username) as last_updated_by,
@@ -2464,7 +2536,7 @@ app.get('/api/reports/user-companies', authenticateToken, async (req, res) => {
 app.get('/api/reports/event-financials', authenticateToken, async (req, res) => {
   try {
     const result = await db.query(`
-      SELECT 
+      SELECT
         as1.service_name as event_name,
         COUNT(ep.id) as participants_count,
         COALESCE(SUM(CASE WHEN ep.payment_status = 'გადახდილი' THEN ep.payment_amount ELSE 0 END), 0) as total_paid,
@@ -2501,7 +2573,7 @@ app.get('/api/reports/user-analysis', authenticateToken, async (req, res) => {
 app.get('/api/bookings', authenticateToken, async (req, res) => {
   try {
     const result = await db.query(`
-      SELECT 
+      SELECT
         b.*,
         e.exhibition_name,
         c.company_name,
@@ -2521,18 +2593,18 @@ app.get('/api/bookings', authenticateToken, async (req, res) => {
 
 app.post('/api/bookings', authenticateToken, async (req, res) => {
   try {
-    const { 
-      exhibition_id, 
-      company_id, 
-      booking_date, 
-      start_time, 
-      end_time, 
-      notes 
+    const {
+      exhibition_id,
+      company_id,
+      booking_date,
+      start_time,
+      end_time,
+      notes
     } = req.body;
 
     const result = await db.query(
       `INSERT INTO bookings (
-        exhibition_id, company_id, booking_date, 
+        exhibition_id, company_id, booking_date,
         start_time, end_time, notes, created_by_user_id
       ) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
       [exhibition_id, company_id, booking_date, start_time, end_time, notes, req.user.id]
@@ -2551,20 +2623,20 @@ app.post('/api/bookings', authenticateToken, async (req, res) => {
 app.put('/api/bookings/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { 
-      exhibition_id, 
-      company_id, 
-      booking_date, 
-      start_time, 
-      end_time, 
-      notes 
+    const {
+      exhibition_id,
+      company_id,
+      booking_date,
+      start_time,
+      end_time,
+      notes
     } = req.body;
 
     const result = await db.query(
-      `UPDATE bookings SET 
-        exhibition_id = $1, company_id = $2, 
-        booking_date = $3, start_time = $4, end_time = $5, 
-        notes = $6, updated_at = CURRENT_TIMESTAMP 
+      `UPDATE bookings SET
+        exhibition_id = $1, company_id = $2,
+        booking_date = $3, start_time = $4, end_time = $5,
+        notes = $6, updated_at = CURRENT_TIMESTAMP
       WHERE id = $7 RETURNING *`,
       [exhibition_id, company_id, booking_date, start_time, end_time, notes, id]
     );
@@ -2600,50 +2672,32 @@ app.delete('/api/bookings/:id', authenticateToken, authorizeRoles('admin', 'mana
   }
 });
 
-// Routes
-const companiesRoutes = require('./routes/companies');
-const equipmentRoutes = require('./routes/equipment');
-const importRoutes = require('./routes/import');
-const statisticsRoutes = require('./routes/statistics');
-const packagesRoutes = require('./routes/packages');
-const reportsRoutes = require('./routes/reports');
-const standsRoutes = require('./routes/stands');
-
-app.use('/api/companies', companiesRoutes);
-app.use('/api/equipment', equipmentRoutes);
-app.use('/api/import', importRoutes);
-app.use('/api/statistics', statisticsRoutes);
-app.use('/api/packages', authenticateToken, packagesRoutes);
-app.use('/api/reports', reportsRoutes);
-app.use('/api/stands', standsRoutes);
-
-
 // Multer error handling middleware
 app.use((error, req, res, next) => {
-    if (error instanceof multer.MulterError) {
-        console.error('Multer error:', error);
-        if (error.code === 'LIMIT_FILE_SIZE') {
-            return res.status(413).json({
-                error: 'ფაილი ძალიან დიდია',
-                details: 'მაქსიმალური ზომა 5MB'
-            });
-        }
-        if (error.code === 'LIMIT_FILE_COUNT') {
-            return res.status(400).json({
-                error: 'ძალიან ბევრი ფაილი',
-                details: 'მხოლოდ ერთი ფაილის ატვირთვა შესაძლებელია'
-            });
-        }
-        if (error.code === 'LIMIT_UNEXPECTED_FILE') {
-            return res.status(400).json({
-                error: 'მოულოდნელი ფაილის ველი',
-                details: 'გამოიყენეთ "excelFile" ველის სახელი'
-            });
-        }
-        return res.status(400).json({
-            error: 'ფაილის ატვირთვის შეცდომა',
-            details: error.message
-        });
+  if (error instanceof multer.MulterError) {
+    console.error('Multer error:', error);
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({
+        error: 'ფაილი ძალიან დიდია',
+        details: 'მაქსიმალური ზომა 5MB'
+      });
     }
-    next(error);
+    if (error.code === 'LIMIT_FILE_COUNT') {
+      return res.status(400).json({
+        error: 'ძალიან ბევრი ფაილი',
+        details: 'მხოლოდ ერთი ფაილის ატვირთვა შესაძლებელია'
+      });
+    }
+    if (error.code === 'LIMIT_UNEXPECTED_FILE') {
+      return res.status(400).json({
+        error: 'მოულოდნელი ფაილის ველი',
+        details: 'გამოიყენეთ "excelFile" ველის სახელი'
+      });
+    }
+    return res.status(400).json({
+      error: 'ფაილის ატვირთვის შეცდომა',
+      details: error.message
+    });
+  }
+  next(error);
 });

@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 
 // Base API configuration
@@ -88,15 +87,15 @@ export const usersAPI = {
   getAll: async () => {
     return api.get('/users');
   },
-  
+
   create: async (userData) => {
     return api.post('/users', userData);
   },
-  
+
   update: async (id, userData) => {
     return api.put(`/users/${id}`, userData);
   },
-  
+
   delete: async (id) => {
     return api.delete(`/users/${id}`);
   },
@@ -107,19 +106,19 @@ export const exhibitionsAPI = {
   getAll: async () => {
     return api.get('/exhibitions');
   },
-  
+
   getById: async (id) => {
     return api.get(`/exhibitions/${id}`);
   },
-  
+
   create: async (exhibitionData) => {
     return api.post('/exhibitions', exhibitionData);
   },
-  
+
   update: async (id, exhibitionData) => {
     return api.put(`/exhibitions/${id}`, exhibitionData);
   },
-  
+
   delete: async (id) => {
     return api.delete(`/exhibitions/${id}`);
   }
@@ -127,32 +126,105 @@ export const exhibitionsAPI = {
 
 // Companies API
 export const companiesAPI = {
-  getAll: async () => {
-    try {
-      return api.get('/companies');
-    } catch (error) {
-      console.error('Error fetching companies:', error);
+  getAll: () => api.get('/companies'),
+  getById: (id) => api.get(`/companies/${id}`),
+  create: (data) => api.post('/companies', data),
+  update: (id, data) => api.put(`/companies/${id}`, data),
+  delete: (id) => api.delete(`/companies/${id}`),
+  import: async (file) => {
+    console.log('🚀🚀🚀 API SERVICE IMPORT CALLED 🚀🚀🚀');
+    console.log('🚀 API Service: Starting import with file:', {
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      lastModified: file.lastModified,
+      instanceof_File: file instanceof File,
+      constructor: file.constructor.name
+    });
+
+    // Validate file before creating FormData
+    if (!file || !(file instanceof File)) {
+      const error = new Error('Invalid file object provided to API import');
+      console.error('❌ API Service: Invalid file:', error.message);
       throw error;
     }
-  },
-  
-  create: async (companyData) => {
-    return api.post('/companies', companyData);
-  },
-  
-  update: async (id, companyData) => {
-    return api.put(`/companies/${id}`, companyData);
-  },
-  
-  delete: async (id) => {
-    return api.delete(`/companies/${id}`);
-  },
-  
-  import: async (file) => {
+
+    if (file.size === 0) {
+      const error = new Error('File is empty');
+      console.error('❌ API Service: Empty file:', error.message);
+      throw error;
+    }
+
+    console.log('📋 API Service: Creating FormData...');
     const formData = new FormData();
     formData.append('excelFile', file);
-    return api.post('/import/companies', formData);
-  },
+
+    console.log('📋 API Service: FormData created successfully:');
+    for (let [key, value] of formData.entries()) {
+      console.log(`📋   ${key}:`, value);
+      if (value instanceof File) {
+        console.log(`📋   ${key} file details:`, {
+          name: value.name,
+          size: value.size,
+          type: value.type,
+          lastModified: value.lastModified
+        });
+      }
+    }
+
+    try {
+      console.log('🌐 API Service: Preparing POST request to /api/import/companies');
+      
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      console.log('🔑 API Service: Token length:', token.length);
+      console.log('🌐 API Service: Request URL:', '/api/import/companies');
+      console.log('🌐 API Service: Request headers preparation...');
+
+      const requestConfig = {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`
+        },
+        timeout: 60000 // 60 seconds timeout
+      };
+
+      console.log('🌐 API Service: Sending POST request...');
+      console.log('🌐 API Service: Request timestamp:', new Date().toISOString());
+
+      const response = await apiClient.post('/import/companies', formData, requestConfig);
+
+      console.log('✅✅✅ API SERVICE: REQUEST SUCCESSFUL ✅✅✅');
+      console.log('✅ API Service: Response status:', response.status);
+      console.log('✅ API Service: Response data:', response.data);
+      console.log('✅ API Service: Response timestamp:', new Date().toISOString());
+      
+      return response.data;
+    } catch (error) {
+      console.error('❌❌❌ API SERVICE: REQUEST FAILED ❌❌❌');
+      console.error('❌ API Service: Error type:', error.constructor.name);
+      console.error('❌ API Service: Error message:', error.message);
+      console.error('❌ API Service: Error stack:', error.stack);
+      
+      if (error.response) {
+        console.error('❌ API Service: HTTP Error Response:');
+        console.error('  Status:', error.response.status);
+        console.error('  Status Text:', error.response.statusText);
+        console.error('  Data:', error.response.data);
+        console.error('  Headers:', error.response.headers);
+      } else if (error.request) {
+        console.error('❌ API Service: Request Error (no response received):');
+        console.error('  Request:', error.request);
+      } else {
+        console.error('❌ API Service: Setup Error:', error.message);
+      }
+
+      throw error;
+    }
+  }
 };
 
 // Equipment API
@@ -160,15 +232,15 @@ export const equipmentAPI = {
   getAll: async () => {
     return api.get('/equipment');
   },
-  
+
   create: async (equipmentData) => {
     return api.post('/equipment', equipmentData);
   },
-  
+
   update: async (id, equipmentData) => {
     return api.put(`/equipment/${id}`, equipmentData);
   },
-  
+
   delete: async (id) => {
     return api.delete(`/equipment/${id}`);
   },
@@ -179,15 +251,15 @@ export const packagesAPI = {
   getAll: async (exhibitionId) => {
     return api.get(`/packages/exhibition/${exhibitionId}`);
   },
-  
+
   create: async (packageData) => {
     return api.post('/packages', packageData);
   },
-  
+
   update: async (id, packageData) => {
     return api.put(`/packages/${id}`, packageData);
   },
-  
+
   delete: async (id) => {
     return api.delete(`/packages/${id}`);
   },
@@ -198,19 +270,19 @@ export const bookingsAPI = {
   getAll: async () => {
     return api.get('/bookings');
   },
-  
+
   create: async (bookingData) => {
     return api.post('/bookings', bookingData);
   },
-  
+
   update: async (id, bookingData) => {
     return api.put(`/bookings/${id}`, bookingData);
   },
-  
+
   delete: async (id) => {
     return api.delete(`/bookings/${id}`);
   },
-  
+
   updateStatus: async (id, status) => {
     return api.put(`/bookings/${id}/status`, { status });
   },
@@ -221,7 +293,7 @@ export const statisticsAPI = {
   getOverview: async () => {
     return api.get('/statistics/overview');
   },
-  
+
   getReports: async () => {
     return api.get('/reports');
   },
@@ -240,7 +312,7 @@ export const filesAPI = {
     const response = await apiClient.get(`/download/${fileName}`, {
       responseType: 'blob'
     });
-    
+
     // Create download link
     const url = window.URL.createObjectURL(response);
     const link = document.createElement('a');
@@ -261,7 +333,7 @@ export const filesAPI = {
         'Expires': '0'
       }
     });
-    
+
     // Create download link
     const url = window.URL.createObjectURL(response);
     const link = document.createElement('a');
@@ -282,7 +354,7 @@ export const filesAPI = {
         'Expires': '0'
       }
     });
-    
+
     // Create download link
     const url = window.URL.createObjectURL(response);
     const link = document.createElement('a');
@@ -319,7 +391,7 @@ export const filesAPI = {
     files.forEach(file => {
       formData.append('invoice_files', file);
     });
-    
+
     return api.post(`/events/${eventId}/upload-invoices`, formData);
   },
 
@@ -328,7 +400,7 @@ export const filesAPI = {
     files.forEach(file => {
       formData.append('expense_files', file);
     });
-    
+
     return api.post(`/events/${eventId}/upload-expenses`, formData);
   },
 
@@ -348,17 +420,17 @@ export const filesAPI = {
   getFileBlob: async (filePath) => {
     // Clean the path - extract only the filename
     let fileName = filePath;
-    
+
     // If it's a full path, get just the filename
     if (fileName.includes('/')) {
       fileName = fileName.split('/').pop();
     }
-    
+
     // If it's a Windows path, get just the filename
     if (fileName.includes('\\')) {
       fileName = fileName.split('\\').pop();
     }
-    
+
     const response = await apiClient.get(`/download/${fileName}?t=${Date.now()}`, {
       responseType: 'blob',
       headers: {

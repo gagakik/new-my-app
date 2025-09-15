@@ -70,14 +70,9 @@ const CompaniesList = ({ showNotification, userRole }) => {
 
   const fetchExhibitions = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/exhibitions', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setExhibitions(data);
-      }
+      const { exhibitionsAPI } = await import('../services/api');
+      const data = await exhibitionsAPI.getAll();
+      setExhibitions(data);
     } catch (error) {
       console.error('გამოფენების ჩატვირთვის შეცდომა:', error);
     }
@@ -366,18 +361,8 @@ const CompaniesList = ({ showNotification, userRole }) => {
 
       console.log('Fetching companies with URL:', url);
 
-      const response = await fetch(url, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('ავტორიზაცია ვადაგასულია');
-        }
-        throw new Error('კომპანიების ჩატვირთვა ვერ მოხერხდა');
-      }
-
-      const data = await response.json();
+      const { companiesAPI } = await import('../services/api');
+      const data = await companiesAPI.getAll();
       console.log('Companies data received:', data);
       setCompanies(data);
     } catch (error) {
@@ -391,9 +376,12 @@ const CompaniesList = ({ showNotification, userRole }) => {
 
   useEffect(() => {
     fetchCompanies();
+  }, [searchTerm, filterCountry, filterProfile, filterStatus, filterIdentificationCode, filterExhibition, showNotification]);
+
+  useEffect(() => {
     fetchExhibitions();
     fetchCountries();
-  }, [fetchCompanies, fetchExhibitions, fetchCountries]);
+  }, [fetchExhibitions, fetchCountries]);
 
   const handleDelete = async (id) => {
     const isConfirmed = window.confirm('ნამდვილად გსურთ ამ კომპანიის წაშლა?');
@@ -405,18 +393,10 @@ const CompaniesList = ({ showNotification, userRole }) => {
         showNotification('ავტორიზაციის ტოკენი არ მოიძებნა. გთხოვთ, შეხვიდეთ სისტემაში.', 'error');
         return;
       }
-      const response = await fetch(`/api/companies/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        showNotification('კომპანია წარმატებით წაიშალა!', 'success');
-        fetchCompanies();
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'წაშლა ვერ მოხერხდა.');
-      }
+      const { companiesAPI } = await import('../services/api');
+      await companiesAPI.delete(id);
+      showNotification('კომპანია წარმატებით წაიშალა!', 'success');
+      fetchCompanies();
     } catch (error) {
       console.error('შეცდომა წაშლისას:', error);
       showNotification(`დაფიქსირდა შეცდომა წაშლისას: ${error.message}`, 'error');
@@ -471,25 +451,13 @@ const CompaniesList = ({ showNotification, userRole }) => {
   const saveExhibitionChanges = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/companies/${editingExhibitions.companyId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          selected_exhibitions: editingExhibitions.selectedExhibitions
-        })
+      const { companiesAPI } = await import('../services/api');
+      await companiesAPI.update(editingExhibitions.companyId, {
+        selected_exhibitions: editingExhibitions.selectedExhibitions
       });
-
-      if (response.ok) {
-        showNotification('გამოფენები წარმატებით განახლდა!', 'success');
-        setEditingExhibitions(null);
-        fetchCompanies();
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'განახლება ვერ მოხერხდა');
-      }
+      showNotification('გამოფენები წარმატებით განახლდა!', 'success');
+      setEditingExhibitions(null);
+      fetchCompanies();
     } catch (error) {
       showNotification(`შეცდომა: ${error.message}`, 'error');
     }

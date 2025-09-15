@@ -1,4 +1,3 @@
-
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
@@ -10,21 +9,32 @@ const { importCompaniesFromExcel } = require("../import-companies");
 
 // Authentication middleware
 function authenticateToken(req, res, next) {
+    console.log('🔐 Authentication middleware called');
+    console.log('🔐 Request URL:', req.url);
+    console.log('🔐 Request method:', req.method);
+    
     const authHeader = req.headers["authorization"];
+    console.log('🔐 Auth header present:', !!authHeader);
+    console.log('🔐 Auth header value:', authHeader ? authHeader.substring(0, 30) + '...' : 'null');
+    
     const token = authHeader && authHeader.split(" ")[1];
 
     if (token == null) {
+        console.log('❌ No token provided');
         return res
             .status(401)
             .json({ error: "ავტორიზაციის ტოკენი არ არის მოწოდებული." });
     }
 
+    console.log('🔐 Token found, verifying...');
     jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
         if (err) {
+            console.log('❌ Token verification failed:', err.message);
             return res
                 .status(403)
                 .json({ error: "არასწორი ან ვადაგასული ავტორიზაციის ტოკენი." });
         }
+        console.log('✅ Token verified for user:', user.username);
         req.user = user;
         next();
     });
@@ -40,73 +50,29 @@ function requireAdmin(req, res, next) {
     next();
 }
 
-// Simple multer configuration
+// Simplified multer configuration for better reliability
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         const uploadDir = path.join(__dirname, "../uploads/import");
-        
-        console.log('=== File Upload Debug ===');
-        console.log('__dirname:', __dirname);
-        console.log('uploadDir:', uploadDir);
-        console.log('Directory exists:', fs.existsSync(uploadDir));
 
-        // Ensure directory exists with proper permissions
-        try {
-            if (!fs.existsSync(uploadDir)) {
-                console.log('Creating upload directory:', uploadDir);
-                fs.mkdirSync(uploadDir, { recursive: true });
-                console.log('Upload directory created successfully');
-                
-                // Set permissions after creation (Unix/Linux)
-                try {
-                    fs.chmodSync(uploadDir, 0o755);
-                } catch (chmodError) {
-                    console.log('chmod not supported on this system:', chmodError.message);
-                }
-            }
-            
-            // Test write permissions
-            const testFile = path.join(uploadDir, `test-${Date.now()}.tmp`);
-            try {
-                fs.writeFileSync(testFile, 'test');
-                fs.unlinkSync(testFile);
-                console.log('✅ Write permissions confirmed for:', uploadDir);
-            } catch (writeError) {
-                console.error('❌ Write permission test failed:', writeError);
-                // Try to create with different approach
-                try {
-                    const alternateDir = path.resolve(__dirname, "..", "uploads", "import");
-                    if (!fs.existsSync(alternateDir)) {
-                        fs.mkdirSync(alternateDir, { recursive: true });
-                    }
-                    const testFile2 = path.join(alternateDir, `test-${Date.now()}.tmp`);
-                    fs.writeFileSync(testFile2, 'test');
-                    fs.unlinkSync(testFile2);
-                    console.log('✅ Alternate directory works:', alternateDir);
-                    return cb(null, alternateDir);
-                } catch (altError) {
-                    console.error('❌ Alternate approach also failed:', altError);
-                }
-            }
+        console.log('🔧 Upload destination:', uploadDir);
 
-            console.log('Final upload directory:', uploadDir);
-            cb(null, uploadDir);
-        } catch (dirError) {
-            console.error('Directory creation error:', dirError);
-            // Fallback to parent uploads directory
-            const fallbackDir = path.join(__dirname, "../uploads");
-            console.log('Using fallback directory:', fallbackDir);
-            cb(null, fallbackDir);
+        // Ensure directory exists
+        if (!fs.existsSync(uploadDir)) {
+            console.log('📁 Creating directory:', uploadDir);
+            fs.mkdirSync(uploadDir, { recursive: true });
         }
+
+        console.log('✅ Directory ready:', uploadDir);
+        cb(null, uploadDir);
     },
     filename: function (req, file, cb) {
         const timestamp = Date.now();
+        const randomNum = Math.floor(Math.random() * 1000000);
         const ext = path.extname(file.originalname).toLowerCase();
-        const filename = `companies-${timestamp}${ext}`;
-        console.log('Generated filename:', filename);
-        console.log('Original filename:', file.originalname);
-        console.log('File mimetype:', file.mimetype);
-        console.log('File size:', file.size);
+        const filename = `import-${timestamp}-${randomNum}${ext}`;
+
+        console.log('📄 Generated filename:', filename);
         cb(null, filename);
     }
 });
@@ -114,171 +80,121 @@ const storage = multer.diskStorage({
 const upload = multer({
     storage: storage,
     fileFilter: function (req, file, cb) {
-        const allowedTypes = [
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "application/vnd.ms-excel"
-        ];
+        console.log('🔍 File filter check for:', file.originalname);
+        console.log('🔍 File mimetype:', file.mimetype);
+        console.log('🔍 File fieldname:', file.fieldname);
+
         const allowedExtensions = [".xlsx", ".xls"];
         const fileExtension = path.extname(file.originalname).toLowerCase();
 
-        if (allowedTypes.includes(file.mimetype) || allowedExtensions.includes(fileExtension)) {
-            console.log('✅ File accepted:', file.originalname);
+        if (allowedExtensions.includes(fileExtension)) {
+            console.log('✅ FILE ACCEPTED:', file.originalname);
             cb(null, true);
         } else {
-            console.log('❌ File rejected:', file.originalname);
+            console.log('❌ FILE REJECTED:', file.originalname, 'Extension:', fileExtension);
             cb(new Error('მხოლოდ Excel ფაილები (.xlsx, .xls) ნებადართულია'), false);
         }
     },
     limits: {
-        fileSize: 5 * 1024 * 1024 // 5MB limit
+        fileSize: 10 * 1024 * 1024 // 10MB limit
     }
 });
 
-// POST: Import companies from Excel file
-router.post(
-    "/companies",
-    authenticateToken,
-    requireAdmin,
-    (req, res, next) => {
-        console.log('=== Before multer processing ===');
-        console.log('Content-Type:', req.headers['content-type']);
-        console.log('Content-Length:', req.headers['content-length']);
-        console.log('Authorization header exists:', !!req.headers['authorization']);
-        console.log('Request method:', req.method);
-        console.log('Request URL:', req.url);
-        next();
-    },
-    (req, res, next) => {
-        console.log('=== Multer processing start ===');
-        const multerHandler = upload.single("excelFile");
-        multerHandler(req, res, (err) => {
-            console.log('=== Multer processing result ===');
-            if (err) {
-                console.error('Multer error:', err);
-                if (err.code === 'LIMIT_FILE_SIZE') {
-                    return res.status(413).json({ error: 'ფაილი ძალიან დიდია (მაქსიმუმ 5MB)' });
-                }
-                return res.status(400).json({ error: err.message });
-            }
-            console.log('File after multer:', req.file ? 'Present' : 'Missing');
-            if (req.file) {
-                console.log('File info:', {
-                    originalname: req.file.originalname,
-                    filename: req.file.filename,
-                    size: req.file.size,
-                    mimetype: req.file.mimetype,
-                    path: req.file.path
-                });
-            }
-            next();
-        });
-    },
-    async (req, res) => {
-        let filePath = null;
+// Company import route
+router.post('/companies', upload.single('excelFile'), async (req, res) => {
+  console.log('📋📋📋 IMPORT REQUEST RECEIVED 📋📋📋');
+  console.log('📋 Timestamp:', new Date().toISOString());
+  console.log('📋 Request method:', req.method);
+  console.log('📋 Request URL:', req.url);
+  console.log('📋 Request headers:', JSON.stringify(req.headers, null, 2));
+  console.log('📋 Content-Type:', req.headers['content-type']);
+  console.log('📋 Content-Length:', req.headers['content-length']);
+  console.log('📋 Request body keys:', Object.keys(req.body));
+  console.log('📋 Request body:', req.body);
+  console.log('📋 Request files object:', req.files);
+  console.log('📋 Request file object:', req.file);
+  console.log('📋 Request raw headers:', req.rawHeaders);
 
-        try {
-            console.log('=== Import request received ===');
-            console.log('Request headers keys:', Object.keys(req.headers));
-            console.log('Request body keys:', Object.keys(req.body));
-            console.log('Multer file info:', req.file ? 'File present' : 'No file');
-            console.log('Request files:', req.files);
-            
-            if (req.file) {
-                console.log('File details:', {
-                    originalname: req.file.originalname,
-                    filename: req.file.filename,
-                    size: req.file.size,
-                    mimetype: req.file.mimetype,
-                    path: req.file.path,
-                    destination: req.file.destination
-                });
-            }
+  if (req.file) {
+    console.log('📁 File details:', {
+      fieldname: req.file.fieldname,
+      originalname: req.file.originalname,
+      encoding: req.file.encoding,
+      mimetype: req.file.mimetype,
+      destination: req.file.destination,
+      filename: req.file.filename,
+      path: req.file.path,
+      size: req.file.size
+    });
+  } else {
+    console.log('❌ No file found in request');
+    console.log('📋 Available fields in request:');
+    console.log('  - req.body:', Object.keys(req.body));
+    console.log('  - req.files:', req.files ? Object.keys(req.files) : 'null');
+    console.log('  - req.file:', req.file ? 'exists' : 'null');
+  }
 
-            if (!req.file) {
-                console.error('No file received in request');
-                console.log('This might be due to:');
-                console.log('1. File size too large');
-                console.log('2. Wrong field name (should be "excelFile")');
-                console.log('3. File type not allowed');
-                console.log('4. Multer configuration issue');
-                return res.status(400).json({
-                    error: "Excel ფაილი არ არის ატვირთული"
-                });
-            }
+  try {
+    console.log('🔄🔄🔄 PROCESSING IMPORT REQUEST 🔄🔄🔄');
 
-            console.log('File received:', {
-                originalname: req.file.originalname,
-                filename: req.file.filename,
-                size: req.file.size,
-                path: req.file.path
-            });
-
-            filePath = req.file.path;
-
-            // Verify file exists
-            if (!fs.existsSync(filePath)) {
-                throw new Error('ფაილი ვერ შეინახა სერვერზე');
-            }
-
-            console.log('Starting import process...');
-
-            // Import companies from Excel
-            const result = await importCompaniesFromExcel(filePath, req.user.id);
-
-            console.log('Import completed:', {
-                success: result.success,
-                imported: result.imported,
-                total: result.total,
-                errors: result.errors
-            });
-
-            if (result.success) {
-                res.json({
-                    message: `წარმატებით იმპორტირდა ${result.imported} კომპანია ${result.total}-დან`,
-                    imported: result.imported,
-                    total: result.total,
-                    errors: result.errors,
-                    errorDetails: result.errorDetails
-                });
-            } else {
-                res.status(400).json({
-                    error: 'იმპორტი ვერ განხორციელდა',
-                    details: result.error
-                });
-            }
-
-        } catch (error) {
-            console.error('Import error:', error);
-
-            let errorMessage = 'იმპორტის შეცდომა';
-            let statusCode = 500;
-
-            if (error.code === 'ENOENT') {
-                errorMessage = 'ფაილი ვერ მოიძებნა';
-                statusCode = 400;
-            } else if (error.message.includes('ცარიელია')) {
-                errorMessage = error.message;
-                statusCode = 400;
-            }
-
-            res.status(statusCode).json({
-                error: errorMessage,
-                details: error.message
-            });
-
-        } finally {
-            // Clean up uploaded file
-            if (filePath && fs.existsSync(filePath)) {
-                try {
-                    fs.unlinkSync(filePath);
-                    console.log('Temporary file cleaned up');
-                } catch (cleanupError) {
-                    console.warn('File cleanup failed:', cleanupError.message);
-                }
-            }
+    if (!req.file) {
+      console.log('❌ ERROR: No file provided in request');
+      return res.status(400).json({
+        success: false,
+        error: 'ფაილი არ არის მოწოდებული. გთხოვთ აირჩიოთ Excel ფაილი.',
+        details: {
+          receivedFields: Object.keys(req.body),
+          hasFiles: !!req.files,
+          hasFile: !!req.file
         }
+      });
     }
-);
+
+    const filePath = req.file.path;
+    console.log('📁 File saved at path:', filePath);
+    console.log('📁 File exists?', fs.existsSync(filePath));
+
+    if (!fs.existsSync(filePath)) {
+      console.log('❌ ERROR: File was not saved properly');
+      return res.status(500).json({
+        success: false,
+        error: 'ფაილის შენახვა ვერ მოხერხდა'
+      });
+    }
+
+    const userId = req.user ? req.user.id : null;
+    console.log('👤 Import initiated by user ID:', userId);
+
+    console.log('🚀🚀🚀 STARTING IMPORT PROCESS 🚀🚀🚀');
+
+    // Import companies using the utility function
+    const result = await importCompaniesFromExcel(filePath, userId);
+
+    console.log('📊📊📊 IMPORT COMPLETED 📊📊📊');
+    console.log('📊 Result:', JSON.stringify(result, null, 2));
+
+    // Clean up uploaded file
+    try {
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+        console.log('🗑️ Temporary file cleaned up:', filePath);
+      }
+    } catch (cleanupError) {
+      console.error('⚠️ File cleanup warning:', cleanupError);
+    }
+
+    res.json(result);
+  } catch (error) {
+    console.error('❌❌❌ IMPORT ROUTE ERROR ❌❌❌');
+    console.error('❌ Error message:', error.message);
+    console.error('❌ Error stack:', error.stack);
+    res.status(500).json({
+      success: false,
+      error: 'იმპორტის პროცესი ვერ დასრულდა: ' + error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
 
 // Test upload endpoint for debugging
 router.post('/test-upload', authenticateToken, requireAdmin, upload.single('testFile'), (req, res) => {
@@ -423,6 +339,31 @@ router.get(
         }
     },
 );
+
+// GET: List all imported files
+router.get("/files", authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const result = await db.query(`
+            SELECT 
+                if.*,
+                u.username as uploaded_by_username
+            FROM import_files if
+            LEFT JOIN users u ON if.uploaded_by = u.id
+            ORDER BY if.uploaded_at DESC
+        `);
+
+        res.json({
+            success: true,
+            files: result.rows
+        });
+    } catch (error) {
+        console.error("Import files list error:", error);
+        res.status(500).json({
+            error: "იმპორტირებული ფაილების სიის მიღება ვერ მოხერხდა",
+            details: error.message
+        });
+    }
+});
 
 // GET: Export companies to Excel file
 router.get("/companies/export", authenticateToken, async (req, res) => {

@@ -146,7 +146,7 @@ const createTables = async () => {
         files_updated_at TIMESTAMP
       )
     `);
-    
+
     console.log("DATE columns verified for annual_services table");
 
     // Service Spaces table
@@ -158,7 +158,7 @@ const createTables = async () => {
         UNIQUE(service_id, space_id)
       )
     `);
-    
+
     // **ATTENTION: The following table was moved to resolve the dependency issue.**
     // Event Participants table
     await query(`
@@ -202,6 +202,43 @@ const createTables = async () => {
       )
     `);
 
+    // Create file_storage table
+    await query(`
+      CREATE TABLE IF NOT EXISTS file_storage (
+        id SERIAL PRIMARY KEY,
+        filename VARCHAR(255) NOT NULL,
+        original_name VARCHAR(255) NOT NULL,
+        mime_type VARCHAR(100),
+        file_data BYTEA,
+        file_size INTEGER,
+        related_table VARCHAR(100),
+        related_id INTEGER,
+        uploaded_by INTEGER,
+        uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        metadata JSON
+      )
+    `);
+
+    // Create import_files table for tracking imported files
+    await query(`
+      CREATE TABLE IF NOT EXISTS import_files (
+        id SERIAL PRIMARY KEY,
+        filename VARCHAR(255) NOT NULL,
+        original_name VARCHAR(255) NOT NULL,
+        file_path VARCHAR(500) NOT NULL,
+        file_size INTEGER,
+        uploaded_by INTEGER REFERENCES users(id),
+        uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        import_status VARCHAR(50) DEFAULT 'pending',
+        imported_count INTEGER DEFAULT 0,
+        total_count INTEGER DEFAULT 0,
+        error_count INTEGER DEFAULT 0,
+        import_completed_at TIMESTAMP,
+        import_errors TEXT
+      )
+    `);
+
+
     console.log("PostgreSQL ცხრილები წარმატებით შეიქმნა!");
   } catch (error) {
     console.error("PostgreSQL ცხრილების შექმნის შეცდომა:", error);
@@ -230,7 +267,6 @@ const addMissingColumns = async () => {
             "booth_category",
             "booth_type",
             "contact_person",
-            "contact_position",
             "contact_email",
             "contact_phone",
             "payment_due_date",
