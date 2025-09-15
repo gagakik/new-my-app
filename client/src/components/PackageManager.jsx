@@ -223,7 +223,8 @@ const PackageManager = ({ exhibitionId, showNotification }) => {
           variant="contained"
           startIcon={<Add />}
           onClick={handleAddPackage}
-          sx={{ borderRadius: 2 }}
+          sx={{ px:1, py:0.4, fontSize:'0.7rem', textTransform: 'none',
+              color:'#000000ff', background: '#ffffffff',boxShadow: '0 0 5px #745ba7',borderRadius:'5px', '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   }   }}
         >
           ADD NEW
         </Button>
@@ -432,7 +433,8 @@ const PackageManager = ({ exhibitionId, showNotification }) => {
                 
                 <CardActions>
                   <Button
-                    sx={{ mr: 1, color: '#fff' }}
+                   sx={{ px:1, py:0.4, fontSize:'0.7rem', textTransform: 'none',
+              color:'#000000ff', background: '#ffffffff',boxShadow: '0 0 5px #745ba7',borderRadius:'5px', '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   }   }}
                     variant="outlined"
                     size="small"
                     startIcon={<Edit />}
@@ -441,7 +443,8 @@ const PackageManager = ({ exhibitionId, showNotification }) => {
                     EDIT
                   </Button>
                   <Button
-                    sx={{ color: '#fff', background: '#ff0000ff' }}
+                    sx={{ px:1, py:0.4, fontSize:'0.7rem', textTransform: 'none',
+              color:'#ff0000ff', background: '#ffffffff',boxShadow: '0 0 5px #745ba7',borderRadius:'5px', '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#ff0000ff'   }   }}
                     size="small"
                     color="error"
                     startIcon={<Delete />}

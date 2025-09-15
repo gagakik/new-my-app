@@ -143,7 +143,8 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
               variant="outlined"
               onClick={handleClose}
               startIcon={<Cancel />}
-              sx={{ mr: 1, color: '#fff', background: '#ff0000ff', border: 'none'}}
+              sx={{ px:1, py:0.4, fontSize:'0.7rem', textTransform: 'none',
+              color:'#ff0000ff', background: '#ffffffff',boxShadow: '0 0 5px #745ba7',borderRadius:'5px', '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   }   }}
             >
               CANCEL
             </Button>
@@ -153,10 +154,8 @@ const ExhibitionForm = ({ exhibitionToEdit, onExhibitionUpdated, showNotificatio
               type="submit"
               variant="contained"
               startIcon={<Save />}
-              sx={{ 
-                background: 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)', border: 'none',
-                '&:hover': { background: 'linear-gradient(135deg, #45a049 0%, #3d8b40 100%)' }
-              }}
+              sx={{ px:1, py:0.4, fontSize:'0.7rem', textTransform: 'none',
+              color:'#000000ff', background: '#ffffffff',boxShadow: '0 0 5px #745ba7',borderRadius:'5px', '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   }   }}
             >
               {isEditing ? 'UPDATE' : 'ADD'}
             </Button>

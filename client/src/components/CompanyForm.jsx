@@ -695,16 +695,20 @@ const CompanyForm = ({ companyToEdit, onCompanyUpdated, showNotification, onCanc
           onClick={onCompanyUpdated}
           color="inherit"
           size="medium"
+          sx={{ px:1, py:0.4, fontSize:'0.9rem', textTransform: 'none',
+              color:'#ff0000ff', background: '#ffffffff',boxShadow: '0 0 5px #745ba7',borderRadius:'5px', '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   }   }}
         >
-          გაუქმება
+          Cancel
         </Button>
         <Button
           onClick={handleSubmit}
           variant="contained"
           color="inherit"
           size="medium"
+          sx={{ px:1, py:0.4, fontSize:'0.9rem', textTransform: 'none',
+              color:'#000000ff', background: '#ffffffff',boxShadow: '0 0 5px #745ba7',borderRadius:'5px', '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   }   }}
         >
-          {isEditing ? 'განახლება' : 'დამატება'}
+          {isEditing ? 'Update' : 'Add'}
         </Button>
       </DialogActions>
     </Dialog>

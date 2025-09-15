@@ -196,12 +196,13 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
               onClick={menu.action}
               startIcon={menu.icon}
                 sx={{
-                  background: '#ffffffff',
+                  background: 'linear-gradient(135deg, #667eea60 0%, #764ba246 100%)',
                   color: '#000000ff',
                   textTransform: 'none',
                   boxShadow: '0 0 5px #745ba7',
-                  px: 2,
+                  px: 1,
                   py: 1,
+                  ml: 1,
                   borderRadius: 2,
                   '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   } ,
                   transition: 'all 0.2s ease'
@@ -218,11 +219,12 @@ const Header = ({ isLoggedIn, userRole, userName, activeView, onLogout, onViewCh
                 endIcon={<ExpandMore />}
                 startIcon={menu.icon}
                 sx={{
-                  background: '#ffffffff',
+                  background: 'linear-gradient(135deg, #667eea60 0%, #764ba246 100%)',
                   color: '#000000ff',
                   textTransform: 'none',
                   boxShadow: '0 0 5px #745ba7',
-                  px: 2,
+                  ml: 1,
+                  px: 1,
                   py: 1,
                   borderRadius: 2,
                   '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   } ,

@@ -658,7 +658,7 @@ const EventReports = ({ showNotification }) => {
 
             {!['summary', 'user-companies', 'event-financials'].includes(reportType) && (
               <Grid item xs={12} md={3}>
-                <FormControl fullWidth>
+                <FormControl fullWidth size='mall' sx={{ minWidth: 140 }}>
                   <InputLabel>ივენთი</InputLabel>
                   <Select
                     value={selectedEvent}

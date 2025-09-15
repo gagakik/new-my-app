@@ -225,26 +225,10 @@ const SpaceForm = ({ spaceToEdit, onFormClose, onSpaceUpdated, showNotification 
           variant="outlined"
           startIcon={<Cancel />}
           disabled={isSubmitting}
-          sx={{
-            borderColor: '#6c757d',
-            color: '#6c757d',
-            borderRadius: 2,
-            px: 3,
-            py: 1.5,
-            fontWeight: 600,
-            '&:hover': {
-              borderColor: '#5a6268',
-              backgroundColor: 'rgba(108, 117, 125, 0.04)',
-              transform: 'translateY(-1px)'
-            },
-            '&:disabled': {
-              borderColor: '#dee2e6',
-              color: '#6c757d'
-            },
-            transition: 'all 0.2s ease'
-          }}
+          sx={{ px:1, py:0.4, fontSize:'0.9rem', fontWeight: '600', textTransform: 'none', margin: '5px',
+          color:'#ff0000ff', background: '#ffffffff',boxShadow: '0 0 5px #745ba7',borderRadius:'5px', '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   }   }}
         >
-          გაუქმება
+          Cancel
         </Button>
 
         <Button
@@ -252,26 +236,10 @@ const SpaceForm = ({ spaceToEdit, onFormClose, onSpaceUpdated, showNotification 
           variant="contained"
           startIcon={isSubmitting ? <CircularProgress size={16} color="inherit" /> : <Save />}
           disabled={isSubmitting}
-          sx={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: 'white',
-            borderRadius: 2,
-            px: 3,
-            py: 1.5,
-            fontWeight: 600,
-            boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
-            '&:hover': {
-              background: 'linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)',
-              boxShadow: '0 6px 20px rgba(102, 126, 234, 0.4)',
-              transform: 'translateY(-2px)'
-            },
-            '&:disabled': {
-              background: '#e2e8f0',
-              color: '#a0aec0',
-              boxShadow: 'none'
-            },
-            transition: 'all 0.3s ease'
-          }}
+          sx={{ px:1, py:0.4, fontSize:'0.9rem', fontWeight: '600', textTransform: 'none',
+          color:'#000000ff', background: '#ffffffff',boxShadow: '0 0 5px #745ba7',borderRadius:'5px',
+          margin: '5px', 
+          '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   }   }}
         >
           {isSubmitting ? 'მუშავდება...' : (isEditing ? 'განახლება' : 'დამატება')}
         </Button>
