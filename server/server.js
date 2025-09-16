@@ -170,7 +170,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Root route for development
 app.get('/', (req, res) => {
-  res.json({ 
+  res.json({
     message: 'Expo Georgia API Server',
     version: '1.0.0',
     environment: process.env.NODE_ENV || 'development',

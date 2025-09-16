@@ -334,33 +334,6 @@ const CompaniesList = ({ showNotification, userRole }) => {
         throw new Error('ავტორიზაცია საჭიროა კომპანიების ნახვისთვის');
       }
 
-      const params = new URLSearchParams();
-
-      // Only add parameters if they have actual values
-      if (searchTerm && searchTerm.trim()) {
-        params.append('searchTerm', searchTerm.trim());
-      }
-      if (filterCountry && filterCountry.trim() && filterCountry !== 'All Countries') {
-        params.append('country', filterCountry.trim());
-      }
-      if (filterProfile && filterProfile.trim()) {
-        params.append('profile', filterProfile.trim());
-      }
-      if (filterStatus && filterStatus.trim() && filterStatus !== 'ყველა') {
-        params.append('status', filterStatus.trim());
-      }
-      if (filterIdentificationCode && filterIdentificationCode.trim()) {
-        params.append('identification_code', filterIdentificationCode.trim());
-      }
-      if (filterExhibition && filterExhibition !== '' && filterExhibition !== 'ყველა') {
-        params.append('exhibition', filterExhibition.toString());
-      }
-
-      const queryString = params.toString();
-      const url = `/api/companies${queryString ? `?${queryString}` : ''}`;
-
-      console.log('Fetching companies with URL:', url);
-
       const { companiesAPI } = await import('../services/api');
       const data = await companiesAPI.getAll();
       console.log('Companies data received:', data);
@@ -372,11 +345,71 @@ const CompaniesList = ({ showNotification, userRole }) => {
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, filterCountry, filterProfile, filterStatus, filterIdentificationCode, filterExhibition, showNotification]);
+  }, [showNotification]);
+
+  // Separate function for filtering companies
+  const getFilteredCompanies = useCallback(() => {
+    return companies.filter(company => {
+      // Search term filter
+      if (searchTerm && searchTerm.trim()) {
+        const searchLower = searchTerm.trim().toLowerCase();
+        if (!company.company_name?.toLowerCase().includes(searchLower)) {
+          return false;
+        }
+      }
+
+      // Country filter
+      if (filterCountry && filterCountry.trim() && filterCountry !== 'All Countries') {
+        if (company.country?.toLowerCase() !== filterCountry.trim().toLowerCase()) {
+          return false;
+        }
+      }
+
+      // Profile filter
+      if (filterProfile && filterProfile.trim()) {
+        const profileLower = filterProfile.trim().toLowerCase();
+        if (!company.company_profile?.toLowerCase().includes(profileLower)) {
+          return false;
+        }
+      }
+
+      // Status filter
+      if (filterStatus && filterStatus.trim() && filterStatus !== 'ყველა') {
+        if (company.status !== filterStatus.trim()) {
+          return false;
+        }
+      }
+
+      // Identification code filter
+      if (filterIdentificationCode && filterIdentificationCode.trim()) {
+        const codeLower = filterIdentificationCode.trim().toLowerCase();
+        if (!company.identification_code?.toString().toLowerCase().includes(codeLower)) {
+          return false;
+        }
+      }
+
+      // Exhibition filter
+      if (filterExhibition && filterExhibition !== '' && filterExhibition !== 'ყველა') {
+        const exhibitionId = parseInt(filterExhibition);
+        if (!isNaN(exhibitionId)) {
+          if (!company.selected_exhibitions || !Array.isArray(company.selected_exhibitions)) {
+            return false;
+          }
+          if (!company.selected_exhibitions.includes(exhibitionId)) {
+            return false;
+          }
+        }
+      }
+
+      return true;
+    });
+  }, [companies, searchTerm, filterCountry, filterProfile, filterStatus, filterIdentificationCode, filterExhibition]);
+
+  const filteredCompanies = getFilteredCompanies();
 
   useEffect(() => {
     fetchCompanies();
-  }, [searchTerm, filterCountry, filterProfile, filterStatus, filterIdentificationCode, filterExhibition, showNotification]);
+  }, [fetchCompanies]);
 
   useEffect(() => {
     fetchExhibitions();
@@ -568,7 +601,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
 
         <Box sx={{ textAlign: 'center', mb: 4 }}>
           <Chip 
-            label={`ჯამურ რაოდენობა: ${companies.length}`}
+            label={`ჯამურ რაოდენობა: ${filteredCompanies.length}${companies.length !== filteredCompanies.length ? ` (${companies.length}-იდან)` : ''}`}
             color="primary"
             variant="outlined"
             sx={{ 
@@ -684,18 +717,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={6} md={2}>
-              <Button
-                size="small"
-                fullWidth
-                variant="contained"
-                startIcon={<FilterList />}
-                onClick={fetchCompanies}
-                sx={{ height: '40px' }}
-              >
-                ფილტრი
-              </Button>
-            </Grid>
+            
           </Grid>
         </Paper>
 
@@ -785,9 +807,9 @@ const CompaniesList = ({ showNotification, userRole }) => {
         </Dialog>
 
         {/* კომპანიების სია */}
-        {companies.length === 0 ? (
+        {filteredCompanies.length === 0 ? (
           <Typography textAlign="center" color="text.secondary" sx={{ mt: 4, fontStyle: 'italic' }}>
-            კომპანიები არ მოიძებნა.
+            {companies.length === 0 ? 'კომპანიები არ მოიძებნა.' : 'ფილტრის შესაბამისი კომპანიები არ მოიძებნა.'}
           </Typography>
         ) : (
           <>
@@ -807,7 +829,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {companies.map(company => (
+                    {filteredCompanies.map(company => (
                       <TableRow 
                         key={company.id} 
                         hover
@@ -977,7 +999,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
             ) : (
               /* Mobile Card View */
               <Grid container spacing={2}>
-                {companies.map(company => (
+                {filteredCompanies.map(company => (
                   <Grid item xs={12} key={company.id}>
                     <Card 
                       elevation={2} 

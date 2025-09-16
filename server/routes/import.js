@@ -1,481 +1,287 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
-const jwt = require("jsonwebtoken");
-const db = require("../db");
-const { importCompaniesFromExcel } = require("../import-companies");
+const multer = require('multer');
+const XLSX = require('xlsx');
+const db = require('../db');
+const path = require('path');
+const fs = require('fs');
+const jwt = require('jsonwebtoken');
 
 // Authentication middleware
 function authenticateToken(req, res, next) {
-    console.log('🔐 Authentication middleware called');
-    console.log('🔐 Request URL:', req.url);
-    console.log('🔐 Request method:', req.method);
-    
-    const authHeader = req.headers["authorization"];
-    console.log('🔐 Auth header present:', !!authHeader);
-    console.log('🔐 Auth header value:', authHeader ? authHeader.substring(0, 30) + '...' : 'null');
-    
-    const token = authHeader && authHeader.split(" ")[1];
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
 
     if (token == null) {
-        console.log('❌ No token provided');
-        return res
-            .status(401)
-            .json({ error: "ავტორიზაციის ტოკენი არ არის მოწოდებული." });
+        return res.status(401).json({ error: 'ავტორიზაციის ტოკენი არ არის მოწოდებული.' });
     }
 
-    console.log('🔐 Token found, verifying...');
     jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
         if (err) {
-            console.log('❌ Token verification failed:', err.message);
-            return res
-                .status(403)
-                .json({ error: "არასწორი ან ვადაგასული ავტორიზაციის ტოკენი." });
+            return res.status(403).json({ error: 'არასწორი ან ვადაგასული ავტორიზაციის ტოკენი.' });
         }
-        console.log('✅ Token verified for user:', user.username);
         req.user = user;
         next();
     });
 }
 
-// Admin only middleware
-function requireAdmin(req, res, next) {
-    if (req.user.role !== "admin") {
-        return res
-            .status(403)
-            .json({ error: "ამ ოპერაციისთვის admin უფლებები არის საჭირო." });
-    }
-    next();
-}
-
-// Simplified multer configuration for better reliability
+// Configure multer for file upload
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        const uploadDir = path.join(__dirname, "../uploads/import");
-
-        console.log('🔧 Upload destination:', uploadDir);
-
-        // Ensure directory exists
-        if (!fs.existsSync(uploadDir)) {
-            console.log('📁 Creating directory:', uploadDir);
-            fs.mkdirSync(uploadDir, { recursive: true });
+        const uploadPath = path.join(__dirname, '../uploads/imports');
+        // Create directory if it doesn't exist
+        if (!fs.existsSync(uploadPath)) {
+            fs.mkdirSync(uploadPath, { recursive: true });
         }
-
-        console.log('✅ Directory ready:', uploadDir);
-        cb(null, uploadDir);
+        cb(null, uploadPath);
     },
     filename: function (req, file, cb) {
         const timestamp = Date.now();
-        const randomNum = Math.floor(Math.random() * 1000000);
-        const ext = path.extname(file.originalname).toLowerCase();
-        const filename = `import-${timestamp}-${randomNum}${ext}`;
-
-        console.log('📄 Generated filename:', filename);
-        cb(null, filename);
+        const originalName = file.originalname;
+        const extension = path.extname(originalName);
+        const baseName = path.basename(originalName, extension);
+        cb(null, `${baseName}_${timestamp}${extension}`);
     }
 });
 
 const upload = multer({
     storage: storage,
-    fileFilter: function (req, file, cb) {
-        console.log('🔍 File filter check for:', file.originalname);
-        console.log('🔍 File mimetype:', file.mimetype);
-        console.log('🔍 File fieldname:', file.fieldname);
-
-        const allowedExtensions = [".xlsx", ".xls"];
-        const fileExtension = path.extname(file.originalname).toLowerCase();
-
-        if (allowedExtensions.includes(fileExtension)) {
-            console.log('✅ FILE ACCEPTED:', file.originalname);
-            cb(null, true);
-        } else {
-            console.log('❌ FILE REJECTED:', file.originalname, 'Extension:', fileExtension);
-            cb(new Error('მხოლოდ Excel ფაილები (.xlsx, .xls) ნებადართულია'), false);
-        }
-    },
     limits: {
         fileSize: 10 * 1024 * 1024 // 10MB limit
+    },
+    fileFilter: (req, file, cb) => {
+        const allowedMimes = [
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.ms-excel',
+            'application/excel'
+        ];
+
+        if (allowedMimes.includes(file.mimetype) || file.originalname.toLowerCase().endsWith('.xlsx') || file.originalname.toLowerCase().endsWith('.xls')) {
+            cb(null, true);
+        } else {
+            cb(new Error('მხოლოდ Excel ფაილები (.xlsx, .xls) დაშვებულია'), false);
+        }
     }
 });
 
-// Company import route
-router.post('/companies', upload.single('excelFile'), async (req, res) => {
-  console.log('📋📋📋 IMPORT REQUEST RECEIVED 📋📋📋');
-  console.log('📋 Timestamp:', new Date().toISOString());
-  console.log('📋 Request method:', req.method);
-  console.log('📋 Request URL:', req.url);
-  console.log('📋 Request headers:', JSON.stringify(req.headers, null, 2));
-  console.log('📋 Content-Type:', req.headers['content-type']);
-  console.log('📋 Content-Length:', req.headers['content-length']);
-  console.log('📋 Request body keys:', Object.keys(req.body));
-  console.log('📋 Request body:', req.body);
-  console.log('📋 Request files object:', req.files);
-  console.log('📋 Request file object:', req.file);
-  console.log('📋 Request raw headers:', req.rawHeaders);
-
-  if (req.file) {
-    console.log('📁 File details:', {
-      fieldname: req.file.fieldname,
-      originalname: req.file.originalname,
-      encoding: req.file.encoding,
-      mimetype: req.file.mimetype,
-      destination: req.file.destination,
-      filename: req.file.filename,
-      path: req.file.path,
-      size: req.file.size
+// POST: Import companies from Excel
+router.post('/companies', authenticateToken, upload.single('excelFile'), async (req, res) => {
+    console.log('🚀🚀🚀 IMPORT ROUTE CALLED 🚀🚀🚀');
+    console.log('📋 Import Route: Request received');
+    console.log('📋 Import Route: User:', req.user?.username || req.user?.id);
+    console.log('📋 Import Route: File info:', {
+        filename: req.file?.filename,
+        originalname: req.file?.originalname,
+        size: req.file?.size,
+        mimetype: req.file?.mimetype,
+        path: req.file?.path
     });
-  } else {
-    console.log('❌ No file found in request');
-    console.log('📋 Available fields in request:');
-    console.log('  - req.body:', Object.keys(req.body));
-    console.log('  - req.files:', req.files ? Object.keys(req.files) : 'null');
-    console.log('  - req.file:', req.file ? 'exists' : 'null');
-  }
-
-  try {
-    console.log('🔄🔄🔄 PROCESSING IMPORT REQUEST 🔄🔄🔄');
 
     if (!req.file) {
-      console.log('❌ ERROR: No file provided in request');
-      return res.status(400).json({
-        success: false,
-        error: 'ფაილი არ არის მოწოდებული. გთხოვთ აირჩიოთ Excel ფაილი.',
-        details: {
-          receivedFields: Object.keys(req.body),
-          hasFiles: !!req.files,
-          hasFile: !!req.file
-        }
-      });
+        console.error('❌ Import Route: No file uploaded');
+        return res.status(400).json({ 
+            success: false,
+            message: 'ფაილი არ არის ატვირთული' 
+        });
     }
 
     const filePath = req.file.path;
-    console.log('📁 File saved at path:', filePath);
-    console.log('📁 File exists?', fs.existsSync(filePath));
+    let successCount = 0;
+    let errorCount = 0;
+    let errors = [];
+    let processedCompanies = [];
 
-    if (!fs.existsSync(filePath)) {
-      console.log('❌ ERROR: File was not saved properly');
-      return res.status(500).json({
-        success: false,
-        error: 'ფაილის შენახვა ვერ მოხერხდა'
-      });
-    }
-
-    const userId = req.user ? req.user.id : null;
-    console.log('👤 Import initiated by user ID:', userId);
-
-    console.log('🚀🚀🚀 STARTING IMPORT PROCESS 🚀🚀🚀');
-
-    // Import companies using the utility function
-    const result = await importCompaniesFromExcel(filePath, userId);
-
-    console.log('📊📊📊 IMPORT COMPLETED 📊📊📊');
-    console.log('📊 Result:', JSON.stringify(result, null, 2));
-
-    // Clean up uploaded file
     try {
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-        console.log('🗑️ Temporary file cleaned up:', filePath);
-      }
-    } catch (cleanupError) {
-      console.error('⚠️ File cleanup warning:', cleanupError);
-    }
+        console.log('📖 Import Route: Reading Excel file from:', filePath);
 
-    res.json(result);
-  } catch (error) {
-    console.error('❌❌❌ IMPORT ROUTE ERROR ❌❌❌');
-    console.error('❌ Error message:', error.message);
-    console.error('❌ Error stack:', error.stack);
-    res.status(500).json({
-      success: false,
-      error: 'იმპორტის პროცესი ვერ დასრულდა: ' + error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
-  }
-});
+        // Read the Excel file
+        const workbook = XLSX.readFile(filePath);
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
 
-// Test upload endpoint for debugging
-router.post('/test-upload', authenticateToken, requireAdmin, upload.single('testFile'), (req, res) => {
-    console.log('=== Test upload endpoint hit ===');
-    console.log('File received:', req.file);
-    console.log('Body:', req.body);
+        // Convert to JSON
+        const data = XLSX.utils.sheet_to_json(sheet);
+        console.log('📊 Import Route: Data rows found:', data.length);
+        console.log('📊 Import Route: First row sample:', data[0]);
 
-    if (req.file) {
-        // Clean up test file immediately
-        try {
-            fs.unlinkSync(req.file.path);
-        } catch (e) {
-            console.warn('Could not delete test file:', e.message);
+        if (data.length === 0) {
+            throw new Error('Excel ფაილი ცარიელია ან არასწორ ფორმატშია');
         }
 
-        res.json({ 
-            success: true, 
-            message: 'Upload test successful',
-            fileInfo: {
-                originalname: req.file.originalname,
-                size: req.file.size,
-                mimetype: req.file.mimetype
+        // Process each row
+        for (let i = 0; i < data.length; i++) {
+            const row = data[i];
+            console.log(`📝 Import Route: Processing row ${i + 1}:`, row);
+            
+            // Debug first few rows more thoroughly
+            if (i < 3) {
+                console.log(`🔍 Row ${i + 1} detailed analysis:`);
+                console.log(`   - Keys:`, Object.keys(row));
+                console.log(`   - Values:`, Object.values(row));
+                console.log(`   - Company Name variations:`, {
+                    'Company Name': row['Company Name'],
+                    'კომპანიის სახელი': row['კომპანიის სახელი'],
+                    'company_name': row['company_name'],
+                    'კომპანიის დასახელება': row['კომპანიის დასახელება']
+                });
             }
-        });
-    } else {
-        res.status(400).json({ error: 'No file received in test upload' });
-    }
-});
 
-// GET: Download template Excel file
-router.get(
-    "/companies/template",
-    authenticateToken,
-    requireAdmin,
-    (req, res) => {
-        try {
-            const XLSX = require("xlsx");
+            try {
+                // Map Excel columns to database fields - check all possible column names
+                const companyData = {
+                    company_name: row['Company Name'] || row['კომპანიის სახელი'] || row['company_name'] || row['კომპანიის დასახელება'] || '',
+                    country: row['Country'] || row['ქვეყანა'] || row['country'] || '',
+                    company_profile: row['Company Profile'] || row['კომპანიის პროფილი'] || row['company_profile'] || row['პროფილი'] || '',
+                    identification_code: row['Identification Code'] || row['საიდენტიფიკაციო კოდი'] || row['identification_code'] || '',
+                    legal_address: row['Legal Address'] || row['იურიდიული მისამართი'] || row['legal_address'] || '',
+                    website: row['Website'] || row['ვებსაიტი'] || row['website'] || '',
+                    status: row['Status'] || row['სტატუსი'] || row['status'] || 'აქტიური',
+                    comment: row['Comment'] || row['კომენტარი'] || row['comment'] || '',
+                    contact_persons: [],
+                    selected_exhibitions: []
+                };
 
-            // Create template data with multiple examples and instructions
-            const templateData = [
-                {
-                    "კომპანიის დასახელება": "ტექნოლოგიური შპს",
-                    "ქვეყანა": "",
-                    "პროფილი": "",
-                    "საიდენტიფიკაციო კოდი": "",
-                    "იურიდიული მისამართი": "",
-                    "ვებსაიტი": "",
-                    "სტატუსი": "",
-                    "კომენტარი": "",
-                    "საკონტაქტო პირი": "",
-                    "პოზიცია": "",
-                    "ტელეფონი": "",
-                    "ელ-ფოსტა": "",
-                    "მონაწილე გამოფენები": ""
-                },
-                {
-                    "კომპანიის დასახელება": "მაგალითი კომპანია 1",
-                    "ქვეყანა": "საქართველო",
-                    "პროფილი": "ინფორმაციული ტექნოლოგიები",
-                    "საიდენტიფიკაციო კოდი": "123456789",
-                    "იურიდიული მისამართი": "თბილისი, საქართველო",
-                    "ვებსაიტი": "https://example.ge",
-                    "სტატუსი": "აქტიური",
-                    "კომენტარი": "ტესტ კომპანია",
-                    "საკონტაქტო პირი": "ნიკოლოზ გაბუნია",
-                    "პოზიცია": "დირექტორი",
-                    "ტელეფონი": "+995555123456",
-                    "ელ-ფოსტა": "info@example.ge",
-                    "მონაწილე გამოფენები": "1,2,3"
-                },
-                {
-                    "კომპანიის დასახელება": "მაგალითი კომპანია 2",
-                    "ქვეყანა": "აშშ",
-                    "პროფილი": "კონსულტინგი",
-                    "საიდენტიფიკაციო კოდი": "",
-                    "იურიდიული მისამართი": "",
-                    "ვებსაიტი": "",
-                    "სტატუსი": "",
-                    "კომენტარი": "",
-                    "საკონტაქტო პირი": "",
-                    "პოზიცია": "",
-                    "ტელეფონი": "",
-                    "ელ-ფოსტა": "",
-                    "მონაწილე გამოფენები": "1,4"
+                // Debug: log actual column names and first row data
+                if (i === 0) {
+                    console.log('📊 Available columns in Excel:', Object.keys(row));
+                    console.log('📊 First row data:', row);
+                    console.log('📊 Mapped company_name:', companyData.company_name);
                 }
-            ];
 
-            // Create workbook with instructions
-            const worksheet = XLSX.utils.json_to_sheet(templateData);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "კომპანიები");
+                // Validate required fields
+                if (!companyData.company_name) {
+                    throw new Error(`მწკრივი ${i + 1}: კომპანიის სახელი აუცილებელია`);
+                }
 
-            // Add instructions as comments/notes in the first row
-            if (worksheet['A1']) {
-                worksheet['A1'].c = [{
-                    a: "ინსტრუქცია",
-                    t: "მხოლოდ 'კომპანიის დასახელება' არის სავალდებულო ველი. " +
-                       "დანარჩენი ველები შეიძლება იყოს ცარიელი. " +
-                       "მონაწილე გამოფენები - კომებით გაყოფილი ID-ების ჩამონათვალი (მაგ: 1,2,3)"
-                }];
+                console.log(`💾 Import Route: Inserting company:`, companyData.company_name);
+
+                // Insert into database
+                const result = await db.query(`
+                    INSERT INTO companies (
+                        company_name, country, company_profile, identification_code,
+                        legal_address, website, status, comment, contact_persons,
+                        selected_exhibitions, created_by_user_id, created_at
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP)
+                    RETURNING id, company_name
+                `, [
+                    companyData.company_name,
+                    companyData.country,
+                    companyData.company_profile,
+                    companyData.identification_code,
+                    companyData.legal_address,
+                    companyData.website,
+                    companyData.status,
+                    companyData.comment,
+                    JSON.stringify(companyData.contact_persons),
+                    JSON.stringify(companyData.selected_exhibitions),
+                    req.user.id
+                ]);
+
+                processedCompanies.push({
+                    id: result.rows[0].id,
+                    name: result.rows[0].company_name,
+                    row: i + 1
+                });
+
+                successCount++;
+                console.log(`✅ Import Route: Successfully imported company: ${companyData.company_name}`);
+
+            } catch (rowError) {
+                errorCount++;
+                const errorMessage = `მწკრივი ${i + 1}: ${rowError.message}`;
+                errors.push(errorMessage);
+                console.error(`❌ Import Route: Row error:`, errorMessage);
+                continue;
             }
-
-            // Set column widths
-            const colWidths = [
-                { wch: 25 }, // კომპანიის დასახელება
-                { wch: 15 }, // ქვეყანა
-                { wch: 20 }, // პროფილი
-                { wch: 15 }, // საიდენტიფიკაციო კოდი
-                { wch: 30 }, // იურიდიული მისამართი
-                { wch: 20 }, // ვებსაიტი
-                { wch: 10 }, // სტატუსი
-                { wch: 25 }, // კომენტარი
-                { wch: 20 }, // საკონტაქტო პირი
-                { wch: 15 }, // პოზიცია
-                { wch: 15 }, // ტელეფონი
-                { wch: 25 }, // ელ-ფოსტა
-                { wch: 20 }, // მონაწილე გამოფენები
-            ];
-            worksheet["!cols"] = colWidths;
-
-            // Generate buffer
-            const buffer = XLSX.write(workbook, {
-                type: "buffer",
-                bookType: "xlsx",
-            });
-
-            res.setHeader(
-                "Content-Type",
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            );
-            res.setHeader(
-                "Content-Disposition",
-                'attachment; filename="companies-template.xlsx"',
-            );
-            res.send(buffer);
-        } catch (error) {
-            console.error("Template generation error:", error);
-            res.status(500).json({
-                error: "შაბლონის გენერირების შეცდომა",
-                details: error.message,
-            });
         }
-    },
-);
 
-// GET: List all imported files
-router.get("/files", authenticateToken, requireAdmin, async (req, res) => {
-    try {
-        const result = await db.query(`
-            SELECT 
-                if.*,
-                u.username as uploaded_by_username
-            FROM import_files if
-            LEFT JOIN users u ON if.uploaded_by = u.id
-            ORDER BY if.uploaded_at DESC
-        `);
+        // Clean up uploaded file
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+            console.log('🗑️ Import Route: Temporary file deleted');
+        }
 
-        res.json({
+        const response = {
             success: true,
-            files: result.rows
-        });
+            message: `იმპორტი დასრულდა: ${successCount} კომპანია წარმატებით დაემატა${errorCount > 0 ? `, ${errorCount} შეცდომა` : ''}`,
+            statistics: {
+                total: data.length,
+                success: successCount,
+                errors: errorCount
+            },
+            processedCompanies,
+            errors: errors.slice(0, 10) // Limit errors to first 10
+        };
+
+        console.log('✅✅✅ IMPORT ROUTE COMPLETED SUCCESSFULLY ✅✅✅');
+        console.log('📊 Import Route: Final response:', response);
+
+        res.json(response);
+
     } catch (error) {
-        console.error("Import files list error:", error);
+        console.error('❌❌❌ IMPORT ROUTE FAILED ❌❌❌');
+        console.error('❌ Import Route: Error:', error.message);
+        console.error('❌ Import Route: Stack:', error.stack);
+
+        // Clean up uploaded file on error
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+            console.log('🗑️ Import Route: Temporary file deleted (after error)');
+        }
+
         res.status(500).json({
-            error: "იმპორტირებული ფაილების სიის მიღება ვერ მოხერხდა",
-            details: error.message
+            success: false,
+            message: `იმპორტის შეცდომა: ${error.message}`,
+            statistics: {
+                total: 0,
+                success: successCount,
+                errors: errorCount + 1
+            },
+            processedCompanies,
+            errors: [...errors, error.message]
         });
     }
 });
 
-// GET: Export companies to Excel file
-router.get("/companies/export", authenticateToken, async (req, res) => {
+// GET: Download template file
+router.get('/template', authenticateToken, (req, res) => {
     try {
-        const XLSX = require("xlsx");
-
-        // Get all companies from database
-        const result = await require("../db").query(`
-            SELECT 
-                company_name,
-                country,
-                company_profile,
-                identification_code,
-                legal_address,
-                website,
-                status,
-                comment,
-                contact_persons,
-                created_at
-            FROM companies 
-            ORDER BY company_name
-        `);
-
-        const companies = result.rows;
-
-        // Prepare data for Excel export
-        const exportData = companies.map((company) => {
-            let contactPersons = [];
-            try {
-                contactPersons =
-                    typeof company.contact_persons === "string"
-                        ? JSON.parse(company.contact_persons)
-                        : company.contact_persons || [];
-            } catch (e) {
-                contactPersons = [];
+        // Create a template Excel file
+        const templateData = [
+            {
+                'Company Name': 'Example Company',
+                'Country': 'Georgia',
+                'Company Profile': 'Technology',
+                'Identification Code': '123456789',
+                'Legal Address': '123 Main St, Tbilisi',
+                'Website': 'www.example.com',
+                'Status': 'აქტიური',
+                'Comment': 'Example comment'
             }
-
-            const primaryContact =
-                contactPersons.length > 0 ? contactPersons[0] : {};
-
-            // მონაწილე გამოფენების ID-ების სტრინგად გადაქცევა
-            let selectedExhibitionsStr = "";
-            try {
-                const exhibitions = typeof company.selected_exhibitions === "string" 
-                    ? JSON.parse(company.selected_exhibitions) 
-                    : company.selected_exhibitions || [];
-                selectedExhibitionsStr = exhibitions.join(",");
-            } catch (e) {
-                selectedExhibitionsStr = "";
-            }
-
-            return {
-                "კომპანიის დასახელება": company.company_name || "",
-                ქვეყანა: company.country || "",
-                პროფილი: company.company_profile || "",
-                "საიდენტიფიკაციო კოდი": company.identification_code || "",
-                "იურიდიული მისამართი": company.legal_address || "",
-                ვებსაიტი: company.website || "",
-                სტატუსი: company.status || "",
-                კომენტარი: company.comment || "",
-                "საკონტაქტო პირი": primaryContact.name || "",
-                პოზიცია: primaryContact.position || "",
-                ტელეფონი: primaryContact.phone || "",
-                "ელ-ფოსტა": primaryContact.email || "",
-                "მონაწილე გამოფენები": selectedExhibitionsStr
-            };
-        });
-
-        // Create workbook
-        const worksheet = XLSX.utils.json_to_sheet(exportData);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "კომპანიები");
-
-        // Set column widths
-        const colWidths = [
-            { wch: 25 }, // კომპანიის დასახელება
-            { wch: 15 }, // ქვეყანა
-            { wch: 20 }, // პროფილი
-            { wch: 15 }, // საიდენტიფიკაციო კოდი
-            { wch: 30 }, // იურიდიული მისამართი
-            { wch: 20 }, // ვებსაიტი
-            { wch: 10 }, // სტატუსი
-            { wch: 25 }, // კომენტარი
-            { wch: 20 }, // საკონტაქტო პირი
-            { wch: 15 }, // პოზიცია
-            { wch: 15 }, // ტელეფონი
-            { wch: 25 }, // ელ-ფოსტა
-            { wch: 20 }, // მონაწილე გამოფენები
         ];
-        worksheet["!cols"] = colWidths;
 
-        // Generate buffer
-        const buffer = XLSX.write(workbook, {
-            type: "buffer",
-            bookType: "xlsx",
+        const worksheet = XLSX.utils.json_to_sheet(templateData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Companies');
+
+        const templatePath = path.join(__dirname, '../uploads/companies-template.xlsx');
+        XLSX.writeFile(workbook, templatePath);
+
+        res.download(templatePath, 'companies-template.xlsx', (err) => {
+            if (err) {
+                console.error('Template download error:', err);
+            }
+            // Clean up template file
+            if (fs.existsSync(templatePath)) {
+                fs.unlinkSync(templatePath);
+            }
         });
 
-        const timestamp = new Date().toISOString().split("T")[0];
-        res.setHeader(
-            "Content-Type",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        );
-        res.setHeader(
-            "Content-Disposition",
-            `attachment; filename="companies-export-${timestamp}.xlsx"`,
-        );
-        res.send(buffer);
     } catch (error) {
-        console.error("Export error:", error);
+        console.error('Template generation error:', error);
         res.status(500).json({
-            error: "ექსპორტის შეცდომა",
-            details: error.message,
+            success: false,
+            message: 'ტემპლეიტის გენერირება ვერ მოხერხდა'
         });
     }
 });

@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 
 // Base API configuration
@@ -131,6 +132,7 @@ export const companiesAPI = {
   create: (data) => api.post('/companies', data),
   update: (id, data) => api.put(`/companies/${id}`, data),
   delete: (id) => api.delete(`/companies/${id}`),
+  
   import: async (file) => {
     console.log('🚀🚀🚀 API SERVICE IMPORT CALLED 🚀🚀🚀');
     console.log('🚀 API Service: Starting import with file:', {
@@ -174,7 +176,7 @@ export const companiesAPI = {
 
     try {
       console.log('🌐 API Service: Preparing POST request to /api/import/companies');
-      
+
       const token = localStorage.getItem('token');
       if (!token) {
         throw new Error('No authentication token found');
@@ -184,44 +186,49 @@ export const companiesAPI = {
       console.log('🌐 API Service: Request URL:', '/api/import/companies');
       console.log('🌐 API Service: Request headers preparation...');
 
-      const requestConfig = {
+      const response = await fetch('/api/import/companies', {
+        method: 'POST',
         headers: {
-          'Content-Type': 'multipart/form-data',
           'Authorization': `Bearer ${token}`
+          // Don't set Content-Type for FormData, let browser set it with boundary
         },
-        timeout: 60000 // 60 seconds timeout
-      };
+        body: formData
+      });
 
-      console.log('🌐 API Service: Sending POST request...');
-      console.log('🌐 API Service: Request timestamp:', new Date().toISOString());
+      console.log('🌐 API Service: Response received:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        headers: Array.from(response.headers.entries())
+      });
 
-      const response = await apiClient.post('/import/companies', formData, requestConfig);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API Service: Error response text:', errorText);
+        
+        let errorMessage;
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.message || errorJson.error || 'Import failed';
+        } catch {
+          errorMessage = errorText || `HTTP ${response.status}: ${response.statusText}`;
+        }
+        
+        throw new Error(errorMessage);
+      }
 
-      console.log('✅✅✅ API SERVICE: REQUEST SUCCESSFUL ✅✅✅');
-      console.log('✅ API Service: Response status:', response.status);
-      console.log('✅ API Service: Response data:', response.data);
-      console.log('✅ API Service: Response timestamp:', new Date().toISOString());
+      const result = await response.json();
+      console.log('✅✅✅ API SERVICE: IMPORT SUCCESSFUL ✅✅✅');
+      console.log('✅ API Service: Import result:', result);
       
-      return response.data;
+      return result;
+      
     } catch (error) {
-      console.error('❌❌❌ API SERVICE: REQUEST FAILED ❌❌❌');
+      console.error('❌❌❌ API SERVICE: IMPORT FAILED ❌❌❌');
       console.error('❌ API Service: Error type:', error.constructor.name);
       console.error('❌ API Service: Error message:', error.message);
       console.error('❌ API Service: Error stack:', error.stack);
       
-      if (error.response) {
-        console.error('❌ API Service: HTTP Error Response:');
-        console.error('  Status:', error.response.status);
-        console.error('  Status Text:', error.response.statusText);
-        console.error('  Data:', error.response.data);
-        console.error('  Headers:', error.response.headers);
-      } else if (error.request) {
-        console.error('❌ API Service: Request Error (no response received):');
-        console.error('  Request:', error.request);
-      } else {
-        console.error('❌ API Service: Setup Error:', error.message);
-      }
-
       throw error;
     }
   }
