@@ -237,6 +237,7 @@ const EquipmentForm = ({ equipmentToEdit, onEquipmentUpdated, showNotification, 
             rows={3}
             variant="outlined"
             sx={{
+              
               '& .MuiOutlinedInput-root': {
                 '&:hover fieldset': {
                   borderColor: '#667eea',
@@ -323,11 +324,12 @@ const EquipmentForm = ({ equipmentToEdit, onEquipmentUpdated, showNotification, 
           variant="outlined"
           type="button"
           sx={{
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             borderColor: '#6c757d',
             color: '#ffffffff',
             '&:hover': {
               borderColor: '#5a6268',
-              backgroundColor: 'rgba(108, 117, 125, 0.04)'
+              background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
             }
           }}
         >

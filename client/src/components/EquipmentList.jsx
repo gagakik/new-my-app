@@ -450,7 +450,8 @@ const EquipmentList = ({ showNotification, userRole }) => {
                           onClick={() => handleEditClick(item)}
                           size="small"
                           sx={{ 
-                            color: '#fff',
+                            backgroundColor: 'primary.main',
+                            color: '#000000ff',
                             '&:hover': { 
                               backgroundColor: 'primary.main',
                               color: 'white'
