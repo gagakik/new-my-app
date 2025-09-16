@@ -221,7 +221,7 @@ const EquipmentList = ({ showNotification, userRole }) => {
               }}
               sx={{
                 backgroundColor: 'white',
-                color: '#fff',
+                color: '#000000ff',
                 borderRadius: 25,
                 px: 4,
                 py: 1.5,

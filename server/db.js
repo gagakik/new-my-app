@@ -87,6 +87,8 @@ const createTables = async () => {
         image_url VARCHAR(500),
         created_by_id INTEGER,
         updated_by_id INTEGER,
+        created_by_user_id INTEGER,
+        updated_by_user_id INTEGER,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )

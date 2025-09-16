@@ -5,6 +5,38 @@ const db = require('../db');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const jwt = require('jsonwebtoken');
+
+// Token verification middleware
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    console.log('Equipment route: No token provided');
+    return res.status(401).json({ message: 'Access token არ არის მოწოდებული' });
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret', (err, user) => {
+    if (err) {
+      console.log('Equipment route: Token verification failed', err.message);
+      return res.status(403).json({ message: 'არასწორი token' });
+    }
+    req.user = user;
+    next();
+  });
+};
+
+// Authorization middleware
+const authorizeRoles = (...roles) => {
+  return (req, res, next) => {
+    if (!roles.includes(req.user.role)) {
+      console.log(`Equipment route: Role ${req.user.role} not authorized for roles:`, roles);
+      return res.status(403).json({ message: 'არ გაქვთ ამ მოქმედების ნებართვა' });
+    }
+    next();
+  };
+};
 
 // მულტერის კონფიგურაცია ფაილების ატვირთვისთვის
 const storage = multer.diskStorage({
@@ -40,16 +72,15 @@ const upload = multer({
 });
 
 // GET /api/equipment - ყველა აღჭურვილობის მიღება
-router.get('/', async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
+  console.log('Equipment GET request from user:', req.user.username);
   try {
     const result = await db.query(`
       SELECT 
         e.*,
-        u1.username as created_by,
-        u2.username as updated_by
+        u1.username as created_by
       FROM equipment e
-      LEFT JOIN users u1 ON e.created_by_user_id = u1.id
-      LEFT JOIN users u2 ON e.updated_by_user_id = u2.id
+      LEFT JOIN users u1 ON e.created_by_id = u1.id
       ORDER BY e.created_at DESC
     `);
     
@@ -61,17 +92,15 @@ router.get('/', async (req, res) => {
 });
 
 // GET /api/equipment/:id - კონკრეტული აღჭურვილობის მიღება
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const result = await db.query(`
       SELECT 
         e.*,
-        u1.username as created_by,
-        u2.username as updated_by
+        u1.username as created_by
       FROM equipment e
-      LEFT JOIN users u1 ON e.created_by_user_id = u1.id
-      LEFT JOIN users u2 ON e.updated_by_user_id = u2.id
+      LEFT JOIN users u1 ON e.created_by_id = u1.id
       WHERE e.id = $1
     `, [id]);
 
@@ -87,7 +116,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST /api/equipment - ახალი აღჭურვილობის დამატება
-router.post('/', upload.single('image'), async (req, res) => {
+router.post('/', authenticateToken, authorizeRoles('admin', 'operation'), upload.single('image'), async (req, res) => {
   try {
     const { code_name, quantity, price, description } = req.body;
     const userId = req.user.id;
@@ -98,7 +127,7 @@ router.post('/', upload.single('image'), async (req, res) => {
     }
 
     const result = await db.query(
-      `INSERT INTO equipment (code_name, quantity, price, description, image_url, created_by_user_id) 
+      `INSERT INTO equipment (code_name, quantity, price, description, image_url, created_by_id) 
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
       [code_name, parseInt(quantity), parseFloat(price), description, imageUrl, userId]
     );
@@ -114,7 +143,7 @@ router.post('/', upload.single('image'), async (req, res) => {
 });
 
 // PUT /api/equipment/:id - აღჭურვილობის განახლება
-router.put('/:id', upload.single('image'), async (req, res) => {
+router.put('/:id', authenticateToken, authorizeRoles('admin', 'operation'), upload.single('image'), async (req, res) => {
   try {
     const { id } = req.params;
     const { code_name, quantity, price, description, image_url_existing } = req.body;
@@ -143,7 +172,7 @@ router.put('/:id', upload.single('image'), async (req, res) => {
     const result = await db.query(
       `UPDATE equipment 
        SET code_name = $1, quantity = $2, price = $3, description = $4, 
-           image_url = $5, updated_by_user_id = $6, updated_at = CURRENT_TIMESTAMP
+           image_url = $5, updated_by_id = $6, updated_at = CURRENT_TIMESTAMP
        WHERE id = $7 
        RETURNING *`,
       [code_name, parseInt(quantity), parseFloat(price), description, imageUrl, userId, id]
@@ -160,7 +189,7 @@ router.put('/:id', upload.single('image'), async (req, res) => {
 });
 
 // DELETE /api/equipment/:id - აღჭურვილობის წაშლა
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res) => {
   try {
     const { id } = req.params;
     

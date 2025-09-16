@@ -410,7 +410,7 @@ app.post('/api/login', async (req, res) => {
 console.log('🔧 Registering routes...');
 app.use('/api/companies', require('./routes/companies'));
 console.log('✅ Companies route registered');
-app.use('/api/equipment', require('./routes/equipment'));
+app.use('/api/equipment', authenticateToken, require('./routes/equipment'));
 console.log('✅ Equipment route registered');
 app.use('/api/packages', require('./routes/packages'));
 console.log('✅ Packages route registered');
@@ -423,122 +423,7 @@ console.log('✅ Stands route registered');
 app.use('/api/import', require('./routes/import'));
 console.log('✅ Import route registered at /api/import');
 
-// Equipment routes
-app.get('/api/equipment', authenticateToken, async (req, res) => {
-  try {
-    const result = await db.query(`
-      SELECT
-        e.*,
-        u1.username as created_by,
-        u2.username as updated_by
-      FROM equipment e
-      LEFT JOIN users u1 ON e.created_by_id = u1.id
-      LEFT JOIN users u2 ON e.updated_by_id = u2.id
-      ORDER BY e.id DESC
-    `);
-    res.json(result.rows);
-  } catch (error) {
-    console.error('აღჭურვილობის მიღების შეცდომა:', error);
-    res.status(500).json({ message: 'აღჭურვილობის მიღება ვერ მოხერხდა' });
-  }
-});
-
-app.post('/api/equipment', authenticateToken, authorizeRoles('admin', 'operation'), upload.single('image'), async (req, res) => {
-  try {
-    const { code_name, description, quantity, price } = req.body;
-    const image_url = req.file ? `/uploads/${req.file.filename}` : null;
-
-    const result = await db.query(
-      'INSERT INTO equipment (code_name, description, quantity, price, image_url, created_by_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-      [code_name, description, parseInt(quantity), parseFloat(price), image_url, req.user.id]
-    );
-
-    res.status(201).json({
-      message: 'აღჭურვილობა წარმატებით დაემატა',
-      equipment: result.rows[0]
-    });
-  } catch (error) {
-    console.error('აღჭურვილობის დამატების შეცდომა:', error);
-    res.status(500).json({ message: 'აღჭურვილობის დამატება ვერ მოხერხდა' });
-  }
-});
-
-app.put('/api/equipment/:id', authenticateToken, authorizeRoles('admin', 'operation'), upload.single('image'), async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { code_name, description, quantity, price, image_url_existing } = req.body;
-
-    console.log('Equipment update request:', { id, code_name, description, quantity, price });
-
-    // Get current equipment to check existing image
-    const currentEquipment = await db.query('SELECT * FROM equipment WHERE id = $1', [id]);
-    if (currentEquipment.rows.length === 0) {
-      return res.status(404).json({ message: 'აღჭურვილობა ვერ მოიძებნა' });
-    }
-
-    let image_url = currentEquipment.rows[0].image_url;
-
-    if (req.file) {
-      // Delete old image if exists
-      if (image_url && image_url.startsWith('/uploads/')) {
-        const oldImagePath = path.join(__dirname, image_url);
-        if (fs.existsSync(oldImagePath)) {
-          fs.unlinkSync(oldImagePath);
-        }
-      }
-      image_url = `/uploads/${req.file.filename}`;
-    } else if (image_url_existing) {
-      // Keep existing image URL if provided
-      image_url = image_url_existing;
-    }
-
-    const result = await db.query(
-      'UPDATE equipment SET code_name = $1, description = $2, quantity = $3, price = $4, image_url = $5, updated_by_id = $6 WHERE id = $7 RETURNING *',
-      [code_name, description, parseInt(quantity), parseFloat(price), image_url, req.user.id, id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'აღჭურვილობა ვერ მოიძებნა' });
-    }
-
-    console.log('Equipment updated successfully:', result.rows[0]);
-
-    res.json({
-      message: 'აღჭურვილობა წარმატებით განახლდა',
-      equipment: result.rows[0]
-    });
-  } catch (error) {
-    console.error('აღჭურვილობის განახლების შეცდომა:', error);
-    res.status(500).json({ message: 'აღჭურვილობის განახლება ვერ მოხერხდა' });
-  }
-});
-
-app.delete('/api/equipment/:id', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Get equipment to delete associated image
-    const equipment = await db.query('SELECT * FROM equipment WHERE id = $1', [id]);
-    if (equipment.rows.length === 0) {
-      return res.status(404).json({ message: 'აღჭურვილობა ვერ მოიძებნა' });
-    }
-
-    // Delete image file if exists
-    const image_url = equipment.rows[0].image_url;
-    if (image_url && image_url.startsWith('/uploads/')) {
-      const imagePath = path.join(__dirname, image_url);
-      if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
-      }
-    }
-
-    await db.query('DELETE FROM equipment WHERE id = $1', [id]);
-    res.json({ message: 'აღჭურვილობა წარმატებით წაიშალა' });
-  } catch (error) {
-    console.error('აღჭურვილობის წაშლის შეცდომა:', error);
-    res.status(500).json({ message: 'აღჭურვილობის წაშლა ვერ მოხერხდა' });
-  }
-});
+// Equipment routes are handled by the separate equipment router
 
 // Equipment availability for events
 app.get('/api/equipment/availability/:eventId', authenticateToken, async (req, res) => {

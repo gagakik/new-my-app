@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Container,
   Typography,
@@ -717,7 +717,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
                 </Select>
               </FormControl>
             </Grid>
-            
+
           </Grid>
         </Paper>
 
@@ -910,7 +910,7 @@ const CompaniesList = ({ showNotification, userRole }) => {
                             {isAuthorizedForManagement && (
                               <Button
                                 size="small"
-                                
+
                                 onClick={() => handleEditExhibitions(company)}
                                 startIcon={<Edit />}
                                 sx={{ px:1, py:0.4, fontSize:'0.7rem', textTransform: 'none',
