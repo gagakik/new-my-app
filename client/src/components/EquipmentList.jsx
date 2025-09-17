@@ -446,33 +446,44 @@ const EquipmentList = ({ showNotification, userRole }) => {
                   {isAuthorizedForManagement && (
                     <TableCell align="center">
                       <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-                        <Button
+                        <IconButton
                           onClick={() => handleEditClick(item)}
                           size="small"
-                          sx={{ 
-                            backgroundColor: 'primary.main',
+                          sx={{
+                            background: '#ffffffff',
                             color: '#000000ff',
-                            '&:hover': { 
-                              backgroundColor: 'primary.main',
-                              color: 'white'
-                            }
+                            textTransform: 'none',
+                            boxShadow: '0 0 5px #745ba7',
+                            px: 0.5,
+                            py: 0.5,
+                            mb: 0.5,
+                            mr: 0.5,
+                            borderRadius: 2,
+                            '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7' },
+                            transition: 'all 0.2s ease'
                           }}
                         >
                           <Edit />
-                        </Button>
-                        <Button
+                        </IconButton>
+                        <IconButton
                           onClick={() => handleDelete(item.id)}
                           size="small"
-                          sx={{ 
-                            color: '#fff',
-                            background: '#990000ff',
-                            '&:hover': { 
-                              color: '#990000ff'
-                            }
+                          sx={{
+                            background: '#ffffffff',
+                            color: '#000000ff',
+                            textTransform: 'none',
+                            boxShadow: '0 0 5px #745ba7',
+                            px: 0.5,
+                            py: 0.5,
+                            mb: 0.5,
+                            mr: 0.5,
+                            borderRadius: 2,
+                            '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#ff0000ff' },
+                            transition: 'all 0.2s ease'
                           }}
                         >
                           <Delete />
-                        </Button>
+                        </IconButton>
                       </Box>
                     </TableCell>
                   )}

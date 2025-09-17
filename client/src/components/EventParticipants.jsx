@@ -1281,17 +1281,17 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
               </Typography>
 
               <form onSubmit={handleSubmit}>
-                <Grid container spacing={3}>
+                <Grid container spacing={3} >
                   <Grid item xs={12}>
-                    <FormControl fullWidth required>
-                      <InputLabel>კომპანია</InputLabel>
-                      <Select
+                    <FormControl fullWidth required >
+                      <InputLabel >კომპანია</InputLabel>
+                      <Select 
                         value={formData.company_id}
                         onChange={(e) => handleCompanyChange(e.target.value)}
                         label="კომპანია"
                       >
                         {companies.map(company => (
-                          <MenuItem key={company.id} value={company.id}>
+                          <MenuItem key={company.id} value={company.id} >
                             {company.company_name} ({company.country})
                           </MenuItem>
                         ))}
@@ -1931,8 +1931,8 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                             transition: 'all 0.2s ease'
                           }}
                         >
-                          <TableCell>
-                            <Box>
+                          <TableCell component="th" scope="row">
+                            <Box display={'flex'} alignItems="center" gap={2}>
                               <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#2d3748' }}>
                                 {participant.company_name}
                               </Typography>
@@ -1940,16 +1940,9 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                                 <Chip
                                   label={participant.country}
                                   size="small"
-                                  sx={{
-                                    bgcolor: '#e0f2fe',
-                                    color: '#0369a1',
-                                    fontSize: '0.7rem',
-                                    height: '20px'
-                                  }}
+                                  sx={{ bgcolor: '#f3f4f6', color: '#374151', fontSize: '0.7rem', height: '20px', width: '100px',
+                                    '& .MuiChip-label': { mr: 0.5, textTransform: 'uppercase', fontWeight: 500 }}}
                                 />
-                                <Typography variant="caption" color="text.secondary">
-                                  {participant.identification_code}
-                                </Typography>
                               </Box>
                             </Box>
                           </TableCell>
@@ -1974,9 +1967,6 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                                   </Typography>
                                 )}
                               </Box>
-                              <Typography variant="caption" color="text.secondary">
-                                {new Date(participant.registration_date).toLocaleDateString('ka-GE')}
-                              </Typography>
                             </Box>
                           </TableCell>
                           <TableCell align="center">
@@ -2073,7 +2063,17 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                                     <IconButton
                                       size="small"
                                       onClick={() => handleEdit(participant)}
-                                      sx={{ color: '#ffffffff' }}
+                                                  sx={{
+                            background: '#ffffffff',
+                            color: '#000000ff',
+                            textTransform: 'none',
+                            boxShadow: '0 0 5px #745ba7',
+                            px: 0.5,
+                            py: 0.5,
+                            borderRadius: 2,
+                            '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7' },
+                            transition: 'all 0.2s ease'
+                          }}
                                     >
                                       <Edit fontSize="small" />
                                     </IconButton>
@@ -2082,7 +2082,18 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                                     <IconButton
                                       size="small"
                                       onClick={() => handleDelete(participant.id)}
-                                      sx={{ color: '#ffffffff', background: 'rgba(220, 53, 69, 1)' }}
+                                                  sx={{
+                            background: '#ffffffff',
+                            color: '#000000ff',
+                            textTransform: 'none',
+                            boxShadow: '0 0 5px #745ba7',
+                            px: 0.5,
+                            py: 0.5,
+                            borderRadius: 2,
+                            '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7' },
+                            transition: 'all 0.2s ease'
+                          }}
+                                      
                                     >
                                       <Delete fontSize="small" />
                                     </IconButton>
