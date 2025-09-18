@@ -147,7 +147,35 @@ router.get('/events/:eventId/stands', authenticateToken, async (req, res) => {
       }
 
       standWithDetails.stand_equipment = stand_equipment;
-      standWithDetails.stand_designs = []; // Empty for now - can be populated from file uploads
+
+      // Get design files for this participant
+      let stand_designs = [];
+      try {
+        const designResult = await db.query(`
+          SELECT 
+            sd.*,
+            u.username as uploaded_by_username
+          FROM stand_designs sd
+          LEFT JOIN users u ON sd.uploaded_by_user_id = u.id
+          WHERE sd.stand_id = $1
+          ORDER BY sd.uploaded_at DESC
+        `, [participant.participant_id]);
+
+        console.log(`🎨 მონაწილისთვის ${participant.company_name} ნაპოვნი დიზაინის ფაილები: ${designResult.rows.length}`);
+
+        stand_designs = designResult.rows.map(design => ({
+          design_id: design.id,
+          design_url: design.design_file_url,
+          description: design.description,
+          uploaded_at: design.uploaded_at,
+          uploaded_by: design.uploaded_by_username || 'უცნობი'
+        }));
+      } catch (designError) {
+        console.log('⚠️ დიზაინის ფაილების მიღების შეცდომა:', designError.message);
+        stand_designs = [];
+      }
+
+      standWithDetails.stand_designs = stand_designs;
       standWithDetails.stand_photos = []; // Empty for now - can be populated from file uploads
 
       standsWithDetails.push(standWithDetails);
@@ -227,32 +255,64 @@ router.get('/events/:eventId/stands/:standId', authenticateToken, async (req, re
 router.post('/events/:eventId/stands/:standId/design', authenticateToken, upload.array('design_files', 10), async (req, res) => {
   try {
     console.log(`🎨 დიზაინის ფაილების ატვირთვა სტენდისთვის ID: ${req.params.standId}`);
+    console.log('📁 მიღებული ფაილები:', req.files);
+    console.log('📝 მიღებული body:', req.body);
 
     const { description } = req.body;
     const standId = req.params.standId;
+    const eventId = req.params.eventId;
     const userId = req.user.id;
 
-    // შევამოწმოთ არსებობს თუ არა სტენდი
-    const standCheck = await db.query('SELECT id FROM stands WHERE id = $1 AND event_id = $2', 
-      [standId, req.params.eventId]);
+    // Ensure uploads/stands directory exists
+    const standsUploadDir = path.join(__dirname, '../uploads/stands');
+    if (!fs.existsSync(standsUploadDir)) {
+      fs.mkdirSync(standsUploadDir, { recursive: true });
+      console.log('✅ Created uploads/stands directory');
+    }
+
+    // შევამოწმოთ არსებობს თუ არა სტენდი event_participants ცხრილში
+    const standCheck = await db.query('SELECT id FROM event_participants WHERE id = $1 AND event_id = $2', 
+      [standId, eventId]);
 
     if (standCheck.rows.length === 0) {
+      console.log('❌ სტენდი არ მოიძებნა event_participants ცხრილში');
       return res.status(404).json({ message: 'სტენდი არ მოიძებნა' });
     }
 
     const uploadedFiles = [];
 
-    if (req.files && req.files.length > 0) {
-      for (const file of req.files) {
-        const fileUrl = `/uploads/stands/${file.filename}`;
+    if (!req.files || req.files.length === 0) {
+      console.log('❌ ფაილები არ მოიძებნა request-ში');
+      return res.status(400).json({ message: 'ფაილები არ არის ატვირთული' });
+    }
 
-        const result = await db.query(`
-          INSERT INTO stand_designs (stand_id, design_file_url, description, uploaded_by_user_id)
-          VALUES ($1, $2, $3, $4) RETURNING *
-        `, [standId, fileUrl, description || file.originalname, userId]);
+    // Create stand_designs table if it doesn't exist
+    try {
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS stand_designs (
+          id SERIAL PRIMARY KEY,
+          stand_id INTEGER REFERENCES event_participants(id) ON DELETE CASCADE,
+          design_file_url VARCHAR(500),
+          description TEXT,
+          uploaded_by_user_id INTEGER REFERENCES users(id),
+          uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      console.log('✅ stand_designs table ready');
+    } catch (tableError) {
+      console.log('stand_designs ცხრილი უკვე არსებობს');
+    }
 
-        uploadedFiles.push(result.rows[0]);
-      }
+    for (const file of req.files) {
+      const fileUrl = `/uploads/stands/${file.filename}`;
+
+      const result = await db.query(`
+        INSERT INTO stand_designs (stand_id, design_file_url, description, uploaded_by_user_id)
+        VALUES ($1, $2, $3, $4) RETURNING *
+      `, [standId, fileUrl, description || file.originalname, userId]);
+
+      uploadedFiles.push(result.rows[0]);
+      console.log(`✅ ფაილი შენახულია: ${fileUrl}`);
     }
 
     console.log('✅ დიზაინის ფაილები ატვირთულია');
@@ -262,7 +322,44 @@ router.post('/events/:eventId/stands/:standId/design', authenticateToken, upload
     });
   } catch (error) {
     console.error('❌ დიზაინის ფაილების ატვირთვის შეცდომა:', error);
+    console.error('❌ Error details:', error.message);
+    console.error('❌ Error stack:', error.stack);
     res.status(500).json({ message: 'დიზაინის ფაილების ატვირთვა ვერ მოხერხდა', error: error.message });
+  }
+});
+
+// GET: სტენდის დიზაინის ფაილების მიღება
+router.get('/events/:eventId/stands/:standId/design', authenticateToken, async (req, res) => {
+  try {
+    console.log(`🎨 დიზაინის ფაილების მიღება სტენდისთვის ID: ${req.params.standId}`);
+
+    const standId = req.params.standId;
+    const eventId = req.params.eventId;
+
+    // შევამოწმოთ არსებობს თუ არა სტენდი
+    const standCheck = await db.query('SELECT id FROM event_participants WHERE id = $1 AND event_id = $2', 
+      [standId, eventId]);
+
+    if (standCheck.rows.length === 0) {
+      return res.status(404).json({ message: 'სტენდი არ მოიძებნა' });
+    }
+
+    // მივიღოთ დიზაინის ფაილები
+    const designFiles = await db.query(`
+      SELECT 
+        sd.*,
+        u.username as uploaded_by_username
+      FROM stand_designs sd
+      LEFT JOIN users u ON sd.uploaded_by_user_id = u.id
+      WHERE sd.stand_id = $1
+      ORDER BY sd.uploaded_at DESC
+    `, [standId]);
+
+    console.log(`✅ მოიძებნა ${designFiles.rows.length} დიზაინის ფაილი`);
+    res.json(designFiles.rows);
+  } catch (error) {
+    console.error('❌ დიზაინის ფაილების მიღების შეცდომა:', error);
+    res.status(500).json({ message: 'დიზაინის ფაილების მიღება ვერ მოხერხდა', error: error.message });
   }
 });
 
@@ -495,8 +592,9 @@ router.patch('/events/:eventId/stands/:standId/status', authenticateToken, async
       return res.status(400).json({ message: 'სტატუსი სავალდებულოა' });
     }
 
+    // Update in event_participants table instead of stands table
     const result = await db.query(`
-      UPDATE stands SET
+      UPDATE event_participants SET
         status = $1,
         updated_at = NOW()
       WHERE id = $2 AND event_id = $3

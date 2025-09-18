@@ -55,7 +55,8 @@ import {
   Event as EventIcon,
   CalendarToday,
   LocationOn,
-  ArrowBack
+  ArrowBack,
+  Image as ImageIcon
 } from '@mui/icons-material';
 
 const OperationPage = ({ showNotification, userRole }) => {
@@ -63,6 +64,14 @@ const OperationPage = ({ showNotification, userRole }) => {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [stands, setStands] = useState([]);
   const [selectedStand, setSelectedStand] = useState(null);
+
+  const processImageUrl = (imageUrl) => {
+    if (!imageUrl) return null;
+    if (imageUrl.startsWith('http')) {
+      return imageUrl;
+    }
+    return `http://localhost:5173${imageUrl.startsWith('/') ? imageUrl : '/' + imageUrl}`;
+  };
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
   const [showStandForm, setShowStandForm] = useState(false);
@@ -73,6 +82,9 @@ const OperationPage = ({ showNotification, userRole }) => {
     booth_number: '',
     company_name: '',
     area: '',
+    booth_type: 'რიგითი',
+    booth_category: 'ოქტანორმის სტენდები',
+    price_per_sqm: '',
     contact_person: '',
     contact_phone: '',
     contact_email: '',
@@ -297,11 +309,39 @@ const OperationPage = ({ showNotification, userRole }) => {
     }
   };
 
+  const handleStatusChange = async (standId, newStatus) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/events/${selectedEvent.id}/stands/${standId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      if (response.ok) {
+        showNotification('სტატუსი წარმატებით განახლდა', 'success');
+        fetchStands(selectedEvent.id);
+      } else {
+        const errorData = await response.json();
+        showNotification(errorData.message || 'სტატუსის განახლება ვერ მოხერხდა', 'error');
+      }
+    } catch (error) {
+      console.error('სტატუსის განახლების შეცდომა:', error);
+      showNotification('შეცდომა ქსელურ მოთხოვნაში', 'error');
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       booth_number: '',
       company_name: '',
       area: '',
+      booth_type: 'რიგითი',
+      booth_category: 'ოქტანორმის სტენდები',
+      price_per_sqm: '',
       contact_person: '',
       contact_phone: '',
       contact_email: '',
@@ -521,19 +561,46 @@ const OperationPage = ({ showNotification, userRole }) => {
                           {statusInfo.icon}
                         </Avatar>
                         <ListItemText
-                          primary={`სტენდი ${stand.booth_number}`}
+                          primary={`სტენდი ${stand.booth_number || `#${stand.id}`}`}
                           secondary={
                             <Box>
                               <Typography variant="body2">{stand.company_name}</Typography>
-                              <Chip
-                                label={stand.status}
-                                size="small"
-                                sx={{
-                                  bgcolor: statusInfo.color,
-                                  color: 'white',
-                                  mt: 0.5
-                                }}
-                              />
+                              {stand.area && (
+                                <Typography variant="caption" display="block">
+                                  ფართობი: {stand.area} მ²
+                                </Typography>
+                              )}
+                              {stand.booth_category && (
+                                <Typography variant="caption" display="block" color="text.secondary">
+                                  {stand.booth_category}
+                                </Typography>
+                              )}
+                              <FormControl size="small" sx={{ mt: 1, minWidth: 120 }}>
+                                <Select
+                                  value={stand.status}
+                                  onChange={(e) => handleStatusChange(stand.id, e.target.value)}
+                                  size="small"
+                                  sx={{
+                                    bgcolor: statusInfo.color,
+                                    color: 'white',
+                                    '& .MuiOutlinedInput-notchedOutline': {
+                                      border: 'none'
+                                    },
+                                    '& .MuiSelect-icon': {
+                                      color: 'white'
+                                    }
+                                  }}
+                                >
+                                  {standStatuses.map((status) => (
+                                    <MenuItem key={status.value} value={status.value}>
+                                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                        {status.icon}
+                                        <Typography sx={{ ml: 1 }}>{status.value}</Typography>
+                                      </Box>
+                                    </MenuItem>
+                                  ))}
+                                </Select>
+                              </FormControl>
                             </Box>
                           }
                         />
@@ -571,20 +638,50 @@ const OperationPage = ({ showNotification, userRole }) => {
                             <Business sx={{ mr: 1, verticalAlign: 'middle' }} />
                             სტენდის ინფორმაცია
                           </Typography>
-                          <Typography variant="body1"><strong>სტენდის ნომერი:</strong> {selectedStand.booth_number}</Typography>
+                          <Typography variant="body1"><strong>სტენდის ნომერი:</strong> {selectedStand.booth_number || 'N/A'}</Typography>
                           <Typography variant="body1"><strong>კომპანია:</strong> {selectedStand.company_name}</Typography>
                           <Typography variant="body1">
                             <Straighten sx={{ mr: 1, verticalAlign: 'middle' }} />
-                            <strong>ფართობი:</strong> {selectedStand.area} მ²
+                            <strong>ფართობი:</strong> {selectedStand.area || 'N/A'} მ²
                           </Typography>
+                          <Typography variant="body1"><strong>სტენდის ტიპი:</strong> {selectedStand.booth_type || 'N/A'}</Typography>
+                          <Typography variant="body1"><strong>კატეგორია:</strong> {selectedStand.booth_category || 'N/A'}</Typography>
+                          {selectedStand.price_per_sqm && (
+                            <Typography variant="body1"><strong>ფასი მ²-ზე:</strong> ₾{selectedStand.price_per_sqm}</Typography>
+                          )}
+                          {selectedStand.total_price && (
+                            <Typography variant="body1"><strong>საერთო ღირებულება:</strong> ₾{selectedStand.total_price}</Typography>
+                          )}
                           <Box sx={{ mt: 2 }}>
-                            <Chip
-                              label={selectedStand.status}
-                              sx={{
-                                bgcolor: getStatusInfo(selectedStand.status).color,
-                                color: 'white'
-                              }}
-                            />
+                            <Typography variant="body2" sx={{ mb: 1 }}>
+                              <strong>სტატუსი:</strong>
+                            </Typography>
+                            <FormControl size="small">
+                              <Select
+                                value={selectedStand.status}
+                                onChange={(e) => handleStatusChange(selectedStand.id, e.target.value)}
+                                size="small"
+                                sx={{
+                                  bgcolor: getStatusInfo(selectedStand.status).color,
+                                  color: 'white',
+                                  '& .MuiOutlinedInput-notchedOutline': {
+                                    border: 'none'
+                                  },
+                                  '& .MuiSelect-icon': {
+                                    color: 'white'
+                                  }
+                                }}
+                              >
+                                {standStatuses.map((status) => (
+                                  <MenuItem key={status.value} value={status.value}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                      {status.icon}
+                                      <Typography sx={{ ml: 1 }}>{status.value}</Typography>
+                                    </Box>
+                                  </MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
                           </Box>
                           {selectedStand.package_name && (
                             <Typography variant="body1" sx={{ mt: 1 }}>
@@ -650,15 +747,49 @@ const OperationPage = ({ showNotification, userRole }) => {
                         <Grid xs={12} sm={6} md={4} key={index}>
                           <Card elevation={2}>
                             <CardContent>
-                              <Typography variant="h6" color="primary">
-                                {equipment.equipment_name}
-                              </Typography>
-                              <Typography variant="body2">
-                                რაოდენობა: {equipment.quantity}
-                              </Typography>
-                              <Typography variant="body2">
-                                ფასი: ₾{equipment.equipment_price}
-                              </Typography>
+                              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                {equipment.image_url ? (
+                                  <Avatar
+                                    src={processImageUrl(equipment.image_url)}
+                                    alt={equipment.equipment_name}
+                                    variant="rounded"
+                                    sx={{ 
+                                      width: 60, 
+                                      height: 60,
+                                      border: '2px solid #e0e6ed',
+                                      mr: 2
+                                    }}
+                                    onError={(e) => {
+                                      console.error('სურათის ჩატვირთვის შეცდომა:', equipment.image_url);
+                                      e.target.style.display = 'none';
+                                    }}
+                                  />
+                                ) : (
+                                  <Avatar
+                                    variant="rounded"
+                                    sx={{ 
+                                      width: 60, 
+                                      height: 60,
+                                      backgroundColor: '#f0f0f0',
+                                      border: '2px solid #e0e6ed',
+                                      mr: 2
+                                    }}
+                                  >
+                                    <ImageIcon sx={{ color: '#999' }} />
+                                  </Avatar>
+                                )}
+                                <Box>
+                                  <Typography variant="h6" color="primary">
+                                    {equipment.equipment_name}
+                                  </Typography>
+                                  <Typography variant="body2">
+                                    რაოდენობა: {equipment.quantity}
+                                  </Typography>
+                                  <Typography variant="body2">
+                                    ფასი: ₾{equipment.equipment_price}
+                                  </Typography>
+                                </Box>
+                              </Box>
                             </CardContent>
                           </Card>
                         </Grid>
@@ -688,30 +819,115 @@ const OperationPage = ({ showNotification, userRole }) => {
                   </Box>
 
                   {selectedStand.stand_designs && selectedStand.stand_designs.length > 0 ? (
-                    <ImageList cols={3} gap={8}>
-                      {selectedStand.stand_designs.map((design, index) => (
-                        <ImageListItem key={index}>
-                          <img
-                            src={design.design_url}
-                            alt={design.description}
-                            loading="lazy"
-                            style={{ height: 200, objectFit: 'cover' }}
-                          />
-                          <ImageListItemBar
-                            title={design.description}
-                            subtitle={new Date(design.uploaded_at).toLocaleDateString('ka-GE')}
-                            actionIcon={
-                              <IconButton
-                                sx={{ color: 'rgba(255, 255, 255, 0.54)' }}
-                                onClick={() => handleDesignDelete(design.design_id)}
-                              >
-                                <Delete />
-                              </IconButton>
-                            }
-                          />
-                        </ImageListItem>
-                      ))}
-                    </ImageList>
+                    <Grid container spacing={2}>
+                      {selectedStand.stand_designs.map((design, index) => {
+                        const fileExtension = design.design_url ? design.design_url.split('.').pop().toLowerCase() : '';
+                        const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension);
+                        
+                        return (
+                          <Grid xs={12} sm={6} md={4} key={index}>
+                            <Card elevation={2}>
+                              <CardContent sx={{ p: 2 }}>
+                                {isImage ? (
+                                  <Box 
+                                    sx={{ 
+                                      width: '100%', 
+                                      height: 200, 
+                                      overflow: 'hidden',
+                                      borderRadius: 1,
+                                      mb: 2,
+                                      cursor: 'pointer',
+                                      position: 'relative'
+                                    }}
+                                    onClick={() => window.open(design.design_url, '_blank')}
+                                  >
+                                    <img
+                                      src={design.design_url}
+                                      alt={design.description}
+                                      style={{ 
+                                        width: '100%', 
+                                        height: '100%', 
+                                        objectFit: 'cover'
+                                      }}
+                                      onError={(e) => {
+                                        e.target.style.display = 'none';
+                                        e.target.nextSibling.style.display = 'flex';
+                                      }}
+                                    />
+                                    <Box 
+                                      sx={{
+                                        display: 'none',
+                                        width: '100%',
+                                        height: '100%',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        bgcolor: 'grey.200',
+                                        color: 'grey.600'
+                                      }}
+                                    >
+                                      <Image sx={{ fontSize: 48 }} />
+                                    </Box>
+                                  </Box>
+                                ) : (
+                                  <Box 
+                                    sx={{ 
+                                      width: '100%', 
+                                      height: 200, 
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      bgcolor: 'grey.100',
+                                      borderRadius: 1,
+                                      mb: 2,
+                                      cursor: 'pointer'
+                                    }}
+                                    onClick={() => window.open(design.design_url, '_blank')}
+                                  >
+                                    <Stack alignItems="center" spacing={1}>
+                                      <Description sx={{ fontSize: 48, color: 'grey.500' }} />
+                                      <Typography variant="caption" color="grey.600">
+                                        .{fileExtension.toUpperCase()}
+                                      </Typography>
+                                    </Stack>
+                                  </Box>
+                                )}
+                                
+                                <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                                  {design.description || 'უსახელო ფაილი'}
+                                </Typography>
+                                
+                                <Typography variant="caption" color="text.secondary" display="block">
+                                  ატვირთულია: {new Date(design.uploaded_at).toLocaleDateString('ka-GE')}
+                                </Typography>
+                                
+                                {design.uploaded_by && (
+                                  <Typography variant="caption" color="text.secondary" display="block">
+                                    ატვირთა: {design.uploaded_by}
+                                  </Typography>
+                                )}
+                              </CardContent>
+                              
+                              <CardActions sx={{ pt: 0, justifyContent: 'space-between' }}>
+                                <Button 
+                                  size="small" 
+                                  startIcon={<Image />}
+                                  onClick={() => window.open(design.design_url, '_blank')}
+                                >
+                                  ნახვა
+                                </Button>
+                                <IconButton
+                                  size="small"
+                                  color="error"
+                                  onClick={() => handleDesignDelete(design.design_id)}
+                                >
+                                  <Delete />
+                                </IconButton>
+                              </CardActions>
+                            </Card>
+                          </Grid>
+                        );
+                      })}
+                    </Grid>
                   ) : (
                     <Alert severity="info">
                       დიზაინის ფაილები არ არის ატვირთული
@@ -795,6 +1011,45 @@ const OperationPage = ({ showNotification, userRole }) => {
                   value={formData.area}
                   onChange={(e) => setFormData({...formData, area: e.target.value})}
                   required
+                />
+              </Grid>
+              <Grid xs={12} sm={6}>
+                <FormControl fullWidth>
+                  <InputLabel>სტენდის ტიპი</InputLabel>
+                  <Select
+                    value={formData.booth_type || 'რიგითი'}
+                    onChange={(e) => setFormData({...formData, booth_type: e.target.value})}
+                    label="სტენდის ტიპი"
+                  >
+                    <MenuItem value="რიგითი">რიგითი</MenuItem>
+                    <MenuItem value="კუთხური">კუთხური</MenuItem>
+                    <MenuItem value="თავისუფალი">თავისუფალი</MenuItem>
+                    <MenuItem value="ღია">ღია</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid xs={12} sm={6}>
+                <FormControl fullWidth>
+                  <InputLabel>კატეგორია</InputLabel>
+                  <Select
+                    value={formData.booth_category || 'ოქტანორმის სტენდები'}
+                    onChange={(e) => setFormData({...formData, booth_category: e.target.value})}
+                    label="კატეგორია"
+                  >
+                    <MenuItem value="ოქტანორმის სტენდები">ოქტანორმის სტენდები</MenuItem>
+                    <MenuItem value="ღია ფართობი">ღია ფართობი</MenuItem>
+                    <MenuItem value="პრემიუმ სტენდი">პრემიუმ სტენდი</MenuItem>
+                    <MenuItem value="სპეციალური სტენდი">სპეციალური სტენდი</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="ფასი მ²-ზე (₾)"
+                  type="number"
+                  value={formData.price_per_sqm || ''}
+                  onChange={(e) => setFormData({...formData, price_per_sqm: e.target.value})}
                 />
               </Grid>
               <Grid xs={12} sm={6}>
