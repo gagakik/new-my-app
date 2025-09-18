@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Footer from './components/Footer';
 import AuthPage from './components/AuthPage';
 import MainContent from './components/MainContent';
+import EventInfo from './components/EventInfo';
 import Notification from './components/Notification';
 import './index.css';
 import './calendar-custom.css';
@@ -145,19 +147,34 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <div className="App">
-        <main>
-          {renderContent()}
-        </main>
-        <Footer />
-        {notification.message && (
-          <Notification
-            message={notification.message}
-            type={notification.type}
-            onClose={clearNotification}
-          />
-        )}
-      </div>
+      <Router>
+        <div className="App">
+          <main>
+            <Routes>
+              <Route 
+                path="/event-info" 
+                element={<EventInfo />} 
+              />
+              <Route 
+                path="/" 
+                element={renderContent()}
+              />
+              <Route 
+                path="*" 
+                element={<Navigate to="/" replace />}
+              />
+            </Routes>
+          </main>
+          <Footer />
+          {notification.message && (
+            <Notification
+              message={notification.message}
+              type={notification.type}
+              onClose={clearNotification}
+            />
+          )}
+        </div>
+      </Router>
     </ErrorBoundary>
   );
 }

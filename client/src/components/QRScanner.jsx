@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
   DialogTitle,
@@ -29,7 +30,8 @@ import {
   LocationOn,
   CalendarToday,
   CheckCircle,
-  ErrorOutline
+  ErrorOutline,
+  OpenInNew
 } from '@mui/icons-material';
 import jsQR from 'jsqr';
 
@@ -41,6 +43,7 @@ const QRScanner = ({ onClose, showNotification }) => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     checkCameraAvailability();
@@ -137,6 +140,23 @@ const QRScanner = ({ onClose, showNotification }) => {
           qrData.registration_status_display = statusDisplayMap[qrData.registration_status];
         }
         
+        // URL Parameters შექმნა
+        const urlParams = new URLSearchParams({
+          event: qrData.event_name || '',
+          company: qrData.company_name || '',
+          booth: qrData.booth_number || '',
+          size: qrData.booth_size || '',
+          status: qrData.registration_status || '',
+          location: qrData.booth_location || '',
+          start_date: qrData.start_date || '',
+          end_date: qrData.end_date || '',
+          message: qrData.custom_message || ''
+        });
+
+        // URL-ის განახლება
+        const newUrl = `${window.location.origin}/event-info?${urlParams.toString()}`;
+        window.history.pushState(null, '', newUrl);
+        
         setScannedData(qrData);
         showNotification('QR კოდი წარმატებით წაიკითხა', 'success');
       } else {
@@ -170,6 +190,25 @@ const QRScanner = ({ onClose, showNotification }) => {
       case 'მოლოდინში': return 'warning';
       case 'გაუქმებული': return 'error';
       default: return 'default';
+    }
+  };
+
+  const navigateToEventInfo = () => {
+    if (scannedData) {
+      const urlParams = new URLSearchParams({
+        event: scannedData.event_name || '',
+        company: scannedData.company_name || '',
+        booth: scannedData.booth_number || '',
+        size: scannedData.booth_size || '',
+        status: scannedData.registration_status || '',
+        location: scannedData.booth_location || '',
+        start_date: scannedData.start_date || '',
+        end_date: scannedData.end_date || '',
+        message: scannedData.custom_message || ''
+      });
+      
+      navigate(`/event-info?${urlParams.toString()}`);
+      onClose();
     }
   };
 
@@ -436,16 +475,31 @@ const QRScanner = ({ onClose, showNotification }) => {
 
       <DialogActions sx={{ p: 3, pt: 1 }}>
         {scannedData ? (
-          <Button
-            onClick={() => setScannedData(null)}
-            variant="contained"
-            startIcon={<QrCodeScanner />}
-            sx={{
-              background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)'
-            }}
-          >
-            კიდევ სკანირება
-          </Button>
+          <>
+            <Button
+              onClick={navigateToEventInfo}
+              variant="contained"
+              startIcon={<OpenInNew />}
+              sx={{
+                background: 'linear-gradient(45deg, #4CAF50 30%, #45a049 90%)',
+                '&:hover': {
+                  background: 'linear-gradient(45deg, #45a049 30%, #4CAF50 90%)'
+                }
+              }}
+            >
+              გვერდზე გადასვლა
+            </Button>
+            <Button
+              onClick={() => setScannedData(null)}
+              variant="contained"
+              startIcon={<QrCodeScanner />}
+              sx={{
+                background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)'
+              }}
+            >
+              კიდევ სკანირება
+            </Button>
+          </>
         ) : null}
         
         <Button

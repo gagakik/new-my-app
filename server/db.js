@@ -266,27 +266,53 @@ const addMissingColumns = async () => {
       switch (tableName) {
         case "event_participants":
           const participantColumns = [
-            "booth_category",
-            "booth_type",
-            "contact_person",
-            "contact_email",
-            "contact_phone",
-            "payment_due_date",
-            "payment_method",
-            "invoice_number",
-            "invoice_file",
-            "contract_file",
-            "handover_file",
+            { name: "event_id", type: "INTEGER REFERENCES annual_services(id)" },
+            { name: "booth_category", type: "VARCHAR(50) DEFAULT 'ოქტანორმის სტენდები'" },
+            { name: "booth_type", type: "VARCHAR(50) DEFAULT 'რიგითი'" },
+            { name: "booth_number", type: "VARCHAR(100)" },
+            { name: "booth_size", type: "DECIMAL(10,2)" },
+            { name: "area", type: "DECIMAL(10,2)" },
+            { name: "price_per_sqm", type: "DECIMAL(10,2)" },
+            { name: "total_price", type: "DECIMAL(10,2)" },
+            { name: "contact_person", type: "VARCHAR(255)" },
+            { name: "contact_position", type: "VARCHAR(255)" },
+            { name: "contact_email", type: "VARCHAR(255)" },
+            { name: "contact_phone", type: "VARCHAR(255)" },
+            { name: "payment_due_date", type: "DATE" },
+            { name: "payment_method", type: "VARCHAR(50) DEFAULT 'ნაღდი'" },
+            { name: "payment_amount", type: "DECIMAL(10,2)" },
+            { name: "invoice_number", type: "VARCHAR(100)" },
+            { name: "invoice_file", type: "VARCHAR(500)" },
+            { name: "contract_file", type: "VARCHAR(500)" },
+            { name: "handover_file", type: "VARCHAR(500)" },
+            { name: "status", type: "VARCHAR(50) DEFAULT 'აქტიური'" },
+            { name: "notes", type: "TEXT" }
           ];
           for (const col of participantColumns) {
-            if (!existingColumns.includes(col)) {
-              console.log(`Adding missing column '${col}' to '${tableName}'...`);
-              await query(`
-                ALTER TABLE ${tableName}
-                ADD COLUMN ${col} VARCHAR(255)
-              `);
+            if (!existingColumns.includes(col.name)) {
+              console.log(`Adding missing column '${col.name}' to '${tableName}'...`);
+              try {
+                await query(`
+                  ALTER TABLE ${tableName}
+                  ADD COLUMN ${col.name} ${col.type}
+                `);
+              } catch (addColumnError) {
+                console.log(`Column '${col.name}' might already exist or constraint issue:`, addColumnError.message);
+              }
             }
           }
+
+          // Update event_id from annual_service_id if needed
+          try {
+            await query(`
+              UPDATE event_participants 
+              SET event_id = annual_service_id 
+              WHERE event_id IS NULL AND annual_service_id IS NOT NULL
+            `);
+          } catch (updateError) {
+            console.log('Could not update event_id from annual_service_id:', updateError.message);
+          }
+
           break;
         case "annual_services":
           const serviceColumns = [

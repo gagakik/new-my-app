@@ -418,7 +418,7 @@ app.use('/api/reports', require('./routes/reports'));
 console.log('✅ Reports route registered');
 app.use('/api/statistics', require('./routes/statistics'));
 console.log('✅ Statistics route registered');
-app.use('/api/stands', require('./routes/stands'));
+app.use('/api', require('./routes/stands'));
 console.log('✅ Stands route registered');
 app.use('/api/import', require('./routes/import'));
 console.log('✅ Import route registered at /api/import');

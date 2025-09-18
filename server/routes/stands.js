@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
@@ -54,71 +53,127 @@ const upload = multer({
   }
 });
 
-// GET: ყველა სტენდის მიღება კონკრეტული ივენთისთვის სრული ინფორმაციით
+// GET: ყველა სტენდის მიღება კონკრეტული ივენთისთვის - მონაწილეებიდან
 router.get('/events/:eventId/stands', authenticateToken, async (req, res) => {
   try {
     console.log(`🏗️ სტენდების მიღება ივენთისთვის ID: ${req.params.eventId}`);
-    
+
+    // Get stands data from event participants with full area and booth info
     const result = await db.query(`
       SELECT 
-        s.*,
-        e.service_name as event_name, 
-        e.start_date as event_start, 
-        e.end_date as event_end,
-        ep.company_id,
-        c.name as company_name,
-        c.contact_person as company_contact_person,
-        c.phone as company_phone,
-        c.email as company_email,
-        ce.space_area_sqm as allocated_area,
-        ce.package_id,
-        ep2.package_name as package_name,
-        json_agg(
-          DISTINCT jsonb_build_object(
-            'equipment_id', se.equipment_id,
-            'quantity', se.quantity,
-            'equipment_name', eq.code_name,
-            'equipment_price', eq.price
-          )
-        ) FILTER (WHERE se.equipment_id IS NOT NULL) as stand_equipment,
-        json_agg(
-          DISTINCT jsonb_build_object(
-            'photo_id', sp.id,
-            'photo_url', sp.photo_url,
-            'description', sp.description,
-            'uploaded_at', sp.uploaded_at
-          )
-        ) FILTER (WHERE sp.id IS NOT NULL) as stand_photos,
-        json_agg(
-          DISTINCT jsonb_build_object(
-            'design_id', sd.id,
-            'design_url', sd.design_file_url,
-            'description', sd.description,
-            'uploaded_at', sd.uploaded_at
-          )
-        ) FILTER (WHERE sd.id IS NOT NULL) as stand_designs
-      FROM stands s
-      LEFT JOIN annual_services e ON s.event_id = e.id
-      LEFT JOIN event_participants ep ON s.event_id = ep.event_id AND s.company_name = 
-        (SELECT name FROM companies WHERE id = ep.company_id)
-      LEFT JOIN companies c ON ep.company_id = c.id
-      LEFT JOIN company_exhibitions ce ON ep.company_id = ce.company_id AND ce.exhibition_id = s.event_id
-      LEFT JOIN exhibition_packages ep2 ON ce.package_id = ep2.id
-      LEFT JOIN stand_equipment se ON s.id = se.stand_id
-      LEFT JOIN equipment eq ON se.equipment_id = eq.id
-      LEFT JOIN stand_photos sp ON s.id = sp.stand_id
-      LEFT JOIN stand_designs sd ON s.id = sd.stand_id
-      WHERE s.event_id = $1
-      GROUP BY s.id, e.service_name, e.start_date, e.end_date, 
-               ep.company_id, c.name, c.contact_person, c.phone, c.email,
-               ce.space_area_sqm, ce.package_id, ep2.package_name
-      ORDER BY s.booth_number ASC
+        ep.id as participant_id,
+        COALESCE(ep.area, ep.booth_size, 0) as area,
+        ep.booth_category,
+        ep.booth_type,
+        ep.booth_number,
+        ep.status,
+        ep.notes,
+        ep.created_at,
+        ep.contact_person,
+        ep.contact_phone,
+        ep.contact_email,
+        ep.price_per_sqm,
+        ep.total_price,
+        c.company_name,
+        e.service_name as event_name,
+        e.start_date as event_start,
+        e.end_date as event_end
+      FROM event_participants ep
+      JOIN companies c ON ep.company_id = c.id
+      LEFT JOIN annual_services e ON ep.event_id = e.id
+      WHERE ep.event_id = $1
+      ORDER BY c.company_name ASC
     `, [req.params.eventId]);
 
-    console.log(`✅ მოიძებნა ${result.rows.length} სტენდი`);
-    res.json(result.rows);
+    console.log(`📊 ნაპოვნი მონაწილეები: ${result.rows.length}`);
+
+    const standsWithDetails = [];
+
+    for (const participant of result.rows) {
+      console.log(`📝 მონაწილე: ${participant.company_name}, ფართობი: ${participant.area}`);
+
+      let standWithDetails = {
+        id: participant.participant_id,
+        booth_number: participant.booth_number || `B-${participant.participant_id}`,
+        company_name: participant.company_name,
+        area: parseFloat(participant.area) || 0,
+        status: participant.status === 'გადახდილი' ? 'დასრულებული' : 
+                participant.status === 'მომლოდინე' ? 'დაგეგმილი' : 'დაგეგმილი',
+        booth_category: participant.booth_category || 'ოქტანორმის სტენდები',
+        booth_type: participant.booth_type || 'რიგითი',
+        notes: participant.notes,
+        contact_person: participant.contact_person,
+        contact_phone: participant.contact_phone,
+        contact_email: participant.contact_email,
+        price_per_sqm: parseFloat(participant.price_per_sqm) || 0,
+        total_price: parseFloat(participant.total_price) || 0,
+        created_at: participant.created_at,
+        event_name: participant.event_name,
+        event_start: participant.event_start,
+        event_end: participant.event_end
+      };
+
+      // Get equipment bookings for this participant
+      let stand_equipment = [];
+      try {
+        const equipmentResult = await db.query(`
+          SELECT 
+            eb.equipment_id,
+            eb.quantity,
+            eb.booking_date,
+            e.code_name as equipment_name,
+            e.description as equipment_description,
+            e.price as equipment_price
+          FROM equipment_bookings eb
+          JOIN equipment e ON eb.equipment_id = e.id
+          WHERE eb.participant_id = $1
+          ORDER BY eb.booking_date DESC
+        `, [participant.participant_id]);
+
+        console.log(`🔧 მონაწილისთვის ${participant.company_name} ნაპოვნი აღჭურვილობა: ${equipmentResult.rows.length}`);
+
+        stand_equipment = equipmentResult.rows.map(eq => ({
+          equipment_id: eq.equipment_id,
+          equipment_name: eq.equipment_name || eq.code_name || 'უცნობი აღჭურვილობა',
+          equipment_description: eq.equipment_description || 'აღწერა არ არის',
+          equipment_price: parseFloat(eq.equipment_price) || 0,
+          quantity: parseInt(eq.quantity) || 0,
+          booking_date: eq.booking_date,
+          total_equipment_price: (parseFloat(eq.equipment_price) || 0) * (parseInt(eq.quantity) || 0)
+        }));
+      } catch (equipError) {
+        console.log('⚠️ აღჭურვილობის მიღების შეცდომა:', equipError.message);
+        stand_equipment = [];
+      }
+
+      standWithDetails.stand_equipment = stand_equipment;
+      standWithDetails.stand_designs = []; // Empty for now - can be populated from file uploads
+      standWithDetails.stand_photos = []; // Empty for now - can be populated from file uploads
+
+      standsWithDetails.push(standWithDetails);
+    }
+
+    console.log(`✅ მოიძებნა ${standsWithDetails.length} სტენდი`);
+
+    // Debug output with detailed information
+    standsWithDetails.forEach(stand => {
+      console.log(`📊 სტენდი: ${stand.company_name}`);
+      console.log(`   📏 ფართობი: ${stand.area}მ²`);
+      console.log(`   🏷️ კატეგორია: ${stand.booth_category}`);
+      console.log(`   📋 ტიპი: ${stand.booth_type}`);
+      console.log(`   📍 ნომერი: ${stand.booth_number}`);
+      console.log(`   🔧 აღჭურვილობა: ${stand.stand_equipment.length} ნივთი`);
+
+      stand.stand_equipment.forEach((eq, index) => {
+        console.log(`      ${index + 1}. ${eq.equipment_name} - ${eq.quantity} ცალი × €${eq.equipment_price} = €${eq.total_equipment_price}`);
+      });
+    });
+
+    res.json(standsWithDetails);
   } catch (error) {
     console.error('❌ სტენდების მიღების შეცდომა:', error);
+    console.error('❌ Error details:', error.message);
+    console.error('❌ Error stack:', error.stack);
     res.status(500).json({ message: 'სტენდების მიღება ვერ მოხერხდა', error: error.message });
   }
 });
@@ -127,7 +182,7 @@ router.get('/events/:eventId/stands', authenticateToken, async (req, res) => {
 router.get('/stands', authenticateToken, async (req, res) => {
   try {
     console.log('🏗️ ყველა სტენდის მიღება');
-    
+
     const result = await db.query(`
       SELECT s.*, e.service_name as event_name
       FROM stands s
@@ -147,7 +202,7 @@ router.get('/stands', authenticateToken, async (req, res) => {
 router.get('/events/:eventId/stands/:standId', authenticateToken, async (req, res) => {
   try {
     console.log(`🏗️ სტენდის მიღება ID: ${req.params.standId}`);
-    
+
     const result = await db.query(`
       SELECT s.*, e.service_name as event_name, e.start_date as event_start, e.end_date as event_end
       FROM stands s
@@ -172,7 +227,7 @@ router.get('/events/:eventId/stands/:standId', authenticateToken, async (req, re
 router.post('/events/:eventId/stands/:standId/design', authenticateToken, upload.array('design_files', 10), async (req, res) => {
   try {
     console.log(`🎨 დიზაინის ფაილების ატვირთვა სტენდისთვის ID: ${req.params.standId}`);
-    
+
     const { description } = req.body;
     const standId = req.params.standId;
     const userId = req.user.id;
@@ -180,7 +235,7 @@ router.post('/events/:eventId/stands/:standId/design', authenticateToken, upload
     // შევამოწმოთ არსებობს თუ არა სტენდი
     const standCheck = await db.query('SELECT id FROM stands WHERE id = $1 AND event_id = $2', 
       [standId, req.params.eventId]);
-    
+
     if (standCheck.rows.length === 0) {
       return res.status(404).json({ message: 'სტენდი არ მოიძებნა' });
     }
@@ -190,12 +245,12 @@ router.post('/events/:eventId/stands/:standId/design', authenticateToken, upload
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
         const fileUrl = `/uploads/stands/${file.filename}`;
-        
+
         const result = await db.query(`
           INSERT INTO stand_designs (stand_id, design_file_url, description, uploaded_by_user_id)
           VALUES ($1, $2, $3, $4) RETURNING *
         `, [standId, fileUrl, description || file.originalname, userId]);
-        
+
         uploadedFiles.push(result.rows[0]);
       }
     }
@@ -215,16 +270,16 @@ router.post('/events/:eventId/stands/:standId/design', authenticateToken, upload
 router.delete('/events/:eventId/stands/:standId/design/:designId', authenticateToken, async (req, res) => {
   try {
     console.log(`🗑️ დიზაინის ფაილის წაშლა ID: ${req.params.designId}`);
-    
+
     const designResult = await db.query('SELECT * FROM stand_designs WHERE id = $1 AND stand_id = $2', 
       [req.params.designId, req.params.standId]);
-    
+
     if (designResult.rows.length === 0) {
       return res.status(404).json({ message: 'დიზაინის ფაილი არ მოიძებნა' });
     }
 
     const design = designResult.rows[0];
-    
+
     // ფაილის წაშლა ფაილსისტემიდან
     if (design.design_file_url) {
       const filePath = path.join(__dirname, '../', design.design_file_url);
@@ -248,7 +303,7 @@ router.delete('/events/:eventId/stands/:standId/design/:designId', authenticateT
 router.post('/events/:eventId/stands/:standId/equipment', authenticateToken, async (req, res) => {
   try {
     console.log(`🔧 აღჭურვილობის დამატება სტენდზე ID: ${req.params.standId}`);
-    
+
     const { equipment_id, quantity, notes } = req.body;
     const standId = req.params.standId;
     const userId = req.user.id;
@@ -256,14 +311,14 @@ router.post('/events/:eventId/stands/:standId/equipment', authenticateToken, asy
     // შევამოწმოთ არსებობს თუ არა სტენდი
     const standCheck = await db.query('SELECT id FROM stands WHERE id = $1 AND event_id = $2', 
       [standId, req.params.eventId]);
-    
+
     if (standCheck.rows.length === 0) {
       return res.status(404).json({ message: 'სტენდი არ მოიძებნა' });
     }
 
     // შევამოწმოთ არსებობს თუ არა აღჭურვილობა
     const equipmentCheck = await db.query('SELECT id, code_name FROM equipment WHERE id = $1', [equipment_id]);
-    
+
     if (equipmentCheck.rows.length === 0) {
       return res.status(404).json({ message: 'აღჭურვილობა არ მოიძებნა' });
     }
@@ -289,7 +344,7 @@ router.post('/events/:eventId/stands', authenticateToken, async (req, res) => {
   try {
     console.log(`🏗️ ახალი სტენდის დამატება ივენთისთვის ID: ${req.params.eventId}`);
     console.log('📝 მიღებული მონაცემები:', req.body);
-    
+
     const {
       booth_number,
       company_name,
@@ -317,7 +372,7 @@ router.post('/events/:eventId/stands', authenticateToken, async (req, res) => {
     // სტენდის ნომრის უნიკალურობის შემოწმება ამ ივენთისთვის
     const existingStand = await db.query('SELECT id FROM stands WHERE booth_number = $1 AND event_id = $2', 
       [booth_number, req.params.eventId]);
-    
+
     if (existingStand.rows.length > 0) {
       console.log('❌ სტენდი უკვე არსებობს ამ ნომრით');
       return res.status(400).json({ message: 'სტენდი ამ ნომრით უკვე არსებობს ამ ივენთზე' });
@@ -359,7 +414,7 @@ router.put('/events/:eventId/stands/:standId', authenticateToken, async (req, re
   try {
     console.log(`🏗️ სტენდის განახლება ID: ${req.params.standId}`);
     console.log('📝 განსაახლებელი მონაცემები:', req.body);
-    
+
     const {
       booth_number,
       company_name,
@@ -374,7 +429,7 @@ router.put('/events/:eventId/stands/:standId', authenticateToken, async (req, re
     // სტენდის არსებობის შემოწმება
     const existingStand = await db.query('SELECT * FROM stands WHERE id = $1 AND event_id = $2', 
       [req.params.standId, req.params.eventId]);
-    
+
     if (existingStand.rows.length === 0) {
       console.log('❌ სტენდი არ მოიძებნა');
       return res.status(404).json({ message: 'სტენდი არ მოიძებნა' });
@@ -384,7 +439,7 @@ router.put('/events/:eventId/stands/:standId', authenticateToken, async (req, re
     if (booth_number && booth_number !== existingStand.rows[0].booth_number) {
       const duplicateCheck = await db.query('SELECT id FROM stands WHERE booth_number = $1 AND event_id = $2 AND id != $3', 
         [booth_number, req.params.eventId, req.params.standId]);
-      
+
       if (duplicateCheck.rows.length > 0) {
         console.log('❌ სტენდი უკვე არსებობს ამ ნომრით');
         return res.status(400).json({ message: 'სტენდი ამ ნომრით უკვე არსებობს ამ ივენთზე' });
@@ -433,7 +488,7 @@ router.patch('/events/:eventId/stands/:standId/status', authenticateToken, async
   try {
     console.log(`🏗️ სტენდის სტატუსის განახლება ID: ${req.params.standId}`);
     console.log('📝 ახალი სტატუსი:', req.body.status);
-    
+
     const { status } = req.body;
 
     if (!status) {
@@ -468,11 +523,11 @@ router.patch('/events/:eventId/stands/:standId/status', authenticateToken, async
 router.delete('/events/:eventId/stands/:standId', authenticateToken, async (req, res) => {
   try {
     console.log(`🏗️ სტენდის წაშლა ID: ${req.params.standId}`);
-    
+
     // სტენდის არსებობის შემოწმება
     const existingStand = await db.query('SELECT * FROM stands WHERE id = $1 AND event_id = $2', 
       [req.params.standId, req.params.eventId]);
-    
+
     if (existingStand.rows.length === 0) {
       console.log('❌ სტენდი არ მოიძებნა');
       return res.status(404).json({ message: 'სტენდი არ მოიძებნა' });
@@ -497,7 +552,7 @@ router.delete('/events/:eventId/stands/:standId', authenticateToken, async (req,
 router.get('/events/:eventId/stands/statistics', authenticateToken, async (req, res) => {
   try {
     console.log(`📊 სტენდების სტატისტიკა ივენთისთვის ID: ${req.params.eventId}`);
-    
+
     const stats = await db.query(`
       SELECT 
         status,
