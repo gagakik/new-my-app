@@ -669,10 +669,12 @@ const EventsList = ({ showNotification, userRole }) => {
                 sx={{
                   borderRadius: 2,
                   border: 'none',
-                  color: '#ffffffff',
+                  color: '#000000ff',
+                  backgroundColor: 'rgba(102, 126, 234, 0.68)',
                   '&:hover': {
                     borderColor: '#5a6268',
-                    backgroundColor: 'rgba(108, 117, 125, 0.04)'
+                    backgroundColor: 'rgba(102, 126, 234, 0.4)',
+                    scale: '1.05'
                   }
                 }}
               >
@@ -686,10 +688,12 @@ const EventsList = ({ showNotification, userRole }) => {
                 sx={{
                   borderRadius: 2,
                   border: 'none',
-                  color: '#ffffffff',
+                  color: '#000000ff',
+                  backgroundColor: 'rgba(102, 126, 234, 0.68)',
                   '&:hover': {
                     borderColor: '#5a6fd8',
-                    backgroundColor: 'rgba(102, 126, 234, 0.04)'
+                    backgroundColor: 'rgba(102, 126, 234, 0.4)',
+                    scale: '1.05'
                   }
                 }}
               >

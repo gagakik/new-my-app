@@ -59,7 +59,7 @@ import {
   Image as ImageIcon
 } from '@mui/icons-material';
 
-const OperationPage = ({ showNotification, userRole }) => {
+const OperationPage = ({ showNotification }) => {
   const [events, setEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [stands, setStands] = useState([]);
@@ -130,8 +130,8 @@ const OperationPage = ({ showNotification, userRole }) => {
         setError('ივენთების ჩატვირთვის შეცდომა');
         showNotification('ივენთების მიღება ვერ მოხერხდა', 'error');
       }
-    } catch (error) {
-      console.error('Error fetching events:', error);
+    } catch (err) {
+      console.error('Error fetching events:', err);
       setError('სერვერთან კავშირის შეცდომა');
       showNotification('შეცდომა მონაცემების ჩატვირთვისას', 'error');
     } finally {
@@ -158,8 +158,8 @@ const OperationPage = ({ showNotification, userRole }) => {
       } else {
         showNotification('სტენდების მიღება ვერ მოხერხდა', 'error');
       }
-    } catch (error) {
-      console.error('Error fetching stands:', error);
+    } catch (err) {
+      console.error('Error fetching stands:', err);
       setLoading(false);
       showNotification('შეცდომა სტენდების ჩატვირთვისას', 'error');
     }
@@ -176,8 +176,8 @@ const OperationPage = ({ showNotification, userRole }) => {
         const data = await response.json();
         setAllEquipment(data);
       }
-    } catch (error) {
-      console.error('აღჭურვილობის მიღების შეცდომა:', error);
+    } catch (err) {
+      console.error('აღჭურვილობის მიღების შეცდომა:', err);
     }
   }, []);
 
@@ -214,8 +214,8 @@ const OperationPage = ({ showNotification, userRole }) => {
         const errorData = await response.json();
         showNotification(errorData.message || 'შეცდომა სტენდის დამატებისას', 'error');
       }
-    } catch (error) {
-      console.error('შეცდომა:', error);
+    } catch (err) {
+      console.error('შეცდომა:', err);
       showNotification('შეცდომა ქსელურ მოთხოვნაში', 'error');
     }
   };
@@ -241,8 +241,8 @@ const OperationPage = ({ showNotification, userRole }) => {
         const errorData = await response.json();
         showNotification(errorData.message || 'შეცდომა აღჭურვილობის დამატებისას', 'error');
       }
-    } catch (error) {
-      console.error('შეცდომა:', error);
+    } catch (err) {
+      console.error('შეცდომა:', err);
       showNotification('შეცდომა ქსელურ მოთხოვნაში', 'error');
     }
   };
@@ -283,8 +283,8 @@ const OperationPage = ({ showNotification, userRole }) => {
         const errorData = await response.json();
         showNotification(errorData.message || 'შეცდომა ფაილების ატვირთვისას', 'error');
       }
-    } catch (error) {
-      console.error('შეცდომა:', error);
+    } catch (err) {
+      console.error('შეცდომა:', err);
       showNotification('შეცდომა ქსელურ მოთხოვნაში', 'error');
     }
   };
@@ -303,8 +303,8 @@ const OperationPage = ({ showNotification, userRole }) => {
       } else {
         showNotification('ფაილის წაშლა ვერ მოხერხდა', 'error');
       }
-    } catch (ERROR) {
-      console.error('შეცდომა:', ERROR);
+    } catch (err) {
+      console.error('შეცდომა:', err);
       showNotification('შეცდომა ქსელურ მოთხოვნაში', 'error');
     }
   };
@@ -328,8 +328,8 @@ const OperationPage = ({ showNotification, userRole }) => {
         const errorData = await response.json();
         showNotification(errorData.message || 'სტატუსის განახლება ვერ მოხერხდა', 'error');
       }
-    } catch (error) {
-      console.error('სტატუსის განახლების შეცდომა:', error);
+    } catch (err) {
+      console.error('სტატუსის განახლების შეცდომა:', err);
       showNotification('შეცდომა ქსელურ მოთხოვნაში', 'error');
     }
   };
@@ -380,7 +380,7 @@ const OperationPage = ({ showNotification, userRole }) => {
     try {
       const date = new Date(dateString);
       return date.toLocaleDateString('ka-GE');
-    } catch (error) {
+    } catch (err) {
       return dateString;
     }
   };
@@ -429,10 +429,11 @@ const OperationPage = ({ showNotification, userRole }) => {
                       cursor: 'pointer',
                       '&:hover': {
                         transform: 'translateY(-4px)',
-                        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)'
+                        boxShadow: '0 8px 24px rgba(102, 126, 234, 0.3)'
                       },
-                      border: '1px solid rgba(102, 126, 234, 0.1)',
-                      background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)'
+                      border: '1px solid rgba(102, 126, 234, 0.2)',
+                      background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                      borderLeft: '4px solid #667eea'
                     }}
                     onClick={() => setSelectedEvent(event)}
                   >
@@ -554,6 +555,11 @@ const OperationPage = ({ showNotification, userRole }) => {
                           '&.Mui-selected': {
                             backgroundColor: 'primary.light',
                             color: 'primary.contrastText'
+                          },
+                          borderLeft: `4px solid ${statusInfo.color}`,
+                          backgroundColor: `${statusInfo.color}15`,
+                          '&:hover': {
+                            backgroundColor: `${statusInfo.color}25`
                           }
                         }}
                       >
@@ -583,11 +589,17 @@ const OperationPage = ({ showNotification, userRole }) => {
                                   sx={{
                                     bgcolor: statusInfo.color,
                                     color: 'white',
+                                    borderRadius: 2,
+                                    fontWeight: 'bold',
                                     '& .MuiOutlinedInput-notchedOutline': {
                                       border: 'none'
                                     },
                                     '& .MuiSelect-icon': {
                                       color: 'white'
+                                    },
+                                    '&:hover': {
+                                      bgcolor: statusInfo.color,
+                                      filter: 'brightness(1.1)'
                                     }
                                   }}
                                 >
@@ -753,8 +765,8 @@ const OperationPage = ({ showNotification, userRole }) => {
                                     src={processImageUrl(equipment.image_url)}
                                     alt={equipment.equipment_name}
                                     variant="rounded"
-                                    sx={{ 
-                                      width: 60, 
+                                    sx={{
+                                      width: 60,
                                       height: 60,
                                       border: '2px solid #e0e6ed',
                                       mr: 2
@@ -767,8 +779,8 @@ const OperationPage = ({ showNotification, userRole }) => {
                                 ) : (
                                   <Avatar
                                     variant="rounded"
-                                    sx={{ 
-                                      width: 60, 
+                                    sx={{
+                                      width: 60,
                                       height: 60,
                                       backgroundColor: '#f0f0f0',
                                       border: '2px solid #e0e6ed',
@@ -823,16 +835,16 @@ const OperationPage = ({ showNotification, userRole }) => {
                       {selectedStand.stand_designs.map((design, index) => {
                         const fileExtension = design.design_url ? design.design_url.split('.').pop().toLowerCase() : '';
                         const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension);
-                        
+
                         return (
                           <Grid xs={12} sm={6} md={4} key={index}>
                             <Card elevation={2}>
                               <CardContent sx={{ p: 2 }}>
                                 {isImage ? (
-                                  <Box 
-                                    sx={{ 
-                                      width: '100%', 
-                                      height: 200, 
+                                  <Box
+                                    sx={{
+                                      width: '100%',
+                                      height: 200,
                                       overflow: 'hidden',
                                       borderRadius: 1,
                                       mb: 2,
@@ -844,9 +856,9 @@ const OperationPage = ({ showNotification, userRole }) => {
                                     <img
                                       src={design.design_url}
                                       alt={design.description}
-                                      style={{ 
-                                        width: '100%', 
-                                        height: '100%', 
+                                      style={{
+                                        width: '100%',
+                                        height: '100%',
                                         objectFit: 'cover'
                                       }}
                                       onError={(e) => {
@@ -854,7 +866,7 @@ const OperationPage = ({ showNotification, userRole }) => {
                                         e.target.nextSibling.style.display = 'flex';
                                       }}
                                     />
-                                    <Box 
+                                    <Box
                                       sx={{
                                         display: 'none',
                                         width: '100%',
@@ -869,10 +881,10 @@ const OperationPage = ({ showNotification, userRole }) => {
                                     </Box>
                                   </Box>
                                 ) : (
-                                  <Box 
-                                    sx={{ 
-                                      width: '100%', 
-                                      height: 200, 
+                                  <Box
+                                    sx={{
+                                      width: '100%',
+                                      height: 200,
                                       display: 'flex',
                                       alignItems: 'center',
                                       justifyContent: 'center',
@@ -891,25 +903,25 @@ const OperationPage = ({ showNotification, userRole }) => {
                                     </Stack>
                                   </Box>
                                 )}
-                                
+
                                 <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
                                   {design.description || 'უსახელო ფაილი'}
                                 </Typography>
-                                
+
                                 <Typography variant="caption" color="text.secondary" display="block">
                                   ატვირთულია: {new Date(design.uploaded_at).toLocaleDateString('ka-GE')}
                                 </Typography>
-                                
+
                                 {design.uploaded_by && (
                                   <Typography variant="caption" color="text.secondary" display="block">
-                                    ატვირთა: {design.uploaded_by}
+                                    ატვირთვა: {design.uploaded_by}
                                   </Typography>
                                 )}
                               </CardContent>
-                              
+
                               <CardActions sx={{ pt: 0, justifyContent: 'space-between' }}>
-                                <Button 
-                                  size="small" 
+                                <Button
+                                  size="small"
                                   startIcon={<Image />}
                                   onClick={() => window.open(design.design_url, '_blank')}
                                 >
