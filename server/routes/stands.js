@@ -123,7 +123,8 @@ router.get('/events/:eventId/stands', authenticateToken, async (req, res) => {
             eb.booking_date,
             e.code_name as equipment_name,
             e.description as equipment_description,
-            e.price as equipment_price
+            e.price as equipment_price,
+            e.image_url
           FROM equipment_bookings eb
           JOIN equipment e ON eb.equipment_id = e.id
           WHERE eb.participant_id = $1
@@ -139,6 +140,7 @@ router.get('/events/:eventId/stands', authenticateToken, async (req, res) => {
           equipment_price: parseFloat(eq.equipment_price) || 0,
           quantity: parseInt(eq.quantity) || 0,
           booking_date: eq.booking_date,
+          image_url: eq.image_url || null,
           total_equipment_price: (parseFloat(eq.equipment_price) || 0) * (parseInt(eq.quantity) || 0)
         }));
       } catch (equipError) {

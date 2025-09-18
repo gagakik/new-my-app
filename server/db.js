@@ -358,24 +358,31 @@ const addMissingColumns = async () => {
   }
 };
 
-// Function to add image_url column to equipment table if it doesn't exist
-const addImageUrlColumn = async () => {
+// Function to add missing columns to equipment table if they don't exist
+const addEquipmentColumns = async () => {
   try {
-    const checkColumn = await query(`
-      SELECT column_name
-      FROM information_schema.columns
-      WHERE table_name = 'equipment'
-      AND column_name = 'image_url'
-    `);
+    const requiredColumns = [
+      { name: 'image_url', type: 'VARCHAR(500)' },
+      { name: 'updated_at', type: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' },
+      { name: 'updated_by_id', type: 'INTEGER' }
+    ];
 
-    if (checkColumn.rows.length === 0) {
-      await query("ALTER TABLE equipment ADD COLUMN image_url VARCHAR(500)");
-      console.log("image_url სვეტი დაემატა equipment ცხრილში");
-    } else {
-      console.log("image_url სვეტი უკვე არსებობს equipment ცხრილში");
+    for (const column of requiredColumns) {
+      const checkColumn = await query(`
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name = 'equipment'
+        AND column_name = $1
+      `, [column.name]);
+
+      if (checkColumn.rows.length === 0) {
+        await query(`ALTER TABLE equipment ADD COLUMN ${column.name} ${column.type}`);
+        console.log(`${column.name} სვეტი დამატებულია equipment ცხრილში`);
+      }
     }
+    console.log("Equipment table ყველა საჭირო სვეტით მზადაა!");
   } catch (error) {
-    console.error("image_url სვეტის დამატების შეცდომა:", error);
+    console.error("Equipment table-ის სვეტების დამატების შეცდომა:", error);
   }
 };
 
@@ -383,7 +390,7 @@ const initializeDatabase = async () => {
   try {
     await createTables();
     await addMissingColumns();
-    await addImageUrlColumn();
+    await addEquipmentColumns();
     console.log("ბაზის ინიციალიზაცია დასრულებულია.");
   } catch (error) {
     console.error("ბაზის ინიციალიზაციის შეცდომა:", error);

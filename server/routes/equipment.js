@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
@@ -42,12 +41,12 @@ const authorizeRoles = (...roles) => {
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     const uploadsDir = path.join(__dirname, '../uploads');
-    
+
     // შევქმნათ uploads დირექტორია თუ არ არსებობს
     if (!fs.existsSync(uploadsDir)) {
       fs.mkdirSync(uploadsDir, { recursive: true });
     }
-    
+
     cb(null, uploadsDir);
   },
   filename: function (req, file, cb) {
@@ -77,17 +76,40 @@ router.get('/', authenticateToken, async (req, res) => {
   try {
     const result = await db.query(`
       SELECT 
-        e.*,
+        e.id,
+        e.code_name,
+        e.quantity,
+        e.price,
+        e.description,
+        e.image_url,
+        e.created_at,
+        e.updated_at,
+        e.created_by_id,
+        e.updated_by_id,
         u1.username as created_by
       FROM equipment e
       LEFT JOIN users u1 ON e.created_by_id = u1.id
       ORDER BY e.created_at DESC
     `);
-    
-    res.json(result.rows);
+
+    // Format image URLs properly
+    const equipmentWithFormattedUrls = result.rows.map(equipment => ({
+      ...equipment,
+      image_url: equipment.image_url ? 
+        (equipment.image_url.startsWith('http') ? 
+          equipment.image_url : 
+          `${equipment.image_url}`
+        ) : null
+    }));
+
+    res.json(equipmentWithFormattedUrls);
   } catch (error) {
     console.error('აღჭურვილობის მიღების შეცდომა:', error);
-    res.status(500).json({ message: 'აღჭურვილობის მიღება ვერ მოხერხდა' });
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      message: 'აღჭურვილობის მიღება ვერ მოხერხდა',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
   }
 });
 
@@ -97,7 +119,16 @@ router.get('/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const result = await db.query(`
       SELECT 
-        e.*,
+        e.id,
+        e.code_name,
+        e.quantity,
+        e.price,
+        e.description,
+        e.image_url,
+        e.created_at,
+        e.updated_at,
+        e.created_by_id,
+        e.updated_by_id,
         u1.username as created_by
       FROM equipment e
       LEFT JOIN users u1 ON e.created_by_id = u1.id
@@ -108,7 +139,13 @@ router.get('/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ message: 'აღჭურვილობა ვერ მოიძებნა' });
     }
 
-    res.json(result.rows[0]);
+    const equipment = result.rows[0];
+    // Format image URL properly
+    if (equipment.image_url && !equipment.image_url.startsWith('http')) {
+      equipment.image_url = equipment.image_url;
+    }
+
+    res.json(equipment);
   } catch (error) {
     console.error('აღჭურვილობის მიღების შეცდომა:', error);
     res.status(500).json({ message: 'აღჭურვილობის მიღება ვერ მოხერხდა' });
@@ -120,7 +157,7 @@ router.post('/', authenticateToken, authorizeRoles('admin', 'operation'), upload
   try {
     const { code_name, quantity, price, description } = req.body;
     const userId = req.user.id;
-    
+
     let imageUrl = null;
     if (req.file) {
       imageUrl = `/uploads/${req.file.filename}`;
@@ -148,7 +185,7 @@ router.put('/:id', authenticateToken, authorizeRoles('admin', 'operation'), uplo
     const { id } = req.params;
     const { code_name, quantity, price, description, image_url_existing } = req.body;
     const userId = req.user.id;
-    
+
     // ჯერ შევამოწმოთ არსებობს თუ არა ეს აღჭურვილობა
     const existingResult = await db.query('SELECT * FROM equipment WHERE id = $1', [id]);
     if (existingResult.rows.length === 0) {
@@ -158,7 +195,7 @@ router.put('/:id', authenticateToken, authorizeRoles('admin', 'operation'), uplo
     let imageUrl = image_url_existing; // Keep existing image by default
     if (req.file) {
       imageUrl = `/uploads/${req.file.filename}`;
-      
+
       // Delete old image file if it exists
       const oldImageUrl = existingResult.rows[0].image_url;
       if (oldImageUrl && oldImageUrl.startsWith('/uploads/')) {
@@ -192,7 +229,7 @@ router.put('/:id', authenticateToken, authorizeRoles('admin', 'operation'), uplo
 router.delete('/:id', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     // შევამოწმოთ არსებობს თუ არა
     const existingResult = await db.query('SELECT id FROM equipment WHERE id = $1', [id]);
     if (existingResult.rows.length === 0) {
@@ -208,10 +245,6 @@ router.delete('/:id', authenticateToken, authorizeRoles('admin', 'manager'), asy
     res.status(500).json({ message: 'აღჭურვილობის წაშლა ვერ მოხერხდა' });
   }
 });
-
-module.exports = router;
-
-
 
 // POST /api/equipment/:id/maintenance - მოვლის გეგმის დამატება
 router.post('/:id/maintenance', async (req, res) => {
@@ -241,7 +274,7 @@ router.post('/:id/maintenance', async (req, res) => {
 router.get('/:id/maintenance', async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const result = await db.query(`
       SELECT 
         em.*,
@@ -251,7 +284,7 @@ router.get('/:id/maintenance', async (req, res) => {
       WHERE em.equipment_id = $1
       ORDER BY em.scheduled_date DESC
     `, [id]);
-    
+
     res.json(result.rows);
   } catch (error) {
     console.error('მოვლის ისტორიის მიღების შეცდომა:', error);
@@ -287,7 +320,7 @@ router.put('/:id/maintenance/:maintenanceId', async (req, res) => {
 router.get('/realtime-availability/:eventId', async (req, res) => {
   try {
     const { eventId } = req.params;
-    
+
     const result = await db.query(`
       SELECT 
         e.*,
@@ -314,7 +347,7 @@ router.get('/realtime-availability/:eventId', async (req, res) => {
       ) maintenance ON e.id = maintenance.equipment_id
       ORDER BY e.code_name
     `, [eventId]);
-    
+
     res.json(result.rows);
   } catch (error) {
     console.error('რეალურ დროში ხელმისაწვდომობის შეცდომა:', error);
@@ -328,7 +361,7 @@ router.post('/:id/damage-report', upload.array('damage_photos', 10), async (req,
     const { id } = req.params;
     const { damage_description, severity, reported_by, incident_date } = req.body;
     const userId = req.user.id;
-    
+
     let photoUrls = [];
     if (req.files && req.files.length > 0) {
       photoUrls = req.files.map(file => `/uploads/${file.filename}`);
@@ -351,3 +384,4 @@ router.post('/:id/damage-report', upload.array('damage_photos', 10), async (req,
   }
 });
 
+module.exports = router;
