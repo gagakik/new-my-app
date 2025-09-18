@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box,
+  Autocomplete,
   Typography,
   Button,
   Card,
@@ -1126,7 +1127,17 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                   onClick={resetFilters}
                   startIcon={<Clear />}
                   size="small"
-                  sx={{ height: '40px', color:'#fff' }}
+                  sx={{
+                            background: '#ffffffff',
+                            color: '#000000ff',
+                            textTransform: 'none',
+                            boxShadow: '0 0 5px #745ba7',
+                            px: 1,
+                            py: 1,
+                            borderRadius: 2,
+                            '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7' },
+                            transition: 'all 0.2s ease'
+                          }}
                   
                 >
                   ფილტრების გასუფთავება
@@ -1283,7 +1294,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
               <form onSubmit={handleSubmit}>
                 <Grid container spacing={3} >
                   <Grid item xs={12}>
-                    <FormControl fullWidth required >
+                    <FormControl fullWidth required sx={{ mb: 1, minWidth: '400px' }}>
                       <InputLabel >კომპანია</InputLabel>
                       <Select 
                         value={formData.company_id}
@@ -1292,7 +1303,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                       >
                         {companies.map(company => (
                           <MenuItem key={company.id} value={company.id} >
-                            {company.company_name} ({company.country})
+                            {company.company_name} 
                           </MenuItem>
                         ))}
                       </Select>
@@ -1300,17 +1311,17 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                   </Grid>
 
                   {/* სტენდის ინფორმაცია */}
-                  <Grid item xs={12} >
+                  <Grid item xs={12} sx={{ mb: 3, display: 'flex', justifyContent: 'center', alignItems: 'center' }} >
                     <Accordion defaultExpanded >
-                      <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 3, marginBottom: 2 }}>
+                      <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 3, marginBottom: 2}}>
                         <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1}}>
                           <LocationOn />
                           სტენდის ინფორმაცია
                         </Typography>
                       </AccordionSummary>
-                      <AccordionDetails>
+                      <AccordionDetails sx={{ mb: 1, p: 1}}>
                         <Grid container spacing={2}>
-                          <Grid item xs={12}>
+                          <Grid item xs={12} sx={{ mb: 1, mt: 1, display: 'flex', alignItems: 'center', gap: 2 }}>
                             <Typography variant="subtitle2" sx={{ mb: 1 }}>რეგისტრაციის ტიპი</Typography>
                             <RadioGroup
                               row
@@ -1345,8 +1356,8 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                             </FormControl>
                           </Grid>
                           <Grid item xs={6}>
-                            <FormControl fullWidth>
-                              <InputLabel>ტიპი</InputLabel>
+                            <FormControl fullWidth >
+                              <InputLabel >ტიპი</InputLabel>
                               <Select
                                 value={formData.booth_type}
                                 onChange={(e) => setFormData(prev => ({ ...prev, booth_type: e.target.value }))}
@@ -1764,9 +1775,10 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                   </Grid>
 
                   {/* დოკუმენტები */}
-                  <Grid item xs={12}>
+                  <Grid item xs={12} sx={{ mb: 1, mt: 1, display: 'flex', alignItems: 'center', gap: 2, flexDirection: 'column', width: '100%' }}>
+                  <Grid item xs={12} sx={{ width: '100%' }}>
                     <Accordion>
-                      <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 3, marginBottom: 2 }}>
+                      <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 3, marginBottom: 0, borderRadius: 1 }}>
                         <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <AttachFile />
                           დოკუმენტების მიმაგრება
@@ -1827,7 +1839,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                     </Accordion>
                   </Grid>
 
-                  <Grid item xs={12}>
+                  <Grid item xs={12} sx={{ mt: 1, mb: 1, width: '100%' }}>
                     <TextField
                       fullWidth
                       label="შენიშვნები"
@@ -1837,6 +1849,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                       onChange={(e) => setFormData({...formData, notes: e.target.value})}
                     />
                   </Grid>
+                </Grid>
                 </Grid>
 
                 <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 3, pt: 2, borderTop: '1px solid #e2e8f0' }}>
@@ -2026,7 +2039,17 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                                   size="small"
                                   onClick={() => showCompanyDetailsModal(participant)}
                                   disabled={loadingCompanyDetails}
-                                  sx={{ color: '#ffffffff' }}
+                                  sx={{
+                            background: '#ffffffff',
+                            color: '#000000ff',
+                            textTransform: 'none',
+                            boxShadow: '0 0 5px #745ba7',
+                            px: 0.5,
+                            py: 0.5,
+                            borderRadius: 2,
+                            '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7' },
+                            transition: 'all 0.2s ease'
+                          }}
                                 >
                                   <Business fontSize="small" />
                                 </IconButton>
@@ -2035,7 +2058,17 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                                 <IconButton
                                   size="small"
                                   onClick={() => handleGenerateInvoice(participant)}
-                                  sx={{ color: '#ffffffff' }}
+                                  sx={{
+                            background: '#ffffffff',
+                            color: '#000000ff',
+                            textTransform: 'none',
+                            boxShadow: '0 0 5px #745ba7',
+                            px: 0.5,
+                            py: 0.5,
+                            borderRadius: 2,
+                            '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7' },
+                            transition: 'all 0.2s ease'
+                          }}
                                 >
                                   <Receipt fontSize="small" />
                                 </IconButton>
