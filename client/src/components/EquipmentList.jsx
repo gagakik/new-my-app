@@ -137,15 +137,38 @@ const EquipmentList = ({ showNotification, userRole }) => {
     console.log('Processing image URL:', url);
 
     let cleanUrl = url;
-    if (cleanUrl.startsWith('http://0.0.0.0:5000/uploads/')) {
-      cleanUrl = cleanUrl.replace('http://0.0.0.0:5000/uploads/', '');
+    
+    // Handle different URL formats
+    if (cleanUrl.startsWith('http://localhost:') || cleanUrl.startsWith('http://0.0.0.0:')) {
+      // Extract the path part after /uploads/
+      const uploadsPart = cleanUrl.match(/\/uploads\/(.+)$/);
+      if (uploadsPart) {
+        cleanUrl = uploadsPart[1];
+      }
     } else if (cleanUrl.startsWith('/uploads/')) {
       cleanUrl = cleanUrl.replace('/uploads/', '');
     } else if (cleanUrl.startsWith('uploads/')) {
       cleanUrl = cleanUrl.replace('uploads/', '');
     }
 
-    return `/uploads/${cleanUrl}`;
+    // Ensure we have a clean filename
+    if (cleanUrl.includes('/')) {
+      const parts = cleanUrl.split('/');
+      cleanUrl = parts[parts.length - 1]; // Get the last part (filename)
+    }
+
+    const finalUrl = `/uploads/${cleanUrl}`;
+    console.log('Final processed URL:', finalUrl);
+    return finalUrl;
+  };
+
+  // სურათის შეცდომის დამმუშავებელი ფუნქცია
+  const handleImageError = (e, imageUrl) => {
+    console.error('სურათის ჩატვირთვის შეცდომა:', imageUrl);
+    
+    // Try to show a placeholder instead of hiding
+    e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik0yMCAyMEg0MFY0MEgyMFYyMFoiIGZpbGw9IiNDQ0NDQ0MiLz4KPC9zdmc+';
+    e.target.alt = 'სურათი ვერ იტვირთება';
   };
 
   if (loading) {

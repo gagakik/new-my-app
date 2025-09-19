@@ -92,15 +92,30 @@ router.get('/', authenticateToken, async (req, res) => {
       ORDER BY e.created_at DESC
     `);
 
-    // Format image URLs properly
-    const equipmentWithFormattedUrls = result.rows.map(equipment => ({
-      ...equipment,
-      image_url: equipment.image_url ? 
-        (equipment.image_url.startsWith('http') ? 
-          equipment.image_url : 
-          `${equipment.image_url}`
-        ) : null
-    }));
+    // Format image URLs properly and check file existence
+    const equipmentWithFormattedUrls = result.rows.map(equipment => {
+      let formattedImageUrl = null;
+      
+      if (equipment.image_url) {
+        if (equipment.image_url.startsWith('http')) {
+          formattedImageUrl = equipment.image_url;
+        } else {
+          formattedImageUrl = equipment.image_url;
+          
+          // Check if file exists on server
+          const filePath = path.join(__dirname, '..', equipment.image_url);
+          if (!fs.existsSync(filePath)) {
+            console.warn(`Image file not found: ${filePath} for equipment ${equipment.id}`);
+            formattedImageUrl = null; // Set to null if file doesn't exist
+          }
+        }
+      }
+      
+      return {
+        ...equipment,
+        image_url: formattedImageUrl
+      };
+    });
 
     res.json(equipmentWithFormattedUrls);
   } catch (error) {
@@ -161,6 +176,12 @@ router.post('/', authenticateToken, authorizeRoles('admin', 'operation'), upload
     let imageUrl = null;
     if (req.file) {
       imageUrl = `/uploads/${req.file.filename}`;
+      console.log('File uploaded successfully:', {
+        filename: req.file.filename,
+        path: req.file.path,
+        size: req.file.size,
+        imageUrl: imageUrl
+      });
     }
 
     const result = await db.query(
@@ -169,12 +190,18 @@ router.post('/', authenticateToken, authorizeRoles('admin', 'operation'), upload
       [code_name, parseInt(quantity), parseFloat(price), description, imageUrl, userId]
     );
 
+    console.log('Equipment created with image URL:', result.rows[0].image_url);
+
     res.status(201).json({
       message: 'აღჭურვილობა წარმატებით დაემატა!',
       equipment: result.rows[0]
     });
   } catch (error) {
     console.error('აღჭურვილობის დამატების შეცდომა:', error);
+    console.error('Error details:', error.message);
+    if (req.file) {
+      console.error('File info:', req.file);
+    }
     res.status(500).json({ message: 'აღჭურვილობის დამატება ვერ მოხერხდა' });
   }
 });
