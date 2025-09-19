@@ -130,8 +130,8 @@ const OperationPage = ({ showNotification }) => {
         setError('ივენთების ჩატვირთვის შეცდომა');
         showNotification('ივენთების მიღება ვერ მოხერხდა', 'error');
       }
-    } catch (err) {
-      console.error('Error fetching events:', err);
+    } catch (_error) {
+      console.error('Error fetching events:', _error);
       setError('სერვერთან კავშირის შეცდომა');
       showNotification('შეცდომა მონაცემების ჩატვირთვისას', 'error');
     } finally {
@@ -158,8 +158,8 @@ const OperationPage = ({ showNotification }) => {
       } else {
         showNotification('სტენდების მიღება ვერ მოხერხდა', 'error');
       }
-    } catch (err) {
-      console.error('Error fetching stands:', err);
+    } catch (_error) {
+      console.error('Error fetching stands:', _error);
       setLoading(false);
       showNotification('შეცდომა სტენდების ჩატვირთვისას', 'error');
     }
@@ -176,8 +176,8 @@ const OperationPage = ({ showNotification }) => {
         const data = await response.json();
         setAllEquipment(data);
       }
-    } catch (err) {
-      console.error('აღჭურვილობის მიღების შეცდომა:', err);
+    } catch (_error) {
+      console.error('აღჭურვილობის მიღების შეცდომა:', _error);
     }
   }, []);
 
@@ -214,8 +214,8 @@ const OperationPage = ({ showNotification }) => {
         const errorData = await response.json();
         showNotification(errorData.message || 'შეცდომა სტენდის დამატებისას', 'error');
       }
-    } catch (err) {
-      console.error('შეცდომა:', err);
+    } catch (_error) {
+      console.error('შეცდომა:', _error);
       showNotification('შეცდომა ქსელურ მოთხოვნაში', 'error');
     }
   };
@@ -241,8 +241,8 @@ const OperationPage = ({ showNotification }) => {
         const errorData = await response.json();
         showNotification(errorData.message || 'შეცდომა აღჭურვილობის დამატებისას', 'error');
       }
-    } catch (err) {
-      console.error('შეცდომა:', err);
+    } catch (_error) {
+      console.error('შეცდომა:', _error);
       showNotification('შეცდომა ქსელურ მოთხოვნაში', 'error');
     }
   };
@@ -283,8 +283,8 @@ const OperationPage = ({ showNotification }) => {
         const errorData = await response.json();
         showNotification(errorData.message || 'შეცდომა ფაილების ატვირთვისას', 'error');
       }
-    } catch (err) {
-      console.error('შეცდომა:', err);
+    } catch (_error) {
+      console.error('შეცდომა:', _error);
       showNotification('შეცდომა ქსელურ მოთხოვნაში', 'error');
     }
   };
@@ -303,8 +303,8 @@ const OperationPage = ({ showNotification }) => {
       } else {
         showNotification('ფაილის წაშლა ვერ მოხერხდა', 'error');
       }
-    } catch (err) {
-      console.error('შეცდომა:', err);
+    } catch (_error) {
+      console.error('შეცდომა:', _error);
       showNotification('შეცდომა ქსელურ მოთხოვნაში', 'error');
     }
   };
@@ -328,8 +328,8 @@ const OperationPage = ({ showNotification }) => {
         const errorData = await response.json();
         showNotification(errorData.message || 'სტატუსის განახლება ვერ მოხერხდა', 'error');
       }
-    } catch (err) {
-      console.error('სტატუსის განახლების შეცდომა:', err);
+    } catch (_error) {
+      console.error('სტატუსის განახლების შეცდომა:', _error);
       showNotification('შეცდომა ქსელურ მოთხოვნაში', 'error');
     }
   };
@@ -380,7 +380,7 @@ const OperationPage = ({ showNotification }) => {
     try {
       const date = new Date(dateString);
       return date.toLocaleDateString('ka-GE');
-    } catch (err) {
+    } catch (_error) {
       return dateString;
     }
   };
@@ -658,12 +658,7 @@ const OperationPage = ({ showNotification }) => {
                           </Typography>
                           <Typography variant="body1"><strong>სტენდის ტიპი:</strong> {selectedStand.booth_type || 'N/A'}</Typography>
                           <Typography variant="body1"><strong>კატეგორია:</strong> {selectedStand.booth_category || 'N/A'}</Typography>
-                          {selectedStand.price_per_sqm && (
-                            <Typography variant="body1"><strong>ფასი მ²-ზე:</strong> ₾{selectedStand.price_per_sqm}</Typography>
-                          )}
-                          {selectedStand.total_price && (
-                            <Typography variant="body1"><strong>საერთო ღირებულება:</strong> ₾{selectedStand.total_price}</Typography>
-                          )}
+                          
                           <Box sx={{ mt: 2 }}>
                             <Typography variant="body2" sx={{ mb: 1 }}>
                               <strong>სტატუსი:</strong>
@@ -797,9 +792,6 @@ const OperationPage = ({ showNotification }) => {
                                   <Typography variant="body2">
                                     რაოდენობა: {equipment.quantity}
                                   </Typography>
-                                  <Typography variant="body2">
-                                    ფასი: ₾{equipment.equipment_price}
-                                  </Typography>
                                 </Box>
                               </Box>
                             </CardContent>
@@ -903,10 +895,6 @@ const OperationPage = ({ showNotification }) => {
                                     </Stack>
                                   </Box>
                                 )}
-
-                                <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
-                                  {design.description || 'უსახელო ფაილი'}
-                                </Typography>
 
                                 <Typography variant="caption" color="text.secondary" display="block">
                                   ატვირთულია: {new Date(design.uploaded_at).toLocaleDateString('ka-GE')}

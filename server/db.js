@@ -386,11 +386,48 @@ const addEquipmentColumns = async () => {
   }
 };
 
+// Function to create stand_designs table if it doesn't exist
+const createStandDesignsTable = async () => {
+  try {
+    console.log("🔧 შევამოწმებთ stand_designs ცხრილს...");
+
+    // Check if table exists
+    const tableExists = await query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_name = 'stand_designs'
+      );
+    `);
+
+    if (!tableExists.rows[0].exists) {
+      console.log('📋 stand_designs ცხრილი არ არსებობს, ვქმნით...');
+      
+      await query(`
+        CREATE TABLE stand_designs (
+          id SERIAL PRIMARY KEY,
+          stand_id INTEGER REFERENCES event_participants(id) ON DELETE CASCADE,
+          design_file_url VARCHAR(500) NOT NULL,
+          description TEXT,
+          uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      
+      console.log('✅ stand_designs ცხრილი შეიქმნა!');
+    } else {
+      console.log('✓ stand_designs ცხრილი უკვე არსებობს');
+    }
+
+  } catch (error) {
+    console.error('❌ შეცდომა stand_designs ცხრილის შექმნისას:', error);
+  }
+};
+
 const initializeDatabase = async () => {
   try {
     await createTables();
     await addMissingColumns();
     await addEquipmentColumns();
+    await createStandDesignsTable();
     console.log("ბაზის ინიციალიზაცია დასრულებულია.");
   } catch (error) {
     console.error("ბაზის ინიციალიზაციის შეცდომა:", error);

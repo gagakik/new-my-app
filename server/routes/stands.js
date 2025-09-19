@@ -155,12 +155,13 @@ router.get('/events/:eventId/stands', authenticateToken, async (req, res) => {
       try {
         const designResult = await db.query(`
           SELECT 
-            sd.*,
-            u.username as uploaded_by_username
+            sd.id,
+            sd.design_file_url,
+            sd.description,
+            COALESCE(sd.uploaded_at, CURRENT_TIMESTAMP) as uploaded_at
           FROM stand_designs sd
-          LEFT JOIN users u ON sd.uploaded_by_user_id = u.id
           WHERE sd.stand_id = $1
-          ORDER BY sd.uploaded_at DESC
+          ORDER BY COALESCE(sd.uploaded_at, CURRENT_TIMESTAMP) DESC
         `, [participant.participant_id]);
 
         console.log(`🎨 მონაწილისთვის ${participant.company_name} ნაპოვნი დიზაინის ფაილები: ${designResult.rows.length}`);
@@ -169,8 +170,7 @@ router.get('/events/:eventId/stands', authenticateToken, async (req, res) => {
           design_id: design.id,
           design_url: design.design_file_url,
           description: design.description,
-          uploaded_at: design.uploaded_at,
-          uploaded_by: design.uploaded_by_username || 'უცნობი'
+          uploaded_at: design.uploaded_at
         }));
       } catch (designError) {
         console.log('⚠️ დიზაინის ფაილების მიღების შეცდომა:', designError.message);
@@ -294,9 +294,8 @@ router.post('/events/:eventId/stands/:standId/design', authenticateToken, upload
         CREATE TABLE IF NOT EXISTS stand_designs (
           id SERIAL PRIMARY KEY,
           stand_id INTEGER REFERENCES event_participants(id) ON DELETE CASCADE,
-          design_file_url VARCHAR(500),
+          design_file_url VARCHAR(500) NOT NULL,
           description TEXT,
-          uploaded_by_user_id INTEGER REFERENCES users(id),
           uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);
@@ -308,12 +307,13 @@ router.post('/events/:eventId/stands/:standId/design', authenticateToken, upload
     for (const file of req.files) {
       const fileUrl = `/uploads/stands/${file.filename}`;
 
-      const result = await db.query(`
-        INSERT INTO stand_designs (stand_id, design_file_url, description, uploaded_by_user_id)
-        VALUES ($1, $2, $3, $4) RETURNING *
-      `, [standId, fileUrl, description || file.originalname, userId]);
+      // Insert into stand_designs table
+        const designResult = await db.query(`
+          INSERT INTO stand_designs (stand_id, design_file_url, description)
+          VALUES ($1, $2, $3) RETURNING *
+        `, [standId, fileUrl, description || file.originalname]);
 
-      uploadedFiles.push(result.rows[0]);
+      uploadedFiles.push(designResult.rows[0]);
       console.log(`✅ ფაილი შენახულია: ${fileUrl}`);
     }
 
@@ -347,15 +347,22 @@ router.get('/events/:eventId/stands/:standId/design', authenticateToken, async (
     }
 
     // მივიღოთ დიზაინის ფაილები
-    const designFiles = await db.query(`
-      SELECT 
-        sd.*,
-        u.username as uploaded_by_username
-      FROM stand_designs sd
-      LEFT JOIN users u ON sd.uploaded_by_user_id = u.id
-      WHERE sd.stand_id = $1
-      ORDER BY sd.uploaded_at DESC
-    `, [standId]);
+    let designFiles;
+    try {
+      designFiles = await db.query(`
+        SELECT 
+          sd.id,
+          sd.design_file_url,
+          sd.description,
+          COALESCE(sd.uploaded_at, CURRENT_TIMESTAMP) as uploaded_at
+        FROM stand_designs sd
+        WHERE sd.stand_id = $1
+        ORDER BY COALESCE(sd.uploaded_at, CURRENT_TIMESTAMP) DESC
+      `, [standId]);
+    } catch (queryError) {
+      console.log('⚠️ დიზაინის ფაილების მიღების შეცდომა:', queryError.message);
+      designFiles = { rows: [] };
+    }
 
     console.log(`✅ მოიძებნა ${designFiles.rows.length} დიზაინის ფაილი`);
     res.json(designFiles.rows);

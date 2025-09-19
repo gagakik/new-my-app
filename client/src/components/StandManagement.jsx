@@ -48,7 +48,8 @@ import {
   ExpandMore,
   Upload,
   Assignment,
-  BuildCircle
+  BuildCircle,
+  Description
 } from '@mui/icons-material';
 
 const StandManagement = ({ eventId, eventName, onClose, showNotification, userRole }) => {
@@ -78,15 +79,15 @@ const StandManagement = ({ eventId, eventName, onClose, showNotification, userRo
     userRole === 'manager';
 
   const standStatuses = [
-    'დაგეგმილი',
-    'დიზაინის ეტაპი', 
-    'მშენებლობა დაწყებული',
-    'მშენებლობა მიმდინარეობს',
-    'ელექტრობის მოწყობა',
-    'დასრულების ეტაპი',
-    'დასრულებული',
-    'ჩაბარებული',
-    'გადაუდებელი ყურადღება'
+    { value: 'დაგეგმილი', color: '#2196f3', icon: <Assignment /> },
+    { value: 'დიზაინის ეტაპი', color: '#ff9800', icon: <Description /> },
+    { value: 'მშენებლობა დაწყებული', color: '#9c27b0', icon: <Construction /> },
+    { value: 'მშენებლობა მიმდინარეობს', color: '#3f51b5', icon: <Construction /> },
+    { value: 'ელექტრობის მოწყობა', color: '#673ab7', icon: <Engineering /> },
+    { value: 'დასრულების ეტაპი', color: '#009688', icon: <Construction /> },
+    { value: 'დასრულებული', color: '#4caf50', icon: <CheckCircle /> },
+    { value: 'ჩაბარებული', color: '#8bc34a', icon: <CheckCircle /> },
+    { value: 'გადაუდებელი ყურადღება', color: '#f44336', icon: <Warning /> }
   ];
 
   useEffect(() => {
@@ -258,33 +259,13 @@ const StandManagement = ({ eventId, eventName, onClose, showNotification, userRo
   };
 
   const getStatusColor = (status) => {
-    const statusMap = {
-      'დაგეგმილი': 'default',
-      'დიზაინის ეტაპი': 'secondary',
-      'მშენებლობა დაწყებული': 'warning',
-      'მშენებლობა მიმდინარეობს': 'info',
-      'ელექტრობის მოწყობა': 'info',
-      'დასრულების ეტაპი': 'primary',
-      'დასრულებული': 'success',
-      'ჩაბარებული': 'success',
-      'გადაუდებელი ყურადღება': 'error'
-    };
-    return statusMap[status] || 'default';
+    const statusConfig = standStatuses.find(s => s.value === status);
+    return statusConfig ? statusConfig.color : '#2196f3';
   };
 
   const getStatusIcon = (status) => {
-    const iconMap = {
-      'დაგეგმილი': <Schedule />,
-      'დიზაინის ეტაპი': <Assignment />,
-      'მშენებლობა დაწყებული': <Construction />,
-      'მშენებლობა მიმდინარეობს': <BuildCircle />,
-      'ელექტრობის მოწყობა': <Engineering />,
-      'დასრულების ეტაპი': <Construction />,
-      'დასრულებული': <CheckCircle />,
-      'ჩაბარებული': <CheckCircle />,
-      'გადაუდებელი ყურადღება': <Warning />
-    };
-    return iconMap[status] || <Schedule />;
+    const statusConfig = standStatuses.find(s => s.value === status);
+    return statusConfig ? statusConfig.icon : <Schedule />;
   };
 
   if (loading) {
@@ -357,7 +338,7 @@ const StandManagement = ({ eventId, eventName, onClose, showNotification, userRo
                 >
                   <MenuItem value="">ყველა სტატუსი</MenuItem>
                   {standStatuses.map(status => (
-                    <MenuItem key={status} value={status}>{status}</MenuItem>
+                    <MenuItem key={status.value} value={status.value}>{status.value}</MenuItem>
                   ))}
                 </Select>
               </FormControl>
@@ -434,7 +415,7 @@ const StandManagement = ({ eventId, eventName, onClose, showNotification, userRo
                       label="სტატუსი"
                     >
                       {standStatuses.map(status => (
-                        <MenuItem key={status} value={status}>{status}</MenuItem>
+                        <MenuItem key={status.value} value={status.value}>{status.value}</MenuItem>
                       ))}
                     </Select>
                   </FormControl>
@@ -584,11 +565,12 @@ const StandManagement = ({ eventId, eventName, onClose, showNotification, userRo
                     height: '100%',
                     borderRadius: 2,
                     transition: 'all 0.3s ease',
-                    borderLeft: `4px solid`,
-                    borderLeftColor: `${getStatusColor(stand.stand_status)}.main`,
+                    borderLeft: `4px solid ${getStatusColor(stand.stand_status)}`,
+                    background: `linear-gradient(135deg, ${getStatusColor(stand.stand_status)}10 0%, ${getStatusColor(stand.stand_status)}05 100%)`,
                     '&:hover': {
                       transform: 'translateY(-4px)',
-                      boxShadow: 6
+                      boxShadow: `0 8px 25px ${getStatusColor(stand.stand_status)}40`,
+                      background: `linear-gradient(135deg, ${getStatusColor(stand.stand_status)}20 0%, ${getStatusColor(stand.stand_status)}10 100%)`
                     }
                   }}
                 >
@@ -606,9 +588,16 @@ const StandManagement = ({ eventId, eventName, onClose, showNotification, userRo
                       <Chip
                         icon={getStatusIcon(stand.stand_status)}
                         label={stand.stand_status}
-                        color={getStatusColor(stand.stand_status)}
                         size="small"
-                        variant="outlined"
+                        variant="filled"
+                        sx={{ 
+                          backgroundColor: getStatusColor(stand.stand_status),
+                          color: 'white',
+                          fontWeight: 'bold',
+                          '& .MuiChip-icon': {
+                            color: 'white'
+                          }
+                        }}
                       />
                     </Box>
 
@@ -627,7 +616,10 @@ const StandManagement = ({ eventId, eventName, onClose, showNotification, userRo
                         sx={{ 
                           height: 8, 
                           borderRadius: 4,
-                          backgroundColor: 'grey.200'
+                          backgroundColor: 'grey.200',
+                          '& .MuiLinearProgress-bar': {
+                            backgroundColor: getStatusColor(stand.stand_status)
+                          }
                         }}
                       />
                     </Box>
@@ -695,7 +687,7 @@ const StandManagement = ({ eventId, eventName, onClose, showNotification, userRo
                           label="სტატუსის შეცვლა"
                         >
                           {standStatuses.map(status => (
-                            <MenuItem key={status} value={status}>{status}</MenuItem>
+                            <MenuItem key={status.value} value={status.value}>{status.value}</MenuItem>
                           ))}
                         </Select>
                       </FormControl>
