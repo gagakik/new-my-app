@@ -447,7 +447,7 @@ const PackageManager = ({ exhibitionId, showNotification }) => {
                 
                 <CardActions>
                   <IconButton
-                   sx={{ px:1, py:0.4, fontSize:'0.7rem', textTransform: 'none',
+                   sx={{ px: 0.5, py: 0.5, fontSize:'0.7rem', textTransform: 'none',
               color:'#000000ff', background: '#ffffffff',boxShadow: '0 0 5px #745ba7',borderRadius:'5px', '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   }   }}
                     variant="outlined"
                     size="small"
@@ -463,8 +463,8 @@ const PackageManager = ({ exhibitionId, showNotification }) => {
                                         color: '#000000ff',
                                         textTransform: 'none',
                                         boxShadow: '0 0 5px #745ba7',
-                                        px: 1,
-                                        py: 1,
+                                        px: 0.5,
+                                        py: 0.5,
                                         borderRadius: 2,
                                         '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   } ,
                                         transition: 'all 0.2s ease'
