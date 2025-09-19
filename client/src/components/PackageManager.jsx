@@ -304,12 +304,24 @@ const PackageManager = ({ exhibitionId, showNotification }) => {
               <Grid item xs={12}>
                 <Paper variant="outlined" sx={{ p: 2, mt: 2 }}>
                   <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} flexDirection={'column'}>
-                    <Typography variant="h6" color="primary">
+                    <Typography variant="h6" color="primary" gap={1} mb={1}>
                       შემავალი აღჭურვილობა
                     </Typography>
                     <Button
-                      sx={{ color: '#fff' }}
-                      variant="outlined"
+                      variant="outlined"                       
+                      sx={{                   
+                            background: '#ffffffff',
+                            color: '#000000ff',
+                            textTransform: 'none',
+                            boxShadow: '0 0 5px #745ba7',
+                            px: 1,
+                            py: 1,
+                            mb: 1,
+                            mr: 0.5,
+                            borderRadius: 2,
+                            '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#ff0000ff' },
+                            transition: 'all 0.2s ease'
+                          }}
                       startIcon={<Add />}
                       onClick={handleEquipmentAdd}
                       size="small"
@@ -321,7 +333,7 @@ const PackageManager = ({ exhibitionId, showNotification }) => {
                   {formData.equipment_list.map((item, index) => (
                     <Grid container spacing={2} key={index} alignItems="center" sx={{ mb: 2 }}>
                       <Grid item xs={6}>
-                        <FormControl fullWidth>
+                        <FormControl fullWidth size='small' variant="outlined" sx={{ width: '200px' }}>
                           <InputLabel>აირჩიეთ</InputLabel>
                           <Select
                             value={item.equipment_id}
@@ -339,9 +351,11 @@ const PackageManager = ({ exhibitionId, showNotification }) => {
 
                       <Grid item xs={4}>
                         <TextField
-                          fullWidth
+                          variant="outlined"
+                          size='small'
                           label="რაოდენობა"
                           type="number"
+                          sx={{ width: '100px' }}
                           inputProps={{ min: 1 }}
                           value={item.quantity}
                           onChange={(e) => handleEquipmentChange(index, 'quantity', parseInt(e.target.value))}
@@ -432,26 +446,34 @@ const PackageManager = ({ exhibitionId, showNotification }) => {
                 <Divider />
                 
                 <CardActions>
-                  <Button
+                  <IconButton
                    sx={{ px:1, py:0.4, fontSize:'0.7rem', textTransform: 'none',
               color:'#000000ff', background: '#ffffffff',boxShadow: '0 0 5px #745ba7',borderRadius:'5px', '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   }   }}
                     variant="outlined"
                     size="small"
-                    startIcon={<Edit />}
+                    
                     onClick={() => handleEditPackage(pkg)}
                   >
-                    EDIT
-                  </Button>
-                  <Button
-                    sx={{ px:1, py:0.4, fontSize:'0.7rem', textTransform: 'none',
-              color:'#ff0000ff', background: '#ffffffff',boxShadow: '0 0 5px #745ba7',borderRadius:'5px', '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#ff0000ff'   }   }}
-                    size="small"
-                    color="error"
+                    <Edit />
+                  </IconButton>
+                  <IconButton
+                                    size="small"
+                                    sx={{
+                                        background: '#ffffffff',
+                                        color: '#000000ff',
+                                        textTransform: 'none',
+                                        boxShadow: '0 0 5px #745ba7',
+                                        px: 1,
+                                        py: 1,
+                                        borderRadius: 2,
+                                        '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7'   } ,
+                                        transition: 'all 0.2s ease'
+                                      }}
                     startIcon={<Delete />}
                     onClick={() => handleDeletePackage(pkg.id)}
                   >
-                    DELETE
-                  </Button>
+                   <Delete />
+                  </IconButton>
                 </CardActions>
               </Card>
             </Grid>
