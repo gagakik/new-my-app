@@ -295,5 +295,82 @@ npm install react-qr-code html2canvas jspdf qrcode qrcode-generator
 6. მონაწილის რეგისტრაციის ფორმაში: ფირზზე წარწერა,
 
 
+შენი პროექტის Git Repo-ს დაკავშირება
+
+თუ ჯერ არ გაქვს დაკავშირებული:
+
+cd /var/www/new-my-app
+git init
+git remote add origin <შენი-git-repo-url>
+git pull origin main
 
 
+(ან თუ უკვე გაქვს, უბრალოდ გააკეთებ pull-ს შემდეგ ნაბიჯში.)
+
+2️⃣ განახლების პროცესი (Manual Deploy)
+
+როცა კოდს შეცვლი ლოკალურად და git push გააკეთებ GitHub-ზე (ან GitLab-ზე), სერვერზე შედიხარ და:
+
+cd /var/www/new-my-app
+
+# 1. ჩაწერე ბოლო ცვლილებები
+git pull origin main
+
+# 2. დააყენე ახალი dependenci-ები (თუ package.json შეიცვალა)
+cd server
+npm install
+
+# 3. გადააგენერირე frontend (თუ client-ში ცვლილებებია)
+cd ../client
+npm install
+npm run build
+
+# 4. გადატვირთე PM2
+cd ../server
+pm2 restart server
+
+
+ამის შემდეგ შენი ახალი ვერსია უკვე იმუშავებს.
+
+3️⃣ PM2-სთვის შენახვა (სერვერის გადატვირთვის შემდეგაც რომ გაშვდეს)
+
+თუ ჯერ არ გაქვს გააქტიურებული:
+
+pm2 save
+pm2 startup
+
+
+ეს ქმნის systemd სკრიპტს, რომ სერვერი გადაიტვირთოს და შენი აპი ისევ გაეშვას.
+
+4️⃣ (Optional) ავტომატური Deploy (Zero Downtime)
+
+როცა გინდა უფრო პროფესიონალური გადაწყვეტილება, შეგიძლია PM2-ს ecosystem.config.js გამოიყენო:
+
+cd /var/www/new-my-app
+pm2 init simple
+nano ecosystem.config.js
+
+
+ჩაწერე:
+
+module.exports = {
+  apps: [
+    {
+      name: "server",
+      script: "./server/server.js",
+      watch: false,
+    },
+  ],
+};
+
+
+შემდეგ:
+
+pm2 start ecosystem.config.js
+pm2 save
+
+git pull origin main
+npm install --prefix server
+npm install --prefix client
+npm run build --prefix client
+pm2 reload ecosystem.config.js
