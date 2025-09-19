@@ -412,7 +412,7 @@ app.use('/api/companies', require('./routes/companies'));
 console.log('✅ Companies route registered');
 app.use('/api/equipment', authenticateToken, require('./routes/equipment'));
 console.log('✅ Equipment route registered');
-app.use('/api/packages', require('./routes/packages'));
+app.use('/api/packages', authenticateToken, require('./routes/packages'));
 console.log('✅ Packages route registered');
 app.use('/api/reports', require('./routes/reports'));
 console.log('✅ Reports route registered');

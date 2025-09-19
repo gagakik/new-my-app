@@ -2,6 +2,26 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const jwt = require('jsonwebtoken');
+
+// Authentication middleware
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ message: 'Access token არ არის მოწოდებული' });
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret', (err, user) => {
+    if (err) {
+      console.log('Token verification failed:', err.message);
+      return res.status(403).json({ message: 'არასწორი token' });
+    }
+    req.user = user;
+    next();
+  });
+};
 
 // GET /api/packages/:exhibitionId - გამოფენის პაკეტების მიღება
 router.get('/:exhibitionId', async (req, res) => {
@@ -35,7 +55,7 @@ router.get('/:exhibitionId', async (req, res) => {
 });
 
 // POST /api/packages - ახალი პაკეტის შექმნა
-router.post('/', async (req, res) => {
+router.post('/', authenticateToken, async (req, res) => {
   try {
     const { 
       exhibition_id, 
@@ -43,39 +63,56 @@ router.post('/', async (req, res) => {
       description, 
       fixed_area_sqm, 
       fixed_price, 
-      equipment_list,
-      is_bundle,
-      bundle_packages,
-      bundle_discount_percent,
-      early_bird_price,
-      early_bird_end_date,
-      last_minute_price,
-      last_minute_start_date
+      equipment_list
     } = req.body;
     const userId = req.user.id;
 
-    // პაკეტის შექმნა
+    console.log('Creating package with data:', {
+      exhibition_id, package_name, description, fixed_area_sqm, fixed_price, userId
+    });
+
+    // Validate required fields
+    if (!exhibition_id || !package_name || !fixed_area_sqm || !fixed_price) {
+      return res.status(400).json({ message: 'სავალდებულო ველები არ არის შევსებული' });
+    }
+
+    // Check if exhibition_packages table exists
+    const tableCheck = await db.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'exhibition_packages'
+      );
+    `);
+    
+    if (!tableCheck.rows[0].exists) {
+      return res.status(500).json({ 
+        message: 'პაკეტების ცხრილი არ არსებობს. გთხოვთ დაუკავშირდეთ ადმინისტრატორს.' 
+      });
+    }
+
+    // პაკეტის შექმნა - simplified insert with only core fields
     const packageResult = await db.query(
       `INSERT INTO exhibition_packages 
-       (exhibition_id, package_name, description, fixed_area_sqm, fixed_price, created_by_user_id,
-        is_bundle, bundle_discount_percent, early_bird_price, early_bird_end_date, 
-        last_minute_price, last_minute_start_date) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
-      [exhibition_id, package_name, description, fixed_area_sqm, fixed_price, userId,
-       is_bundle || false, bundle_discount_percent || 0, early_bird_price, early_bird_end_date,
-       last_minute_price, last_minute_start_date]
+       (exhibition_id, package_name, description, fixed_area_sqm, fixed_price, created_by_user_id) 
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [exhibition_id, package_name, description || '', parseFloat(fixed_area_sqm), parseFloat(fixed_price), userId]
     );
 
     const packageId = packageResult.rows[0].id;
+    console.log('Package created with ID:', packageId);
 
     // აღჭურვილობის დამატება
     if (equipment_list && equipment_list.length > 0) {
+      console.log('Adding equipment to package:', equipment_list);
       for (const equipment of equipment_list) {
-        await db.query(
-          `INSERT INTO package_equipment (package_id, equipment_id, quantity) 
-           VALUES ($1, $2, $3)`,
-          [packageId, equipment.equipment_id, equipment.quantity]
-        );
+        if (equipment.equipment_id && equipment.quantity > 0) {
+          await db.query(
+            `INSERT INTO package_equipment (package_id, equipment_id, quantity) 
+             VALUES ($1, $2, $3)`,
+            [packageId, equipment.equipment_id, parseInt(equipment.quantity)]
+          );
+        }
       }
     }
 
@@ -84,13 +121,29 @@ router.post('/', async (req, res) => {
       package: packageResult.rows[0]
     });
   } catch (error) {
-    console.error('პაკეტის შექმნის შეცდომა:', error);
-    res.status(500).json({ message: 'პაკეტის შექმნა ვერ მოხერხდა' });
+    console.error('❌ პაკეტის შექმნის შეცდომა:', error);
+    console.error('❌ Error code:', error.code);
+    console.error('❌ Error message:', error.message);
+    console.error('❌ Error stack:', error.stack);
+    
+    let errorMessage = 'პაკეტის შექმნა ვერ მოხერხდა';
+    
+    if (error.code === '23503') {
+      errorMessage = 'არასწორი exhibition_id ან user_id';
+    } else if (error.code === '42P01') {
+      errorMessage = 'მონაცემთა ბაზის ცხრილი არ არსებობს';
+    }
+    
+    res.status(500).json({ 
+      message: errorMessage,
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      code: process.env.NODE_ENV === 'development' ? error.code : undefined
+    });
   }
 });
 
 // PUT /api/packages/:id - პაკეტის განახლება
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { 
@@ -140,7 +193,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE /api/packages/:id - პაკეტის წაშლა
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -198,9 +251,17 @@ router.get('/equipment/availability/:eventId', async (req, res) => {
       };
     });
 
+    const equipmentWithAvailability = await Promise.all(availabilityPromises);
+    res.json(equipmentWithAvailability);
+    
+  } catch (error) {
+    console.error('ხელმისაწვდომობის გამოთვლის შეცდომა:', error);
+    res.status(500).json({ message: 'ხელმისაწვდომობის გამოთვლა ვერ მოხერხდა' });
+  }
+});
 
 // POST /api/packages/bundles - ბანდლ პაკეტის შექმნა
-router.post('/bundles', async (req, res) => {
+router.post('/bundles', authenticateToken, async (req, res) => {
   try {
     const { exhibition_id, bundle_name, description, package_ids, discount_percent } = req.body;
     const userId = req.user.id;
@@ -339,17 +400,6 @@ router.get('/compare/:exhibitionId', async (req, res) => {
   } catch (error) {
     console.error('შედარების მონაცემების მიღების შეცდომა:', error);
     res.status(500).json({ message: 'შედარების მონაცემები ვერ მოიძებნა' });
-  }
-});
-
-
-    
-    const equipmentWithAvailability = await Promise.all(availabilityPromises);
-    res.json(equipmentWithAvailability);
-    
-  } catch (error) {
-    console.error('ხელმისაწვდომობის გამოთვლის შეცდომა:', error);
-    res.status(500).json({ message: 'ხელმისაწვდომობის გამოთვლა ვერ მოხერხდა' });
   }
 });
 

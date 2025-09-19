@@ -70,9 +70,7 @@ const ExhibitionsList = ({ showNotification, userRole }) => {
       }
       const data = await response.json();
       console.log('მიღებული გამოფენების მონაცემები:', data);
-      if (data.length > 0) {
-        console.log('პირველი გამოფენის price_per_sqm:', data[0].price_per_sqm);
-      }
+      
       setExhibitions(data);
     } catch (err) {
       setError(err.message);

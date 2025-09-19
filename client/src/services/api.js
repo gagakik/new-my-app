@@ -256,7 +256,7 @@ export const equipmentAPI = {
 // Packages API
 export const packagesAPI = {
   getAll: async (exhibitionId) => {
-    return api.get(`/packages/exhibition/${exhibitionId}`);
+    return api.get(`/packages/${exhibitionId}`);
   },
 
   create: async (packageData) => {

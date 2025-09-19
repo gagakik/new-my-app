@@ -240,6 +240,75 @@ const createTables = async () => {
       )
     `);
 
+    // Exhibition Packages table
+    await query(`
+      CREATE TABLE IF NOT EXISTS exhibition_packages (
+        id SERIAL PRIMARY KEY,
+        exhibition_id INTEGER REFERENCES exhibitions(id),
+        package_name VARCHAR(255) NOT NULL,
+        description TEXT,
+        fixed_area_sqm DECIMAL(10,2) NOT NULL,
+        fixed_price DECIMAL(10,2) NOT NULL,
+        early_bird_price DECIMAL(10,2),
+        early_bird_end_date DATE,
+        last_minute_price DECIMAL(10,2),
+        last_minute_start_date DATE,
+        created_by_user_id INTEGER REFERENCES users(id),
+        updated_by_user_id INTEGER REFERENCES users(id),
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Package Equipment table
+    await query(`
+      CREATE TABLE IF NOT EXISTS package_equipment (
+        id SERIAL PRIMARY KEY,
+        package_id INTEGER REFERENCES exhibition_packages(id) ON DELETE CASCADE,
+        equipment_id INTEGER REFERENCES equipment(id),
+        quantity INTEGER NOT NULL DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Package Bundles table
+    await query(`
+      CREATE TABLE IF NOT EXISTS package_bundles (
+        id SERIAL PRIMARY KEY,
+        exhibition_id INTEGER REFERENCES exhibitions(id),
+        bundle_name VARCHAR(255) NOT NULL,
+        description TEXT,
+        discount_percent DECIMAL(5,2) DEFAULT 0,
+        created_by_user_id INTEGER REFERENCES users(id),
+        updated_by_user_id INTEGER REFERENCES users(id),
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Bundle Packages table
+    await query(`
+      CREATE TABLE IF NOT EXISTS bundle_packages (
+        id SERIAL PRIMARY KEY,
+        bundle_id INTEGER REFERENCES package_bundles(id) ON DELETE CASCADE,
+        package_id INTEGER REFERENCES exhibition_packages(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Participant Selected Equipment table
+    await query(`
+      CREATE TABLE IF NOT EXISTS participant_selected_equipment (
+        id SERIAL PRIMARY KEY,
+        participant_id INTEGER REFERENCES event_participants(id) ON DELETE CASCADE,
+        equipment_id INTEGER REFERENCES equipment(id),
+        quantity INTEGER NOT NULL DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
 
     console.log("PostgreSQL ცხრილები წარმატებით შეიქმნა!");
   } catch (error) {
