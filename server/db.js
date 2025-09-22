@@ -168,9 +168,12 @@ const createTables = async () => {
         id SERIAL PRIMARY KEY,
         company_id INTEGER REFERENCES companies(id),
         annual_service_id INTEGER REFERENCES annual_services(id),
+        event_id INTEGER REFERENCES annual_services(id),
         booth_type VARCHAR(50) DEFAULT 'ივენთის სტენდი',
         booth_category VARCHAR(50) DEFAULT 'ოქტანორმის სტენდები',
         booth_location VARCHAR(255),
+        booth_number VARCHAR(100),
+        booth_size DECIMAL(10,2),
         area DECIMAL(10,2),
         price_per_sqm DECIMAL(10,2),
         total_price DECIMAL(10,2),
@@ -181,10 +184,16 @@ const createTables = async () => {
         payment_due_date DATE,
         payment_method VARCHAR(50) DEFAULT 'ნაღდი',
         payment_amount DECIMAL(10,2),
+        payment_status VARCHAR(50) DEFAULT 'მომლოდინე',
+        registration_status VARCHAR(50) DEFAULT 'მონაწილეობის მოთხოვნა',
+        registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         invoice_number VARCHAR(100),
         contract_file VARCHAR(500),
         invoice_file VARCHAR(500),
         handover_file VARCHAR(500),
+        invoice_file_path VARCHAR(500),
+        contract_file_path VARCHAR(500),
+        handover_file_path VARCHAR(500),
         status VARCHAR(50) DEFAULT 'აქტიური',
         notes TEXT,
         created_by_user_id INTEGER,
@@ -309,6 +318,63 @@ const createTables = async () => {
       )
     `);
 
+    // Stands table
+    await query(`
+      CREATE TABLE IF NOT EXISTS stands (
+        id SERIAL PRIMARY KEY,
+        event_id INTEGER REFERENCES annual_services(id) ON DELETE CASCADE,
+        booth_number VARCHAR(50) NOT NULL,
+        company_name VARCHAR(255) NOT NULL,
+        area DECIMAL(8,2),
+        contact_person VARCHAR(255),
+        contact_phone VARCHAR(50),
+        contact_email VARCHAR(255),
+        status VARCHAR(100) DEFAULT 'დაგეგმილი',
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_by_user_id INTEGER REFERENCES users(id),
+        UNIQUE(event_id, booth_number)
+      )
+    `);
+
+    // Stand equipment junction table
+    await query(`
+      CREATE TABLE IF NOT EXISTS stand_equipment (
+        id SERIAL PRIMARY KEY,
+        stand_id INTEGER REFERENCES stands(id) ON DELETE CASCADE,
+        equipment_id INTEGER REFERENCES equipment(id) ON DELETE CASCADE,
+        quantity INTEGER NOT NULL DEFAULT 1,
+        notes TEXT,
+        assigned_by_user_id INTEGER REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(stand_id, equipment_id)
+      )
+    `);
+
+    // Update stand_designs to reference stands table
+    await query(`
+      CREATE TABLE IF NOT EXISTS stand_designs (
+        id SERIAL PRIMARY KEY,
+        stand_id INTEGER REFERENCES stands(id) ON DELETE CASCADE,
+        design_file_url VARCHAR(500) NOT NULL,
+        description TEXT,
+        uploaded_by_user_id INTEGER REFERENCES users(id),
+        uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Stand photos table
+    await query(`
+      CREATE TABLE IF NOT EXISTS stand_photos (
+        id SERIAL PRIMARY KEY,
+        stand_id INTEGER REFERENCES stands(id) ON DELETE CASCADE,
+        photo_url VARCHAR(500) NOT NULL,
+        description TEXT,
+        uploaded_by_user_id INTEGER REFERENCES users(id),
+        uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
 
     console.log("PostgreSQL ცხრილები წარმატებით შეიქმნა!");
   } catch (error) {
@@ -470,7 +536,7 @@ const createStandDesignsTable = async () => {
 
     if (!tableExists.rows[0].exists) {
       console.log('📋 stand_designs ცხრილი არ არსებობს, ვქმნით...');
-      
+
       await query(`
         CREATE TABLE stand_designs (
           id SERIAL PRIMARY KEY,
@@ -480,7 +546,7 @@ const createStandDesignsTable = async () => {
           uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);
-      
+
       console.log('✅ stand_designs ცხრილი შეიქმნა!');
     } else {
       console.log('✓ stand_designs ცხრილი უკვე არსებობს');
