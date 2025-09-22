@@ -165,12 +165,29 @@ const authorizeRoles = (...roles) => {
   };
 };
 
-// Static file serving for uploads with better headers
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
-  setHeaders: (res, path) => {
+// Static file serving for uploads with better headers and logging
+app.use('/uploads', (req, res, next) => {
+  console.log(`📁 Static file request: ${req.method} ${req.originalUrl}`);
+  console.log(`📁 Requested file path: ${req.path}`);
+  console.log(`📁 Full file path would be: ${path.join(__dirname, 'uploads', req.path)}`);
+  
+  // Check if file exists before serving
+  const fullPath = path.join(__dirname, 'uploads', req.path);
+  if (fs.existsSync(fullPath)) {
+    const stats = fs.statSync(fullPath);
+    console.log(`✅ File exists: ${fullPath} (${stats.size} bytes)`);
+  } else {
+    console.log(`❌ File not found: ${fullPath}`);
+  }
+  
+  next();
+}, express.static(path.join(__dirname, 'uploads'), {
+  setHeaders: (res, filePath) => {
+    console.log(`📁 Serving file: ${filePath}`);
     // Set proper cache headers for images
-    if (path.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)) {
+    if (filePath.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)) {
       res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year
+      console.log(`📁 Set cache headers for image: ${filePath}`);
     }
     // Set proper MIME types
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -864,13 +881,88 @@ app.delete('/api/events/:id', authenticateToken, authorizeRoles('admin', 'manage
   try {
     const { id } = req.params;
 
-    const result = await db.query('DELETE FROM annual_services WHERE id = $1 RETURNING *', [id]);
+    console.log(`Attempting to delete event with ID: ${id}`);
 
-    if (result.rows.length === 0) {
+    // Check if the event exists first
+    const eventCheck = await db.query('SELECT * FROM annual_services WHERE id = $1', [id]);
+    if (eventCheck.rows.length === 0) {
       return res.status(404).json({ message: 'ივენთი ვერ მოიძებნა' });
     }
 
-    res.json({ message: 'ივენთი წარმატებით წაიშალა' });
+    // Use transaction to ensure atomicity
+    try {
+      await db.query('BEGIN');
+
+      // Delete all related records in proper order to avoid foreign key constraint violations
+      
+      // 1. Delete stand-related data
+      try {
+        await db.query(`
+          DELETE FROM stand_photos 
+          WHERE stand_id IN (SELECT id FROM stands WHERE event_id = $1)
+        `, [id]);
+        
+        await db.query(`
+          DELETE FROM stand_designs 
+          WHERE stand_id IN (SELECT id FROM stands WHERE event_id = $1)
+        `, [id]);
+        
+        await db.query(`
+          DELETE FROM stand_equipment 
+          WHERE stand_id IN (SELECT id FROM stands WHERE event_id = $1)
+        `, [id]);
+        
+        await db.query('DELETE FROM stands WHERE event_id = $1', [id]);
+        console.log('Deleted stand-related data');
+      } catch (e) {
+        console.log('Some stand tables may not exist, continuing...');
+      }
+
+      // 2. Delete participant-related data
+      await db.query(`
+        DELETE FROM participant_selected_equipment
+        WHERE participant_id IN (SELECT id FROM event_participants WHERE event_id = $1)
+      `, [id]);
+
+      await db.query(`
+        DELETE FROM equipment_bookings
+        WHERE participant_id IN (SELECT id FROM event_participants WHERE event_id = $1)
+      `, [id]);
+
+      // 3. Delete event completion records
+      try {
+        await db.query('DELETE FROM event_completion WHERE event_id = $1', [id]);
+      } catch (e) {
+        console.log('event_completion table may not exist, continuing...');
+      }
+
+      // 4. Delete event participants
+      const participantResult = await db.query('DELETE FROM event_participants WHERE event_id = $1', [id]);
+      console.log(`Deleted ${participantResult.rowCount} event participants`);
+
+      // 5. Delete service spaces
+      await db.query('DELETE FROM service_spaces WHERE service_id = $1', [id]);
+
+      // 6. Finally delete the event
+      const result = await db.query('DELETE FROM annual_services WHERE id = $1 RETURNING *', [id]);
+
+      await db.query('COMMIT');
+      
+      res.json({ message: 'ივენთი წარმატებით წაიშალა' });
+      
+    } catch (deleteError) {
+      await db.query('ROLLBACK');
+      console.error('Event deletion error:', deleteError);
+      
+      if (deleteError.code === '23503') {
+        return res.status(400).json({
+          message: 'ივენთის წაშლა შეუძლებელია, რადგან მასთან დაკავშირებული მონაცემები არსებობს.',
+          detail: deleteError.detail
+        });
+      }
+      
+      throw deleteError;
+    }
   } catch (error) {
     console.error('ივენთის წაშლის შეცდომა:', error);
     res.status(500).json({ message: 'ივენთის წაშლა ვერ მოხერხდა' });
@@ -1977,40 +2069,116 @@ app.delete('/api/annual-services/:id', authenticateToken, authorizeRoles('admin'
       return res.status(404).json({ message: 'სერვისი ვერ მოიძებნა' });
     }
 
-    // Delete in correct order to handle foreign key constraints
+    // Use transaction to ensure atomicity
     try {
-      // 1. Delete participant selected equipment first
-      await db.query(`
-        DELETE FROM participant_selected_equipment
-        WHERE participant_id IN (SELECT id FROM event_participants WHERE event_id = $1)
-      `, [id]);
-      console.log('Deleted participant selected equipment');
+      await db.query('BEGIN');
 
-      // 2. Delete equipment bookings
-      await db.query(`
-        DELETE FROM equipment_bookings
-        WHERE participant_id IN (SELECT id FROM event_participants WHERE event_id = $1)
-      `, [id]);
-      console.log('Deleted equipment bookings');
+      // 1. Delete stand photos first (if stands table references participants)
+      try {
+        await db.query(`
+          DELETE FROM stand_photos 
+          WHERE stand_id IN (
+            SELECT id FROM stands WHERE event_id = $1
+          )
+        `, [id]);
+        console.log('Deleted stand photos');
+      } catch (e) {
+        console.log('stand_photos table may not exist, skipping');
+      }
 
-      // 3. Delete event completion records
-      await db.query('DELETE FROM event_completion WHERE event_id = $1', [id]);
-      console.log('Deleted event completion records');
+      // 2. Delete stand designs
+      try {
+        await db.query(`
+          DELETE FROM stand_designs 
+          WHERE stand_id IN (
+            SELECT id FROM stands WHERE event_id = $1
+          )
+        `, [id]);
+        console.log('Deleted stand designs');
+      } catch (e) {
+        console.log('stand_designs table may not exist, skipping');
+      }
 
-      // 4. Delete event participants
-      await db.query('DELETE FROM event_participants WHERE event_id = $1', [id]);
-      console.log('Deleted event participants');
+      // 3. Delete stand equipment
+      try {
+        await db.query(`
+          DELETE FROM stand_equipment 
+          WHERE stand_id IN (
+            SELECT id FROM stands WHERE event_id = $1
+          )
+        `, [id]);
+        console.log('Deleted stand equipment');
+      } catch (e) {
+        console.log('stand_equipment table may not exist, skipping');
+      }
 
-      // 5. Delete service spaces
-      await db.query('DELETE FROM service_spaces WHERE service_id = $1', [id]);
-      console.log('Deleted service spaces');
+      // 4. Delete stands
+      try {
+        await db.query('DELETE FROM stands WHERE event_id = $1', [id]);
+        console.log('Deleted stands');
+      } catch (e) {
+        console.log('stands table may not exist, skipping');
+      }
 
-      // 6. Finally delete the annual service
+      // 5. Delete participant selected equipment
+      try {
+        await db.query(`
+          DELETE FROM participant_selected_equipment
+          WHERE participant_id IN (SELECT id FROM event_participants WHERE event_id = $1)
+        `, [id]);
+        console.log('Deleted participant selected equipment');
+      } catch (e) {
+        console.log('participant_selected_equipment table may not exist, skipping');
+      }
+
+      // 6. Delete equipment bookings
+      try {
+        await db.query(`
+          DELETE FROM equipment_bookings
+          WHERE participant_id IN (SELECT id FROM event_participants WHERE event_id = $1)
+        `, [id]);
+        console.log('Deleted equipment bookings');
+      } catch (e) {
+        console.log('equipment_bookings table may not exist, skipping');
+      }
+
+      // 7. Delete event completion records (if table exists)
+      try {
+        await db.query('DELETE FROM event_completion WHERE event_id = $1', [id]);
+        console.log('Deleted event completion records');
+      } catch (completionError) {
+        if (completionError.code !== '42P01') { // Table doesn't exist
+          console.log('event_completion table does not exist, skipping');
+        }
+      }
+
+      // 8. Delete event participants (this is the key step causing the foreign key constraint)
+      const participantResult = await db.query('DELETE FROM event_participants WHERE event_id = $1', [id]);
+      console.log(`Deleted ${participantResult.rowCount} event participants`);
+
+      // 9. Delete service spaces
+      try {
+        await db.query('DELETE FROM service_spaces WHERE service_id = $1', [id]);
+        console.log('Deleted service spaces');
+      } catch (e) {
+        console.log('service_spaces table may not exist, skipping');
+      }
+
+      // 10. Finally delete the annual service
       const result = await db.query('DELETE FROM annual_services WHERE id = $1 RETURNING *', [id]);
+      
+      if (result.rows.length === 0) {
+        await db.query('ROLLBACK');
+        return res.status(404).json({ message: 'სერვისი ვერ მოიძებნა' });
+      }
+
       console.log('Deleted annual service:', result.rows[0]);
 
+      await db.query('COMMIT');
       res.json({ message: 'სერვისი წარმატებით წაიშალა' });
+
     } catch (deleteError) {
+      await db.query('ROLLBACK');
       console.error('Detailed deletion error:', deleteError);
       console.error('Error code:', deleteError.code);
       console.error('Error detail:', deleteError.detail);
@@ -2018,7 +2186,8 @@ app.delete('/api/annual-services/:id', authenticateToken, authorizeRoles('admin'
       // More specific error handling
       if (deleteError.code === '23503') {
         return res.status(400).json({
-          message: 'სერვისის წაშლა შეუძლებელია, რადგან მასთან დაკავშირებული მონაცემები არსებობს'
+          message: 'სერვისის წაშლა შეუძლებელია, რადგან მასთან დაკავშირებული მონაცემები არსებობს. გთხოვთ, ჯერ წაშალოთ ყველა დაკავშირებული მონაწილე.',
+          detail: deleteError.detail || 'უცნობი მიზეზი'
         });
       }
 

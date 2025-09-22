@@ -72,8 +72,16 @@ const upload = multer({
 
 // GET /api/equipment - ყველა აღჭურვილობის მიღება
 router.get('/', authenticateToken, async (req, res) => {
-  console.log('Equipment GET request from user:', req.user.username);
+  console.log('📋 Equipment GET request from user:', req.user.username);
+  console.log('📋 Request timestamp:', new Date().toISOString());
+  console.log('📋 Request headers:', {
+    'user-agent': req.headers['user-agent'],
+    'accept': req.headers['accept'],
+    'content-type': req.headers['content-type']
+  });
+
   try {
+    console.log('📊 Executing equipment query...');
     const result = await db.query(`
       SELECT 
         e.id,
@@ -92,23 +100,47 @@ router.get('/', authenticateToken, async (req, res) => {
       ORDER BY e.created_at DESC
     `);
 
+    console.log(`📊 Found ${result.rows.length} equipment items`);
+
     // Format image URLs properly and check file existence
-    const equipmentWithFormattedUrls = result.rows.map(equipment => {
+    const equipmentWithFormattedUrls = result.rows.map((equipment, index) => {
+      console.log(`📸 Processing image for equipment ${equipment.id} (${index + 1}/${result.rows.length})`);
+      console.log(`📸 Original image_url: ${equipment.image_url}`);
+      
       let formattedImageUrl = null;
       
       if (equipment.image_url) {
         if (equipment.image_url.startsWith('http')) {
+          console.log(`📸 Equipment ${equipment.id}: Using HTTP URL as-is`);
           formattedImageUrl = equipment.image_url;
         } else {
-          formattedImageUrl = equipment.image_url;
+          // Ensure proper relative path format
+          if (!equipment.image_url.startsWith('/uploads/')) {
+            if (equipment.image_url.startsWith('uploads/')) {
+              formattedImageUrl = `/${equipment.image_url}`;
+            } else {
+              formattedImageUrl = `/uploads/${equipment.image_url}`;
+            }
+          } else {
+            formattedImageUrl = equipment.image_url;
+          }
+          
+          console.log(`📸 Equipment ${equipment.id}: Formatted URL: ${formattedImageUrl}`);
           
           // Check if file exists on server
-          const filePath = path.join(__dirname, '..', equipment.image_url);
+          const filePath = path.join(__dirname, '..', formattedImageUrl);
+          console.log(`📸 Equipment ${equipment.id}: Checking file existence at: ${filePath}`);
+          
           if (!fs.existsSync(filePath)) {
-            console.warn(`Image file not found: ${filePath} for equipment ${equipment.id}`);
-            formattedImageUrl = null; // Set to null if file doesn't exist
+            console.warn(`❌ Image file not found: ${filePath} for equipment ${equipment.id}`);
+            console.warn(`❌ Equipment ${equipment.id}: Setting image_url to null due to missing file`);
+            formattedImageUrl = null;
+          } else {
+            console.log(`✅ Equipment ${equipment.id}: File exists, using URL: ${formattedImageUrl}`);
           }
         }
+      } else {
+        console.log(`📸 Equipment ${equipment.id}: No image_url provided`);
       }
       
       return {
@@ -117,13 +149,33 @@ router.get('/', authenticateToken, async (req, res) => {
       };
     });
 
+    console.log('✅ Equipment data processed successfully');
+    console.log(`📊 Response will contain ${equipmentWithFormattedUrls.length} items`);
+    
+    // Log summary of image URLs
+    const imageStats = equipmentWithFormattedUrls.reduce((acc, eq) => {
+      if (eq.image_url) {
+        acc.withImages++;
+      } else {
+        acc.withoutImages++;
+      }
+      return acc;
+    }, { withImages: 0, withoutImages: 0 });
+    
+    console.log(`📊 Image statistics: ${imageStats.withImages} with images, ${imageStats.withoutImages} without images`);
+
     res.json(equipmentWithFormattedUrls);
   } catch (error) {
-    console.error('აღჭურვილობის მიღების შეცდომა:', error);
-    console.error('Error stack:', error.stack);
+    console.error('❌ აღჭურვილობის მიღების შეცდომა:', error);
+    console.error('❌ Error message:', error.message);
+    console.error('❌ Error code:', error.code);
+    console.error('❌ Error stack:', error.stack);
+    console.error('❌ Error occurred at:', new Date().toISOString());
+    
     res.status(500).json({ 
       message: 'აღჭურვილობის მიღება ვერ მოხერხდა',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
+      timestamp: new Date().toISOString()
     });
   }
 });
@@ -169,70 +221,198 @@ router.get('/:id', authenticateToken, async (req, res) => {
 
 // POST /api/equipment - ახალი აღჭურვილობის დამატება
 router.post('/', authenticateToken, authorizeRoles('admin', 'operation'), upload.single('image'), async (req, res) => {
+  console.log('📤 POST /api/equipment - New equipment creation request');
+  console.log('👤 User:', req.user.username, 'ID:', req.user.id);
+  console.log('📋 Request body:', req.body);
+  console.log('📎 File info:', req.file ? {
+    fieldname: req.file.fieldname,
+    originalname: req.file.originalname,
+    encoding: req.file.encoding,
+    mimetype: req.file.mimetype,
+    size: req.file.size,
+    destination: req.file.destination,
+    filename: req.file.filename,
+    path: req.file.path
+  } : 'No file uploaded');
+
   try {
     const { code_name, quantity, price, description } = req.body;
     const userId = req.user.id;
 
+    console.log('📊 Processing equipment data:', {
+      code_name,
+      quantity,
+      price,
+      description,
+      userId
+    });
+
     let imageUrl = null;
     if (req.file) {
       imageUrl = `/uploads/${req.file.filename}`;
-      console.log('File uploaded successfully:', {
+      console.log('📸 File uploaded successfully:', {
         filename: req.file.filename,
+        originalName: req.file.originalname,
         path: req.file.path,
         size: req.file.size,
+        mimetype: req.file.mimetype,
         imageUrl: imageUrl
       });
+
+      // Verify file was actually saved
+      const filePath = path.join(__dirname, '..', 'uploads', req.file.filename);
+      if (fs.existsSync(filePath)) {
+        const stats = fs.statSync(filePath);
+        console.log('✅ File verified on disk:', {
+          path: filePath,
+          size: stats.size,
+          created: stats.birthtime
+        });
+      } else {
+        console.error('❌ File not found on disk after upload:', filePath);
+      }
+    } else {
+      console.log('📸 No image file provided');
     }
 
+    console.log('💾 Inserting equipment into database...');
     const result = await db.query(
       `INSERT INTO equipment (code_name, quantity, price, description, image_url, created_by_id) 
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
       [code_name, parseInt(quantity), parseFloat(price), description, imageUrl, userId]
     );
 
-    console.log('Equipment created with image URL:', result.rows[0].image_url);
+    console.log('✅ Equipment created successfully:', {
+      id: result.rows[0].id,
+      code_name: result.rows[0].code_name,
+      image_url: result.rows[0].image_url
+    });
 
     res.status(201).json({
       message: 'აღჭურვილობა წარმატებით დაემატა!',
       equipment: result.rows[0]
     });
   } catch (error) {
-    console.error('აღჭურვილობის დამატების შეცდომა:', error);
-    console.error('Error details:', error.message);
+    console.error('❌ აღჭურვილობის დამატების შეცდომა:', error);
+    console.error('❌ Error message:', error.message);
+    console.error('❌ Error code:', error.code);
+    console.error('❌ Error stack:', error.stack);
+    console.error('❌ Error occurred at:', new Date().toISOString());
+    
     if (req.file) {
-      console.error('File info:', req.file);
+      console.error('📎 File details at error:', {
+        originalname: req.file.originalname,
+        filename: req.file.filename,
+        path: req.file.path,
+        size: req.file.size,
+        mimetype: req.file.mimetype
+      });
     }
-    res.status(500).json({ message: 'აღჭურვილობის დამატება ვერ მოხერხდა' });
+    
+    if (req.body) {
+      console.error('📋 Request body at error:', req.body);
+    }
+    
+    res.status(500).json({ 
+      message: 'აღჭურვილობის დამატება ვერ მოხერხდა',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
+      timestamp: new Date().toISOString()
+    });
   }
 });
 
 // PUT /api/equipment/:id - აღჭურვილობის განახლება
 router.put('/:id', authenticateToken, authorizeRoles('admin', 'operation'), upload.single('image'), async (req, res) => {
+  const { id } = req.params;
+  console.log(`📝 PUT /api/equipment/${id} - Equipment update request`);
+  console.log('👤 User:', req.user.username, 'ID:', req.user.id);
+  console.log('📋 Request body:', req.body);
+  console.log('📎 File info:', req.file ? {
+    fieldname: req.file.fieldname,
+    originalname: req.file.originalname,
+    encoding: req.file.encoding,
+    mimetype: req.file.mimetype,
+    size: req.file.size,
+    destination: req.file.destination,
+    filename: req.file.filename,
+    path: req.file.path
+  } : 'No new file uploaded');
+
   try {
-    const { id } = req.params;
     const { code_name, quantity, price, description, image_url_existing } = req.body;
     const userId = req.user.id;
 
+    console.log('📊 Processing equipment update data:', {
+      id,
+      code_name,
+      quantity,
+      price,
+      description,
+      image_url_existing,
+      userId
+    });
+
     // ჯერ შევამოწმოთ არსებობს თუ არა ეს აღჭურვილობა
+    console.log(`🔍 Checking if equipment with ID ${id} exists...`);
     const existingResult = await db.query('SELECT * FROM equipment WHERE id = $1', [id]);
     if (existingResult.rows.length === 0) {
+      console.error(`❌ Equipment with ID ${id} not found`);
       return res.status(404).json({ message: 'აღჭურვილობა ვერ მოიძებნა' });
     }
+
+    const existingEquipment = existingResult.rows[0];
+    console.log('✅ Found existing equipment:', {
+      id: existingEquipment.id,
+      code_name: existingEquipment.code_name,
+      current_image_url: existingEquipment.image_url
+    });
 
     let imageUrl = image_url_existing; // Keep existing image by default
     if (req.file) {
       imageUrl = `/uploads/${req.file.filename}`;
+      console.log('📸 New image uploaded:', {
+        newImageUrl: imageUrl,
+        filename: req.file.filename,
+        size: req.file.size
+      });
 
       // Delete old image file if it exists
-      const oldImageUrl = existingResult.rows[0].image_url;
+      const oldImageUrl = existingEquipment.image_url;
       if (oldImageUrl && oldImageUrl.startsWith('/uploads/')) {
         const oldFilePath = path.join(__dirname, '..', oldImageUrl);
+        console.log(`🗑️ Attempting to delete old image: ${oldFilePath}`);
+        
         if (fs.existsSync(oldFilePath)) {
-          fs.unlinkSync(oldFilePath);
+          try {
+            fs.unlinkSync(oldFilePath);
+            console.log('✅ Old image file deleted successfully');
+          } catch (deleteError) {
+            console.error('❌ Error deleting old image file:', deleteError);
+          }
+        } else {
+          console.log('⚠️ Old image file not found, skipping deletion');
         }
+      } else {
+        console.log('ℹ️ No old image to delete or invalid path format');
       }
+
+      // Verify new file was actually saved
+      const newFilePath = path.join(__dirname, '..', 'uploads', req.file.filename);
+      if (fs.existsSync(newFilePath)) {
+        const stats = fs.statSync(newFilePath);
+        console.log('✅ New file verified on disk:', {
+          path: newFilePath,
+          size: stats.size,
+          created: stats.birthtime
+        });
+      } else {
+        console.error('❌ New file not found on disk after upload:', newFilePath);
+      }
+    } else {
+      console.log('📸 No new image uploaded, keeping existing:', image_url_existing);
     }
 
+    console.log('💾 Updating equipment in database...');
     const result = await db.query(
       `UPDATE equipment 
        SET code_name = $1, quantity = $2, price = $3, description = $4, 
@@ -242,13 +422,42 @@ router.put('/:id', authenticateToken, authorizeRoles('admin', 'operation'), uplo
       [code_name, parseInt(quantity), parseFloat(price), description, imageUrl, userId, id]
     );
 
+    console.log('✅ Equipment updated successfully:', {
+      id: result.rows[0].id,
+      code_name: result.rows[0].code_name,
+      image_url: result.rows[0].image_url
+    });
+
     res.json({
       message: 'აღჭურვილობა წარმატებით განახლდა!',
       equipment: result.rows[0]
     });
   } catch (error) {
-    console.error('აღჭურვილობის განახლების შეცდომა:', error);
-    res.status(500).json({ message: 'აღჭურვილობის განახლება ვერ მოხერხდა' });
+    console.error('❌ აღჭურვილობის განახლების შეცდომა:', error);
+    console.error('❌ Error message:', error.message);
+    console.error('❌ Error code:', error.code);
+    console.error('❌ Error stack:', error.stack);
+    console.error('❌ Error occurred at:', new Date().toISOString());
+    
+    if (req.file) {
+      console.error('📎 File details at error:', {
+        originalname: req.file.originalname,
+        filename: req.file.filename,
+        path: req.file.path,
+        size: req.file.size,
+        mimetype: req.file.mimetype
+      });
+    }
+    
+    if (req.body) {
+      console.error('📋 Request body at error:', req.body);
+    }
+    
+    res.status(500).json({ 
+      message: 'აღჭურვილობის განახლება ვერ მოხერხდა',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
+      timestamp: new Date().toISOString()
+    });
   }
 });
 
