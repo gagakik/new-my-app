@@ -69,6 +69,8 @@ const createTables = async () => {
         status VARCHAR(50) DEFAULT 'აქტიური',
         selected_exhibitions JSONB DEFAULT '[]',
         contact_persons JSONB DEFAULT '[]',
+        company_phone VARCHAR(255),
+        company_email VARCHAR(255),
         created_by_user_id INTEGER,
         updated_by_user_id INTEGER,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -513,6 +515,7 @@ const addMissingColumns = async () => {
         case "annual_services":
           const serviceColumns = [
             "plan_file_path",
+            "plan_uploaded_by",
             "invoice_files",
             "expense_files",
             "plan_updated_at",
@@ -528,6 +531,9 @@ const addMissingColumns = async () => {
                   break;
                 case "plan_file_path":
                   columnDefinition = "VARCHAR(500)";
+                  break;
+                case "plan_uploaded_by":
+                  columnDefinition = "VARCHAR(255)";
                   break;
                 case "plan_updated_at":
                 case "files_updated_at":
@@ -579,6 +585,33 @@ const addEquipmentColumns = async () => {
     console.log("Equipment table ყველა საჭირო სვეტით მზადაა!");
   } catch (error) {
     console.error("Equipment table-ის სვეტების დამატების შეცდომა:", error);
+  }
+};
+
+// Function to add missing columns to companies table if they don't exist
+const addCompanyContactColumns = async () => {
+  try {
+    const requiredColumns = [
+      { name: 'company_phone', type: 'VARCHAR(255)' },
+      { name: 'company_email', type: 'VARCHAR(255)' }
+    ];
+
+    for (const column of requiredColumns) {
+      const checkColumn = await query(`
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name = 'companies'
+        AND column_name = $1
+      `, [column.name]);
+
+      if (checkColumn.rows.length === 0) {
+        await query(`ALTER TABLE companies ADD COLUMN ${column.name} ${column.type}`);
+        console.log(`${column.name} სვეტი დამატებულია companies ცხრილში`);
+      }
+    }
+    console.log("Companies table ყველა საჭირო სვეტით მზადაა!");
+  } catch (error) {
+    console.error("Companies table-ის სვეტების დამატების შეცდომა:", error);
   }
 };
 
@@ -678,6 +711,7 @@ const initializeDatabase = async () => {
     await ensureAllTablesExist();
     await addMissingColumns();
     await addEquipmentColumns();
+    await addCompanyContactColumns();
     await createStandDesignsTable();
     console.log("✅ ბაზის ინიციალიზაცია დასრულებულია.");
   } catch (error) {

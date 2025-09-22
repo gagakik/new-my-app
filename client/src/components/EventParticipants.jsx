@@ -75,6 +75,7 @@ import {
 import InvoiceForm from './InvoiceForm';
 import InvitationGenerator from './InvitationGenerator';
 
+
 const EventParticipants = ({ eventId, eventName, onClose, showNotification, userRole }) => {
   const [participants, setParticipants] = useState([]);
   const [filteredParticipants, setFilteredParticipants] = useState([]);
@@ -958,38 +959,57 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
       }
 
       const companyData = await response.json();
+      console.log('Raw company data from API:', companyData);
 
+      // Handle contact_persons properly
+      let contactPersons = [];
       if (companyData.contact_persons) {
-        if (!Array.isArray(companyData.contact_persons)) {
-          if (typeof companyData.contact_persons === 'string') {
-            try {
-              if (companyData.contact_persons === '[object Object]') {
-                companyData.contact_persons = [];
-              } else {
-                companyData.contact_persons = JSON.parse(companyData.contact_persons);
+        if (Array.isArray(companyData.contact_persons)) {
+          contactPersons = companyData.contact_persons;
+        } else if (typeof companyData.contact_persons === 'string') {
+          try {
+            if (companyData.contact_persons.trim() === '' || 
+                companyData.contact_persons === '[]' || 
+                companyData.contact_persons === '[object Object]') {
+              contactPersons = [];
+            } else {
+              contactPersons = JSON.parse(companyData.contact_persons);
+              if (!Array.isArray(contactPersons)) {
+                contactPersons = [];
               }
-            } catch {
-              console.error('Contact persons parsing error');
-              companyData.contact_persons = [];
             }
-          } else {
-            companyData.contact_persons = [];
+          } catch (parseError) {
+            console.error('Contact persons parsing error:', parseError);
+            contactPersons = [];
           }
-        } else {
-          companyData.contact_persons = [];
+        } else if (typeof companyData.contact_persons === 'object') {
+          // If it's an object but not array, wrap it or reset to empty
+          contactPersons = [];
         }
-      } else {
-        companyData.contact_persons = [];
       }
 
-      if (!Array.isArray(companyData.contact_persons)) {
-        companyData.contact_persons = [];
+      // Ensure we have a valid array
+      if (!Array.isArray(contactPersons)) {
+        contactPersons = [];
       }
 
-      setSelectedCompanyForDetails(companyData);
+      // Filter out invalid contact persons
+      contactPersons = contactPersons.filter(person => 
+        person && typeof person === 'object' && 
+        (person.name || person.position || person.phone || person.email)
+      );
+
+      console.log('Processed contact persons:', contactPersons);
+
+      const processedCompanyData = {
+        ...companyData,
+        contact_persons: contactPersons
+      };
+
+      setSelectedCompanyForDetails(processedCompanyData);
       setShowCompanyDetails(true);
     } catch (error) {
-      console.error('კომპანიის დეტალების მიღება ვერ მოხერხდა', error);
+      console.error('კომპანიის დეტალების მიღება ვერ მოხერხდა:', error);
       showNotification('კომპანიის დეტალების მიღება ვერ მოხერხდა', 'error');
     } finally {
       setLoadingCompanyDetails(false);
@@ -997,6 +1017,18 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
   };
 
   const showCompanyDetailsModal = async (participant) => {
+    console.log('Opening company details for participant:', participant);
+    console.log('Company ID:', participant.company_id);
+    
+    // If participant already has company details loaded, use them as fallback
+    if (participant.contact_persons || participant.company_phone || participant.company_email) {
+      console.log('Participant has company contact info:', {
+        contact_persons: participant.contact_persons,
+        company_phone: participant.company_phone,
+        company_email: participant.company_email
+      });
+    }
+    
     await fetchCompanyDetails(participant.company_id);
   };
 
@@ -2220,7 +2252,12 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                 </Grid>
               </Grid>
 
-              {selectedCompanyForDetails.comment && (
+
+
+              <Grid item xs={12}>
+
+              <Grid fullWidth container spacing={2}>
+                {selectedCompanyForDetails.comment && (
                 <Grid item xs={12} borderBottom={1} borderColor={'#b8ceebff'} pb={1} mb={2}>
                   <Divider sx={{ my: 2 }} />
                   <Typography variant="h6" gutterBottom>კომენტარი</Typography>
@@ -2229,10 +2266,10 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                   </Alert>
                 </Grid>
               )}
-
-              <Grid item xs={12}>
-                <Divider sx={{ my: 2 }} />
+              </Grid>
+                <Divider sx={{ my: 2}} />
                 <Typography variant="h6" gutterBottom>საკონტაქტო პირები</Typography>
+
                 {selectedCompanyForDetails.contact_persons &&
                   Array.isArray(selectedCompanyForDetails.contact_persons) &&
                   selectedCompanyForDetails.contact_persons.length > 0 ? (
@@ -2240,9 +2277,9 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                       {selectedCompanyForDetails.contact_persons
                         .filter(person => person && (person.name || person.position || person.phone || person.email))
                         .map((person, index) => (
-                          <Grid item xs={12} md={6} key={index}>
+                          <Grid item xs={12} md={6} key={index} sx={{width: '100%'}}>
                             <Card variant="outlined" sx={{ p: 2 }}>
-                              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1}}>
                                 {person.name || 'უცნობი'}
                               </Typography>
                               <Stack spacing={1} sx={{ mt: 1 }}>
@@ -2278,7 +2315,42 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                         ))}
                     </Grid>
                   ) : (
-                    <Alert severity="info">საკონტაქტო პირები არ არის დამატებული</Alert>
+                    <Box>
+                      <Alert severity="info" sx={{ mb: 2 }}>
+                        საკონტაქტო პირები არ არის დამატებული
+                      </Alert>
+                      
+                      {/* Show company general contact info if available */}
+                      {(selectedCompanyForDetails.company_phone || selectedCompanyForDetails.company_email) && (
+                        <Card variant="outlined" sx={{ p: 2 }}>
+                          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+                            კომპანიის ზოგადი საკონტაქტო ინფორმაცია:
+                          </Typography>
+                          <Stack spacing={1}>
+                            {selectedCompanyForDetails.company_phone && (
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Phone fontSize="small" />
+                                <Typography variant="body2">
+                                  <Button component="a" href={`tel:${selectedCompanyForDetails.company_phone}`} size="small">
+                                    {selectedCompanyForDetails.company_phone}
+                                  </Button>
+                                </Typography>
+                              </Box>
+                            )}
+                            {selectedCompanyForDetails.company_email && (
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Email fontSize="small" />
+                                <Typography variant="body2">
+                                  <Button component="a" href={`mailto:${selectedCompanyForDetails.company_email}`} size="small">
+                                    {selectedCompanyForDetails.company_email}
+                                  </Button>
+                                </Typography>
+                              </Box>
+                            )}
+                          </Stack>
+                        </Card>
+                      )}
+                    </Box>
                   )}
               </Grid>
             </Grid>

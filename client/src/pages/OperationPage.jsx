@@ -78,9 +78,13 @@ const OperationPage = ({ showNotification }) => {
   const [showEquipmentDialog, setShowEquipmentDialog] = useState(false);
   const [showDesignDialog, setShowDesignDialog] = useState(false);
   const [allEquipment, setAllEquipment] = useState([]);
+  const [companies, setCompanies] = useState([]);
+  const [selectedCompany, setSelectedCompany] = useState(null);
+  const [contactPersons, setContactPersons] = useState([]);
   const [formData, setFormData] = useState({
     booth_number: '',
     company_name: '',
+    company_id: '',
     area: '',
     booth_type: 'რიგითი',
     booth_category: 'ოქტანორმის სტენდები',
@@ -181,10 +185,29 @@ const OperationPage = ({ showNotification }) => {
     }
   }, []);
 
+  const fetchCompanies = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/companies', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCompanies(data);
+      } else {
+        console.error('კომპანიების მიღება ვერ მოხერხდა');
+      }
+    } catch (error) {
+      console.error('კომპანიების მიღების შეცდომა:', error);
+    }
+  }, []);
+
   useEffect(() => {
     fetchEvents();
     fetchEquipment();
-  }, [fetchEvents, fetchEquipment]);
+    fetchCompanies();
+  }, [fetchEvents, fetchEquipment, fetchCompanies]);
 
   useEffect(() => {
     if (selectedEvent) {
@@ -334,10 +357,39 @@ const OperationPage = ({ showNotification }) => {
     }
   };
 
+  const handleCompanySelection = (companyId) => {
+    const company = companies.find(c => c.id === companyId);
+    if (company) {
+      setSelectedCompany(company);
+      setContactPersons(company.contact_persons || []);
+      setFormData(prev => ({
+        ...prev,
+        company_id: companyId,
+        company_name: company.company_name,
+        contact_person: '',
+        contact_phone: '',
+        contact_email: ''
+      }));
+    }
+  };
+
+  const handleContactPersonSelection = (contactIndex) => {
+    if (contactPersons[contactIndex]) {
+      const contact = contactPersons[contactIndex];
+      setFormData(prev => ({
+        ...prev,
+        contact_person: contact.name || '',
+        contact_phone: contact.phone || '',
+        contact_email: contact.email || ''
+      }));
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       booth_number: '',
       company_name: '',
+      company_id: '',
       area: '',
       booth_type: 'რიგითი',
       booth_category: 'ოქტანორმის სტენდები',
@@ -348,6 +400,8 @@ const OperationPage = ({ showNotification }) => {
       status: 'დაგეგმილი',
       notes: ''
     });
+    setSelectedCompany(null);
+    setContactPersons([]);
   };
 
   const getStatusInfo = (status) => {
@@ -995,13 +1049,23 @@ const OperationPage = ({ showNotification }) => {
                 />
               </Grid>
               <Grid xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="კომპანიის სახელი"
-                  value={formData.company_name}
-                  onChange={(e) => setFormData({...formData, company_name: e.target.value})}
-                  required
-                />
+                <FormControl fullWidth required>
+                  <InputLabel>კომპანია</InputLabel>
+                  <Select
+                    value={formData.company_id}
+                    onChange={(e) => handleCompanySelection(e.target.value)}
+                    label="კომპანია"
+                  >
+                    <MenuItem value="">
+                      <em>აირჩიეთ კომპანია</em>
+                    </MenuItem>
+                    {companies.map(company => (
+                      <MenuItem key={company.id} value={company.id}>
+                        {company.company_name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </Grid>
               <Grid xs={12} sm={6}>
                 <TextField
@@ -1069,12 +1133,24 @@ const OperationPage = ({ showNotification }) => {
                 </FormControl>
               </Grid>
               <Grid xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="საკონტაქტო პირი"
-                  value={formData.contact_person}
-                  onChange={(e) => setFormData({...formData, contact_person: e.target.value})}
-                />
+                <FormControl fullWidth>
+                  <InputLabel>საკონტაქტო პირი</InputLabel>
+                  <Select
+                    value={contactPersons.findIndex(p => p.name === formData.contact_person)}
+                    onChange={(e) => handleContactPersonSelection(e.target.value)}
+                    label="საკონტაქტო პირი"
+                    disabled={!selectedCompany || contactPersons.length === 0}
+                  >
+                    <MenuItem value={-1}>
+                      <em>აირჩიეთ საკონტაქტო პირი</em>
+                    </MenuItem>
+                    {contactPersons.map((person, index) => (
+                      <MenuItem key={index} value={index}>
+                        {person.name} {person.position ? `- ${person.position}` : ''}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </Grid>
               <Grid xs={12} sm={6}>
                 <TextField
@@ -1082,6 +1158,9 @@ const OperationPage = ({ showNotification }) => {
                   label="ტელეფონი"
                   value={formData.contact_phone}
                   onChange={(e) => setFormData({...formData, contact_phone: e.target.value})}
+                  InputProps={{
+                    readOnly: !!selectedCompany && contactPersons.length > 0
+                  }}
                 />
               </Grid>
               <Grid xs={12}>
@@ -1091,6 +1170,9 @@ const OperationPage = ({ showNotification }) => {
                   type="email"
                   value={formData.contact_email}
                   onChange={(e) => setFormData({...formData, contact_email: e.target.value})}
+                  InputProps={{
+                    readOnly: !!selectedCompany && contactPersons.length > 0
+                  }}
                 />
               </Grid>
               <Grid xs={12}>

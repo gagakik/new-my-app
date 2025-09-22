@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
@@ -63,15 +62,24 @@ const StandManagement = ({ eventId, eventName, onClose, showNotification, userRo
   const [formData, setFormData] = useState({
     booth_number: '',
     company_name: '',
+    company_id: '',
     stand_status: 'დაგეგმილი',
     design_notes: '',
     construction_notes: '',
     special_requirements: '',
     start_date: '',
     deadline: '',
-    completion_percentage: 0
+    completion_percentage: 0,
+    contact_person: '',
+    contact_position: '',
+    contact_email: '',
+    contact_phone: '',
+    notes: ''
   });
   const [designFiles, setDesignFiles] = useState([]);
+  const [companies, setCompanies] = useState([]);
+  const [selectedCompany, setSelectedCompany] = useState(null);
+  const [contactPersons, setContactPersons] = useState([]);
 
   const isAuthorizedForManagement =
     userRole === 'admin' ||
@@ -92,14 +100,33 @@ const StandManagement = ({ eventId, eventName, onClose, showNotification, userRo
 
   useEffect(() => {
     fetchStands();
+    fetchCompanies();
   }, [eventId]);
+
+  const fetchCompanies = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/companies', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCompanies(data);
+      } else {
+        console.error('კომპანიების მიღება ვერ მოხერხდა');
+      }
+    } catch (error) {
+      console.error('კომპანიების მიღების შეცდომა:', error);
+    }
+  }, []);
 
   useEffect(() => {
     let filtered = stands;
 
     if (searchTerm) {
       filtered = filtered.filter(stand =>
-        stand.booth_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (stand.booth_number && stand.booth_number.toLowerCase().includes(searchTerm.toLowerCase())) ||
         stand.company_name.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
@@ -144,7 +171,7 @@ const StandManagement = ({ eventId, eventName, onClose, showNotification, userRo
         : `/api/events/${eventId}/stands`;
 
       const submitData = new FormData();
-      
+
       Object.keys(formData).forEach(key => {
         if (formData[key] !== null && formData[key] !== '') {
           submitData.append(key, formData[key]);
@@ -178,18 +205,62 @@ const StandManagement = ({ eventId, eventName, onClose, showNotification, userRo
     }
   };
 
+  const handleCompanySelection = (companyId) => {
+    const company = companies.find(c => c.id === companyId);
+    if (company) {
+      setSelectedCompany(company);
+      setContactPersons(company.contact_persons || []);
+      setFormData(prev => ({
+        ...prev,
+        company_id: companyId,
+        company_name: company.company_name,
+        contact_person: '',
+        contact_position: '',
+        contact_email: '',
+        contact_phone: ''
+      }));
+    }
+  };
+
+  const handleContactPersonSelection = (contactIndex) => {
+    if (contactPersons[contactIndex]) {
+      const contact = contactPersons[contactIndex];
+      setFormData(prev => ({
+        ...prev,
+        contact_person: contact.name || '',
+        contact_position: contact.position || '',
+        contact_email: contact.email || '',
+        contact_phone: contact.phone || ''
+      }));
+    }
+  };
+
   const handleEdit = (stand) => {
     setEditingStand(stand);
+    
+    // Find and set company if exists
+    const company = companies.find(c => c.company_name === stand.company_name);
+    if (company) {
+      setSelectedCompany(company);
+      setContactPersons(company.contact_persons || []);
+    }
+    
     setFormData({
       booth_number: stand.booth_number || '',
       company_name: stand.company_name || '',
+      company_id: company ? company.id : '',
       stand_status: stand.stand_status || 'დაგეგმილი',
       design_notes: stand.design_notes || '',
       construction_notes: stand.construction_notes || '',
       special_requirements: stand.special_requirements || '',
       start_date: stand.start_date ? stand.start_date.split('T')[0] : '',
       deadline: stand.deadline ? stand.deadline.split('T')[0] : '',
-      completion_percentage: stand.completion_percentage || 0
+      completion_percentage: stand.completion_percentage || 0,
+      contact_person: stand.contact_person || '',
+      contact_position: stand.contact_position || '',
+      contact_email: stand.contact_email || '',
+      contact_phone: stand.contact_phone || '',
+      notes: stand.notes || ''
     });
     setShowStandForm(true);
   };
@@ -245,15 +316,23 @@ const StandManagement = ({ eventId, eventName, onClose, showNotification, userRo
     setFormData({
       booth_number: '',
       company_name: '',
+      company_id: '',
       stand_status: 'დაგეგმილი',
       design_notes: '',
       construction_notes: '',
       special_requirements: '',
       start_date: '',
       deadline: '',
-      completion_percentage: 0
+      completion_percentage: 0,
+      contact_person: '',
+      contact_position: '',
+      contact_email: '',
+      contact_phone: '',
+      notes: ''
     });
     setDesignFiles([]);
+    setSelectedCompany(null);
+    setContactPersons([]);
     setEditingStand(null);
     setShowStandForm(false);
   };
@@ -385,28 +464,38 @@ const StandManagement = ({ eventId, eventName, onClose, showNotification, userRo
           <form onSubmit={handleSubmit}>
             <DialogContent sx={{ p: 3 }}>
               <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12} md={4}>
                   <TextField
                     fullWidth
                     label="სტენდის ნომერი"
-                    value={formData.booth_number}
+                    value={formData.booth_number || ''}
                     onChange={(e) => setFormData({...formData, booth_number: e.target.value})}
-                    required
+                    required={!editingStand} // Booth number is required only for new stands if not provided by participant
                     variant="outlined"
+                    placeholder="თუ არ არის მითითებული, ავტომატურად გენერირდება"
                   />
                 </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="კომპანია"
-                    value={formData.company_name}
-                    onChange={(e) => setFormData({...formData, company_name: e.target.value})}
-                    required
-                    variant="outlined"
-                  />
+                <Grid item xs={12} md={8}>
+                  <FormControl fullWidth required>
+                    <InputLabel>კომპანია</InputLabel>
+                    <Select
+                      value={formData.company_id}
+                      onChange={(e) => handleCompanySelection(e.target.value)}
+                      label="კომპანია"
+                    >
+                      <MenuItem value="">
+                        <em>აირჩიეთ კომპანია</em>
+                      </MenuItem>
+                      {companies.map(company => (
+                        <MenuItem key={company.id} value={company.id}>
+                          {company.company_name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
                 </Grid>
 
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12} md={4}>
                   <FormControl fullWidth>
                     <InputLabel>სტატუსი</InputLabel>
                     <Select
@@ -421,7 +510,7 @@ const StandManagement = ({ eventId, eventName, onClose, showNotification, userRo
                   </FormControl>
                 </Grid>
 
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12} md={4}>
                   <Box>
                     <Typography gutterBottom>დასრულების პროცენტი: {formData.completion_percentage}%</Typography>
                     <Slider
@@ -437,7 +526,7 @@ const StandManagement = ({ eventId, eventName, onClose, showNotification, userRo
                   </Box>
                 </Grid>
 
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12} md={4}>
                   <TextField
                     fullWidth
                     label="დაწყების თარიღი"
@@ -449,7 +538,7 @@ const StandManagement = ({ eventId, eventName, onClose, showNotification, userRo
                   />
                 </Grid>
 
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12} md={4}>
                   <TextField
                     fullWidth
                     label="დასრულების ვადა"
@@ -460,6 +549,80 @@ const StandManagement = ({ eventId, eventName, onClose, showNotification, userRo
                     variant="outlined"
                   />
                 </Grid>
+
+                {/* Contact Information */}
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>საკონტაქტო პირი</InputLabel>
+                    <Select
+                      value={contactPersons.findIndex(p => p.name === formData.contact_person)}
+                      onChange={(e) => handleContactPersonSelection(e.target.value)}
+                      label="საკონტაქტო პირი"
+                      disabled={!selectedCompany || contactPersons.length === 0}
+                    >
+                      <MenuItem value={-1}>
+                        <em>აირჩიეთ საკონტაქტო პირი</em>
+                      </MenuItem>
+                      {contactPersons.map((person, index) => (
+                        <MenuItem key={index} value={index}>
+                          {person.name} {person.position ? `- ${person.position}` : ''}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    <FormHelperText>
+                      {!selectedCompany ? 'ჯერ აირჩიეთ კომპანია' : 
+                       contactPersons.length === 0 ? 'ამ კომპანიისთვის საკონტაქტო პირები არ არის რეგისტრირებული' : ''}
+                    </FormHelperText>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="პოზიცია"
+                    value={formData.contact_position}
+                    onChange={(e) => setFormData({...formData, contact_position: e.target.value})}
+                    variant="outlined"
+                    InputProps={{
+                      readOnly: !!selectedCompany && contactPersons.length > 0
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="ელ-ფოსტა"
+                    value={formData.contact_email}
+                    onChange={(e) => setFormData({...formData, contact_email: e.target.value})}
+                    variant="outlined"
+                    InputProps={{
+                      readOnly: !!selectedCompany && contactPersons.length > 0
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="ტელეფონი"
+                    value={formData.contact_phone}
+                    onChange={(e) => setFormData({...formData, contact_phone: e.target.value})}
+                    variant="outlined"
+                    InputProps={{
+                      readOnly: !!selectedCompany && contactPersons.length > 0
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="შენიშვნები (ზოგადი)"
+                    value={formData.notes}
+                    onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                    multiline
+                    rows={2}
+                    variant="outlined"
+                  />
+                </Grid>
+
 
                 <Grid item xs={12}>
                   <TextField
@@ -578,7 +741,7 @@ const StandManagement = ({ eventId, eventName, onClose, showNotification, userRo
                     <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
                       <Box>
                         <Typography variant="h6" component="div" color="primary" fontWeight="bold">
-                          სტენდი #{stand.booth_number}
+                          სტენდი #{stand.booth_number || 'N/A'}
                         </Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
                           <Business sx={{ mr: 1, fontSize: 16 }} />
@@ -644,11 +807,11 @@ const StandManagement = ({ eventId, eventName, onClose, showNotification, userRo
                       </Box>
                     )}
 
-                    {(stand.design_notes || stand.construction_notes) && (
+                    {(stand.design_notes || stand.construction_notes || stand.contact_person || stand.contact_position || stand.contact_email || stand.contact_phone || stand.notes) && (
                       <Accordion sx={{ mt: 2, boxShadow: 'none', '&:before': { display: 'none' } }}>
                         <AccordionSummary expandIcon={<ExpandMore />} sx={{ px: 0, minHeight: 'auto' }}>
                           <Typography variant="subtitle2" color="primary">
-                            შენიშვნები
+                            დეტალები
                           </Typography>
                         </AccordionSummary>
                         <AccordionDetails sx={{ px: 0, pt: 0 }}>
@@ -663,12 +826,72 @@ const StandManagement = ({ eventId, eventName, onClose, showNotification, userRo
                             </Box>
                           )}
                           {stand.construction_notes && (
-                            <Box>
+                            <Box mb={1}>
                               <Typography variant="caption" color="primary" fontWeight="bold">
                                 მშენებლობა:
                               </Typography>
                               <Typography variant="body2" color="text.secondary">
                                 {stand.construction_notes}
+                              </Typography>
+                            </Box>
+                          )}
+                          {stand.special_requirements && (
+                             <Box mb={1}>
+                              <Typography variant="caption" color="primary" fontWeight="bold">
+                                სპეციალური მოთხოვნები:
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {stand.special_requirements}
+                              </Typography>
+                            </Box>
+                          )}
+                          {stand.contact_person && (
+                            <Box mb={1}>
+                              <Typography variant="caption" color="primary" fontWeight="bold">
+                                საკონტაქტო პირი:
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {stand.contact_person}
+                              </Typography>
+                            </Box>
+                          )}
+                          {stand.contact_position && (
+                            <Box mb={1}>
+                              <Typography variant="caption" color="primary" fontWeight="bold">
+                                პოზიცია:
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {stand.contact_position}
+                              </Typography>
+                            </Box>
+                          )}
+                          {stand.contact_email && (
+                            <Box mb={1}>
+                              <Typography variant="caption" color="primary" fontWeight="bold">
+                                ელ-ფოსტა:
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {stand.contact_email}
+                              </Typography>
+                            </Box>
+                          )}
+                          {stand.contact_phone && (
+                            <Box mb={1}>
+                              <Typography variant="caption" color="primary" fontWeight="bold">
+                                ტელეფონი:
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {stand.contact_phone}
+                              </Typography>
+                            </Box>
+                          )}
+                           {stand.notes && (
+                            <Box>
+                              <Typography variant="caption" color="primary" fontWeight="bold">
+                                შენიშვნები:
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {stand.notes}
                               </Typography>
                             </Box>
                           )}
@@ -691,7 +914,7 @@ const StandManagement = ({ eventId, eventName, onClose, showNotification, userRo
                           ))}
                         </Select>
                       </FormControl>
-                      
+
                       <Stack direction="row" spacing={1} width="100%">
                         <Button
                           fullWidth
