@@ -471,10 +471,16 @@ const addMissingColumns = async () => {
             { name: "payment_due_date", type: "DATE" },
             { name: "payment_method", type: "VARCHAR(50) DEFAULT 'ნაღდი'" },
             { name: "payment_amount", type: "DECIMAL(10,2)" },
+            { name: "payment_status", type: "VARCHAR(50) DEFAULT 'მომლოდინე'" },
+            { name: "registration_status", type: "VARCHAR(50) DEFAULT 'მონაწილეობის მოთხოვნა'" },
+            { name: "registration_date", type: "TIMESTAMP DEFAULT CURRENT_TIMESTAMP" },
             { name: "invoice_number", type: "VARCHAR(100)" },
             { name: "invoice_file", type: "VARCHAR(500)" },
             { name: "contract_file", type: "VARCHAR(500)" },
             { name: "handover_file", type: "VARCHAR(500)" },
+            { name: "invoice_file_path", type: "VARCHAR(500)" },
+            { name: "contract_file_path", type: "VARCHAR(500)" },
+            { name: "handover_file_path", type: "VARCHAR(500)" },
             { name: "status", type: "VARCHAR(50) DEFAULT 'აქტიური'" },
             { name: "notes", type: "TEXT" }
           ];
