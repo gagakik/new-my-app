@@ -1081,9 +1081,9 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
 
   const getStatusBadge = (status) => {
     const statusMap = {
-      'მონაწილეობის მოთხოვნა': { color: 'info', text: 'მოთხოვნა' },
-      'მომლოდინე': { color: 'warning', text: 'მომლოდ.' },
-      'რეგისტრირებული': { color: 'primary', text: 'რეგისტრ.' },
+      'მონაწილეობის მოთხოვნა': { color: 'error', text: 'მოთხოვნა' },
+      'მომლოდინე': { color: 'error', text: 'მომლოდ.' },
+      'რეგისტრირებული': { color: 'success', text: 'რეგისტრ.' },
       'დადასტურებული': { color: 'success', text: 'დადასტ.' },
       'გაუქმებული': { color: 'error', text: 'გაუქმებული' }
     };
@@ -1092,7 +1092,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
 
   const getPaymentBadge = (status) => {
     const statusMap = {
-      'მომლოდინე': { color: 'warning', text: 'მომლოდ.' },
+      'მომლოდინე': { color: 'error', text: 'მომლოდ.' },
       'გადახდილი': { color: 'success', text: 'გადახდ.' },
       'არ არის საჭიროო': { color: 'default', text: 'არ საჭირო' }
     };
