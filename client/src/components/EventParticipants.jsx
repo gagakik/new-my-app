@@ -1050,20 +1050,20 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
 
   const getStatusBadge = (status) => {
     const statusMap = {
-      'მონაწილეობის მოთხოვნა': { color: 'info', text: 'მოთხოვნა' },
-      'მომლოდინე': { color: 'warning', text: 'მომლოდ.' },
-      'რეგისტრირებული': { color: 'primary', text: 'რეგისტრ.' },
+      'მონაწილეობის მოთხოვნა': { color: 'error', text: 'მოთხოვნა' },
+      'მომლოდინე': { color: 'error', text: 'მომლოდ.' },
+      'რეგისტრირებული': { color: 'success', text: 'რეგისტრ.' },
       'დადასტურებული': { color: 'success', text: 'დადასტ.' },
-      'გაუქმებული': { color: 'error', text: 'გაუქმებული' }
+      'გაუქმებული': { color: 'warning', text: 'გაუქმებული' }
     };
     return statusMap[status] || { color: 'default', text: status };
   };
 
   const getPaymentBadge = (status) => {
     const statusMap = {
-      'მომლოდინე': { color: 'warning', text: 'მომლოდ.' },
-      'გადახდილი': { color: 'success', text: 'გადახდ.' },
-      'არ არის საჭიროო': { color: 'default', text: 'არ საჭირო' }
+      'მომლოდინე': { color: 'error', text: 'მომლოდინე' },
+      'გადახდილი': { color: 'success', text: 'გადახდილი' },
+      'არ არის საჭიროო': { color: 'error', text: 'დავალიანება' }
     };
     return statusMap[status] || { color: 'default', text: status };
   };
@@ -1459,7 +1459,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                   {/* პაკეტების არჩევა */}
                   {registrationType === 'package' && (
                     <Grid item xs={12} sx={{justifyContent: 'center', alignItems: 'center', display: 'flex', width: '100%', borderRadius: 1}}>
-                      <Accordion sx={{ mb: 2, width: '100%', borderRadius: 1, width: '100%', border: '1px solid #e2e8f0', justifyContent: 'center', alignItems: 'center' }}>
+                      <Accordion sx={{ mb: 2, width: '100%', borderRadius: 1,  border: '1px solid #e2e8f0', justifyContent: 'center', alignItems: 'center' }}>
                         <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 1, marginBottom: 0,  }}>
                           <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Inventory2 />
