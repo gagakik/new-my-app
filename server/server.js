@@ -165,8 +165,17 @@ const authorizeRoles = (...roles) => {
   };
 };
 
-// Static file serving for uploads
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Static file serving for uploads with better headers
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+  setHeaders: (res, path) => {
+    // Set proper cache headers for images
+    if (path.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year
+    }
+    // Set proper MIME types
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+}));
 
 // Root route for development
 app.get('/', (req, res) => {
@@ -873,23 +882,69 @@ app.get('/api/events/:eventId/participants', authenticateToken, async (req, res)
   const { eventId } = req.params;
 
   try {
-    const query = `
-      SELECT
-        ep.*,
-        c.company_name,
-        c.country,
-        c.identification_code,
-        c.company_profile,
-        u.username as created_by_username
-      FROM event_participants ep
-      JOIN companies c ON ep.company_id = c.id
-      LEFT JOIN users u ON ep.created_by_user_id = u.id
-      WHERE ep.event_id = $1
-      ORDER BY ep.registration_date DESC
-    `;
+    console.log(`📋 მოთხოვნა ივენთის ${eventId} მონაწილეებისთვის`);
 
-    const result = await db.query(query, [eventId]);
-    console.log(`ივენთი ${eventId}: მოიძებნა ${result.rows.length} მონაწილე`);
+    // First check if event_participants table exists
+    const tableCheck = await db.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_name = 'event_participants'
+      )
+    `);
+
+    if (!tableCheck.rows[0].exists) {
+      console.error('❌ event_participants ცხრილი არ არსებობს');
+      return res.status(500).json({ message: 'ბაზის კონფიგურაცია არასრული - event_participants ცხრილი არ მოიძებნა' });
+    }
+
+    // Check if companies table exists
+    const companiesTableCheck = await db.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_name = 'companies'
+      )
+    `);
+
+    let participantsQuery;
+    let queryParams = [eventId];
+
+    if (companiesTableCheck.rows[0].exists) {
+      // Full query with companies join
+      participantsQuery = `
+        SELECT
+          ep.*,
+          c.company_name,
+          c.country,
+          c.identification_code,
+          c.company_profile,
+          u.username as created_by_username
+        FROM event_participants ep
+        LEFT JOIN companies c ON ep.company_id = c.id
+        LEFT JOIN users u ON ep.created_by_user_id = u.id
+        WHERE ep.event_id = $1
+        ORDER BY ep.created_at DESC
+      `;
+    } else {
+      // Simplified query without companies join
+      console.log('⚠️ companies ცხრილი არ მოიძებნა, ვიყენებთ გამარტივებულ მოთხოვნას');
+      participantsQuery = `
+        SELECT
+          ep.*,
+          'Unknown Company' as company_name,
+          null as country,
+          null as identification_code,
+          null as company_profile,
+          u.username as created_by_username
+        FROM event_participants ep
+        LEFT JOIN users u ON ep.created_by_user_id = u.id
+        WHERE ep.event_id = $1
+        ORDER BY ep.created_at DESC
+      `;
+    }
+
+    console.log('📊 SQL მოთხოვნა:', participantsQuery);
+    const result = await db.query(participantsQuery, queryParams);
+    console.log(`✅ ივენთი ${eventId}: მოიძებნა ${result.rows.length} მონაწილე`);
 
     // Parse equipment bookings for each participant
     const participants = result.rows.map(participant => {
@@ -905,8 +960,16 @@ app.get('/api/events/:eventId/participants', authenticateToken, async (req, res)
 
     res.json(participants);
   } catch (error) {
-    console.error('მონაწილეების მიღების შეცდომა:', error);
-    res.status(500).json({ message: 'მონაწილეების მიღება ვერ მოხერხდა' });
+    console.error('❌ მონაწილეების მიღების შეცდომა:', error);
+    console.error('Error details:', error.message);
+    console.error('Error code:', error.code);
+    console.error('Error stack:', error.stack);
+    
+    res.status(500).json({ 
+      message: 'მონაწილეების მიღება ვერ მოხერხდა',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      eventId: eventId
+    });
   }
 });
 

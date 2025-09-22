@@ -162,13 +162,13 @@ const createTables = async () => {
     `);
 
     // **ATTENTION: The following table was moved to resolve the dependency issue.**
-    // Event Participants table
+    // Event Participants table - with proper error handling
     await query(`
       CREATE TABLE IF NOT EXISTS event_participants (
         id SERIAL PRIMARY KEY,
-        company_id INTEGER REFERENCES companies(id),
-        annual_service_id INTEGER REFERENCES annual_services(id),
-        event_id INTEGER REFERENCES annual_services(id),
+        company_id INTEGER,
+        annual_service_id INTEGER,
+        event_id INTEGER,
         booth_type VARCHAR(50) DEFAULT 'ივენთის სტენდი',
         booth_category VARCHAR(50) DEFAULT 'ოქტანორმის სტენდები',
         booth_location VARCHAR(255),
@@ -201,6 +201,61 @@ const createTables = async () => {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    // Add foreign key constraints separately to avoid circular dependencies
+    try {
+      await query(`
+        DO $$ 
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.table_constraints 
+            WHERE constraint_name = 'event_participants_company_id_fkey'
+          ) THEN
+            ALTER TABLE event_participants 
+            ADD CONSTRAINT event_participants_company_id_fkey 
+            FOREIGN KEY (company_id) REFERENCES companies(id);
+          END IF;
+        END $$;
+      `);
+    } catch (e) {
+      console.log('Foreign key constraint for company_id already exists or companies table not ready:', e.message);
+    }
+
+    try {
+      await query(`
+        DO $$ 
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.table_constraints 
+            WHERE constraint_name = 'event_participants_annual_service_id_fkey'
+          ) THEN
+            ALTER TABLE event_participants 
+            ADD CONSTRAINT event_participants_annual_service_id_fkey 
+            FOREIGN KEY (annual_service_id) REFERENCES annual_services(id);
+          END IF;
+        END $$;
+      `);
+    } catch (e) {
+      console.log('Foreign key constraint for annual_service_id already exists or annual_services table not ready:', e.message);
+    }
+
+    try {
+      await query(`
+        DO $$ 
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.table_constraints 
+            WHERE constraint_name = 'event_participants_event_id_fkey'
+          ) THEN
+            ALTER TABLE event_participants 
+            ADD CONSTRAINT event_participants_event_id_fkey 
+            FOREIGN KEY (event_id) REFERENCES annual_services(id);
+          END IF;
+        END $$;
+      `);
+    } catch (e) {
+      console.log('Foreign key constraint for event_id already exists or annual_services table not ready:', e.message);
+    }
 
     // Equipment Bookings table
     await query(`
@@ -557,15 +612,73 @@ const createStandDesignsTable = async () => {
   }
 };
 
+// Comprehensive table existence check
+const ensureAllTablesExist = async () => {
+  try {
+    console.log("🔍 შევამოწმებთ ყველა ცხრილის არსებობას...");
+    
+    const requiredTables = [
+      'users',
+      'companies', 
+      'equipment',
+      'spaces',
+      'exhibitions',
+      'annual_services',
+      'event_participants',
+      'equipment_bookings',
+      'service_spaces'
+    ];
+
+    const result = await query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_type = 'BASE TABLE'
+    `);
+
+    const existingTables = result.rows.map(row => row.table_name);
+    console.log("📋 არსებული ცხრილები:", existingTables.join(', '));
+
+    const missingTables = requiredTables.filter(table => !existingTables.includes(table));
+    
+    if (missingTables.length > 0) {
+      console.log("❌ არ არსებული ცხრილები:", missingTables.join(', '));
+      console.log("🔧 ვცდილობთ ცხრილების შექმნას...");
+      await createTables();
+    } else {
+      console.log("✅ ყველა საჭირო ცხრილი არსებობს");
+    }
+
+    // Check event_participants table structure
+    const epColumns = await query(`
+      SELECT column_name, data_type, is_nullable, column_default
+      FROM information_schema.columns
+      WHERE table_name = 'event_participants'
+      ORDER BY ordinal_position
+    `);
+    
+    console.log(`📊 event_participants ცხრილის სტრუქტურა (${epColumns.rows.length} სვეტი):`, 
+      epColumns.rows.map(col => `${col.column_name} (${col.data_type})`).join(', ')
+    );
+
+  } catch (error) {
+    console.error("❌ ცხრილების შემოწმების შეცდომა:", error);
+    throw error;
+  }
+};
+
 const initializeDatabase = async () => {
   try {
-    await createTables();
+    await ensureAllTablesExist();
     await addMissingColumns();
     await addEquipmentColumns();
     await createStandDesignsTable();
-    console.log("ბაზის ინიციალიზაცია დასრულებულია.");
+    console.log("✅ ბაზის ინიციალიზაცია დასრულებულია.");
   } catch (error) {
-    console.error("ბაზის ინიციალიზაციის შეცდომა:", error);
+    console.error("❌ ბაზის ინიციალიზაციის შეცდომა:", error);
+    console.error("Error details:", error.message);
+    console.error("Error stack:", error.stack);
+    throw error;
   }
 };
 
