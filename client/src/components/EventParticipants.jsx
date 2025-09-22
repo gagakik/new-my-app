@@ -1345,7 +1345,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                   {/* სტენდის ინფორმაცია */}
                   <Grid item xs={12} sx={{ mb: 3, display: 'flex', justifyContent: 'center', alignItems: 'center' }} >
                     <Accordion defaultExpanded >
-                      <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 3, marginBottom: 2}}>
+                      <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 1}}>
                         <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1}}>
                           <LocationOn />
                           სტენდის ინფორმაცია
@@ -1353,7 +1353,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                       </AccordionSummary>
                       <AccordionDetails sx={{ mb: 1, p: 1}}>
                         <Grid container spacing={2}>
-                          <Grid item xs={12} sx={{ mb: 1, mt: 1, display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Grid item xs={12} sx={{ mb: 1, mt: 1, display: 'flex', alignItems: 'center', gap: 2, justifyContent: 'center', width: '100%' }}>
                             <Typography variant="subtitle2" sx={{ mb: 1 }}>რეგისტრაციის ტიპი</Typography>
                             <RadioGroup
                               row
@@ -1388,7 +1388,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                             </FormControl>
                           </Grid>
                           <Grid item xs={6}>
-                            <FormControl fullWidth >
+                            <FormControl fullWidth sx={{ minWidth: '140px' }}>
                               <InputLabel >ტიპი</InputLabel>
                               <Select
                                 value={formData.booth_type}
@@ -1410,12 +1410,27 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                               onChange={(e) => setFormData({...formData, booth_number: e.target.value})}
                             />
                           </Grid>
+                                                <Grid item xs={6}>
+                        <FormControl fullWidth>
+                          <InputLabel>სტატუსი</InputLabel>
+                          <Select
+                            value={formData.registration_status}
+                            onChange={(e) => setFormData({...formData, registration_status: e.target.value})}
+                            label="რეგისტრაციის სტატუსი"
+                          >
+                            <MenuItem value="მონაწილეობის მოთხოვნა">მონაწილეობის მოთხოვნა</MenuItem>
+                            <MenuItem value="რეგისტრირებული">რეგისტრირებული</MenuItem>
+                            <MenuItem value="დადასტურებული">დადასტურებული</MenuItem>
+                            <MenuItem value="გაუქმებული">გაუქმებული</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Grid>
                           <Grid item xs={4}>
                             <TextField
                               fullWidth
                               label="სტენდის ზომა (კვმ)"
                               type="number"
-                              inputProps={{ step: 0.01 }}
+                              inputProps={{ step: 0, min: 0 }}
                               value={formData.booth_size}
                               onChange={(e) => setFormData(prev => ({ ...prev, booth_size: e.target.value }))}
                               disabled={registrationType === 'package'}
@@ -1428,7 +1443,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                               fullWidth
                               label="ფასი კვმ-ზე (EUR)"
                               type="number"
-                              inputProps={{ step: 0.01 }}
+                              inputProps={{ step: 0.01, min: 0 }}
                               value={manualPricePerSqm}
                               onChange={(e) => setManualPricePerSqm(e.target.value)}
                               disabled={registrationType === 'package'}
@@ -1443,17 +1458,18 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
 
                   {/* პაკეტების არჩევა */}
                   {registrationType === 'package' && (
-                    <Grid item xs={12}>
-                      <Accordion>
-                        <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 3, marginBottom: 2 }}>
+                    <Grid item xs={12} sx={{justifyContent: 'center', alignItems: 'center', display: 'flex', width: '100%', borderRadius: 1}}>
+                      <Accordion sx={{ mb: 2, width: '100%', borderRadius: 1, width: '100%', border: '1px solid #e2e8f0', justifyContent: 'center', alignItems: 'center' }}>
+                        <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 1, marginBottom: 0,  }}>
                           <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Inventory2 />
                             პაკეტების არჩევა
                           </Typography>
                         </AccordionSummary>
                         <AccordionDetails>
-                          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-                            <Button
+                          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                            <Button 
+                              width='20%'
                               variant="contained"
                               startIcon={<Add />}
                               onClick={addPackageSelection}
@@ -1469,7 +1485,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                               <CardContent>
                                 <Grid container spacing={2}>
                                   <Grid item xs={8}>
-                                    <FormControl fullWidth required>
+                                    <FormControl fullWidth required sx={{ mb: 1, minWidth: '400px' }}>
                                       <InputLabel>პაკეტი</InputLabel>
                                       <Select
                                         value={packageSelection.package_id || ''}
@@ -1547,9 +1563,9 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                   )}
 
                   {/* აღჭურვილობა */}
-                  <Grid item xs={12}>
-                    <Accordion>
-                      <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 3, marginBottom: 2 }}>
+                  <Grid item xs={12} sx={{width: '100%', mb: 2, display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
+                    <Accordion sx={{ mb: 2, width: '100%', borderRadius: 1 }}>
+                      <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 1, marginBottom: 0 }}>
                         <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Build />
                           {registrationType === 'package'
@@ -1559,8 +1575,10 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                         </Typography>
                       </AccordionSummary>
                       <AccordionDetails>
-                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
                           <Button
+                          sx={{width: '20%' , minWidth: '200px'}}
+                            fullWidth
                             variant="contained"
                             startIcon={<Add />}
                             onClick={addEquipmentRow}
@@ -1578,7 +1596,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                                 <Grid item xs={12} md={4}>
                                   <FormControl fullWidth>
                                     <InputLabel>აღჭურვილობა</InputLabel>
-                                    <Select
+                                    <Select sx={{ width: '160px' }}
                                       value={item.equipment_id || ''}
                                       onChange={(e) => handleEquipmentChange(index, 'equipment_id', e.target.value)}
                                       label="აღჭურვილობა"
@@ -1626,6 +1644,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                                 </Grid>
                                 <Grid item xs={6} md={2}>
                                   <TextField
+                                    sx={{ width: '120px' }}
                                     fullWidth
                                     label="რაოდენობა"
                                     type="number"
@@ -1643,7 +1662,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                                 </Grid>
                                 <Grid item xs={6} md={2}>
                                   <TextField
-                                    fullWidth
+                                    sx={{ width: '160px' }}
                                     label="ერთეულის ფასი EUR"
                                     type="number"
                                     inputProps={{ step: 0.01 }}
@@ -1654,7 +1673,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                                 </Grid>
                                 <Grid item xs={6} md={2}>
                                   <TextField
-                                    fullWidth
+                                    sx={{ width: '160px' }}
                                     label="ჯამი EUR"
                                     type="number"
                                     value={item.total_price ? parseFloat(item.total_price).toFixed(2) : '0.00'}
@@ -1685,44 +1704,12 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                     </Accordion>
                   </Grid>
 
-                  {editingParticipant && (
-                    <>
-                      <Grid item xs={6}>
-                        <FormControl fullWidth>
-                          <InputLabel>სტატუსი</InputLabel>
-                          <Select
-                            value={formData.registration_status}
-                            onChange={(e) => setFormData({...formData, registration_status: e.target.value})}
-                            label="რეგისტრაციის სტატუსი"
-                          >
-                            <MenuItem value="მონაწილეობის მოთხოვნა">მონაწილეობის მოთხოვნა</MenuItem>
-                            <MenuItem value="რეგისტრირებული">რეგისტრირებული</MenuItem>
-                            <MenuItem value="დადასტურებული">დადასტურებული</MenuItem>
-                            <MenuItem value="გაუქმებული">გაუქმებული</MenuItem>
-                          </Select>
-                        </FormControl>
-                      </Grid>
-                      <Grid item xs={6}>
-                        <FormControl fullWidth>
-                          <InputLabel>გადახდის სტატუსი</InputLabel>
-                          <Select
-                            value={formData.payment_status}
-                            onChange={(e) => setFormData({...formData, payment_status: e.target.value})}
-                            label="გადახდის სტატუსი"
-                          >
-                            <MenuItem value="მომლოდინე">მომლოდინე</MenuItem>
-                            <MenuItem value="გადახდილი">გადახდილი</MenuItem>
-                            <MenuItem value="არ არის საჭიროო">არ არის საჭიროო</MenuItem>
-                          </Select>
-                        </FormControl>
-                      </Grid>
-                    </>
-                  )}
+
 
                   {/* გადახდის ინფორმაცია */}
-                  <Grid item xs={12}>
-                    <Accordion>
-                      <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 3, marginBottom: 2 }}>
+                  <Grid item xs={12} sx={{ mb: 1, mt: 1, display: 'flex', alignItems: 'center', gap: 2, flexDirection: 'column', width: '100%' }}>
+                    <Accordion sx={{  width: '100%', borderRadius: 1, mb: 2}} >
+                      <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #1a4e925b', borderRadius: 1, marginBottom: 0 }}>
                         <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Euro />
                           გადახდის ინფორმაცია
@@ -1778,7 +1765,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                             />
                           </Grid>
                           <Grid item xs={6}>
-                            <FormControl fullWidth>
+                            <FormControl fullWidth sx={{ minWidth: '200px' }}>
                               <InputLabel>გადახდის მეთოდი</InputLabel>
                               <Select
                                 value={formData.payment_method}
@@ -1801,6 +1788,25 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                               onChange={(e) => setFormData({...formData, invoice_number: e.target.value})}
                             />
                           </Grid>
+                                            {editingParticipant && (
+                    <>
+
+                      <Grid item xs={6}>
+                        <FormControl fullWidth>
+                          <InputLabel>გადახდის სტატუსი</InputLabel>
+                          <Select
+                            value={formData.payment_status}
+                            onChange={(e) => setFormData({...formData, payment_status: e.target.value})}
+                            label="გადახდის სტატუსი"
+                          >
+                            <MenuItem value="მომლოდინე">მომლოდინე</MenuItem>
+                            <MenuItem value="გადახდილი">გადახდილი</MenuItem>
+                            <MenuItem value="არ არის საჭიროო">დავალიანება</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                    </>
+                  )}
                         </Grid>
                       </AccordionDetails>
                     </Accordion>
@@ -1810,7 +1816,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                   <Grid item xs={12} sx={{ mb: 1, mt: 1, display: 'flex', alignItems: 'center', gap: 2, flexDirection: 'column', width: '100%' }}>
                   <Grid item xs={12} sx={{ width: '100%' }}>
                     <Accordion>
-                      <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 3, marginBottom: 0 }}>
+                      <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 1, marginBottom: 0 }}>
                         <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <AttachFile />
                           დოკუმენტების მიმაგრება
