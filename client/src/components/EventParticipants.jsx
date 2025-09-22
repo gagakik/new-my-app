@@ -1496,16 +1496,16 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
 
                   {/* პაკეტების არჩევა */}
                   {registrationType === 'package' && (
-                    <Grid item xs={12}>
-                      <Accordion>
-                        <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 3, marginBottom: 2 }}>
+                    <Grid item xs={12} sx={{width:'100%'}}>
+                      <Accordion sx={{ mb: 2, border: '1px solid #e2e8f0', borderRadius: 1, width: '100%' }}>
+                        <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 1, marginBottom: 0 }}>
                           <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Inventory2 />
                             პაკეტების არჩევა
                           </Typography>
                         </AccordionSummary>
                         <AccordionDetails>
-                          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
                             <Button
                               variant="contained"
                               startIcon={<Add />}
@@ -1523,8 +1523,9 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                                 <Grid container spacing={2}>
                                   <Grid item xs={8}>
                                     <FormControl fullWidth required>
-                                      <InputLabel>პაკეტი</InputLabel>
+                                      <InputLabel >პაკეტი</InputLabel>
                                       <Select
+                                        sx={{ width: '200px'}}
                                         value={packageSelection.package_id || ''}
                                         onChange={(e) => handlePackageChange(index, 'package_id', e.target.value)}
                                         label="პაკეტი"
@@ -1941,7 +1942,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                         </Typography>
                       </AccordionSummary>
                       <AccordionDetails>
-                        <Grid container spacing={2}>
+                        <Grid container spacing={2} sx={{display: 'flex', gap: 2, flexDirection: 'column'}}>
                           <Grid item xs={6}>
                             <TextField
                               fullWidth
