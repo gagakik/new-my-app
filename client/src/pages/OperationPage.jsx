@@ -712,7 +712,7 @@ const OperationPage = ({ showNotification }) => {
                           </Typography>
                           <Typography variant="body1"><strong>სტენდის ტიპი:</strong> {selectedStand.booth_type || 'N/A'}</Typography>
                           <Typography variant="body1"><strong>კატეგორია:</strong> {selectedStand.booth_category || 'N/A'}</Typography>
-                          
+
                           <Box sx={{ mt: 2 }}>
                             <Typography variant="body2" sx={{ mb: 1 }}>
                               <strong>სტატუსი:</strong>
