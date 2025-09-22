@@ -266,6 +266,9 @@ const createTables = async () => {
         participant_id INTEGER REFERENCES event_participants(id) ON DELETE CASCADE,
         equipment_id INTEGER REFERENCES equipment(id) ON DELETE CASCADE,
         quantity INTEGER NOT NULL,
+        unit_price DECIMAL(10,2),
+        total_price DECIMAL(10,2),
+        created_by INTEGER,
         booking_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -444,7 +447,7 @@ const createTables = async () => {
 const addMissingColumns = async () => {
   try {
     console.log("შემოწმდება და დაემატება ყველა საჭირო სვეტი...");
-    const tablesToCheck = ["event_participants", "annual_services"];
+    const tablesToCheck = ["event_participants", "annual_services", "equipment_bookings"];
     for (const tableName of tablesToCheck) {
       const columns = await query(
         `
@@ -484,7 +487,14 @@ const addMissingColumns = async () => {
             { name: "contract_file_path", type: "VARCHAR(500)" },
             { name: "handover_file_path", type: "VARCHAR(500)" },
             { name: "status", type: "VARCHAR(50) DEFAULT 'აქტიური'" },
-            { name: "notes", type: "TEXT" }
+            { name: "notes", type: "TEXT" },
+            { name: "price_registr_fee", type: "DECIMAL(10,2)" },
+            { name: "price_Participation_fee", type: "DECIMAL(10,2)" },
+            { name: "price_participation_fee", type: "DECIMAL(10,2)" },
+            { name: "Frieze_inscription_geo", type: "TEXT" },
+            { name: "Frieze_inscription_eng", type: "TEXT" },
+            { name: "frieze_inscription_geo", type: "TEXT" },
+            { name: "frieze_inscription_eng", type: "TEXT" }
           ];
           for (const col of participantColumns) {
             if (!existingColumns.includes(col.name)) {
@@ -548,6 +558,26 @@ const addMissingColumns = async () => {
                   ALTER TABLE ${tableName}
                   ADD COLUMN ${col} ${columnDefinition}
                 `);
+              }
+            }
+          }
+          break;
+        case "equipment_bookings":
+          const bookingColumns = [
+            { name: "unit_price", type: "DECIMAL(10,2)" },
+            { name: "total_price", type: "DECIMAL(10,2)" },
+            { name: "created_by", type: "INTEGER" }
+          ];
+          for (const col of bookingColumns) {
+            if (!existingColumns.includes(col.name)) {
+              console.log(`Adding missing column '${col.name}' to '${tableName}'...`);
+              try {
+                await query(`
+                  ALTER TABLE ${tableName}
+                  ADD COLUMN ${col.name} ${col.type}
+                `);
+              } catch (addColumnError) {
+                console.log(`Column '${col.name}' might already exist or constraint issue:`, addColumnError.message);
               }
             }
           }

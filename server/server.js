@@ -32,7 +32,7 @@ const createDirectories = () => {
       console.log(`📍 Absolute path: ${path.resolve(dir)}`);
 
       if (!fs.existsSync(dir)) {
-        console.log(`📁 Creating directory...`);
+        console.log('📁 Creating directory...');
         fs.mkdirSync(dir, { recursive: true, mode: 0o755 });
         console.log(`✅ Directory created: ${dir}`);
       } else {
@@ -41,7 +41,7 @@ const createDirectories = () => {
 
       // Verify directory was created and is accessible
       const dirStats = fs.statSync(dir);
-      console.log(`📊 Directory stats:`, {
+      console.log('📊 Directory stats:', {
         isDirectory: dirStats.isDirectory(),
         mode: dirStats.mode.toString(8),
         created: dirStats.birthtime
@@ -62,7 +62,7 @@ const createDirectories = () => {
 
           // Clean up test file
           fs.unlinkSync(testFile);
-          console.log(`🧹 Test file cleaned up`);
+          console.log('🧹 Test file cleaned up');
         } else {
           throw new Error('Test file was not created even though writeFileSync did not throw');
         }
@@ -70,11 +70,11 @@ const createDirectories = () => {
         console.log(`✅ Write access confirmed for: ${dir}`);
       } catch (writeError) {
         console.error(`❌ Write access test failed for ${dir}:`, writeError.message);
-        console.error(`❌ Error code:`, writeError.code);
+        console.error('❌ Error code:', writeError.code);
 
         // Try to fix permissions
         try {
-          console.log(`🔧 Attempting to fix permissions...`);
+          console.log('🔧 Attempting to fix permissions...');
           fs.chmodSync(dir, 0o777);
 
           // Retry write test
@@ -83,7 +83,7 @@ const createDirectories = () => {
           console.log(`✅ Fixed permissions and confirmed write access for: ${dir}`);
         } catch (fixError) {
           console.error(`❌ Could not fix permissions for ${dir}:`, fixError.message);
-          console.error(`❌ This may cause file upload issues`);
+          console.error('❌ This may cause file upload issues');
         }
       }
 
@@ -92,17 +92,17 @@ const createDirectories = () => {
         const contents = fs.readdirSync(dir);
         console.log(`📋 Directory contents (${contents.length} items):`, contents.slice(0, 5).join(', ') + (contents.length > 5 ? '...' : ''));
       } catch (listError) {
-        console.error(`❌ Could not list directory contents:`, listError.message);
+        console.error('❌ Could not list directory contents:', listError.message);
       }
 
     } catch (error) {
       console.error(`❌ Error setting up directory ${dir}:`, error.message);
-      console.error(`❌ Error code:`, error.code);
-      console.error(`❌ Error stack:`, error.stack);
+      console.error('❌ Error code:', error.code);
+      console.error('❌ Error stack:', error.stack);
     }
   });
 
-  console.log(`\n📁 Directory setup complete. Summary:`);
+  console.log('\n📁 Directory setup complete. Summary:');
   directories.forEach(dir => {
     const exists = fs.existsSync(dir);
     console.log(`  ${exists ? '✅' : '❌'} ${dir} - ${exists ? 'exists' : 'missing'}`);
@@ -122,7 +122,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use((req, res, next) => {
   if (req.path.includes('/api/')) {
     console.log(`🌐 API Request: ${req.method} ${req.originalUrl}`);
-    console.log(`🌐 Headers:`, Object.keys(req.headers).reduce((acc, key) => {
+    console.log('🌐 Headers:', Object.keys(req.headers).reduce((acc, key) => {
       if (!key.toLowerCase().includes('authorization')) {
         acc[key] = req.headers[key];
       }
@@ -130,7 +130,7 @@ app.use((req, res, next) => {
     }, {}));
     console.log(`🌐 Content-Type: ${req.get('Content-Type')}`);
     if (req.files) {
-      console.log(`🌐 Files:`, Object.keys(req.files));
+      console.log('🌐 Files:', Object.keys(req.files));
     }
   }
   next();
@@ -170,7 +170,7 @@ app.use('/uploads', (req, res, next) => {
   console.log(`📁 Static file request: ${req.method} ${req.originalUrl}`);
   console.log(`📁 Requested file path: ${req.path}`);
   console.log(`📁 Full file path would be: ${path.join(__dirname, 'uploads', req.path)}`);
-  
+
   // Check if file exists before serving
   const fullPath = path.join(__dirname, 'uploads', req.path);
   if (fs.existsSync(fullPath)) {
@@ -179,7 +179,7 @@ app.use('/uploads', (req, res, next) => {
   } else {
     console.log(`❌ File not found: ${fullPath}`);
   }
-  
+
   next();
 }, express.static(path.join(__dirname, 'uploads'), {
   setHeaders: (res, filePath) => {
@@ -894,24 +894,24 @@ app.delete('/api/events/:id', authenticateToken, authorizeRoles('admin', 'manage
       await db.query('BEGIN');
 
       // Delete all related records in proper order to avoid foreign key constraint violations
-      
+
       // 1. Delete stand-related data
       try {
         await db.query(`
-          DELETE FROM stand_photos 
+          DELETE FROM stand_photos
           WHERE stand_id IN (SELECT id FROM stands WHERE event_id = $1)
         `, [id]);
-        
+
         await db.query(`
-          DELETE FROM stand_designs 
+          DELETE FROM stand_designs
           WHERE stand_id IN (SELECT id FROM stands WHERE event_id = $1)
         `, [id]);
-        
+
         await db.query(`
-          DELETE FROM stand_equipment 
+          DELETE FROM stand_equipment
           WHERE stand_id IN (SELECT id FROM stands WHERE event_id = $1)
         `, [id]);
-        
+
         await db.query('DELETE FROM stands WHERE event_id = $1', [id]);
         console.log('Deleted stand-related data');
       } catch (e) {
@@ -947,20 +947,20 @@ app.delete('/api/events/:id', authenticateToken, authorizeRoles('admin', 'manage
       const result = await db.query('DELETE FROM annual_services WHERE id = $1 RETURNING *', [id]);
 
       await db.query('COMMIT');
-      
+
       res.json({ message: 'ივენთი წარმატებით წაიშალა' });
-      
+
     } catch (deleteError) {
       await db.query('ROLLBACK');
       console.error('Event deletion error:', deleteError);
-      
+
       if (deleteError.code === '23503') {
         return res.status(400).json({
           message: 'ივენთის წაშლა შეუძლებელია, რადგან მასთან დაკავშირებული მონაცემები არსებობს.',
           detail: deleteError.detail
         });
       }
-      
+
       throw deleteError;
     }
   } catch (error) {
@@ -979,7 +979,7 @@ app.get('/api/events/:eventId/participants', authenticateToken, async (req, res)
     // First check if event_participants table exists
     const tableCheck = await db.query(`
       SELECT EXISTS (
-        SELECT FROM information_schema.tables 
+        SELECT FROM information_schema.tables
         WHERE table_name = 'event_participants'
       )
     `);
@@ -992,7 +992,7 @@ app.get('/api/events/:eventId/participants', authenticateToken, async (req, res)
     // Check if companies table exists
     const companiesTableCheck = await db.query(`
       SELECT EXISTS (
-        SELECT FROM information_schema.tables 
+        SELECT FROM information_schema.tables
         WHERE table_name = 'companies'
       )
     `);
@@ -1009,9 +1009,15 @@ app.get('/api/events/:eventId/participants', authenticateToken, async (req, res)
           c.country,
           c.identification_code,
           c.company_profile,
-          u.username as created_by_username
+          c.contact_persons,
+          c.company_phone,
+          c.company_email,
+          u.username as created_by_username,
+          COALESCE(ep.price_Participation_fee, ep.price_participation_fee) as price_participation_fee,
+          COALESCE(ep.Frieze_inscription_geo, ep.frieze_inscription_geo) as frieze_inscription_geo,
+          COALESCE(ep.Frieze_inscription_eng, ep.frieze_inscription_eng) as frieze_inscription_eng
         FROM event_participants ep
-        LEFT JOIN companies c ON ep.company_id = c.id
+        JOIN companies c ON ep.company_id = c.id
         LEFT JOIN users u ON ep.created_by_user_id = u.id
         WHERE ep.event_id = $1
         ORDER BY ep.created_at DESC
@@ -1026,7 +1032,13 @@ app.get('/api/events/:eventId/participants', authenticateToken, async (req, res)
           null as country,
           null as identification_code,
           null as company_profile,
-          u.username as created_by_username
+          null as contact_persons,
+          null as company_phone,
+          null as company_email,
+          u.username as created_by_username,
+          COALESCE(ep.price_Participation_fee, ep.price_participation_fee) as price_participation_fee,
+          COALESCE(ep.Frieze_inscription_geo, ep.frieze_inscription_geo) as frieze_inscription_geo,
+          COALESCE(ep.Frieze_inscription_eng, ep.frieze_inscription_eng) as frieze_inscription_eng
         FROM event_participants ep
         LEFT JOIN users u ON ep.created_by_user_id = u.id
         WHERE ep.event_id = $1
@@ -1056,8 +1068,8 @@ app.get('/api/events/:eventId/participants', authenticateToken, async (req, res)
     console.error('Error details:', error.message);
     console.error('Error code:', error.code);
     console.error('Error stack:', error.stack);
-    
-    res.status(500).json({ 
+
+    res.status(500).json({
       message: 'მონაწილეების მიღება ვერ მოხერხდა',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined,
       eventId: eventId
@@ -1087,7 +1099,11 @@ app.post('/api/events/:eventId/participants',
         notes,
         equipment_bookings,
         package_id,
-        registration_type
+        registration_type,
+        price_registr_fee,
+        price_Participation_fee,
+        Frieze_inscription_geo,
+        Frieze_inscription_eng
       } = req.body;
 
       console.log('Adding participant for event:', eventId);
@@ -1114,9 +1130,9 @@ app.post('/api/events/:eventId/participants',
       // Insert participant
       const participantResult = await db.query(
         `INSERT INTO event_participants
-         (event_id, company_id, booth_size, booth_number, payment_amount, payment_status, registration_status, notes, created_by_user_id, invoice_file_path, contract_file_path, handover_file_path, package_id, registration_type)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
-        [eventId, company_id, booth_size, booth_number, payment_amount, payment_status, registration_status, notes, req.user.id, invoice_file_path, contract_file_path, handover_file_path, package_id || null, registration_type || 'individual']
+         (event_id, company_id, booth_size, booth_number, payment_amount, payment_status, registration_status, notes, created_by_user_id, invoice_file_path, contract_file_path, handover_file_path, package_id, registration_type, price_registr_fee, price_Participation_fee, Frieze_inscription_geo, Frieze_inscription_eng)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING *`,
+        [eventId, company_id, booth_size, booth_number, payment_amount, payment_status, registration_status, notes, req.user.id, invoice_file_path, contract_file_path, handover_file_path, package_id || null, registration_type || 'individual', price_registr_fee ? parseFloat(price_registr_fee) : null, price_Participation_fee ? parseFloat(price_Participation_fee) : null, Frieze_inscription_geo || null, Frieze_inscription_eng || null]
       );
 
       const participant = participantResult.rows[0];
@@ -1205,7 +1221,11 @@ app.put('/api/events/:eventId/participants/:participantId',
         payment_due_date,
         payment_method,
         invoice_number,
-        equipment_bookings
+        equipment_bookings,
+        price_registr_fee,
+        price_Participation_fee,
+        Frieze_inscription_geo,
+        Frieze_inscription_eng
       } = req.body;
 
       // Handle file uploads
@@ -1269,8 +1289,10 @@ app.put('/api/events/:eventId/participants/:participantId',
             contact_person = $7, contact_position = $8, contact_email = $9, contact_phone = $10,
             payment_amount = $11, payment_due_date = $12, payment_method = $13,
             invoice_number = $14, invoice_file = $15, contract_file = $16,
-            handover_file = $17, booth_category = $18, booth_type = $19, updated_at = CURRENT_TIMESTAMP
-        WHERE id = $20 AND event_id = $21
+            handover_file = $17, booth_category = $18, booth_type = $19,
+            price_registr_fee = $20, price_Participation_fee = $21,
+            Frieze_inscription_geo = $22, Frieze_inscription_eng = $23, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $24 AND event_id = $25
         RETURNING *
       `, [
         company_id || current.company_id,
@@ -1292,6 +1314,10 @@ app.put('/api/events/:eventId/participants/:participantId',
         finalHandoverPath,
         req.body.booth_category || current.booth_category,
         req.body.booth_type || current.booth_type,
+        price_registr_fee ? parseFloat(price_registr_fee) : current.price_registr_fee,
+        price_Participation_fee ? parseFloat(price_Participation_fee) : current.price_Participation_fee,
+        Frieze_inscription_geo || current.Frieze_inscription_geo,
+        Frieze_inscription_eng || current.Frieze_inscription_eng,
         participantId, eventId
       ]);
 
@@ -2076,7 +2102,7 @@ app.delete('/api/annual-services/:id', authenticateToken, authorizeRoles('admin'
       // 1. Delete stand photos first (if stands table references participants)
       try {
         await db.query(`
-          DELETE FROM stand_photos 
+          DELETE FROM stand_photos
           WHERE stand_id IN (
             SELECT id FROM stands WHERE event_id = $1
           )
@@ -2089,7 +2115,7 @@ app.delete('/api/annual-services/:id', authenticateToken, authorizeRoles('admin'
       // 2. Delete stand designs
       try {
         await db.query(`
-          DELETE FROM stand_designs 
+          DELETE FROM stand_designs
           WHERE stand_id IN (
             SELECT id FROM stands WHERE event_id = $1
           )
@@ -2102,7 +2128,7 @@ app.delete('/api/annual-services/:id', authenticateToken, authorizeRoles('admin'
       // 3. Delete stand equipment
       try {
         await db.query(`
-          DELETE FROM stand_equipment 
+          DELETE FROM stand_equipment
           WHERE stand_id IN (
             SELECT id FROM stands WHERE event_id = $1
           )
@@ -2166,7 +2192,7 @@ app.delete('/api/annual-services/:id', authenticateToken, authorizeRoles('admin'
 
       // 10. Finally delete the annual service
       const result = await db.query('DELETE FROM annual_services WHERE id = $1 RETURNING *', [id]);
-      
+
       if (result.rows.length === 0) {
         await db.query('ROLLBACK');
         return res.status(404).json({ message: 'სერვისი ვერ მოიძებნა' });
@@ -2570,24 +2596,24 @@ app.post('/api/cleanup/image-urls', authenticateToken, authorizeRoles('admin'), 
       let paramCount = 1;
 
       if (participant.invoice_file_path && participant.invoice_file_path.startsWith('http://0.0.0.0:5000/uploads/')) {
-        updateFields.push(`invoice_file_path = $${paramCount++}`);
+        updateFields.push('invoice_file_path = $${paramCount++}');
         updateValues.push(participant.invoice_file_path.replace('http://0.0.0.0:5000/uploads/', '/uploads/'));
       }
 
       if (participant.contract_file_path && participant.contract_file_path.startsWith('http://0.0.0.0:5000/uploads/')) {
-        updateFields.push(`contract_file_path = $${paramCount++}`);
+        updateFields.push('contract_file_path = $${paramCount++}');
         updateValues.push(participant.contract_file_path.replace('http://0.0.0.0:5000/uploads/', '/uploads/'));
       }
 
       if (participant.handover_file_path && participant.handover_file_path.startsWith('http://0.0.0.0:5000/uploads/')) {
-        updateFields.push(`handover_file_path = $${paramCount++}`);
+        updateFields.push('handover_file_path = $${paramCount++}');
         updateValues.push(participant.handover_file_path.replace('http://0.0.0.0:5000/uploads/', '/uploads/'));
       }
 
       if (updateFields.length > 0) {
         updateValues.push(participant.id);
         await db.query(
-          `UPDATE event_participants SET ${updateFields.join(', ')} WHERE id = $${paramCount}`,
+          'UPDATE event_participants SET ${updateFields.join(', ')} WHERE id = $${paramCount}',
           updateValues
         );
         updatedParticipants++;

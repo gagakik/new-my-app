@@ -75,7 +75,6 @@ import {
 import InvoiceForm from './InvoiceForm';
 import InvitationGenerator from './InvitationGenerator';
 
-
 const EventParticipants = ({ eventId, eventName, onClose, showNotification, userRole }) => {
   const [participants, setParticipants] = useState([]);
   const [filteredParticipants, setFilteredParticipants] = useState([]);
@@ -101,7 +100,11 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
     payment_amount: '',
     payment_due_date: '',
     payment_method: '',
-    invoice_number: ''
+    invoice_number: '',
+    price_registr_fee: '',
+    price_Participation_fee: '',
+    Frieze_inscription_geo: '',
+    Frieze_inscription_eng: ''
   });
   const [files, setFiles] = useState({
     invoice_file: null,
@@ -282,7 +285,11 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
         return sum + (additionalQuantity * unitPrice);
       }, 0);
 
-      const totalAmount = totalPackagePrice + additionalEquipmentCost;
+      // დავამატოთ რეგისტრაციის და მონაწილეობის საფასურები
+      const registrFee = parseFloat(formData.price_registr_fee) || 0;
+      const participationFee = parseFloat(formData.price_Participation_fee) || 0;
+
+      const totalAmount = totalPackagePrice + additionalEquipmentCost + registrFee + participationFee;
 
       setFormData(prev => ({
         ...prev,
@@ -306,6 +313,12 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
     }
 
     calculatedAmount += equipmentTotal;
+
+    // დავამატოთ რეგისტრაციის და მონაწილეობის საფასურები
+    const registrFee = parseFloat(formData.price_registr_fee) || 0;
+    const participationFee = parseFloat(formData.price_Participation_fee) || 0;
+    calculatedAmount += registrFee + participationFee;
+
     const finalAmount = calculatedAmount;
 
     console.log(`ჯამური თანხა: სტენდი ${boothTotal} + აღჭურვილობა ${equipmentTotal} = ${calculatedAmount} (უკვე შეიცავს 18% დღგ-ს)`);
@@ -315,7 +328,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
       payment_amount: finalAmount.toFixed(2)
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.booth_size, manualPricePerSqm, equipmentTotal, registrationType, selectedPackages]);
+  }, [formData.booth_size, manualPricePerSqm, equipmentTotal, registrationType, selectedPackages, formData.price_registr_fee, formData.price_Participation_fee]);
 
   useEffect(() => {
     let filtered = participants;
@@ -598,7 +611,11 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
         payment_amount: participant.payment_amount || '',
         payment_due_date: participant.payment_due_date ? participant.payment_due_date.split('T')[0] : '',
         payment_method: participant.payment_method || '',
-        invoice_number: participant.invoice_number || ''
+        invoice_number: participant.invoice_number || '',
+        price_registr_fee: participant.price_registr_fee || '',
+        price_Participation_fee: participant.price_Participation_fee || participant.price_participation_fee || '',
+        Frieze_inscription_geo: participant.Frieze_inscription_geo || participant.frieze_inscription_geo || '',
+        Frieze_inscription_eng: participant.Frieze_inscription_eng || participant.frieze_inscription_eng || ''
       });
 
       console.log('Setting form data with booth info:', {
@@ -635,20 +652,30 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
           const boothSize = parseFloat(participant.booth_size);
           const totalAmount = parseFloat(participant.payment_amount);
 
-          const actualEquipmentTotal = equipment.reduce((sum, eq) => {
-            const qty = parseInt(eq.quantity) || 0;
-            const price = parseFloat(eq.unit_price) || 0;
-            return sum + (qty * price);
-          }, 0);
-
-          const boothCost = Math.max(0, totalAmount - actualEquipmentTotal);
-
-          if (boothSize > 0) {
-            const pricePerSqm = (boothCost / boothSize).toFixed(2);
-            console.log('Calculated price per sqm:', pricePerSqm, 'from booth cost:', boothCost, 'booth size:', boothSize, 'total amount:', totalAmount, 'equipment total:', actualEquipmentTotal);
-            setManualPricePerSqm(pricePerSqm);
+          // Check if price_per_sqm is already set in participant data
+          if (participant.price_per_sqm && parseFloat(participant.price_per_sqm) > 0) {
+            setManualPricePerSqm(participant.price_per_sqm);
+            console.log('Using existing price per sqm:', participant.price_per_sqm);
           } else {
-            setManualPricePerSqm('');
+            const actualEquipmentTotal = equipment.reduce((sum, eq) => {
+              const qty = parseInt(eq.quantity) || 0;
+              const price = parseFloat(eq.unit_price) || 0;
+              return sum + (qty * price);
+            }, 0);
+
+            // Subtract registration and participation fees from calculation
+            const registrFee = parseFloat(participant.price_registr_fee) || 0;
+            const participationFee = parseFloat(participant.price_Participation_fee || participant.price_participation_fee) || 0;
+            
+            const boothCost = Math.max(0, totalAmount - actualEquipmentTotal - registrFee - participationFee);
+
+            if (boothSize > 0) {
+              const pricePerSqm = (boothCost / boothSize).toFixed(2);
+              console.log('Calculated price per sqm:', pricePerSqm, 'from booth cost:', boothCost, 'booth size:', boothSize, 'total amount:', totalAmount, 'equipment total:', actualEquipmentTotal, 'fees:', registrFee + participationFee);
+              setManualPricePerSqm(pricePerSqm);
+            } else {
+              setManualPricePerSqm('');
+            }
           }
         } else {
           setManualPricePerSqm('');
@@ -785,7 +812,11 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
       payment_amount: '',
       payment_due_date: '',
       payment_method: '',
-      invoice_number: ''
+      invoice_number: '',
+      price_registr_fee: '',
+      price_Participation_fee: '',
+      Frieze_inscription_geo: '',
+      Frieze_inscription_eng: ''
     });
     setFiles({
       invoice_file: null,
@@ -968,8 +999,8 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
           contactPersons = companyData.contact_persons;
         } else if (typeof companyData.contact_persons === 'string') {
           try {
-            if (companyData.contact_persons.trim() === '' || 
-                companyData.contact_persons === '[]' || 
+            if (companyData.contact_persons.trim() === '' ||
+                companyData.contact_persons === '[]' ||
                 companyData.contact_persons === '[object Object]') {
               contactPersons = [];
             } else {
@@ -994,8 +1025,8 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
       }
 
       // Filter out invalid contact persons
-      contactPersons = contactPersons.filter(person => 
-        person && typeof person === 'object' && 
+      contactPersons = contactPersons.filter(person =>
+        person && typeof person === 'object' &&
         (person.name || person.position || person.phone || person.email)
       );
 
@@ -1019,7 +1050,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
   const showCompanyDetailsModal = async (participant) => {
     console.log('Opening company details for participant:', participant);
     console.log('Company ID:', participant.company_id);
-    
+
     // If participant already has company details loaded, use them as fallback
     if (participant.contact_persons || participant.company_phone || participant.company_email) {
       console.log('Participant has company contact info:', {
@@ -1028,7 +1059,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
         company_email: participant.company_email
       });
     }
-    
+
     await fetchCompanyDetails(participant.company_id);
   };
 
@@ -1050,20 +1081,20 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
 
   const getStatusBadge = (status) => {
     const statusMap = {
-      'მონაწილეობის მოთხოვნა': { color: 'error', text: 'მოთხოვნა' },
-      'მომლოდინე': { color: 'error', text: 'მომლოდ.' },
-      'რეგისტრირებული': { color: 'success', text: 'რეგისტრ.' },
+      'მონაწილეობის მოთხოვნა': { color: 'info', text: 'მოთხოვნა' },
+      'მომლოდინე': { color: 'warning', text: 'მომლოდ.' },
+      'რეგისტრირებული': { color: 'primary', text: 'რეგისტრ.' },
       'დადასტურებული': { color: 'success', text: 'დადასტ.' },
-      'გაუქმებული': { color: 'warning', text: 'გაუქმებული' }
+      'გაუქმებული': { color: 'error', text: 'გაუქმებული' }
     };
     return statusMap[status] || { color: 'default', text: status };
   };
 
   const getPaymentBadge = (status) => {
     const statusMap = {
-      'მომლოდინე': { color: 'error', text: 'მომლოდინე' },
-      'გადახდილი': { color: 'success', text: 'გადახდილი' },
-      'არ არის საჭიროო': { color: 'error', text: 'დავალიანება' }
+      'მომლოდინე': { color: 'warning', text: 'მომლოდ.' },
+      'გადახდილი': { color: 'success', text: 'გადახდ.' },
+      'არ არის საჭიროო': { color: 'default', text: 'არ საჭირო' }
     };
     return statusMap[status] || { color: 'default', text: status };
   };
@@ -1170,7 +1201,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                             '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7' },
                             transition: 'all 0.2s ease'
                           }}
-                  
+
                 >
                   ფილტრების გასუფთავება
                 </Button>
@@ -1328,14 +1359,14 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                   <Grid item xs={12}>
                     <FormControl fullWidth required sx={{ mb: 1, minWidth: '400px' }}>
                       <InputLabel >კომპანია</InputLabel>
-                      <Select 
+                      <Select
                         value={formData.company_id}
                         onChange={(e) => handleCompanyChange(e.target.value)}
                         label="კომპანია"
                       >
                         {companies.map(company => (
                           <MenuItem key={company.id} value={company.id} >
-                            {company.company_name} 
+                            {company.company_name}
                           </MenuItem>
                         ))}
                       </Select>
@@ -1345,7 +1376,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                   {/* სტენდის ინფორმაცია */}
                   <Grid item xs={12} sx={{ mb: 3, display: 'flex', justifyContent: 'center', alignItems: 'center' }} >
                     <Accordion defaultExpanded >
-                      <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 1}}>
+                      <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 3, marginBottom: 2}}>
                         <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1}}>
                           <LocationOn />
                           სტენდის ინფორმაცია
@@ -1353,7 +1384,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                       </AccordionSummary>
                       <AccordionDetails sx={{ mb: 1, p: 1}}>
                         <Grid container spacing={2}>
-                          <Grid item xs={12} sx={{ mb: 1, mt: 1, display: 'flex', alignItems: 'center', gap: 2, justifyContent: 'center', width: '100%' }}>
+                          <Grid item xs={12} sx={{ mb: 1, mt: 1, display: 'flex', alignItems: 'center', gap: 2 }}>
                             <Typography variant="subtitle2" sx={{ mb: 1 }}>რეგისტრაციის ტიპი</Typography>
                             <RadioGroup
                               row
@@ -1388,7 +1419,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                             </FormControl>
                           </Grid>
                           <Grid item xs={6}>
-                            <FormControl fullWidth sx={{ minWidth: '140px' }}>
+                            <FormControl fullWidth >
                               <InputLabel >ტიპი</InputLabel>
                               <Select
                                 value={formData.booth_type}
@@ -1410,27 +1441,12 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                               onChange={(e) => setFormData({...formData, booth_number: e.target.value})}
                             />
                           </Grid>
-                                                <Grid item xs={6}>
-                        <FormControl fullWidth>
-                          <InputLabel>სტატუსი</InputLabel>
-                          <Select
-                            value={formData.registration_status}
-                            onChange={(e) => setFormData({...formData, registration_status: e.target.value})}
-                            label="რეგისტრაციის სტატუსი"
-                          >
-                            <MenuItem value="მონაწილეობის მოთხოვნა">მონაწილეობის მოთხოვნა</MenuItem>
-                            <MenuItem value="რეგისტრირებული">რეგისტრირებული</MenuItem>
-                            <MenuItem value="დადასტურებული">დადასტურებული</MenuItem>
-                            <MenuItem value="გაუქმებული">გაუქმებული</MenuItem>
-                          </Select>
-                        </FormControl>
-                      </Grid>
                           <Grid item xs={4}>
                             <TextField
                               fullWidth
                               label="სტენდის ზომა (კვმ)"
                               type="number"
-                              inputProps={{ step: 0, min: 0 }}
+                              inputProps={{ step: 0.01 }}
                               value={formData.booth_size}
                               onChange={(e) => setFormData(prev => ({ ...prev, booth_size: e.target.value }))}
                               disabled={registrationType === 'package'}
@@ -1443,7 +1459,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                               fullWidth
                               label="ფასი კვმ-ზე (EUR)"
                               type="number"
-                              inputProps={{ step: 0.01, min: 0 }}
+                              inputProps={{ step: 0.01 }}
                               value={manualPricePerSqm}
                               onChange={(e) => setManualPricePerSqm(e.target.value)}
                               disabled={registrationType === 'package'}
@@ -1458,18 +1474,17 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
 
                   {/* პაკეტების არჩევა */}
                   {registrationType === 'package' && (
-                    <Grid item xs={12} sx={{justifyContent: 'center', alignItems: 'center', display: 'flex', width: '100%', borderRadius: 1}}>
-                      <Accordion sx={{ mb: 2, width: '100%', borderRadius: 1,  border: '1px solid #e2e8f0', justifyContent: 'center', alignItems: 'center' }}>
-                        <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 1, marginBottom: 0,  }}>
+                    <Grid item xs={12}>
+                      <Accordion>
+                        <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 3, marginBottom: 2 }}>
                           <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Inventory2 />
                             პაკეტების არჩევა
                           </Typography>
                         </AccordionSummary>
                         <AccordionDetails>
-                          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-                            <Button 
-                              width='20%'
+                          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                            <Button
                               variant="contained"
                               startIcon={<Add />}
                               onClick={addPackageSelection}
@@ -1485,7 +1500,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                               <CardContent>
                                 <Grid container spacing={2}>
                                   <Grid item xs={8}>
-                                    <FormControl fullWidth required sx={{ mb: 1, minWidth: '400px' }}>
+                                    <FormControl fullWidth required>
                                       <InputLabel>პაკეტი</InputLabel>
                                       <Select
                                         value={packageSelection.package_id || ''}
@@ -1563,9 +1578,9 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                   )}
 
                   {/* აღჭურვილობა */}
-                  <Grid item xs={12} sx={{width: '100%', mb: 2, display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
-                    <Accordion sx={{ mb: 2, width: '100%', borderRadius: 1 }}>
-                      <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 1, marginBottom: 0 }}>
+                  <Grid item xs={12}>
+                    <Accordion>
+                      <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 3, marginBottom: 2 }}>
                         <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Build />
                           {registrationType === 'package'
@@ -1575,10 +1590,8 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                         </Typography>
                       </AccordionSummary>
                       <AccordionDetails>
-                        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
                           <Button
-                          sx={{width: '20%' , minWidth: '200px'}}
-                            fullWidth
                             variant="contained"
                             startIcon={<Add />}
                             onClick={addEquipmentRow}
@@ -1596,7 +1609,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                                 <Grid item xs={12} md={4}>
                                   <FormControl fullWidth>
                                     <InputLabel>აღჭურვილობა</InputLabel>
-                                    <Select sx={{ width: '160px' }}
+                                    <Select
                                       value={item.equipment_id || ''}
                                       onChange={(e) => handleEquipmentChange(index, 'equipment_id', e.target.value)}
                                       label="აღჭურვილობა"
@@ -1644,7 +1657,6 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                                 </Grid>
                                 <Grid item xs={6} md={2}>
                                   <TextField
-                                    sx={{ width: '120px' }}
                                     fullWidth
                                     label="რაოდენობა"
                                     type="number"
@@ -1662,7 +1674,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                                 </Grid>
                                 <Grid item xs={6} md={2}>
                                   <TextField
-                                    sx={{ width: '160px' }}
+                                    fullWidth
                                     label="ერთეულის ფასი EUR"
                                     type="number"
                                     inputProps={{ step: 0.01 }}
@@ -1673,7 +1685,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                                 </Grid>
                                 <Grid item xs={6} md={2}>
                                   <TextField
-                                    sx={{ width: '160px' }}
+                                    fullWidth
                                     label="ჯამი EUR"
                                     type="number"
                                     value={item.total_price ? parseFloat(item.total_price).toFixed(2) : '0.00'}
@@ -1704,12 +1716,44 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                     </Accordion>
                   </Grid>
 
-
+                  {editingParticipant && (
+                    <>
+                      <Grid item xs={6}>
+                        <FormControl fullWidth>
+                          <InputLabel>სტატუსი</InputLabel>
+                          <Select
+                            value={formData.registration_status}
+                            onChange={(e) => setFormData({...formData, registration_status: e.target.value})}
+                            label="რეგისტრაციის სტატუსი"
+                          >
+                            <MenuItem value="მონაწილეობის მოთხოვნა">მონაწილეობის მოთხოვნა</MenuItem>
+                            <MenuItem value="რეგისტრირებული">რეგისტრირებული</MenuItem>
+                            <MenuItem value="დადასტურებული">დადასტურებული</MenuItem>
+                            <MenuItem value="გაუქმებული">გაუქმებული</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <FormControl fullWidth>
+                          <InputLabel>გადახდის სტატუსი</InputLabel>
+                          <Select
+                            value={formData.payment_status}
+                            onChange={(e) => setFormData({...formData, payment_status: e.target.value})}
+                            label="გადახდის სტატუსი"
+                          >
+                            <MenuItem value="მომლოდინე">მომლოდინე</MenuItem>
+                            <MenuItem value="გადახდილი">გადახდილი</MenuItem>
+                            <MenuItem value="არ არის საჭიროო">არ არის საჭიროო</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                    </>
+                  )}
 
                   {/* გადახდის ინფორმაცია */}
-                  <Grid item xs={12} sx={{ mb: 1, mt: 1, display: 'flex', alignItems: 'center', gap: 2, flexDirection: 'column', width: '100%' }}>
-                    <Accordion sx={{  width: '100%', borderRadius: 1, mb: 2}} >
-                      <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #1a4e925b', borderRadius: 1, marginBottom: 0 }}>
+                  <Grid item xs={12}>
+                    <Accordion>
+                      <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 3, marginBottom: 2 }}>
                         <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Euro />
                           გადახდის ინფორმაცია
@@ -1718,6 +1762,28 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                       <AccordionDetails>
                         <Grid container spacing={2}>
                           <Grid item xs={6}>
+                            <TextField
+                              fullWidth
+                              label="რეგისტრაციის საფასური EUR"
+                              type="number"
+                              inputProps={{ step: 0.01 }}
+                              value={formData.price_registr_fee}
+                              onChange={(e) => setFormData({...formData, price_registr_fee: e.target.value})}
+                              placeholder="შეიყვანეთ რეგისტრაციის საფასური"
+                            />
+                          </Grid>
+                          <Grid item xs={6}>
+                            <TextField
+                              fullWidth
+                              label="მონაწილეობის საფასური EUR"
+                              type="number"
+                              inputProps={{ step: 0.01 }}
+                              value={formData.price_Participation_fee}
+                              onChange={(e) => setFormData({...formData, price_Participation_fee: e.target.value})}
+                              placeholder="შეიყვანეთ მონაწილეობის საფასური"
+                            />
+                          </Grid>
+                          <Grid item xs={12}>
                             <TextField
                               fullWidth
                               label="გადასახდელი თანხა EUR"
@@ -1747,9 +1813,9 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                                     });
                                     const additionalQuantity = Math.max(0, quantity - totalPackageQuantity);
                                     return sum + (additionalQuantity * (parseFloat(item.unit_price) || 0));
-                                  }, 0).toFixed(2)} | სულ: EUR${formData.payment_amount}`
+                                  }, 0).toFixed(2)} | საფასურები: EUR${(parseFloat(formData.price_registr_fee) || 0) + (parseFloat(formData.price_Participation_fee) || 0)} | სულ: EUR${formData.payment_amount}`
                                 ) : (
-                                  `${formData.booth_size && manualPricePerSqm ? `სტენდი: EUR${(parseFloat(formData.booth_size || 0) * parseFloat(manualPricePerSqm || 0)).toFixed(2)} | ` : ''}აღჭურვილობა: EUR${equipmentTotal.toFixed(2)} | სულ: EUR${formData.payment_amount}`
+                                  `${formData.booth_size && manualPricePerSqm ? `სტენდი: EUR${(parseFloat(formData.booth_size || 0) * parseFloat(manualPricePerSqm || 0)).toFixed(2)} | ` : ''}აღჭურვილობა: EUR${equipmentTotal.toFixed(2)} | საფასურები: EUR${(parseFloat(formData.price_registr_fee) || 0) + (parseFloat(formData.price_Participation_fee) || 0)} | სულ: EUR${formData.payment_amount}`
                                 )
                               }
                             />
@@ -1765,7 +1831,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                             />
                           </Grid>
                           <Grid item xs={6}>
-                            <FormControl fullWidth sx={{ minWidth: '200px' }}>
+                            <FormControl fullWidth>
                               <InputLabel>გადახდის მეთოდი</InputLabel>
                               <Select
                                 value={formData.payment_method}
@@ -1788,25 +1854,6 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                               onChange={(e) => setFormData({...formData, invoice_number: e.target.value})}
                             />
                           </Grid>
-                                            {editingParticipant && (
-                    <>
-
-                      <Grid item xs={6}>
-                        <FormControl fullWidth>
-                          <InputLabel>გადახდის სტატუსი</InputLabel>
-                          <Select
-                            value={formData.payment_status}
-                            onChange={(e) => setFormData({...formData, payment_status: e.target.value})}
-                            label="გადახდის სტატუსი"
-                          >
-                            <MenuItem value="მომლოდინე">მომლოდინე</MenuItem>
-                            <MenuItem value="გადახდილი">გადახდილი</MenuItem>
-                            <MenuItem value="არ არის საჭიროო">დავალიანება</MenuItem>
-                          </Select>
-                        </FormControl>
-                      </Grid>
-                    </>
-                  )}
                         </Grid>
                       </AccordionDetails>
                     </Accordion>
@@ -1816,7 +1863,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                   <Grid item xs={12} sx={{ mb: 1, mt: 1, display: 'flex', alignItems: 'center', gap: 2, flexDirection: 'column', width: '100%' }}>
                   <Grid item xs={12} sx={{ width: '100%' }}>
                     <Accordion>
-                      <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 1, marginBottom: 0 }}>
+                      <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 3, marginBottom: 0 }}>
                         <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <AttachFile />
                           დოკუმენტების მიმაგრება
@@ -1871,6 +1918,43 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                                 </Typography>
                               )}
                             </Box>
+                          </Grid>
+                        </Grid>
+                      </AccordionDetails>
+                    </Accordion>
+                  </Grid>
+
+                  <Grid item xs={12} sx={{ mt: 1, mb: 1, width: '100%' }}>
+                    <Accordion>
+                      <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 3, marginBottom: 0 }}>
+                        <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Receipt />
+                          ფრიზზე წარწერა
+                        </Typography>
+                      </AccordionSummary>
+                      <AccordionDetails>
+                        <Grid container spacing={2}>
+                          <Grid item xs={6}>
+                            <TextField
+                              fullWidth
+                              label="ფრიზზე წარწერა ქართულად"
+                              multiline
+                              rows={2}
+                              value={formData.Frieze_inscription_geo}
+                              onChange={(e) => setFormData({...formData, Frieze_inscription_geo: e.target.value})}
+                              placeholder="შეიყვანეთ ქართული წარწერა ფრიზისთვის"
+                            />
+                          </Grid>
+                          <Grid item xs={6}>
+                            <TextField
+                              fullWidth
+                              label="ფრიზზე წარწერა ინგლისურად"
+                              multiline
+                              rows={2}
+                              value={formData.Frieze_inscription_eng}
+                              onChange={(e) => setFormData({...formData, Frieze_inscription_eng: e.target.value})}
+                              placeholder="Enter text for frieze inscription in English"
+                            />
                           </Grid>
                         </Grid>
                       </AccordionDetails>
@@ -2164,7 +2248,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                             '&:hover': { boxShadow: '0 0 10px #745ba7', color: '#745ba7' },
                             transition: 'all 0.2s ease'
                           }}
-                                      
+
                                     >
                                       <Delete fontSize="small" />
                                     </IconButton>
@@ -2258,12 +2342,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                 </Grid>
               </Grid>
 
-
-
-              <Grid item xs={12}>
-
-              <Grid fullWidth container spacing={2}>
-                {selectedCompanyForDetails.comment && (
+              {selectedCompanyForDetails.comment && (
                 <Grid item xs={12} borderBottom={1} borderColor={'#b8ceebff'} pb={1} mb={2}>
                   <Divider sx={{ my: 2 }} />
                   <Typography variant="h6" gutterBottom>კომენტარი</Typography>
@@ -2272,9 +2351,19 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                   </Alert>
                 </Grid>
               )}
-              </Grid>
-                <Divider sx={{ my: 2}} />
+
+              <Grid item xs={12}>
+                <Divider sx={{ my: 2 }} />
                 <Typography variant="h6" gutterBottom>საკონტაქტო პირები</Typography>
+
+                {/* Debug info - remove this in production */}
+                {process.env.NODE_ENV === 'development' && (
+                  <Box sx={{ mb: 2, p: 1, bgcolor: '#f5f5f5', borderRadius: 1 }}>
+                    <Typography variant="caption" component="pre">
+                      Debug: contact_persons = {JSON.stringify(selectedCompanyForDetails.contact_persons, null, 2)}
+                    </Typography>
+                  </Box>
+                )}
 
                 {selectedCompanyForDetails.contact_persons &&
                   Array.isArray(selectedCompanyForDetails.contact_persons) &&
@@ -2283,9 +2372,9 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                       {selectedCompanyForDetails.contact_persons
                         .filter(person => person && (person.name || person.position || person.phone || person.email))
                         .map((person, index) => (
-                          <Grid item xs={12} md={6} key={index} sx={{width: '100%'}}>
+                          <Grid item xs={12} md={6} key={index}>
                             <Card variant="outlined" sx={{ p: 2 }}>
-                              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1}}>
+                              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                                 {person.name || 'უცნობი'}
                               </Typography>
                               <Stack spacing={1} sx={{ mt: 1 }}>
@@ -2325,7 +2414,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                       <Alert severity="info" sx={{ mb: 2 }}>
                         საკონტაქტო პირები არ არის დამატებული
                       </Alert>
-                      
+
                       {/* Show company general contact info if available */}
                       {(selectedCompanyForDetails.company_phone || selectedCompanyForDetails.company_email) && (
                         <Card variant="outlined" sx={{ p: 2 }}>
