@@ -89,18 +89,12 @@ const MainContent = ({ showNotification, userRole, userName, onLogout }) => {
                 }
               }}
             >
-              ზოგადი ინფორმაცია
             </Typography>
             <Typography
               variant="h6"
               color="text.secondary"
             >
-              ჭერის სიმაღლე
-              მე-3 პავილიონი - 410 სმ.
-              მე-4 პავილიონი - 455 სმ.
-              მე-5 პავილიონი - 455 სმ.
-              მე-6 პავილიონი - 455 სმ.
-              მე-11 პავილიონი - 600 სმ.
+              <Statistics/>
             </Typography>
           </Box>
         </Paper>

@@ -1,8 +1,11 @@
+
 const db = require('./db');
 
 // Create stands tables
-async function createStandsTables() {
+async function setupStandsTables() {
   try {
+    console.log('🔧 სტენდების ცხრილების შექმნა...');
+
     // Main stands table
     await db.query(`
       CREATE TABLE IF NOT EXISTS stands (
@@ -20,7 +23,7 @@ async function createStandsTables() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         created_by_user_id INTEGER REFERENCES users(id),
         UNIQUE(event_id, booth_number)
-      );
+      )
     `);
 
     console.log('✅ stands ცხრილი შექმნილია');
@@ -36,7 +39,7 @@ async function createStandsTables() {
         assigned_by_user_id INTEGER REFERENCES users(id),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(stand_id, equipment_id)
-      );
+      )
     `);
 
     console.log('✅ stand_equipment ცხრილი შექმნილია');
@@ -50,7 +53,7 @@ async function createStandsTables() {
         description TEXT,
         uploaded_by_user_id INTEGER REFERENCES users(id),
         uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
+      )
     `);
 
     console.log('✅ stand_designs ცხრილი შექმნილია');
@@ -64,21 +67,57 @@ async function createStandsTables() {
         description TEXT,
         uploaded_by_user_id INTEGER REFERENCES users(id),
         uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
+      )
     `);
 
     console.log('✅ stand_photos ცხრილი შექმნილია');
 
+    // Check if we have event_participants
+    const checkParticipants = await db.query('SELECT COUNT(*) as count FROM event_participants');
+    console.log(`📊 event_participants ცხრილში არის ${checkParticipants.rows[0].count} ჩანაწერი`);
+
+    // If we have participants but no stands, migrate them
+    const standsCount = await db.query('SELECT COUNT(*) as count FROM stands');
+    console.log(`📊 stands ცხრილში არის ${standsCount.rows[0].count} ჩანაწერი`);
+
+    if (checkParticipants.rows[0].count > 0 && standsCount.rows[0].count === 0) {
+      console.log('🔄 მონაწილეების მიგრაცია stands ცხრილში...');
+      
+      await db.query(`
+        INSERT INTO stands (event_id, booth_number, company_name, area, contact_person, contact_phone, contact_email, status, notes, created_at, created_by_user_id)
+        SELECT 
+          ep.event_id,
+          COALESCE(ep.booth_number, 'B-' || ep.id) as booth_number,
+          COALESCE(c.company_name, 'Unknown Company ' || ep.id) as company_name,
+          COALESCE(ep.area, ep.booth_size, 0) as area,
+          ep.contact_person,
+          ep.contact_phone,
+          ep.contact_email,
+          CASE 
+            WHEN ep.status = 'გადახდილი' THEN 'დასრულებული'
+            WHEN ep.status = 'მომლოდინე' THEN 'დაგეგმილი'
+            WHEN ep.status = 'დადასტურებული' THEN 'დიზაინის ეტაპი'
+            WHEN ep.status = 'შეუქმებული' THEN 'მშენებლობა დაწყებული'
+            ELSE 'დაგეგმილი'
+          END as status,
+          ep.notes,
+          ep.created_at,
+          ep.created_by_user_id
+        FROM event_participants ep
+        LEFT JOIN companies c ON ep.company_id = c.id
+        WHERE ep.event_id IS NOT NULL
+      `);
+
+      const migratedCount = await db.query('SELECT COUNT(*) as count FROM stands');
+      console.log(`✅ მიგრირებულია ${migratedCount.rows[0].count} სტენდი`);
+    }
+
   } catch (error) {
     console.error('❌ stands ცხრილების შექმნის შეცდომა:', error);
     throw error;
+  } finally {
+    process.exit(0);
   }
 }
 
-setupStandsTables().then(() => {
-    console.log('=== სტენდების ცხრილების მომზადება დასრულდა ===');
-    process.exit(0);
-}).catch(error => {
-    console.error('შეცდომა:', error);
-    process.exit(1);
-});
+setupStandsTables();

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Container,
@@ -58,6 +59,7 @@ import {
   ArrowBack,
   Image as ImageIcon
 } from '@mui/icons-material';
+import axios from 'axios';
 
 const OperationPage = ({ showNotification }) => {
   const [events, setEvents] = useState([]);
@@ -114,56 +116,60 @@ const OperationPage = ({ showNotification }) => {
     { value: 'გადაუდებელი ყურადღება', color: '#f44336', icon: <Warning /> }
   ];
 
+  // Create axios instance with interceptors
+  const apiClient = axios.create({
+    baseURL: '/api',
+    timeout: 30000,
+  });
+
+  // Request interceptor to add auth headers
+  apiClient.interceptors.request.use((config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  });
+
+  // Response interceptor for error handling
+  apiClient.interceptors.response.use(
+    (response) => response.data,
+    (error) => {
+      const message = error.response?.data?.message || error.message || 'Network error occurred';
+      throw new Error(message);
+    }
+  );
+
   const fetchEvents = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/annual-services', {
-        headers: { 'Authorization': `Bearer ${token}` }
+      const data = await apiClient.get('/annual-services');
+      // ფილტრავთ მხოლოდ აქტიური და მომავალი ივენთები
+      const now = new Date();
+      const activeAndUpcomingEvents = data.filter(event => {
+        const endDate = new Date(event.end_date);
+        return !event.is_archived && endDate >= now;
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        // ფილტრავთ მხოლოდ აქტიური და მომავალი ივენთები
-        const now = new Date();
-        const activeAndUpcomingEvents = data.filter(event => {
-          const endDate = new Date(event.end_date);
-          return !event.is_archived && endDate >= now;
-        });
-        setEvents(activeAndUpcomingEvents);
-      } else {
-        setError('ივენთების ჩატვირთვის შეცდომა');
-        showNotification('ივენთების მიღება ვერ მოხერხდა', 'error');
-      }
-    } catch (_error) {
-      console.error('Error fetching events:', _error);
-      setError('სერვერთან კავშირის შეცდომა');
-      showNotification('შეცდომა მონაცემების ჩატვირთვისას', 'error');
+      setEvents(activeAndUpcomingEvents);
+    } catch (error) {
+      console.error('Error fetching events:', error);
+      setError('ივენთების ჩატვირთვის შეცდომა');
+      showNotification('ივენთების მიღება ვერ მოხერხდა', 'error');
     } finally {
       setLoading(false);
     }
   }, [showNotification]);
 
-
   const fetchStands = useCallback(async (eventId) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/events/${eventId}/stands`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setStands(data);
-        if (data.length > 0) {
-          setSelectedStand(data[0]);
-        } else {
-          setSelectedStand(null);
-        }
+      const data = await apiClient.get(`/events/${eventId}/stands`);
+      setStands(data);
+      if (data.length > 0) {
+        setSelectedStand(data[0]);
       } else {
-        showNotification('სტენდების მიღება ვერ მოხერხდა', 'error');
+        setSelectedStand(null);
       }
-    } catch (_error) {
-      console.error('Error fetching stands:', _error);
+    } catch (error) {
+      console.error('Error fetching stands:', error);
       setLoading(false);
       showNotification('შეცდომა სტენდების ჩატვირთვისას', 'error');
     }
@@ -171,33 +177,17 @@ const OperationPage = ({ showNotification }) => {
 
   const fetchEquipment = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/equipment', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setAllEquipment(data);
-      }
-    } catch (_error) {
-      console.error('აღჭურვილობის მიღების შეცდომა:', _error);
+      const data = await apiClient.get('/equipment');
+      setAllEquipment(data);
+    } catch (error) {
+      console.error('აღჭურვილობის მიღების შეცდომა:', error);
     }
   }, []);
 
   const fetchCompanies = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/companies', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setCompanies(data);
-      } else {
-        console.error('კომპანიების მიღება ვერ მოხერხდა');
-      }
+      const data = await apiClient.get('/companies');
+      setCompanies(data);
     } catch (error) {
       console.error('კომპანიების მიღების შეცდომა:', error);
     }
@@ -218,55 +208,27 @@ const OperationPage = ({ showNotification }) => {
   const handleStandSubmit = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/events/${selectedEvent.id}/stands`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-      });
-
-      if (response.ok) {
-        showNotification('სტენდი წარმატებით დამატებულია', 'success');
-        fetchStands(selectedEvent.id);
-        setShowStandForm(false);
-        resetForm();
-      } else {
-        const errorData = await response.json();
-        showNotification(errorData.message || 'შეცდომა სტენდის დამატებისას', 'error');
-      }
-    } catch (_error) {
-      console.error('შეცდომა:', _error);
-      showNotification('შეცდომა ქსელურ მოთხოვნაში', 'error');
+      await apiClient.post(`/events/${selectedEvent.id}/stands`, formData);
+      showNotification('სტენდი წარმატებით დამატებულია', 'success');
+      fetchStands(selectedEvent.id);
+      setShowStandForm(false);
+      resetForm();
+    } catch (error) {
+      console.error('შეცდომა:', error);
+      showNotification(error.message || 'შეცდომა სტენდის დამატებისას', 'error');
     }
   };
 
   const handleEquipmentAdd = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/events/${selectedEvent.id}/stands/${selectedStand.id}/equipment`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(equipmentData)
-      });
-
-      if (response.ok) {
-        showNotification('აღჭურვილობა წარმატებით დამატებულია', 'success');
-        fetchStands(selectedEvent.id);
-        setShowEquipmentDialog(false);
-        setEquipmentData({ equipment_id: '', quantity: 1, notes: '' });
-      } else {
-        const errorData = await response.json();
-        showNotification(errorData.message || 'შეცდომა აღჭურვილობის დამატებისას', 'error');
-      }
-    } catch (_error) {
-      console.error('შეცდომა:', _error);
-      showNotification('შეცდომა ქსელურ მოთხოვნაში', 'error');
+      await apiClient.post(`/events/${selectedEvent.id}/stands/${selectedStand.id}/equipment`, equipmentData);
+      showNotification('აღჭურვილობა წარმატებით დამატებულია', 'success');
+      fetchStands(selectedEvent.id);
+      setShowEquipmentDialog(false);
+      setEquipmentData({ equipment_id: '', quantity: 1, notes: '' });
+    } catch (error) {
+      console.error('შეცდომა:', error);
+      showNotification(error.message || 'შეცდომა აღჭურვილობის დამატებისას', 'error');
     }
   };
 
@@ -277,7 +239,6 @@ const OperationPage = ({ showNotification }) => {
     }
 
     try {
-      const token = localStorage.getItem('token');
       const uploadFormData = new FormData();
 
       designFiles.forEach((file, index) => {
@@ -288,72 +249,53 @@ const OperationPage = ({ showNotification }) => {
         uploadFormData.append('description', designDescription);
       }
 
-      const response = await fetch(`/api/events/${selectedEvent.id}/stands/${selectedStand.id}/design`, {
-        method: 'POST',
+      await apiClient.post(`/events/${selectedEvent.id}/stands/${selectedStand.id}/design`, uploadFormData, {
         headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: uploadFormData
+          'Content-Type': 'multipart/form-data'
+        }
       });
 
-      if (response.ok) {
-        showNotification('დიზაინის ფაილები წარმატებით ატვირთულია', 'success');
-        fetchStands(selectedEvent.id);
-        setShowDesignDialog(false);
-        setDesignFiles([]);
-        setDesignDescription('');
-      } else {
-        const errorData = await response.json();
-        showNotification(errorData.message || 'შეცდომა ფაილების ატვირთვისას', 'error');
-      }
-    } catch (_error) {
-      console.error('შეცდომა:', _error);
-      showNotification('შეცდომა ქსელურ მოთხოვნაში', 'error');
+      showNotification('დიზაინის ფაილები წარმატებით ატვირთულია', 'success');
+      fetchStands(selectedEvent.id);
+      setShowDesignDialog(false);
+      setDesignFiles([]);
+      setDesignDescription('');
+    } catch (error) {
+      console.error('შეცდომა:', error);
+      showNotification(error.message || 'შეცდომა ფაილების ატვირთვისას', 'error');
     }
   };
 
   const handleDesignDelete = async (designId) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/events/${selectedEvent.id}/stands/${selectedStand.id}/design/${designId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        showNotification('დიზაინის ფაილი წაშლილია', 'success');
-        fetchStands(selectedEvent.id);
-      } else {
-        showNotification('ფაილის წაშლა ვერ მოხერხდა', 'error');
-      }
-    } catch (_error) {
-      console.error('შეცდომა:', _error);
-      showNotification('შეცდომა ქსელურ მოთხოვნაში', 'error');
+      await apiClient.delete(`/events/${selectedEvent.id}/stands/${selectedStand.id}/design/${designId}`);
+      showNotification('დიზაინის ფაილი წაშლილია', 'success');
+      fetchStands(selectedEvent.id);
+    } catch (error) {
+      console.error('შეცდომა:', error);
+      showNotification('ფაილის წაშლა ვერ მოხერხდა', 'error');
     }
   };
 
   const handleStatusChange = async (standId, newStatus) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/events/${selectedEvent.id}/stands/${standId}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ status: newStatus })
-      });
-
-      if (response.ok) {
-        showNotification('სტატუსი წარმატებით განახლდა', 'success');
-        fetchStands(selectedEvent.id);
-      } else {
-        const errorData = await response.json();
-        showNotification(errorData.message || 'სტატუსის განახლება ვერ მოხერხდა', 'error');
+      await apiClient.patch(`/events/${selectedEvent.id}/stands/${standId}/status`, { stand_status: newStatus });
+      showNotification('სტატუსი წარმატებით განახლდა', 'success');
+      
+      // განვაახლოთ stands სია მაშინვე
+      setStands(prevStands => 
+        prevStands.map(stand => 
+          stand.id === standId ? { ...stand, status: newStatus } : stand
+        )
+      );
+      
+      // თუ არჩეული სტენდია, განვაახლოთ იგიც
+      if (selectedStand && selectedStand.id === standId) {
+        setSelectedStand(prevStand => ({ ...prevStand, status: newStatus }));
       }
-    } catch (_error) {
-      console.error('სტატუსის განახლების შეცდომა:', _error);
-      showNotification('შეცდომა ქსელურ მოთხოვნაში', 'error');
+    } catch (error) {
+      console.error('სტატუსის განახლების შეცდომა:', error);
+      showNotification(error.message || 'სტატუსის განახლება ვერ მოხერხდა', 'error');
     }
   };
 
@@ -434,7 +376,7 @@ const OperationPage = ({ showNotification }) => {
     try {
       const date = new Date(dateString);
       return date.toLocaleDateString('ka-GE');
-    } catch (_error) {
+    } catch (error) {
       return dateString;
     }
   };
@@ -548,7 +490,7 @@ const OperationPage = ({ showNotification }) => {
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       {/* Header */}
-      <Paper elevation={2} sx={{ p: 3, mb: 3, background: 'linear-gradient(135deg, #667eeaa 0%, #764ba2 100%)', color: 'white' }}>
+      <Paper elevation={2} sx={{ p: 3, mb: 3, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
           <IconButton
             onClick={() => {
@@ -638,7 +580,10 @@ const OperationPage = ({ showNotification }) => {
                               <FormControl size="small" sx={{ mt: 1, minWidth: 120 }}>
                                 <Select
                                   value={stand.status}
-                                  onChange={(e) => handleStatusChange(stand.id, e.target.value)}
+                                  onChange={(e) => {
+                                    e.stopPropagation();
+                                    handleStatusChange(stand.id, e.target.value);
+                                  }}
                                   size="small"
                                   sx={{
                                     bgcolor: statusInfo.color,

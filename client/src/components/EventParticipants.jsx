@@ -1748,7 +1748,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                   {/* გადახდის ინფორმაცია */}
                   <Grid item xs={12}>
                     <Accordion>
-                      <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 3, marginBottom: 2 }}>
+                      <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 1, marginBottom: 0 }}>
                         <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Euro />
                           გადახდის ინფორმაცია
@@ -1872,7 +1872,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                   <Grid item xs={12} sx={{ mb: 1, mt: 1, display: 'flex', alignItems: 'center', gap: 2, flexDirection: 'column', width: '100%' }}>
                   <Grid item xs={12} sx={{ width: '100%' }}>
                     <Accordion>
-                      <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 3, marginBottom: 0 }}>
+                      <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 1, marginBottom: 0 }}>
                         <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <AttachFile />
                           დოკუმენტების მიმაგრება
@@ -1935,7 +1935,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
 
                   <Grid item xs={12} sx={{ mt: 1, mb: 1, width: '100%' }}>
                     <Accordion>
-                      <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 3, marginBottom: 0 }}>
+                      <AccordionSummary expandIcon={<ExpandMore />} sx={{ boxShadow: 'none', border: '1px solid #e2e8f0', borderRadius: 1, marginBottom: 0 }}>
                         <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Receipt />
                           ფრიზზე წარწერა

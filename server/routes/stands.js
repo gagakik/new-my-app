@@ -129,13 +129,40 @@ router.get('/events/:eventId/stands', authenticateToken, async (req, res) => {
         primaryContactEmail = firstContact.email || participant.company_email || '';
       }
 
+      // Debug participant status
+      console.log(`📊 მონაწილის სტატუსი (raw): "${participant.status}"`);
+      console.log(`📊 მონაწილის სტატუსი (type): ${typeof participant.status}`);
+      
+      // Map participant status to stand status
+      let mappedStatus;
+      if (participant.status === 'გადახდილი') {
+        mappedStatus = 'დასრულებული';
+      } else if (participant.status === 'მომლოდინე') {
+        mappedStatus = 'დაგეგმილი';
+      } else if (participant.status === 'დადასტურებული') {
+        mappedStatus = 'დიზაინის ეტაპი';
+      } else if (participant.status === 'შეუქმებული') {
+        mappedStatus = 'მშენებლობა დაწყებული';
+      } else if (participant.status === 'დიზაინის ეტაპი') {
+        mappedStatus = 'დიზაინის ეტაპი';
+      } else if (participant.status === 'მშენებლობა დაწყებული') {
+        mappedStatus = 'მშენებლობა დაწყებული';
+      } else if (participant.status === 'მშენებლობა მიმდინარეობს') {
+        mappedStatus = 'მშენებლობა მიმდინარეობს';
+      } else if (participant.status === 'ჩაბარებული') {
+        mappedStatus = 'ჩაბარებული';
+      } else {
+        mappedStatus = participant.status || 'დაგეგმილი'; // use original status or default
+      }
+      
+      console.log(`📊 მაპირებული სტატუსი: "${mappedStatus}"`);
+
       let standWithDetails = {
         id: participant.participant_id,
         booth_number: participant.booth_number || `B-${participant.participant_id}`,
         company_name: participant.company_name,
         area: parseFloat(participant.area) || 0,
-        status: participant.status === 'გადახდილი' ? 'დასრულებული' : 
-                participant.status === 'მომლოდინე' ? 'დაგეგმილი' : 'დაგეგმილი',
+        status: mappedStatus,
         booth_category: participant.booth_category || 'ოქტანორმის სტენდები',
         booth_type: participant.booth_type || 'რიგითი',
         notes: participant.notes,
@@ -233,6 +260,7 @@ router.get('/events/:eventId/stands', authenticateToken, async (req, res) => {
       console.log(`   🏷️ კატეგორია: ${stand.booth_category}`);
       console.log(`   📋 ტიპი: ${stand.booth_type}`);
       console.log(`   📍 ნომერი: ${stand.booth_number}`);
+      console.log(`   📊 სტატუსი: "${stand.status}"`);
       console.log(`   🔧 აღჭურვილობა: ${stand.stand_equipment.length} ნივთი`);
 
       stand.stand_equipment.forEach((eq, index) => {
@@ -445,11 +473,14 @@ router.post('/events/:eventId/stands/:standId/equipment', authenticateToken, asy
 router.patch('/events/:eventId/stands/:standId/status', authenticateToken, async (req, res) => {
   try {
     console.log(`🏗️ სტენდის სტატუსის განახლება ID: ${req.params.standId}`);
-    console.log('📝 ახალი სტატუსი:', req.body.status);
+    console.log('📝 მიღებული body:', req.body);
+    console.log('📝 stand_status value:', req.body.stand_status);
+    console.log('📝 all keys in body:', Object.keys(req.body));
 
-    const { status } = req.body;
+    const { stand_status } = req.body;
 
-    if (!status) {
+    if (!stand_status) {
+      console.log('❌ stand_status არ არის ან ცარიელია');
       return res.status(400).json({ message: 'სტატუსი სავალდებულოა' });
     }
 
@@ -460,7 +491,7 @@ router.patch('/events/:eventId/stands/:standId/status', authenticateToken, async
         updated_at = NOW()
       WHERE id = $2 AND event_id = $3
       RETURNING *
-    `, [status, req.params.standId, req.params.eventId]);
+    `, [stand_status, req.params.standId, req.params.eventId]);
 
     if (result.rows.length === 0) {
       console.log('❌ სტენდი არ მოიძებნა');

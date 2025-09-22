@@ -591,7 +591,7 @@ const addMissingColumns = async () => {
 };
 
 // Function to add missing columns to equipment table if they don't exist
-const addEquipmentColumns = async () => {
+const addMissingEquipmentColumns = async () => {
   try {
     const requiredColumns = [
       { name: 'image_url', type: 'VARCHAR(500)' },
@@ -619,7 +619,7 @@ const addEquipmentColumns = async () => {
 };
 
 // Function to add missing columns to companies table if they don't exist
-const addCompanyContactColumns = async () => {
+const addMissingCompanyColumns = async () => {
   try {
     const requiredColumns = [
       { name: 'company_phone', type: 'VARCHAR(255)' },
@@ -645,57 +645,170 @@ const addCompanyContactColumns = async () => {
   }
 };
 
-// Function to create stand_designs table if it doesn't exist
-const createStandDesignsTable = async () => {
+// Function to initialize stands-related tables
+const initializeStandsTables = async () => {
   try {
-    console.log("🔧 შევამოწმებთ stand_designs ცხრილს...");
+    console.log("🏗️ სტენდების ცხრილების ინიციალიზაცია...");
 
-    // Check if table exists
-    const tableExists = await query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_name = 'stand_designs'
-      );
+    // Main stands table
+    await query(`
+      CREATE TABLE IF NOT EXISTS stands (
+        id SERIAL PRIMARY KEY,
+        event_id INTEGER REFERENCES annual_services(id) ON DELETE CASCADE,
+        booth_number VARCHAR(50) NOT NULL,
+        company_name VARCHAR(255) NOT NULL,
+        area DECIMAL(8,2),
+        contact_person VARCHAR(255),
+        contact_phone VARCHAR(50),
+        contact_email VARCHAR(255),
+        status VARCHAR(100) DEFAULT 'დაგეგმილი',
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_by_user_id INTEGER REFERENCES users(id),
+        UNIQUE(event_id, booth_number)
+      )
     `);
 
-    if (!tableExists.rows[0].exists) {
-      console.log('📋 stand_designs ცხრილი არ არსებობს, ვქმნით...');
+    // Stand equipment junction table
+    await query(`
+      CREATE TABLE IF NOT EXISTS stand_equipment (
+        id SERIAL PRIMARY KEY,
+        stand_id INTEGER REFERENCES stands(id) ON DELETE CASCADE,
+        equipment_id INTEGER REFERENCES equipment(id) ON DELETE CASCADE,
+        quantity INTEGER NOT NULL DEFAULT 1,
+        notes TEXT,
+        assigned_by_user_id INTEGER REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(stand_id, equipment_id)
+      )
+    `);
 
-      await query(`
-        CREATE TABLE stand_designs (
-          id SERIAL PRIMARY KEY,
-          stand_id INTEGER REFERENCES event_participants(id) ON DELETE CASCADE,
-          design_file_url VARCHAR(500) NOT NULL,
-          description TEXT,
-          uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    // Stand designs table
+    await query(`
+      CREATE TABLE IF NOT EXISTS stand_designs (
+        id SERIAL PRIMARY KEY,
+        stand_id INTEGER REFERENCES stands(id) ON DELETE CASCADE,
+        design_file_url VARCHAR(500) NOT NULL,
+        description TEXT,
+        uploaded_by_user_id INTEGER REFERENCES users(id),
+        uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Stand photos table
+    await query(`
+      CREATE TABLE IF NOT EXISTS stand_photos (
+        id SERIAL PRIMARY KEY,
+        stand_id INTEGER REFERENCES stands(id) ON DELETE CASCADE,
+        photo_url VARCHAR(500) NOT NULL,
+        description TEXT,
+        uploaded_by_user_id INTEGER REFERENCES users(id),
+        uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    console.log("✅ სტენდების ცხრილები შეიქმნა");
+
+    // Check if we need to migrate data from event_participants to stands
+    const participantsCount = await query('SELECT COUNT(*) as count FROM event_participants');
+    const standsCount = await query('SELECT COUNT(*) as count FROM stands');
+
+    if (participantsCount.rows[0].count > 0 && standsCount.rows[0].count === 0) {
+      console.log('🔄 მონაწილეების მიგრაცია stands ცხრილში...');
+
+      // Check if companies table exists for JOIN
+      const companiesTableCheck = await query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables
+          WHERE table_name = 'companies'
         )
       `);
 
-      console.log('✅ stand_designs ცხრილი შეიქმნა!');
-    } else {
-      console.log('✓ stand_designs ცხრილი უკვე არსებობს');
+      let migrationQuery;
+      if (companiesTableCheck.rows[0].exists) {
+        migrationQuery = `
+          INSERT INTO stands (event_id, booth_number, company_name, area, contact_person, contact_phone, contact_email, status, notes, created_at, created_by_user_id)
+          SELECT 
+            ep.event_id,
+            COALESCE(ep.booth_number, 'B-' || ep.id) as booth_number,
+            COALESCE(c.company_name, 'Unknown Company ' || ep.id) as company_name,
+            COALESCE(ep.area, ep.booth_size, 0) as area,
+            ep.contact_person,
+            ep.contact_phone,
+            ep.contact_email,
+            CASE 
+              WHEN ep.status = 'გადახდილი' THEN 'დასრულებული'
+              WHEN ep.status = 'მომლოდინე' THEN 'დაგეგმილი'
+              WHEN ep.status = 'დადასტურებული' THEN 'დიზაინის ეტაპი'
+              WHEN ep.status = 'შეუქმებული' THEN 'მშენებლობა დაწყებული'
+              ELSE 'დაგეგმილი'
+            END as status,
+            ep.notes,
+            ep.created_at,
+            ep.created_by_user_id
+          FROM event_participants ep
+          LEFT JOIN companies c ON ep.company_id = c.id
+          WHERE ep.event_id IS NOT NULL
+        `;
+      } else {
+        migrationQuery = `
+          INSERT INTO stands (event_id, booth_number, company_name, area, contact_person, contact_phone, contact_email, status, notes, created_at, created_by_user_id)
+          SELECT 
+            ep.event_id,
+            COALESCE(ep.booth_number, 'B-' || ep.id) as booth_number,
+            'Company ' || ep.id as company_name,
+            COALESCE(ep.area, ep.booth_size, 0) as area,
+            ep.contact_person,
+            ep.contact_phone,
+            ep.contact_email,
+            CASE 
+              WHEN ep.status = 'გადახდილი' THEN 'დასრულებული'
+              WHEN ep.status = 'მომლოდინე' THEN 'დაგეგმილი'
+              WHEN ep.status = 'დადასტურებული' THEN 'დიზაინის ეტაპი'
+              WHEN ep.status = 'შეუქმებული' THEN 'მშენებლობა დაწყებული'
+              ELSE 'დაგეგმილი'
+            END as status,
+            ep.notes,
+            ep.created_at,
+            ep.created_by_user_id
+          FROM event_participants ep
+          WHERE ep.event_id IS NOT NULL
+        `;
+      }
+
+      await query(migrationQuery);
+
+      const migratedCount = await query('SELECT COUNT(*) as count FROM stands');
+      console.log(`✅ მიგრირებულია ${migratedCount.rows[0].count} სტენდი`);
     }
 
   } catch (error) {
-    console.error('❌ შეცდომა stand_designs ცხრილის შექმნისას:', error);
+    console.error("❌ სტენდების ცხრილების ინიციალიზაციის შეცდომა:", error);
   }
 };
+
 
 // Comprehensive table existence check
 const ensureAllTablesExist = async () => {
   try {
     console.log("🔍 შევამოწმებთ ყველა ცხრილის არსებობას...");
-    
+
     const requiredTables = [
       'users',
-      'companies', 
-      'equipment',
-      'spaces',
+      'companies',
       'exhibitions',
+      'spaces',
       'annual_services',
+      'service_spaces',
       'event_participants',
+      'equipment',
       'equipment_bookings',
-      'service_spaces'
+      'service_spaces',
+      'stands',
+      'stand_equipment',
+      'stand_designs',
+      'stand_photos'
     ];
 
     const result = await query(`
@@ -709,7 +822,7 @@ const ensureAllTablesExist = async () => {
     console.log("📋 არსებული ცხრილები:", existingTables.join(', '));
 
     const missingTables = requiredTables.filter(table => !existingTables.includes(table));
-    
+
     if (missingTables.length > 0) {
       console.log("❌ არ არსებული ცხრილები:", missingTables.join(', '));
       console.log("🔧 ვცდილობთ ცხრილების შექმნას...");
@@ -725,7 +838,7 @@ const ensureAllTablesExist = async () => {
       WHERE table_name = 'event_participants'
       ORDER BY ordinal_position
     `);
-    
+
     console.log(`📊 event_participants ცხრილის სტრუქტურა (${epColumns.rows.length} სვეტი):`, 
       epColumns.rows.map(col => `${col.column_name} (${col.data_type})`).join(', ')
     );
@@ -740,10 +853,13 @@ const initializeDatabase = async () => {
   try {
     await ensureAllTablesExist();
     await addMissingColumns();
-    await addEquipmentColumns();
-    await addCompanyContactColumns();
-    await createStandDesignsTable();
-    console.log("✅ ბაზის ინიციალიზაცია დასრულებულია.");
+    await addMissingEquipmentColumns();
+    await addMissingCompanyColumns();
+
+    // Initialize stands tables
+    await initializeStandsTables();
+
+    console.log("✅ ბაზის ინიციალიზაცია წარმატებით დასრულდა");
   } catch (error) {
     console.error("❌ ბაზის ინიციალიზაციის შეცდომა:", error);
     console.error("Error details:", error.message);

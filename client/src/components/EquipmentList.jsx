@@ -195,7 +195,7 @@ const EquipmentList = ({ showNotification, userRole }) => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <Container maxWidth="100%" sx={{ py: 2, textAlign: 'center' }}>
       <Box sx={{ 
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         borderRadius: 3,
