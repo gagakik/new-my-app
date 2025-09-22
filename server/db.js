@@ -494,7 +494,9 @@ const addMissingColumns = async () => {
             { name: "Frieze_inscription_geo", type: "TEXT" },
             { name: "Frieze_inscription_eng", type: "TEXT" },
             { name: "frieze_inscription_geo", type: "TEXT" },
-            { name: "frieze_inscription_eng", type: "TEXT" }
+            { name: "frieze_inscription_eng", type: "TEXT" },
+            { name: "package_id", type: "INTEGER REFERENCES exhibition_packages(id)" },
+            { name: "registration_type", type: "VARCHAR(50) DEFAULT 'individual'" }
           ];
           for (const col of participantColumns) {
             if (!existingColumns.includes(col.name)) {

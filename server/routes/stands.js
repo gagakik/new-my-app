@@ -91,7 +91,9 @@ router.get('/events/:eventId/stands', authenticateToken, async (req, res) => {
       FROM event_participants ep
       JOIN companies c ON ep.company_id = c.id
       LEFT JOIN annual_services e ON ep.event_id = e.id
-      WHERE ep.event_id = $1
+      WHERE ep.event_id = $1 
+        AND ep.booth_number IS NOT NULL 
+        AND ep.booth_number != ''
       ORDER BY c.company_name ASC
     `, [req.params.eventId]);
 
