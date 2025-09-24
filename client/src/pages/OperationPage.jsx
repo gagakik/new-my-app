@@ -795,7 +795,7 @@ const OperationPage = ({ showNotification }) => {
                             <CardContent>
                               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                                 {equipment.image_url ? (
-                                                                    <Box sx={{ position: 'relative', mr: 2 }}>
+                                  <Box sx={{ position: 'relative', mr: 2 }}>
                                     <Avatar
                                       src={processImageUrl(equipment.image_url)}
                                       alt={equipment.equipment_name}
