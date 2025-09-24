@@ -109,12 +109,12 @@ const OperationPage = ({ showNotification }) => {
   const [error, setError] = useState(null);
 
   const standStatuses = [
-    { value: 'დაგეგმილი', color: '#2196f3', icon: <Assignment /> },
+    { value: 'დაგეგმილი', color: '#c2b93dff', icon: <Assignment /> },
     { value: 'დიზაინის ეტაპი', color: '#ff9800', icon: <Description /> },
     { value: 'მშენებლობა დაწყებული', color: '#9c27b0', icon: <Construction /> },
-    { value: 'მშენებლობა მიმდინარეობს', color: '#3f51b5', icon: <Construction /> },
-    { value: 'დასრულებული', color: '#4caf50', icon: <CheckCircle /> },
-    { value: 'ჩაბარებული', color: '#8bc34a', icon: <CheckCircle /> },
+    { value: 'მშენებლობა მიმდინარეობს', color: '#2196f3', icon: <Construction /> },
+    { value: 'დასრულებული', color: '#50eb55ff', icon: <CheckCircle /> },
+    { value: 'ჩაბარებული', color: '#4caf50', icon: <CheckCircle /> },
     { value: 'გადაუდებელი ყურადღება', color: '#f44336', icon: <Warning /> }
   ];
 
@@ -639,11 +639,10 @@ const OperationPage = ({ showNotification }) => {
           {selectedStand ? (
             <Paper elevation={3}  sx={{ height: '70vh', overflow: 'auto', width: '100%', mb: 2, py: 2, px: 2 }}>
               <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
+                <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)} sx={{ mb: 1}}>
                   <Tab label="ძირითადი ინფორმაცია" />
                   <Tab label="აღჭურვილობა" />
                   <Tab label="დიზაინი" />
-                  <Tab label="ფოტოები" />
                 </Tabs>
               </Box>
 
@@ -742,14 +741,16 @@ const OperationPage = ({ showNotification }) => {
                       </Grid>
                     )}
                     {(selectedStand.frieze_inscription_geo || selectedStand.Frieze_inscription_geo) && (
+                      <strong>ფრიზი (GEO): 
                             <Typography variant="body1" sx={{ mt: 1 }}>
-                              <strong>ფრიზის წარწერა (ქართული):</strong> {selectedStand.frieze_inscription_geo || selectedStand.Frieze_inscription_geo}
-                            </Typography>
+                               {selectedStand.frieze_inscription_geo || selectedStand.Frieze_inscription_geo}
+                            </Typography></strong>
                           )}
                           {(selectedStand.frieze_inscription_eng || selectedStand.Frieze_inscription_eng) && (
-                            <Typography variant="body1" sx={{ mt: 1 }}>
-                              <strong>ფრიზის წარწერა (ინგლისური):</strong> {selectedStand.frieze_inscription_eng || selectedStand.Frieze_inscription_eng}
-                            </Typography>
+                            <strong>ფრიზი (ENG):
+                            <Typography variant="body1" sx={{ mt: 1, color: '#1e7cff' }}>
+                               {selectedStand.frieze_inscription_eng || selectedStand.Frieze_inscription_eng}
+                            </Typography></strong>
                           )}
                   </Grid>
                 </Box>
@@ -954,36 +955,6 @@ const OperationPage = ({ showNotification }) => {
                   ) : (
                     <Alert severity="info">
                       დიზაინის ფაილები არ არის ატვირთული
-                    </Alert>
-                  )}
-                </Box>
-              )}
-
-              {/* ფოტოები */}
-              {activeTab === 3 && (
-                <Box sx={{ p: 3 }}>
-                  <Typography variant="h6" gutterBottom>სტენდის ფოტოები</Typography>
-
-                  {selectedStand.stand_photos && selectedStand.stand_photos.length > 0 ? (
-                    <ImageList cols={3} gap={8}>
-                      {selectedStand.stand_photos.map((photo, index) => (
-                        <ImageListItem key={index}>
-                          <img
-                            src={photo.photo_url}
-                            alt={photo.description}
-                            loading="lazy"
-                            style={{ height: 200, objectFit: 'cover' }}
-                          />
-                          <ImageListItemBar
-                            title={photo.description}
-                            subtitle={new Date(photo.uploaded_at).toLocaleDateString('ka-GE')}
-                          />
-                        </ImageListItem>
-                      ))}
-                    </ImageList>
-                  ) : (
-                    <Alert severity="info">
-                      სტენდის ფოტოები არ არის ატვირთული
                     </Alert>
                   )}
                 </Box>
