@@ -350,8 +350,9 @@ const EquipmentList = ({ showNotification, userRole }) => {
                         alt={item.code_name}
                         variant="rounded"
                         sx={{ 
-                          width: 60, 
-                          height: 60,
+                          objectFit: 'fill',
+                          width: 80, 
+                          height: 150,
                           border: '2px solid #e0e6ed'
                         }}
                         onError={(e) => {

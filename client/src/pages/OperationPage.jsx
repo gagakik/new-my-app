@@ -793,7 +793,7 @@ const OperationPage = ({ showNotification }) => {
                         <Grid xs={12} sm={6} md={4} key={index}>
                           <Card elevation={2}>
                             <CardContent>
-                              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, flexDirection: 'column'}}>
                                 {equipment.image_url ? (
                                   <Box sx={{ position: 'relative', mr: 2 }}>
                                     <Avatar
@@ -801,8 +801,9 @@ const OperationPage = ({ showNotification }) => {
                                       alt={equipment.equipment_name}
                                       variant="rounded"
                                       sx={{
-                                        width: 60,
-                                        height: 60,
+                                      objectFit: 'fill',
+                                      width: 80, 
+                                      height: 150,
                                         border: '2px solid #e0e6ed'
                                       }}
                                       onError={(e) => {
