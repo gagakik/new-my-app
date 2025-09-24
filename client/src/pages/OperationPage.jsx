@@ -88,14 +88,16 @@ const OperationPage = ({ showNotification }) => {
     company_name: '',
     company_id: '',
     area: '',
-    booth_type: 'რიგითი',
-    booth_category: 'ოქტანორმის სტენდები',
+    booth_type: '',
+    booth_category: '',
     price_per_sqm: '',
     contact_person: '',
     contact_phone: '',
     contact_email: '',
     status: 'დაგეგმილი',
-    notes: ''
+    notes: '',
+    Frieze_inscription_geo: '',
+    Frieze_inscription_eng: ''
   });
   const [equipmentData, setEquipmentData] = useState({
     equipment_id: '',
@@ -340,7 +342,9 @@ const OperationPage = ({ showNotification }) => {
       contact_phone: '',
       contact_email: '',
       status: 'დაგეგმილი',
-      notes: ''
+      notes: '',
+      Frieze_inscription_geo: '',
+      Frieze_inscription_eng: ''
     });
     setSelectedCompany(null);
     setContactPersons([]);
@@ -488,7 +492,7 @@ const OperationPage = ({ showNotification }) => {
 
   // ივენთი არჩეული - აჩვენოს სტენდების მართვა
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+    <Container maxWidth="xl" sx={{ mt: 1, mb: 1, display: 'flex', justifyContent: 'center', flexDirection: 'column', width: '100%' }}>
       {/* Header */}
       <Paper elevation={2} sx={{ p: 3, mb: 3, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -523,15 +527,19 @@ const OperationPage = ({ showNotification }) => {
         </Box>
       </Paper>
 
-      <Grid container spacing={3}>
+
+
+              <Grid container sx={{ width: '100%', display: 'flex', justifyContent: 'center', flexDirection: 'row', background: '#063a3642', py: 1, mt: 1, borderRadius: 2 }}>
+      <Grid container spacing={2} sx={{ display: 'flex', maxWidth: '40%' }}>
+        {/* ფორმა */}
         {/* სტენდების სია */}
-        <Grid xs={12} md={4}>
+        <Grid xs={12} md={4} >
           <Paper elevation={3} sx={{ height: '70vh', overflow: 'auto' }}>
             <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
               <Typography variant="h6">სტენდები ({stands.length})</Typography>
             </Box>
             {stands.length === 0 ? (
-              <Box sx={{ p: 3, textAlign: 'center' }}>
+              <Box sx={{ p: 3, textAlign: 'center', overflow: 'auto' }}>
                 <Construction sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                 <Typography variant="body1" color="text.secondary">
                   ამ ივენთზე სტენდები არ არის დამატებული
@@ -623,12 +631,13 @@ const OperationPage = ({ showNotification }) => {
               </List>
             )}
           </Paper>
+          </Grid>
         </Grid>
 
         {/* სტენდის დეტალები */}
-        <Grid xs={12} md={8}>
+        <Grid xs={12} md={8} sx={{ display: 'flex', justifyContent: 'center', width: '60%', px: 2}}>
           {selectedStand ? (
-            <Paper elevation={3} sx={{ height: '70vh', overflow: 'auto' }}>
+            <Paper elevation={3}  sx={{ height: '70vh', overflow: 'auto', width: '100%', mb: 2, py: 2, px: 2 }}>
               <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
                 <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
                   <Tab label="ძირითადი ინფორმაცია" />
@@ -641,23 +650,27 @@ const OperationPage = ({ showNotification }) => {
               {/* ძირითადი ინფორმაცია */}
               {activeTab === 0 && (
                 <Box sx={{ p: 3 }}>
-                  <Grid container spacing={3}>
+                  <Grid container spacing={4}>
                     <Grid xs={12} md={6}>
                       <Card elevation={2}>
                         <CardContent>
-                          <Typography variant="h6" gutterBottom color="primary">
+                        <Grid fullWidth container spacing={4} sx={{ display: 'flex', justifyContent: 'start-end', flexDirection: 'column' }}>
+                          <Typography variant="h6" gutterBottom color="primary" sx={{ mb: 1 }}>
                             <Business sx={{ mr: 1, verticalAlign: 'middle' }} />
                             სტენდის ინფორმაცია
                           </Typography>
-                          <Typography variant="body1"><strong>სტენდის ნომერი:</strong> {selectedStand.booth_number || 'N/A'}</Typography>
-                          <Typography variant="body1"><strong>კომპანია:</strong> {selectedStand.company_name}</Typography>
-                          <Typography variant="body1">
-                            <Straighten sx={{ mr: 1, verticalAlign: 'middle' }} />
-                            <strong>ფართობი:</strong> {selectedStand.area || 'N/A'} მ²
-                          </Typography>
-                          <Typography variant="body1"><strong>სტენდის ტიპი:</strong> {selectedStand.booth_type || 'N/A'}</Typography>
-                          <Typography variant="body1"><strong>კატეგორია:</strong> {selectedStand.booth_category || 'N/A'}</Typography>
+                        <Typography variant="body1" sx={{ color: '#6f00ffff', fontWeight: 'bold' }}><strong>კომპანია:</strong> {selectedStand.company_name}</Typography>
+                        
 
+                          <Typography variant="body1" sx={{ color: '#6f00ffff', fontWeight: 'bold' }}><strong>სტენდის ნომერი:</strong> {selectedStand.booth_number || '-'}</Typography>
+                          
+                          <Typography variant="body1" sx={{ color: '#6f00ffff', fontWeight: 'bold'}}>
+                            <Straighten sx={{ mr: 1, verticalAlign: 'middle' }} />
+                            <strong>ფართობი:</strong> {selectedStand.area || '-'} მ²
+                          </Typography>
+                          <Typography variant="body1" sx={{ color: '#1e7cff', fontWeight: 'bold'}}><strong>სტენდის ტიპი:</strong> {selectedStand.booth_type || '-'}</Typography>
+                          <Typography variant="body1" sx={{ color: '#1e7cff', fontWeight: 'bold'}}><strong>კატეგორია:</strong> {selectedStand.booth_category || '-'}</Typography>
+                          </Grid>
                           <Box sx={{ mt: 2 }}>
                             <Typography variant="body2" sx={{ mb: 1 }}>
                               <strong>სტატუსი:</strong>
@@ -728,9 +741,20 @@ const OperationPage = ({ showNotification }) => {
                         </Alert>
                       </Grid>
                     )}
+                    {(selectedStand.frieze_inscription_geo || selectedStand.Frieze_inscription_geo) && (
+                            <Typography variant="body1" sx={{ mt: 1 }}>
+                              <strong>ფრიზის წარწერა (ქართული):</strong> {selectedStand.frieze_inscription_geo || selectedStand.Frieze_inscription_geo}
+                            </Typography>
+                          )}
+                          {(selectedStand.frieze_inscription_eng || selectedStand.Frieze_inscription_eng) && (
+                            <Typography variant="body1" sx={{ mt: 1 }}>
+                              <strong>ფრიზის წარწერა (ინგლისური):</strong> {selectedStand.frieze_inscription_eng || selectedStand.Frieze_inscription_eng}
+                            </Typography>
+                          )}
                   </Grid>
                 </Box>
               )}
+              
 
               {/* აღჭურვილობა */}
               {activeTab === 1 && (
@@ -976,6 +1000,7 @@ const OperationPage = ({ showNotification }) => {
             </Paper>
           )}
         </Grid>
+      
       </Grid>
 
       {/* ახალი სტენდის ფორმა */}
@@ -1127,7 +1152,23 @@ const OperationPage = ({ showNotification }) => {
                   multiline
                   rows={3}
                   value={formData.notes}
-                  onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                                    onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                />
+              </Grid>
+              <Grid xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="ფრიზის წარწერა (ქართული)"
+                  value={formData.frieze_inscription_geo}
+                  onChange={(e) => setFormData({...formData, frieze_inscription_geo: e.target.value})}
+                />
+              </Grid>
+              <Grid xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="ფრიზის წარწერა (ინგლისური)"
+                  value={formData.frieze_inscription_eng}
+                  onChange={(e) => setFormData({...formData, frieze_inscription_eng: e.target.value})}
                 />
               </Grid>
             </Grid>

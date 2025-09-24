@@ -74,6 +74,10 @@ router.get('/events/:eventId/stands', authenticateToken, async (req, res) => {
         ep.contact_email,
         ep.price_per_sqm,
         ep.total_price,
+        ep.frieze_inscription_geo,
+        ep.frieze_inscription_eng,
+        ep.Frieze_inscription_geo,
+        ep.Frieze_inscription_eng,
         c.company_name,
         c.contact_persons,
         c.company_phone,
@@ -180,7 +184,9 @@ router.get('/events/:eventId/stands', authenticateToken, async (req, res) => {
         created_at: participant.created_at,
         event_name: participant.event_name,
         event_start: participant.event_start,
-        event_end: participant.event_end
+        event_end: participant.event_end,
+        frieze_inscription_geo: participant.frieze_inscription_geo || participant.Frieze_inscription_geo || '',
+        frieze_inscription_eng: participant.frieze_inscription_eng || participant.Frieze_inscription_eng || ''
       };
 
       // Get equipment bookings for this participant
@@ -508,6 +514,101 @@ router.patch('/events/:eventId/stands/:standId/status', authenticateToken, async
   } catch (error) {
     console.error('❌ სტენდის სტატუსის განახლების შეცდომა:', error);
     res.status(500).json({ message: 'სტენდის სტატუსის განახლება ვერ მოხერხდა', error: error.message });
+  }
+});
+
+// POST: ახალი სტენდის შექმნა
+router.post('/events/:eventId/stands', authenticateToken, async (req, res) => {
+  try {
+    console.log(`🏗️ ახალი სტენდის შექმნა ივენთისთვის ID: ${req.params.eventId}`);
+    console.log('📝 მიღებული body:', req.body);
+
+    const {
+      booth_number,
+      company_id,
+      area,
+      booth_type,
+      booth_category,
+      price_per_sqm,
+      contact_person,
+      contact_phone,
+      contact_email,
+      status,
+      notes,
+      frieze_inscription_geo,
+      frieze_inscription_eng
+    } = req.body;
+
+    const eventId = req.params.eventId;
+    const userId = req.user.id;
+
+    // შევამოწმოთ არსებობს თუ არა ივენთი
+    const eventCheck = await db.query('SELECT id FROM annual_services WHERE id = $1', [eventId]);
+    if (eventCheck.rows.length === 0) {
+      return res.status(404).json({ message: 'ივენთი არ მოიძებნა' });
+    }
+
+    // შევამოწმოთ არსებობს თუ არა კომპანია
+    if (company_id) {
+      const companyCheck = await db.query('SELECT id FROM companies WHERE id = $1', [company_id]);
+      if (companyCheck.rows.length === 0) {
+        return res.status(404).json({ message: 'კომპანია არ მოიძებნა' });
+      }
+    }
+
+    // სტენდის დამატება event_participants ცხრილში
+    const result = await db.query(`
+      INSERT INTO event_participants (
+        event_id, 
+        company_id, 
+        booth_number, 
+        booth_size, 
+        area,
+        booth_type, 
+        booth_category, 
+        price_per_sqm,
+        contact_person, 
+        contact_phone, 
+        contact_email, 
+        status, 
+        notes,
+        frieze_inscription_geo,
+        frieze_inscription_eng,
+        created_by_user_id,
+        registration_status,
+        payment_status
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+      RETURNING *
+    `, [
+      eventId, 
+      company_id, 
+      booth_number, 
+      area,
+      area,
+      booth_type || 'რიგითი', 
+      booth_category || 'ოქტანორმის სტენდები', 
+      price_per_sqm,
+      contact_person, 
+      contact_phone, 
+      contact_email, 
+      status || 'დაგეგმილი', 
+      notes,
+      frieze_inscription_geo || '',
+      frieze_inscription_eng || '',
+      userId,
+      'მონაწილეობის მოთხოვნა',
+      'მომლოდინე'
+    ]);
+
+    console.log('✅ სტენდი წარმატებით შეიქმნა');
+    res.status(201).json({
+      message: 'სტენდი წარმატებით შეიქმნა',
+      stand: result.rows[0]
+    });
+  } catch (error) {
+    console.error('❌ სტენდის შექმნის შეცდომა:', error);
+    res.status(500).json({ message: 'სტენდის შექმნა ვერ მოხერხდა', error: error.message });
   }
 });
 
