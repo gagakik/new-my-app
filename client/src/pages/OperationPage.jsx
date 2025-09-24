@@ -69,10 +69,25 @@ const OperationPage = ({ showNotification }) => {
 
   const processImageUrl = (imageUrl) => {
     if (!imageUrl) return null;
-    if (imageUrl.startsWith('http')) {
-      return imageUrl;
+    // Remove any localhost references and ensure proper path
+    let cleanUrl = imageUrl;
+    if (cleanUrl.includes('localhost')) {
+      const urlParts = cleanUrl.split('/uploads/');
+      if (urlParts.length > 1) {
+        cleanUrl = `/uploads/${urlParts[1]}`;
+      }
     }
-    return `http://localhost:5173${imageUrl.startsWith('/') ? imageUrl : '/' + imageUrl}`;
+    
+    // Ensure it starts with /uploads/
+    if (!cleanUrl.startsWith('/uploads/')) {
+      if (cleanUrl.startsWith('uploads/')) {
+        cleanUrl = `/${cleanUrl}`;
+      } else {
+        cleanUrl = `/uploads/${cleanUrl}`;
+      }
+    }
+    
+    return cleanUrl;
   };
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
@@ -780,21 +795,41 @@ const OperationPage = ({ showNotification }) => {
                             <CardContent>
                               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                                 {equipment.image_url ? (
-                                  <Avatar
-                                    src={processImageUrl(equipment.image_url)}
-                                    alt={equipment.equipment_name}
-                                    variant="rounded"
-                                    sx={{
-                                      width: 60,
-                                      height: 60,
-                                      border: '2px solid #e0e6ed',
-                                      mr: 2
-                                    }}
-                                    onError={(e) => {
-                                      console.error('სურათის ჩატვირთვის შეცდომა:', equipment.image_url);
-                                      e.target.style.display = 'none';
-                                    }}
-                                  />
+                                                                    <Box sx={{ position: 'relative', mr: 2 }}>
+                                    <Avatar
+                                      src={processImageUrl(equipment.image_url)}
+                                      alt={equipment.equipment_name}
+                                      variant="rounded"
+                                      sx={{
+                                        width: 60,
+                                        height: 60,
+                                        border: '2px solid #e0e6ed'
+                                      }}
+                                      onError={(e) => {
+                                        console.error('სურათის ჩატვირთვის შეცდომა:', equipment.image_url);
+                                        console.error('პროცესირებული URL:', processImageUrl(equipment.image_url));
+                                        // Hide the broken image and show fallback
+                                        e.target.style.display = 'none';
+                                        const fallback = e.target.nextElementSibling;
+                                        if (fallback) fallback.style.display = 'flex';
+                                      }}
+                                    />
+                                    <Avatar
+                                      variant="rounded"
+                                      sx={{
+                                        width: 60,
+                                        height: 60,
+                                        backgroundColor: '#f0f0f0',
+                                        border: '2px solid #e0e6ed',
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        display: 'none'
+                                      }}
+                                    >
+                                      <ImageIcon sx={{ color: '#999' }} />
+                                    </Avatar>
+                                  </Box>
                                 ) : (
                                   <Avatar
                                     variant="rounded"

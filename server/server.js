@@ -974,7 +974,7 @@ app.get('/api/events/:eventId/participants', authenticateToken, async (req, res)
   const { eventId } = req.params;
 
   try {
-    console.log(`📋 მოთხოვნა ივენთის ${eventId} მონაწილეებისთვის`);
+    console.log('📋 მოთხოვნა ივენთის ${eventId} მონაწილეებისთვის');
 
     // First check if event_participants table exists
     const tableCheck = await db.query(`
@@ -1048,7 +1048,7 @@ app.get('/api/events/:eventId/participants', authenticateToken, async (req, res)
 
     console.log('📊 SQL მოთხოვნა:', participantsQuery);
     const result = await db.query(participantsQuery, queryParams);
-    console.log(`✅ ივენთი ${eventId}: მოიძებნა ${result.rows.length} მონაწილე`);
+    console.log('✅ ივენთი ${eventId}: მოიძებნა ${result.rows.length} მონაწილე');
 
     // Parse equipment bookings for each participant
     const participants = result.rows.map(participant => {
@@ -1117,13 +1117,13 @@ app.post('/api/events/:eventId/participants',
 
       if (req.files) {
         if (req.files.invoice_file) {
-          invoice_file_path = `/uploads/participants/${req.files.invoice_file[0].filename}`;
+          invoice_file_path = '/uploads/participants/${req.files.invoice_file[0].filename}';
         }
         if (req.files.contract_file) {
-          contract_file_path = `/uploads/participants/${req.files.contract_file[0].filename}`;
+          contract_file_path = '/uploads/participants/${req.files.contract_file[0].filename}';
         }
         if (req.files.handover_file) {
-          handover_file_path = `/uploads/participants/${req.files.handover_file[0].filename}`;
+          handover_file_path = '/uploads/participants/${req.files.handover_file[0].filename}';
         }
       }
 
@@ -1235,13 +1235,13 @@ app.put('/api/events/:eventId/participants/:participantId',
 
       if (req.files) {
         if (req.files.invoice_file) {
-          invoice_file_path = `/uploads/participants/${req.files.invoice_file[0].filename}`;
+          invoice_file_path = '/uploads/participants/${req.files.invoice_file[0].filename}';
         }
         if (req.files.contract_file) {
-          contract_file_path = `/uploads/participants/${req.files.contract_file[0].filename}`;
+          contract_file_path = '/uploads/participants/${req.files.contract_file[0].filename}';
         }
         if (req.files.handover_file) {
-          handover_file_path = `/uploads/participants/${req.files.handover_file[0].filename}`;
+          handover_file_path = '/uploads/participants/${req.files.handover_file[0].filename}';
         }
       }
 
@@ -1414,7 +1414,7 @@ app.get('/api/participants/:participantId/equipment-bookings', authenticateToken
       ORDER BY eb.id ASC
     `, [participantId]);
 
-    console.log(`Equipment bookings for participant ${participantId}:`, result.rows);
+    console.log('Equipment bookings for participant ${participantId}:', result.rows);
     res.json(result.rows);
   } catch (error) {
     console.error('აღჭურვილობის ჯავშნების მიღების შეცდომა:', error);
@@ -1741,7 +1741,7 @@ app.get('/api/annual-services/:id/details', authenticateToken, async (req, res) 
     service.start_date = formatDateConsistent(service.start_date);
     service.end_date = formatDateConsistent(service.end_date);
 
-    console.log(`Formatted dates for edit: start_date=${service.start_date}, end_date=${service.end_date}`);
+    console.log('Formatted dates for edit: start_date=${service.start_date}, end_date=${service.end_date}');
 
     // Get associated spaces
     const spacesResult = await db.query(`
@@ -1814,7 +1814,7 @@ app.post('/api/annual-services', authenticateToken, async (req, res) => {
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
+        return '${year}-${month}-${day}';
       } catch (e) {
         console.error('Date formatting error:', e);
         return dateString;
@@ -1847,9 +1847,9 @@ app.post('/api/annual-services', authenticateToken, async (req, res) => {
           'INSERT INTO service_spaces (service_id, space_id) VALUES ($1, $2)',
           [service.id, spaceId]
         );
-        console.log(`Added space ${spaceId} to service ${service.id}`);
+        console.log('Added space ${spaceId} to service ${service.id}');
       } catch (spaceError) {
-        console.error(`Error adding space ${spaceId}:`, spaceError);
+        console.error('Error adding space ${spaceId}:', spaceError);
       }
     }
 
@@ -1857,7 +1857,7 @@ app.post('/api/annual-services', authenticateToken, async (req, res) => {
 
     // Auto-register companies if exhibition_id is provided and companies are selected
     if (exhibition_id && selected_companies && selected_companies.length > 0) {
-      console.log(`Auto-registering ${selected_companies.length} companies for event ${service.id}`);
+      console.log('Auto-registering ${selected_companies.length} companies for event ${service.id}');
 
       for (const companyId of selected_companies) {
         try {
@@ -1876,12 +1876,12 @@ app.post('/api/annual-services', authenticateToken, async (req, res) => {
               [service.id, companyId, 'მონაწილეობის მოთხოვნა', 'მომლოდინე', req.user.id]
             );
             registeredCompanies++;
-            console.log(`Registered company ${companyId} for event ${service.id}`);
+            console.log('Registered company ${companyId} for event ${service.id}');
           } else {
-            console.log(`Company ${companyId} already registered for event ${service.id}`);
+            console.log('Company ${companyId} already registered for event ${service.id}');
           }
         } catch (companyError) {
-          console.error(`Error registering company ${companyId}:`, companyError);
+          console.error('Error registering company ${companyId}:', companyError);
         }
       }
     }
@@ -1987,9 +1987,9 @@ app.put('/api/annual-services/:id', authenticateToken, async (req, res) => {
           'INSERT INTO service_spaces (service_id, space_id) VALUES ($1, $2)',
           [id, spaceId]
         );
-        console.log(`Updated space ${spaceId} for service ${id}`);
+        console.log('Updated space ${spaceId} for service ${id}');
       } catch (spaceError) {
-        console.error(`Error updating space ${spaceId}:`, spaceError);
+        console.error('Error updating space ${spaceId}:', spaceError);
       }
     }
 
@@ -2013,7 +2013,7 @@ app.put('/api/annual-services/:id', authenticateToken, async (req, res) => {
         const localYear = date.getFullYear();
         const localMonth = String(date.getMonth() + 1).padStart(2, '0');
         const localDay = String(date.getDate()).padStart(2, '0');
-        return `${localYear}-${localMonth}-${localDay}`;
+        return '${localYear}-${localMonth}-${localDay}';
       }
 
       return date;
@@ -2087,7 +2087,7 @@ app.delete('/api/annual-services/:id', authenticateToken, authorizeRoles('admin'
   try {
     const { id } = req.params;
 
-    console.log(`Attempting to delete annual service with ID: ${id}`);
+    console.log('Attempting to delete annual service with ID: ${id}');
 
     // Check if the service exists first
     const serviceCheck = await db.query('SELECT * FROM annual_services WHERE id = $1', [id]);
@@ -2180,7 +2180,7 @@ app.delete('/api/annual-services/:id', authenticateToken, authorizeRoles('admin'
 
       // 8. Delete event participants (this is the key step causing the foreign key constraint)
       const participantResult = await db.query('DELETE FROM event_participants WHERE event_id = $1', [id]);
-      console.log(`Deleted ${participantResult.rowCount} event participants`);
+      console.log('Deleted ${participantResult.rowCount} event participants');
 
       // 9. Delete service spaces
       try {
