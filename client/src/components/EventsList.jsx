@@ -697,7 +697,7 @@ const EventsList = ({ showNotification, userRole }) => {
                   }
                 }}
               >
-                {sortDirection === 'desc' ? 'ახალი → ძველი' : 'ძველი → ახალი'}
+                {sortDirection === 'asc' ? 'ძველი → ახალი' : 'ახალი → ძველი'}
               </Button>
             </Stack>
           </Grid>
