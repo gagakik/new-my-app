@@ -529,8 +529,8 @@ const OperationPage = ({ showNotification }) => {
 
 
 
-              <Grid container sx={{ width: '100%', display: 'flex', justifyContent: 'center', flexDirection: 'row', background: '#063a3642', py: 1, mt: 1, borderRadius: 2 }}>
-      <Grid container spacing={2} sx={{ display: 'flex', maxWidth: '40%' }}>
+      <Grid container sx={{ width: '100%', display: 'flex', justifyContent: 'center', flexDirection: 'row', background: '#063a3642', py: 1, mt: 1, borderRadius: 2 }}>
+      <Grid container spacing={2} sx={{ display: 'flex', width: '400px', justifyContent: 'left' }}>
         {/* ფორმა */}
         {/* სტენდების სია */}
         <Grid xs={12} md={4} >
@@ -635,7 +635,7 @@ const OperationPage = ({ showNotification }) => {
         </Grid>
 
         {/* სტენდის დეტალები */}
-        <Grid xs={12} md={8} sx={{ display: 'flex', justifyContent: 'center', width: '60%', px: 2}}>
+        <Grid xs={12} md={8} sx={{ display: 'flex', justifyContent: 'center', width: '70%', flexDirection: 'column', px: 1}}>
           {selectedStand ? (
             <Paper elevation={3}  sx={{ height: '70vh', overflow: 'auto', width: '100%', mb: 2, py: 2, px: 2 }}>
               <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
