@@ -2163,6 +2163,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                               variant="outlined"
                             />
                           </TableCell>
+                          
                           <TableCell align="center">
                             <Stack direction="row" spacing={0.5} justifyContent="center">
                               <Tooltip title="კომპანიის დეტალები">
@@ -2182,6 +2183,7 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                             transition: 'all 0.2s ease'
                           }}
                                 >
+                                
                                   <Business fontSize="small" />
                                 </IconButton>
                               </Tooltip>
@@ -2204,22 +2206,6 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                                   <Receipt fontSize="small" />
                                 </IconButton>
                               </Tooltip>
-
-                              {/* ფაილების ლინკები */}
-                              {participant.invoice_file && (
-                                <Tooltip title="ინვოისი">
-                                  <IconButton
-                                    component="a"
-                                    href={participant.invoice_file}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    size="small"
-                                    sx={{ color: '#059669' }}
-                                  >
-                                    <AttachFile fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-                              )}
 
                               {isAuthorizedForManagement && (
                                 <>
@@ -2262,6 +2248,53 @@ const EventParticipants = ({ eventId, eventName, onClose, showNotification, user
                                       <Delete fontSize="small" />
                                     </IconButton>
                                   </Tooltip>
+                                                                {/* ფაილების ლინკები */}
+                              {participant.invoice_file && (
+                                <Tooltip title="ინვოისი">
+                                  <IconButton
+                                    component="a"
+                                    href={participant.invoice_file}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    size="small"
+                                    sx={{ color: '#059669' }}
+                                  >
+                                    <AttachFile fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+                                                            {/* ფაილების ლინკები */}
+                              {participant.invoice_file && (
+                                <Tooltip title="ხელშეკრულება">
+                                  <IconButton
+                                    component="a"
+                                    href={participant.contract_file}  //contract_file: null, handover_file//
+
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    size="small"
+                                    sx={{ color: '#8fa336ff' }}
+                                  >
+                                    <AttachFile fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+
+                               {participant.invoice_file && (
+                                <Tooltip title="მიღება-ჩაბარება">
+                                  <IconButton
+                                    component="a"
+                                    href={participant.handover_file}  //contract_file: null, handover_file//
+
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    size="small"
+                                    sx={{ color: '#0e33d8ff' }}
+                                  >
+                                    <AttachFile fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
                                 </>
                               )}
                             </Stack>
