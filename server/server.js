@@ -82,7 +82,7 @@ const createDirectories = () => {
           fs.unlinkSync(testFile);
           console.log(`✅ Fixed permissions and confirmed write access for: ${dir}`);
         } catch (fixError) {
-          console.error(`❌ Could not fix permissions for ${dir}:`, fixError.message);
+          console.error('❌ Could not fix permissions for ${dir}:', fixError.message);
           console.error('❌ This may cause file upload issues');
         }
       }
@@ -184,13 +184,16 @@ app.use('/uploads', (req, res, next) => {
 }, express.static(path.join(__dirname, 'uploads'), {
   setHeaders: (res, filePath) => {
     console.log(`📁 Serving file: ${filePath}`);
+    // Set CORS headers
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
     // Set proper cache headers for images
     if (filePath.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)) {
       res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year
       console.log(`📁 Set cache headers for image: ${filePath}`);
     }
-    // Set proper MIME types
-    res.setHeader('Access-Control-Allow-Origin', '*');
   }
 }));
 
@@ -1117,13 +1120,13 @@ app.post('/api/events/:eventId/participants',
 
       if (req.files) {
         if (req.files.invoice_file) {
-          invoice_file_path = '/uploads/participants/${req.files.invoice_file[0].filename}';
+          invoice_file_path = `/uploads/participants/${req.files.invoice_file[0].filename}`;
         }
         if (req.files.contract_file) {
-          contract_file_path = '/uploads/participants/${req.files.contract_file[0].filename}';
+          contract_file_path = `/uploads/participants/${req.files.contract_file[0].filename}`;
         }
         if (req.files.handover_file) {
-          handover_file_path = '/uploads/participants/${req.files.handover_file[0].filename}';
+          handover_file_path = `/uploads/participants/${req.files.handover_file[0].filename}`;
         }
       }
 
@@ -1235,13 +1238,13 @@ app.put('/api/events/:eventId/participants/:participantId',
 
       if (req.files) {
         if (req.files.invoice_file) {
-          invoice_file_path = '/uploads/participants/${req.files.invoice_file[0].filename}';
+          invoice_file_path = `/uploads/participants/${req.files.invoice_file[0].filename}`;
         }
         if (req.files.contract_file) {
-          contract_file_path = '/uploads/participants/${req.files.contract_file[0].filename}';
+          contract_file_path = `/uploads/participants/${req.files.contract_file[0].filename}`;
         }
         if (req.files.handover_file) {
-          handover_file_path = '/uploads/participants/${req.files.handover_file[0].filename}';
+          handover_file_path = `/uploads/participants/${req.files.handover_file[0].filename}`;
         }
       }
 
