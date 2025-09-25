@@ -63,6 +63,9 @@ server {
     }
 }
 
+sudo nano /etc/nginx/sites-available/my-app
+
+sudo systemctl reload nginx
 
 server {
     listen 80;

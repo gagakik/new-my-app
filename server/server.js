@@ -115,8 +115,8 @@ createDirectories();
 // Middleware
 app.use(cors());
 // Middleware for parsing JSON
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '30mb' }));
+app.use(express.urlencoded({ extended: true, limit: '30mb' }));
 
 // Request monitoring middleware
 app.use((req, res, next) => {
@@ -2825,7 +2825,7 @@ app.use((error, req, res, next) => {
     if (error.code === 'LIMIT_FILE_SIZE') {
       return res.status(413).json({
         error: 'ფაილი ძალიან დიდია',
-        details: 'მაქსიმალური ზომა 5MB'
+        details: 'მაქსიმალური ზომა 30MB'
       });
     }
     if (error.code === 'LIMIT_FILE_COUNT') {
